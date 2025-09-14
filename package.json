@@ -1,0 +1,31 @@
+{
+    "name": "gesto-market",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev:desktop": "turbo run dev --filter=@repo/desktop",
+        "dev": "turbo run dev",
+        "build:desktop": "turbo run build --filter=@repo/desktop",
+        "build:electron": "turbo run package --filter=@repo/electron",
+        "build": "turbo run build",
+        "format": "turbo run format",
+        "clean": "node clean.js",
+        "install-electron": "node apps/electron/node_modules/electron/install.js"
+    },
+    "packageManager": "pnpm@10.16.1",
+    "engines": {
+        "node": ">=18"
+    },
+    "devDependencies": {
+        "@types/node": "^24.3.3",
+        "prettier": "^3.6.2",
+        "prettier-plugin-tailwindcss": "^0.6.14",
+        "turbo": "^2.5.6"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "electron",
+            "electron-winstaller"
+        ]
+    }
+}
