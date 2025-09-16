@@ -10,7 +10,7 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 const config: ForgeConfig = {
     packagerConfig: {
         asar: true,
-        name: 'Gesto Market',
+        name: 'Pruftnet',
     },
     rebuildConfig: {},
     makers: [

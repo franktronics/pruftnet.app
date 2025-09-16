@@ -1,20 +1,21 @@
 import { rm } from 'node:fs'
 
 const dirs = [
-    './apps/desktop/dist',
+    './apps/front/dist',
     './apps/electron/dist',
     './apps/electron/release',
     './apps/electron/dist-electron',
+    './apps/electron/.vite',
     './packages/ui/dist',
     './packages/tailwind-config/dist',
     '.turbo',
 ]
 
 const node_modules = [
-    './apps/desktop/node_modules',
+    './apps/front/node_modules',
     './apps/electron/node_modules',
     './packages/ui/node_modules',
-    './packages/tailwind-config/node_modules',
+    './packages/utils/node_modules',
     './node_modules',
 ]
 

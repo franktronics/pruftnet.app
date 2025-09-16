@@ -1,6 +1,6 @@
 {
     "name": "@repo/electron",
-    "productName": "gesto-market",
+    "productName": "pruftnet",
     "version": "0.0.1",
     "description": "My Electron application description",
     "main": ".vite/build/main.js",
