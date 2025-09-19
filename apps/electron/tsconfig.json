@@ -1,9 +1,0 @@
-{
-    "compilerOptions": {
-        "outDir": "dist",
-        "module": "ESNext"
-    },
-    "include": ["src"],
-    "exclude": ["node_modules", "dist", "dist-electron"],
-    "references": [{ "path": "./tsconfig.node.json" }]
-}
