@@ -56,7 +56,7 @@ export const CategorySidebar = (props: CategorySidebarProps) => {
                 ref={sidebarRef}
                 className={cn(
                     'bg-sidebar relative flex h-full flex-col border-r',
-                    'absolute bottom-0 left-0 top-0',
+                    'absolute top-0 bottom-0 left-0',
                     className,
                 )}
                 style={{ width }}
@@ -65,7 +65,7 @@ export const CategorySidebar = (props: CategorySidebarProps) => {
                 {children}
                 <div
                     className={cn(
-                        'hover:bg-accent absolute -right-1.5 top-0 z-10 h-full w-2 cursor-col-resize transition-colors',
+                        'hover:bg-accent absolute top-0 -right-1.5 z-10 h-full w-2 cursor-col-resize transition-colors',
                     )}
                     onMouseDown={handleMouseDown}
                     role="separator"

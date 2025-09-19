@@ -2,8 +2,8 @@ import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
 
-const MAIN_WINDOW_VITE_DEV_SERVER_URL = import.meta.env.MAIN_WINDOW_VITE_DEV_SERVER_URL
-const MAIN_WINDOW_VITE_NAME = import.meta.env.MAIN_WINDOW_VITE_NAME
+const MAIN_SERVER_URL = import.meta.env.MAIN_SERVER_URL
+const MAIN_ENTRY_FILE = import.meta.env.MAIN_ENTRY_FILE
 const isDev = import.meta.env.MODE === 'development'
 
 if (started) {
@@ -20,13 +20,11 @@ const createWindow = async () => {
         },
     })
 
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL && isDev) {
-        await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+    if (MAIN_SERVER_URL && isDev) {
+        await mainWindow.loadURL(MAIN_SERVER_URL)
         //mainWindow.webContents.openDevTools()
     } else {
-        await mainWindow.loadFile(
-            path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-        )
+        await mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_ENTRY_FILE}/index.html`))
     }
 
     ipcMain.on('theme:change', (_, theme) => {

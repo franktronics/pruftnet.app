@@ -3,12 +3,11 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev:desktop": "turbo run dev --filter=@repo/desktop",
-        "dev": "turbo run dev",
-        "build:desktop": "turbo run build --filter=@repo/desktop",
-        "build:electron": "turbo run package --filter=@repo/electron",
-        "build": "turbo run build",
-        "format": "turbo run format",
+        "dev:web": "turbo run dev:web --filter=@repo/web",
+        "dev:desktop": "turbo run dev:desktop --filter=@repo/web",
+        "build:web": "turbo run build:web --filter=@repo/web",
+        "build:desktop": "turbo run build:desktop --filter=@repo/web",
+        "format": "prettier --write .",
         "clean": "node clean.js",
         "install-electron": "node apps/electron/node_modules/electron/install.js"
     },

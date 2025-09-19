@@ -13,10 +13,10 @@ export function SearchInput(props: SearchInputProps) {
 
     return (
         <div className="relative">
-            <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
             <Input
                 type="search"
-                className={cn(className, '!pl-9 !pr-4')}
+                className={cn(className, '!pr-4 !pl-9')}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => onChange?.(e.target.value)}
                 placeholder="Search..."
                 {...rest}
