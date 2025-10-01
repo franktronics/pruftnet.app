@@ -1,6 +1,12 @@
 import { rm } from 'node:fs'
 
-const dirs = ['./apps/api/dist', './apps/desktop/dist', './packages/ui/dist']
+const dirs = [
+    './apps/api/dist',
+    './apps/desktop/dist',
+    './apps/desktop/.vite',
+    './apps/desktop/.turbo',
+    './packages/ui/dist',
+]
 
 const node_modules = [
     './apps/api/node_modules',
