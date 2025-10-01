@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "target": "ESNext",
+        "target": "ES2022",
         "module": "ESNext",
         "jsx": "react-jsx",
         "allowJs": true,
@@ -10,7 +10,7 @@
         "sourceMap": true,
         "baseUrl": ".",
         "outDir": "dist",
-        "moduleResolution": "nodenext",
+        "moduleResolution": "bundler",
         "resolveJsonModule": true
     }
 }

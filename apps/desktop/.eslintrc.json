@@ -12,5 +12,35 @@
         "plugin:import/electron",
         "plugin:import/typescript"
     ],
-    "parser": "@typescript-eslint/parser"
+    "parser": "@typescript-eslint/parser",
+    "settings": {
+        "import/resolver": {
+            "typescript": {
+                "project": [
+                    "./tsconfig.json",
+                    "../../packages/front/tsconfig.json"
+                ]
+            },
+            "node": {
+                "extensions": [".js", ".jsx", ".ts", ".tsx"],
+                "preferBuiltins": true
+            }
+        },
+        "import/extensions": [".js", ".jsx", ".ts", ".tsx"],
+        "import/ignore": [
+            "node_modules/",
+            "\\.d\\.ts$"
+        ]
+    },
+    "overrides": [
+        {
+            "files": ["config/**/*.ts"],
+            "rules": {
+                "import/namespace": "off",
+                "import/default": "off",
+                "import/no-named-as-default": "off",
+                "import/no-named-as-default-member": "off"
+            }
+        }
+    ]
 }
