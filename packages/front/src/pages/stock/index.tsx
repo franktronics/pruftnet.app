@@ -1,8 +1,8 @@
-import { CategorySidebar } from '@/pages/stock/components/category-sidebar.tsx'
+import { CategorySidebar } from './components/category-sidebar.tsx'
 import { Button, Input, Label } from '@repo/ui/atoms'
 import { ListFilter, Search } from 'lucide-react'
-import { CategoryCard } from '@/pages/stock/components/category-card.tsx'
-import { AddCategoryPopup } from '@/pages/stock/components/add-category-popup.tsx'
+import { CategoryCard } from './components/category-card.tsx'
+import { AddCategoryPopup } from './components/add-category-popup.tsx'
 
 export default function StockPage() {
     return (

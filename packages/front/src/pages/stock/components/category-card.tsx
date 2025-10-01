@@ -1,4 +1,4 @@
-import { ComponentPropsWithoutRef } from 'react'
+import { type ComponentPropsWithoutRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/atoms'
 import { cn } from '@repo/utils'
 

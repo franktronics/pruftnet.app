@@ -3,15 +3,12 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev:web": "turbo run dev:web --filter=@repo/web",
-        "dev:desktop": "turbo run dev:desktop --filter=@repo/web",
-        "build:web": "turbo run build:web --filter=@repo/web",
-        "build:desktop": "turbo run build:desktop --filter=@repo/web",
+        "dev:api": "turbo run dev --filter=@repo/api",
+        "dev:desktop": "turbo run dev --filter=@repo/desktop",
         "format": "prettier --write .",
-        "clean": "node clean.js",
-        "install-electron": "node apps/electron/node_modules/electron/install.js"
+        "clean": "node clean.js"
     },
-    "packageManager": "pnpm@10.16.1",
+    "packageManager": "pnpm@10.17.1",
     "engines": {
         "node": ">=18"
     },

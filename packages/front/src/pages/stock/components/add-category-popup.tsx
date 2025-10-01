@@ -1,4 +1,4 @@
-import { ComponentPropsWithoutRef } from 'react'
+import { type ComponentPropsWithoutRef } from 'react'
 import { Popup } from '@repo/ui/organisms'
 import { PlusIcon } from 'lucide-react'
 import { Button, Input, Label, Textarea } from '@repo/ui/atoms'

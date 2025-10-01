@@ -1,18 +1,15 @@
 import { rm } from 'node:fs'
 
-const dirs = [
-    './apps/web/dist',
-    './apps/web/.vite',
-    './packages/ui/dist',
-    './packages/tailwind-config/dist',
-    '.turbo',
-]
+const dirs = ['./apps/api/dist', './apps/desktop/dist', './packages/ui/dist']
 
 const node_modules = [
-    './apps/web/node_modules',
+    './apps/api/node_modules',
+    './apps/desktop/node_modules',
+    './packages/front/node_modules',
     './packages/ui/node_modules',
     './packages/utils/node_modules',
     './node_modules',
+    '.turbo',
 ]
 
 const removeAll = process.argv.includes('--all')

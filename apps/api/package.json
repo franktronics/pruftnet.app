@@ -1,0 +1,26 @@
+{
+    "name": "@repo/api",
+    "version": "0.0.1",
+    "description": "",
+    "type": "module",
+    "scripts": {
+        "dev": "node build.js --watch"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@10.16.1",
+    "dependencies": {
+        "@repo/front": "workspace:*",
+        "@repo/utils": "workspace:*",
+        "express": "^5.1.0",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.3",
+        "@types/react": "^19.1.13",
+        "@types/react-dom": "^19.1.9",
+        "esbuild": "0.25.10"
+    }
+}

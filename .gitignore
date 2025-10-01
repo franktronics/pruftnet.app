@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
 node_modules/
 dist/
 out/
@@ -47,3 +50,12 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+# Other
+lib-cov
+coverage
+*.lcov
+build/Release
+*.tsbuildinfo
+.npm
+.eslintcache

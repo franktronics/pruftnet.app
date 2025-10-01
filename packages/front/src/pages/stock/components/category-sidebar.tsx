@@ -1,4 +1,4 @@
-import React, { ComponentPropsWithoutRef, useEffect, useRef, useState } from 'react'
+import React, { type ComponentPropsWithoutRef, useEffect, useRef, useState } from 'react'
 import { cn } from '@repo/utils'
 
 export type CategorySidebarProps = {

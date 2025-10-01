@@ -1,7 +1,7 @@
 import { Outlet, createRoute, createRootRoute, createRouter } from '@tanstack/react-router'
-import Home from '@/pages/home'
-import Stock from '@/pages/stock/index'
-import Error404 from '@/pages/error/404'
+import Home from '../pages/home'
+import Stock from '../pages/stock/index'
+import Error404 from '../pages/error/404'
 import { DashboardLayout } from '@repo/ui/templates'
 
 const rootRoute = createRootRoute({
