@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {

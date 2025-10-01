@@ -2,34 +2,16 @@
     "$schema": "https://turbo.build/schema.json",
     "tasks": {
         "dev": {
+          "cache": false,
+          "persistent": true
+        },
+        "dev:api": {
             "cache": false,
             "persistent": true
         },
-        "dev:web": {
-            "cache": false,
-            "persistent": true,
-            "dependsOn": ["^build"]
-        },
         "dev:desktop": {
             "cache": false,
-            "persistent": true,
-            "dependsOn": ["^build"]
-        },
-        "build": {
-            "dependsOn": ["^build"],
-            "outputs": ["dist/**", "build/**", ".next/**", "!.next/cache/**"]
-        },
-        "build:web": {
-            "dependsOn": ["^build"],
-            "outputs": ["dist/**"]
-        },
-        "build:desktop": {
-            "dependsOn": ["^build"],
-            "outputs": [".vite/**", "out/**"]
-        },
-        "package": {
-            "dependsOn": ["build:desktop"],
-            "outputs": ["dist/**", "build/**", "release/**", "out/**"]
+            "persistent": true
         },
         "format": {
             "cache": false

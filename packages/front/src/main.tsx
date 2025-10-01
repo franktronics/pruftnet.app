@@ -8,7 +8,7 @@ const handleChangeTheme = (theme: 'dark' | 'light' | 'system') => {
     window.electron.changeTheme(theme)
 }
 
-export function Main() {
+export const Main = () => {
     return (
         <StrictMode>
             <ThemeProvider

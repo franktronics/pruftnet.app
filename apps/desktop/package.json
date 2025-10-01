@@ -3,8 +3,8 @@
   "productName": "electron",
   "version": "0.0.1",
   "description": "My Electron application description",
-  "type": "module",
   "main": ".vite/build/main.js",
+  "type": "module",
   "scripts": {
     "dev": "electron-forge start",
     "package": "electron-forge package",
@@ -49,8 +49,10 @@
   "dependencies": {
     "@repo/front": "workspace:*",
     "@repo/utils": "workspace:*",
+    "@tailwindcss/vite": "^4.1.13",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.13"
   }
 }
