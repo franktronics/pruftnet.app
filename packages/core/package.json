@@ -1,0 +1,35 @@
+{
+  "name": "@repo/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Core native addon (C++ via node-addon-api) for network scanning utilities.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "gypfile": true,
+  "scripts": {
+    "build:native": "node-gyp configure build",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "pnpm run build:native && pnpm run build:ts",
+    "clean": "rimraf build dist",
+    "postinstall": "node -e \"try{require('node-gyp-build')(__dirname)}catch(e){process.exit(0)}\"",
+    "rebuild:electron": "electron-rebuild -f -w @repo/core",
+    "test:smoke": "node ./test/smoke.mjs"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "electron-rebuild": "^3.2.9",
+    "node-gyp": "^10.2.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.5.4"
+  }
+}
