@@ -1,26 +1,36 @@
 {
     "name": "@repo/api",
     "version": "0.0.1",
-    "description": "",
     "type": "module",
-    "scripts": {
-        "dev": "node build.js --watch"
+    "engines": {
+        "node": ">=18"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "packageManager": "pnpm@10.16.1",
+    "scripts": {
+        "dev": "NODE_ENV=development tsx watch src/server.ts",
+        "build:client": "vite build",
+        "build:server": "node esbuild.config.mjs",
+        "build": "pnpm run build:client && pnpm run build:server",
+        "start": "NODE_ENV=production node dist/server/server.js"
+    },
     "dependencies": {
         "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
         "express": "^5.1.0",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0"
+        "react": "^19.1.1",
+        "react-dom": "^19.1.1"
     },
     "devDependencies": {
+        "@tailwindcss/postcss": "^4.1.14",
         "@types/express": "^5.0.3",
-        "@types/react": "^19.1.13",
-        "@types/react-dom": "^19.1.9",
-        "esbuild": "0.25.10"
+        "@types/node": "^24.6.1",
+        "@types/react": "^19.1.17",
+        "@types/react-dom": "^19.1.11",
+        "@vitejs/plugin-react-swc": "^4.1.0",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^4.1.14",
+        "esbuild": "^0.25.10",
+        "tsx": "^4.20.6",
+        "typescript": "^5.9.3",
+        "vite": "^7.1.7"
     }
 }

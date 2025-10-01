@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client'
-import { Main } from '../../../packages/front/src/main'
+import { Main } from '@repo/front'
 
 const root = createRoot(document.getElementById('root')!)
 root.render(<Main />)
