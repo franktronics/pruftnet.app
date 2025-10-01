@@ -8,6 +8,7 @@ const dirs = [
     './packages/ui/dist',
     './packages/core/dist',
     './packages/core/build',
+    './packages/core/bin',
 ]
 
 const node_modules = [
