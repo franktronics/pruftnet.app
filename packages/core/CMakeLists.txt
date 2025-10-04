@@ -1,60 +1,36 @@
-cmake_minimum_required(VERSION 3.18)
-project(pruftcore VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.15)
+project(repo-core)
 
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable position independent code
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# Include N-API
+execute_process(COMMAND node -p "require('node-addon-api').include"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE NODE_ADDON_API_DIR
+        )
+string(REGEX REPLACE "[\r\n\"]" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 
-# (Will add node headers include path after target definition using CMAKE_JS_INC variable)
+# Include directories
+include_directories(${CMAKE_JS_INC})
+include_directories(${NODE_ADDON_API_DIR})
 
-add_definitions(-DNAPI_VERSION=9)
+# Add source files
+file(GLOB_RECURSE SOURCE_FILES "src/cpp/*.cpp" "src/cpp/*.hpp")
 
-## node-addon-api headers (header only)
-add_compile_definitions(NAPI_CPP_EXCEPTIONS)
+# Create the addon
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
-# Locate node-addon-api include directory dynamically using node
-execute_process(
-  COMMAND node -p "require('node-addon-api').include"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  OUTPUT_VARIABLE NODE_ADDON_API_DIR
-  ERROR_QUIET
-)
-if(NODE_ADDON_API_DIR)
-  string(REPLACE "\n" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
-  string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
-  message(STATUS "node-addon-api include dir: ${NODE_ADDON_API_DIR}")
-else()
-  message(WARNING "Could not determine node-addon-api include directory. Ensure dependency is installed.")
+# Link libraries
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
+
+# Compiler-specific options
+if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+  # Generate node.lib
+  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-add_library(pruftcore SHARED
-  src/native/addon.cpp
-  src/native/modules/packet/packet_parser.cpp
-)
-
-target_include_directories(pruftcore PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/native
-  ${NODE_ADDON_API_DIR}
-)
-
-# Add Node.js headers include dir provided by cmake-js
-if(DEFINED CMAKE_JS_INC)
-  target_include_directories(pruftcore PRIVATE ${CMAKE_JS_INC})
-endif()
-if(DEFINED ENV{CMAKE_JS_INC})
-  # Fallback if only environment variable is set
-  target_include_directories(pruftcore PRIVATE $ENV{CMAKE_JS_INC})
-endif()
-
-# On macOS ensure correct extension name
-set_target_properties(pruftcore PROPERTIES
-  PREFIX ""
-  SUFFIX ".node"
-)
-
-# Link with Node if cmake-js provided libs
-if(DEFINED ENV{CMAKE_JS_LIB})
-  target_link_libraries(pruftcore $ENV{CMAKE_JS_LIB})
-endif()
+# Define NAPI_VERSION
+add_definitions(-DNAPI_VERSION=8)
