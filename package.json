@@ -5,6 +5,7 @@
     "scripts": {
         "dev:web": "turbo run dev --filter=@repo/web",
         "dev:desktop": "turbo run dev --filter=@repo/desktop",
+        "build:core": "pnpm -F @repo/core run build",
         "format": "prettier --write .",
         "clean": "node clean.js"
     },

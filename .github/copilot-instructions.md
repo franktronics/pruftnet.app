@@ -9,13 +9,13 @@ This project is an application that allows different analyses to be performed on
 ## Project Structure
 The project is a monorepo managed with pnpm and Turborepo.
 - `packages/`: Contains all the packages for the project.
-    - `core/`: Core functionalities for network analysis written in C++ with N-API and build scripts using CMake.
-    - `front/`: Frontend application built with React and TypeScript used for the electron app and web app.
-    - `ui/`: Shared UI components for the frontend application using React and TypeScript.
-    - `utils/`: Shared utility functions and types for the project using TypeScript.
+    - `core/` @repo/core: Core functionalities for network analysis written in C++ with N-API and build scripts using CMake.
+    - `front/` @repo/front: Frontend application built with React and TypeScript used for the electron app and web app.
+    - `ui/` @repo/ui: Shared UI components for the frontend application using React and TypeScript.
+    - `utils/` @repo/utils: Shared utility functions and types for the project using TypeScript.
 - `apps/`: Contains the applications for the project.
-    - `desktop/`: Electron application for desktop usage built with React and TypeScript.
-    - `web/`: Web application built with React and TypeScript.
+    - `desktop/` @repo/desktop: Electron application for desktop usage built with React and TypeScript.
+    - `web/` @repo/web: Web application built with React and TypeScript.
 
 ## Project Operation
 - The application runs in two versions, a web version and a desktop version.
@@ -34,5 +34,5 @@ The project is a monorepo managed with pnpm and Turborepo.
 - Use ALL_CAPS for constants
 
 ## Comment Conventions
-- Write comments in English
+- Code and comments should be in English no matter the native language of the author
 - Only write comments for complex logic or non-obvious code

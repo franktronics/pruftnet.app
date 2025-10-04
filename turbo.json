@@ -13,6 +13,10 @@
             "cache": false,
             "persistent": true
         },
+        "build:core": {
+            "cache": false,
+            "persistent": true
+        },
         "format": {
             "cache": false
         },

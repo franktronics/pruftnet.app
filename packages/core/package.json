@@ -1,0 +1,37 @@
+{
+	"name": "@repo/core",
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Native network analysis core (C++ N-API) for Pruftnet",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"require": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build:native": "cmake-js build",
+		"build:ts": "tsc -p tsconfig.json",
+		"build": "pnpm run build:native && pnpm run build:ts"
+	},
+	"dependencies": {
+		"node-addon-api": "^7.0.0"
+	},
+	"devDependencies": {
+		"cmake-js": "^7.3.0",
+		"typescript": "^5.4.0"
+	},
+	"files": [
+		"dist",
+		"build/Release/*.node",
+		"CMakeLists.txt",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=18"
+	}
+}

@@ -3,7 +3,7 @@ import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { DateTime } from '@repo/core'
+import { PacketParser } from '@repo/core'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -36,8 +36,8 @@ const createWindow = () => {
     ipcMain.on('theme:change', (_, theme) => {
         nativeTheme.themeSource = theme
     })
-    const info = DateTime.getInfo()
-    console.log('######### DateTime info', info)
+    const parser = new PacketParser();
+    console.log("###########", parser.getTestData());
 }
 
 // This method will be called when Electron has finished
