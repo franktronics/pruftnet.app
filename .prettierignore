@@ -7,3 +7,5 @@ out
 package-lock.json
 node_modules
 *.css
+*.cc
+*.hpp

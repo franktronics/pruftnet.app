@@ -59,3 +59,4 @@ build/Release
 *.tsbuildinfo
 .npm
 .eslintcache
+bin/

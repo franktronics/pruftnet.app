@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev:api": "turbo run dev --filter=@repo/api",
+        "dev:web": "turbo run dev --filter=@repo/web",
         "dev:desktop": "turbo run dev --filter=@repo/desktop",
         "format": "prettier --write .",
         "clean": "node clean.js"
