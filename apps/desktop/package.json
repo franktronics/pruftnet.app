@@ -33,29 +33,29 @@
         "@electron-forge/plugin-auto-unpack-natives": "^7.9.0",
         "@electron-forge/plugin-fuses": "^7.9.0",
         "@electron-forge/plugin-vite": "^7.9.0",
-        "@electron/fuses": "^1.8.0",
-        "@tailwindcss/vite": "^4.1.13",
+        "@electron/fuses": "^2.0.0",
+        "@tailwindcss/vite": "^4.1.14",
         "@types/electron-squirrel-startup": "^1.0.2",
-        "@types/react": "^19.1.13",
-        "@types/react-dom": "^19.1.9",
-        "@typescript-eslint/eslint-plugin": "^5.62.0",
-        "@typescript-eslint/parser": "^5.62.0",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "@typescript-eslint/eslint-plugin": "^8.45.0",
+        "@typescript-eslint/parser": "^8.45.0",
         "@vitejs/plugin-react": "^5.0.4",
-        "electron": "38.1.0",
-        "eslint": "^8.57.1",
+        "electron": "38.2.1",
+        "eslint": "^9.37.0",
         "eslint-import-resolver-node": "^0.3.9",
         "eslint-import-resolver-typescript": "^4.4.4",
         "eslint-plugin-import": "^2.32.0",
-        "tailwindcss": "^4.1.13",
-        "typescript": "~4.5.5",
-        "vite": "^5.4.20"
+        "tailwindcss": "^4.1.14",
+        "typescript": "~5.9.3",
+        "vite": "^7.1.9"
     },
     "dependencies": {
         "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
         "@repo/core": "workspace:*",
         "electron-squirrel-startup": "^1.0.1",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0"
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
     }
 }

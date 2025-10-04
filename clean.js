@@ -1,18 +1,18 @@
 import { rm } from 'node:fs'
 
 const dirs = [
-    './apps/api/dist',
+    './apps/web/dist',
+    './apps/web/.turbo',
     './apps/desktop/dist',
     './apps/desktop/.vite',
     './apps/desktop/.turbo',
     './packages/ui/dist',
     './packages/core/dist',
-    './packages/core/build',
-    './packages/core/bin',
+    './packages/core/build'
 ]
 
 const node_modules = [
-    './apps/api/node_modules',
+    './apps/web/node_modules',
     './apps/desktop/node_modules',
     './packages/front/node_modules',
     './packages/ui/node_modules',
