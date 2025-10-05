@@ -1,11 +1,18 @@
 // Type definitions for the core network analysis package
 
 export interface PacketData {
-  source_ip: string;
-  dest_ip: string;
-  source_port: number;
-  dest_port: number;
-  protocol: string;
+  data: Uint8Array;
+  length: number;
+  timestamp: number;
+  source_interface: string;
+}
+
+export interface RawPacketData {
+  source_ip?: string;
+  dest_ip?: string;
+  source_port?: number;
+  dest_port?: number;
+  protocol?: string;
   timestamp: number;
 }
 
