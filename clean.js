@@ -8,7 +8,8 @@ const dirs = [
     './apps/desktop/.turbo',
     './packages/ui/dist',
     './packages/core/dist',
-    './packages/core/build'
+    './packages/core/build',
+    './pnpm-lock.yaml'
 ]
 
 const node_modules = [
@@ -22,7 +23,7 @@ const node_modules = [
     '.turbo',
 ]
 
-const removeAll = process.argv.includes('--all')
+const preservemodules = process.argv.includes('--modules')
 
 try {
     dirs.forEach((dir) => {
@@ -34,7 +35,7 @@ try {
         })
         console.log('removed: ', dir)
     })
-    if (removeAll)
+    if (!preservemodules)
         node_modules.forEach((dir) => {
             rm(dir, { recursive: true, force: true }, (error) => {
                 if (error) {

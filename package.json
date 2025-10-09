@@ -20,8 +20,12 @@
     },
     "pnpm": {
         "onlyBuiltDependencies": [
+            "@swc/core",
+            "@tailwindcss/oxide",
             "electron",
-            "electron-winstaller"
+            "electron-winstaller",
+            "esbuild",
+            "unrs-resolver"
         ]
     }
 }

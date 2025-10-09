@@ -18,12 +18,6 @@
         "email": "franktronicsprog@gmail.com"
     },
     "license": "MIT",
-    "pnpm": {
-        "onlyBuiltDependencies": [
-            "electron",
-            "electron-winstaller"
-        ]
-    },
     "devDependencies": {
         "@electron-forge/cli": "^7.9.0",
         "@electron-forge/maker-deb": "^7.9.0",
@@ -34,6 +28,7 @@
         "@electron-forge/plugin-fuses": "^7.9.0",
         "@electron-forge/plugin-vite": "^7.9.0",
         "@electron/fuses": "^2.0.0",
+        "@electron/get": "^4.0.2",
         "@tailwindcss/vite": "^4.1.14",
         "@types/electron-squirrel-startup": "^1.0.2",
         "@types/react": "^19.2.0",
@@ -51,9 +46,9 @@
         "vite": "^7.1.9"
     },
     "dependencies": {
+        "@repo/core": "workspace:*",
         "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
-        "@repo/core": "workspace:*",
         "electron-squirrel-startup": "^1.0.1",
         "react": "^19.2.0",
         "react-dom": "^19.2.0"
