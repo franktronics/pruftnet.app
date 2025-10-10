@@ -46,7 +46,6 @@
         "vite": "^7.1.9"
     },
     "dependencies": {
-        "@repo/core": "workspace:*",
         "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
         "electron-squirrel-startup": "^1.0.1",

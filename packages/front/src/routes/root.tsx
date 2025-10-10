@@ -1,6 +1,5 @@
 import { Outlet, createRoute, createRootRoute, createRouter } from '@tanstack/react-router'
 import Home from '../pages/home'
-import Stock from '../pages/stock/index'
 import Error404 from '../pages/error/404'
 import { DashboardLayout } from '@repo/ui/templates'
 
@@ -21,13 +20,7 @@ const indexRoute = createRoute({
     component: Home,
 })
 
-const stockRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/stock',
-    component: Stock,
-})
-
-const routeTree = rootRoute.addChildren([indexRoute, stockRoute])
+const routeTree = rootRoute.addChildren([indexRoute])
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
