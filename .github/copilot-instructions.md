@@ -25,6 +25,12 @@ The project is a monorepo managed with pnpm and Turborepo.
 - The core functionalities are implemented in C++ for performance and are accessed via N-API.
 - The frontend is built with React and TypeScript for a modern user interface.
 
+## Testing Infrastructure
+- C++ unit tests use Catch2 framework in `packages/core/tests/`
+- Tests are compiled into a single `core_tests` executable
+- Test dependencies are managed via `test_sources.txt` configuration
+- Run all tests: `pnpm test`
+
 
 # Project general coding standards
 

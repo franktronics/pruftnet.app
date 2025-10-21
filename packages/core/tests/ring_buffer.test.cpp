@@ -3,6 +3,9 @@
 #include "utils/buffer/ring_buffer.hpp"
 #include <vector>
 #include <cstring>
+#include <thread>
+#include <chrono>
+#include <atomic>
 
 // Helper function to create test data
 std::vector<uint8_t> createTestData(size_t size, uint8_t fillValue = 0x42) {
@@ -192,5 +195,48 @@ TEST_CASE("RingBuffer edge cases", "[ring_buffer]") {
                 REQUIRE(output.data[j] == data[j]);
             }
         }
+    }
+}
+
+TEST_CASE("RingBuffer multithreading", "[ring_buffer][multithread]") {
+    
+    SECTION("Simple producer-consumer") {
+        RingBuffer buffer;
+        const int numPackets = 20;  // Keep it small for fast execution
+        std::atomic<int> packetsWritten(0);
+        std::atomic<int> packetsRead(0);
+        
+        // Producer thread
+        std::thread producer([&buffer, &packetsWritten, numPackets]() {
+            for (int i = 0; i < numPackets; ++i) {
+                auto data = createTestData(10, static_cast<uint8_t>(i));
+                
+                // Simple retry logic
+                while (!buffer.push(data.data(), data.size())) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(10));
+                }
+                packetsWritten++;
+            }
+        });
+        
+        // Consumer thread
+        std::thread consumer([&buffer, &packetsRead, numPackets]() {
+            RawPacket output;
+            while (packetsRead < numPackets) {
+                if (buffer.pop(output)) {
+                    packetsRead++;
+                } else {
+                    std::this_thread::sleep_for(std::chrono::microseconds(10));
+                }
+            }
+        });
+        
+        // Wait for both threads to complete
+        producer.join();
+        consumer.join();
+        
+        // Verify all packets were processed
+        REQUIRE(packetsWritten == numPackets);
+        REQUIRE(packetsRead == numPackets);
     }
 }
