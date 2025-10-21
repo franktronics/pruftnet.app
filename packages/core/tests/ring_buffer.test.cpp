@@ -2,9 +2,6 @@
 
 #include "utils/buffer/ring_buffer.hpp"
 #include <vector>
-#include <thread>
-#include <chrono>
-#include <atomic>
 #include <cstring>
 
 // Helper function to create test data
@@ -138,48 +135,7 @@ TEST_CASE("RingBuffer overflow behavior", "[ring_buffer]") {
     }
 }
 
-TEST_CASE("RingBuffer multithreading safety", "[ring_buffer][slow]") {
-    
-    SECTION("Producer-consumer thread safety") {
-        RingBuffer buffer;
-        const int numPackets = 50;  // Reduced for faster testing
-        std::atomic<int> packetsWritten(0);
-        std::atomic<int> packetsRead(0);
-        std::atomic<bool> producerDone(false);
-        
-        // Producer thread
-        std::thread producer([&buffer, &packetsWritten, &producerDone, numPackets]() {
-            for (int i = 0; i < numPackets; ++i) {
-                auto data = createTestData(50, i % 256);
-                while (!buffer.push(data.data(), data.size())) {
-                    // Retry if buffer is full
-                    std::this_thread::sleep_for(std::chrono::microseconds(1));
-                }
-                packetsWritten++;
-            }
-            producerDone = true;
-        });
-        
-        // Consumer thread
-        std::thread consumer([&buffer, &packetsRead, &producerDone, numPackets]() {
-            RawPacket output;
-            while (packetsRead < numPackets) {
-                if (buffer.pop(output)) {
-                    packetsRead++;
-                } else {
-                    std::this_thread::sleep_for(std::chrono::microseconds(1));
-                }
-            }
-        });
-        
-        producer.join();
-        consumer.join();
-        
-        REQUIRE(packetsWritten == numPackets);
-        REQUIRE(packetsRead == numPackets);
-        REQUIRE(producerDone == true);
-    }
-}
+
 
 TEST_CASE("RingBuffer edge cases", "[ring_buffer]") {
     

@@ -9,6 +9,7 @@ const dirs = [
     './packages/ui/dist',
     './packages/core/dist',
     './packages/core/build',
+    './packages/core/tests/build',
     './pnpm-lock.yaml'
 ]
 

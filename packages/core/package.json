@@ -16,7 +16,8 @@
     "build:cpp": "cmake-js compile",
     "build:ts": "tsc",
     "build": "pnpm run build:cpp && pnpm run build:ts",
-    "clean": "cmake-js clean && rimraf dist"
+    "clean": "cmake-js clean && rimraf dist",
+    "test": "cd tests && ./run_tests.sh"
   },
   "dependencies": {
     "node-addon-api": "^8.0.0"

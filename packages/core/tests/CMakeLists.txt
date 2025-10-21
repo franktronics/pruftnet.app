@@ -50,35 +50,35 @@ file(GLOB_RECURSE TEST_SOURCES
 # Remove CMakeLists.txt and other non-test files from test sources
 list(FILTER TEST_SOURCES INCLUDE REGEX ".*\\.test\\.cpp$")
 
-# Create test executable
-add_executable(ring_buffer_tests ${TEST_SOURCES} ${CORE_SOURCES})
+# Create test executable (generic name for all tests)
+add_executable(core_tests ${TEST_SOURCES} ${CORE_SOURCES})
 
 # Link Catch2
-target_link_libraries(ring_buffer_tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(core_tests PRIVATE Catch2::Catch2WithMain)
 
 # Enable testing
 enable_testing()
 
 # Add tests to CTest
-add_test(NAME ring_buffer_unit_tests COMMAND ring_buffer_tests)
+add_test(NAME core_unit_tests COMMAND core_tests)
 
 # Optional: Add Catch2's automatic test discovery
 if(TARGET Catch2::Catch2WithMain)
     include(Catch)
-    catch_discover_tests(ring_buffer_tests)
+    catch_discover_tests(core_tests)
 endif()
 
 # Compiler-specific options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(ring_buffer_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(core_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # Enable debug info in debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(ring_buffer_tests PRIVATE -g)
+    target_compile_options(core_tests PRIVATE -g)
 endif()
 
 # Print some information
-message(STATUS "Test executable: ring_buffer_tests")
+message(STATUS "Test executable: core_tests")
 message(STATUS "Core sources found: ${CORE_SOURCES}")
 message(STATUS "Test sources found: ${TEST_SOURCES}")

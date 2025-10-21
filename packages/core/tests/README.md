@@ -4,22 +4,28 @@ This directory contains unit tests for the core C++ components using Catch2 fram
 
 ## Running Tests
 
-### Quick Method (from tests directory)
-Use the provided script:
+### Using pnpm (recommended)
+From project root:
 ```bash
-cd tests
-./run_tests.sh
+pnpm test
 ```
 
-### Alternative Method (from core root)
+From core package:
 ```bash
+cd packages/core
+pnpm test
+```
+
+### Direct script execution
+```bash
+cd packages/core/tests
 ./run_tests.sh
 ```
 
 ### Manual Method
 1. Navigate to tests directory and create a build directory:
 ```bash
-cd tests
+cd packages/core/tests
 mkdir -p build
 cd build
 ```
@@ -36,7 +42,7 @@ cmake --build . --parallel
 
 4. Run tests:
 ```bash
-./ring_buffer_tests
+./core_tests
 ```
 
 ## Adding New Tests
@@ -73,7 +79,9 @@ TEST_CASE("Your test description", "[tag]") {
 ## Test Structure
 
 - `ring_buffer.test.cpp`: Tests for the RingBuffer class
+- `basic_test.test.cpp`: Basic functionality tests (example)
 - More test files can be added following the same pattern (must end with `.test.cpp`)
+- All tests are compiled into a single executable: `core_tests`
 - All tests are isolated in this `tests/` directory
 
 ## Dependencies
@@ -85,11 +93,12 @@ TEST_CASE("Your test description", "[tag]") {
 ## Test Categories
 
 Tests are organized with tags:
-- `[ring_buffer]`: Basic RingBuffer functionality tests
-- `[slow]`: Tests that may take longer to run (multithreading, etc.)
+- `[ring_buffer]`: RingBuffer functionality tests
+- `[basic]`: Basic C++ functionality tests
+- `[memory]`: Memory-related tests
 
-You can run specific test categories:
+You can run specific test categories if needed:
 ```bash
-./ring_buffer_tests "[ring_buffer]"  # Run only ring buffer tests
-./ring_buffer_tests "[slow]"         # Run only slow tests
+./core_tests "[ring_buffer]"  # Run only ring buffer tests
+./core_tests "[basic]"        # Run only basic tests
 ```
