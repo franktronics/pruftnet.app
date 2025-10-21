@@ -1,0 +1,9 @@
+# List of core source files to include in tests
+# Add new files here as needed for testing
+# Format: relative path from core/src/cpp/
+
+utils/buffer/ring_buffer.cpp
+
+# Future files can be added like:
+# utils/parser/packet_parser.cpp
+# utils/network/network_helper.cpp
