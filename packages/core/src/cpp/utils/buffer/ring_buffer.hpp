@@ -13,6 +13,7 @@ public:
   RingBuffer();
 
   bool push(const uint8_t *src, size_t len);
+  bool push(const RawPacket& packet);
   bool pop(RawPacket &out);
 
 private:

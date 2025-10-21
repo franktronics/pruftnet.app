@@ -5,6 +5,9 @@
 utils/buffer/ring_buffer.cpp
 utils/packets/packet_model.cpp
 utils/cap_file_builder/pcap_builder.cpp
+utils/network_interface/n_interface_model.cpp
+modules/sniffer/packet_capture.cpp
+modules/sniffer/network_sniffer.cpp
 
 # Future files can be added like:
 # utils/parser/packet_parser.cpp

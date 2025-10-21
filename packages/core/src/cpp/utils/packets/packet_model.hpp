@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
+#include <string>
 
 constexpr size_t MAX_PACKET_SIZE = 1024;
 
@@ -15,5 +16,6 @@ struct RawPacket {
     bool valid = false;
     
     // Constructor to set timestamp automatically
-    RawPacket() : timestamp(std::chrono::system_clock::now()) {}
+    RawPacket();
+    std::string toString() const;
 };

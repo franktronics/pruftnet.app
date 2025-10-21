@@ -108,4 +108,3 @@ TEST_CASE("PcapBuilder can create and write PCAP files", "[pcap_builder]") {
         std::filesystem::remove(test_filename);
     }
 }
-/*

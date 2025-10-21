@@ -16,8 +16,26 @@ bool RingBuffer::push(const uint8_t *src, size_t len) {
   RawPacket &pkt = buffer[writeIndex];
   std::memcpy(pkt.data.data(), src, len);
   pkt.length = len;
+  pkt.original_length = len;
+  pkt.timestamp = std::chrono::system_clock::now();
   pkt.valid = true;
 
+  writeIndex = nextWrite;
+  return true;
+}
+
+bool RingBuffer::push(const RawPacket& packet) {
+  if (packet.length > MAX_PACKET_SIZE)
+    return false;
+
+  size_t nextWrite = (writeIndex + 1) % RING_SIZE;
+
+  if (nextWrite == readIndex.load(std::memory_order_acquire)) {
+    // Overwrite if the buffer is full
+    readIndex.store((readIndex + 1) % RING_SIZE, std::memory_order_release);
+  }
+
+  buffer[writeIndex] = packet;
   writeIndex = nextWrite;
   return true;
 }
