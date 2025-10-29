@@ -7,6 +7,8 @@
 #include <cstring>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <thread>
+#include <chrono>
 
 PacketCapture::PacketCapture(const std::string& interface_name)
     : interface_name_(interface_name), raw_socket_(-1), is_capturing_(false) {
@@ -48,6 +50,8 @@ bool PacketCapture::startCapture(const PacketHandler& handler) {
         
         if (packet_size < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // Add a small sleep to prevent busy waiting
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;
             }
             std::cerr << "Error receiving packet: " << strerror(errno) << std::endl;
@@ -65,6 +69,11 @@ bool PacketCapture::startCapture(const PacketHandler& handler) {
 
 void PacketCapture::stopCapture() {
     is_capturing_.store(false);
+    
+    // Close the socket to unblock the recv() call
+    if (raw_socket_ != -1) {
+        shutdown(raw_socket_, SHUT_RDWR);
+    }
 }
 
 bool PacketCapture::isCapturing() const {

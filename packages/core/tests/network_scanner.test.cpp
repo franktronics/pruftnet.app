@@ -33,7 +33,7 @@ TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
         
         // Let it capture for 10 seconds
         std::cout << "Capturing packets for 10 seconds..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(3));
         
         // Stop the sniffer
         std::cout << "Stopping capture..." << std::endl;

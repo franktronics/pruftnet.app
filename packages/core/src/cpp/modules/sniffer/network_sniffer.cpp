@@ -78,7 +78,7 @@ void NetworkSniffer::captureWorker() {
 }
 
 void NetworkSniffer::processingWorker() {
-    while (!should_stop_.load() || is_running_.load()) {
+    while (!should_stop_.load()) {
         RawPacket packet;
         
         if (ring_buffer_->pop(packet)) {
