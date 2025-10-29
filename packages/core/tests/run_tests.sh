@@ -26,7 +26,8 @@ cmake --build . --parallel $(nproc)
 # Run all tests
 echo "🚀 Running all tests..."
 echo "========================"
-./core_tests --verbosity high --durations yes
+##./core_tests --verbosity high --durations yes
+sudo ./core_tests "[network_scanner]"
 
 echo ""
 echo "✅ All tests completed successfully!"

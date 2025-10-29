@@ -5,8 +5,7 @@
 #include <cstddef>
 #include <chrono>
 #include <string>
-
-constexpr size_t MAX_PACKET_SIZE = 1024;
+#include "../common/common.hpp"
 
 struct RawPacket {
     std::array<uint8_t, MAX_PACKET_SIZE> data;

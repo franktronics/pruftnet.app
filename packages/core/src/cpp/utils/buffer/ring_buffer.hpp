@@ -1,12 +1,11 @@
 #pragma once
 
 #include "../packets/packet_model.hpp"
+#include "../common/common.hpp"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-
-constexpr size_t RING_SIZE = 128;
 
 class RingBuffer {
 public:
