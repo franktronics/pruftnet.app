@@ -20,7 +20,7 @@ bool NetworkSniffer::startSniffing(const NetworkInterface& interface, const Pack
     }
     
     packet_callback_ = callback;
-    packet_capture_ = std::make_unique<PacketCapture>(interface.name);
+    packet_capture_ = std::make_unique<PacketCapture>(interface.getName());
     
     if (!packet_capture_->initialize()) {
         packet_capture_.reset();

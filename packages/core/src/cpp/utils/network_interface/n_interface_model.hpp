@@ -3,6 +3,10 @@
 #include <string>
 
 struct NetworkInterface {
-    NetworkInterface(std::string interface_name) : name(std::move(interface_name)) {}
-    std::string name;
+    public:
+        NetworkInterface(std::string interface_name);
+        std::string getName() const;
+        void setName(const std::string& interface_name);
+    private:
+        std::string name_;
 };

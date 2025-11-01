@@ -9,7 +9,7 @@
 
 TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
     SECTION("Basic packet capture test") {
-        NetworkInterface enp0s8_interface("wlp1s0");
+        NetworkInterface nic("wlp1s0");
         
         NetworkSniffer sniffer;
         std::atomic<int> packet_count(0);
@@ -23,8 +23,8 @@ TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
         };
         
         // Start sniffing
-        bool started = sniffer.startSniffing(enp0s8_interface, callback);
-        
+        bool started = sniffer.startSniffing(nic, callback);
+
         if (!started) {
             std::cout << "Warning: Could not start packet capture on interface "
                       << "This might be due to missing interface or lack of privileges." 
