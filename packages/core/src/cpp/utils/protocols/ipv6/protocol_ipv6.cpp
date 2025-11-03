@@ -32,12 +32,12 @@ ProtocolType ProtocolIPv6::getNextProtocol() const {
         uint8_t next_header = fields[NEXT_HEADER].value[0];
         
         switch (next_header) {
-            case 0x06:
+            case 6:
                 return ProtocolType::TCP;
-            case 0x11:
+            case 17:
                 return ProtocolType::UDP;
-            case 0x3A:
-                return ProtocolType::ICMP;
+            case 58:
+                return ProtocolType::ICMPV6;
             default:
                 return ProtocolType::UNKNOWN;
         }

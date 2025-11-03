@@ -14,6 +14,7 @@ enum class ProtocolType : uint16_t {
     TCP = 0x06,
     UDP = 0x11,
     ICMP = 0x01,
+    ICMPV6 = 0x3A,
     UNKNOWN = 0xFFFF
 };
 
