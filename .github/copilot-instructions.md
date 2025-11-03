@@ -42,3 +42,13 @@ The project is a monorepo managed with pnpm and Turborepo.
 ## Comment Conventions
 - Code and comments should be in English no matter the native language of the author
 - Only write comments for complex logic or non-obvious code
+
+## Source for documentation
+- Use [RFC editor](https://www.rfc-editor.org/) for network protocol documentation
+- Use [MDN Web Docs](https://developer.mozilla.org/) for web-related documentation
+- Use [C++ reference](https://en.cppreference.com/w/) for C++ documentation
+- Use [Node.js documentation](https://nodejs.org/en/docs/) for Node.js documentation
+- Use [React documentation](https://react.dev/reference/react) for React documentation
+- Use [TypeScript documentation](https://www.typescriptlang.org/docs/) for TypeScript documentation
+- Use [Electron documentation](https://www.electronjs.org/docs/latest/) for Electron documentation
+- Use [Express.js documentation](https://expressjs.com/en/5x/api.html) for Express.js documentation
