@@ -1,14 +1,16 @@
 #include "protocol_ipv6.hpp"
 
 ProtocolIPv6::ProtocolIPv6() {
-    fields.reserve(6);
+    fields.reserve(8);
     
-    fields.emplace_back(0, 4, "version_traffic_flow", "Version, Traffic Class and Flow Label");
-    fields.emplace_back(4, 2, "payload_length", "Payload Length");
-    fields.emplace_back(6, 1, "next_header", "Next Header");
-    fields.emplace_back(7, 1, "hop_limit", "Hop Limit");
-    fields.emplace_back(8, 16, "src_ip", "Source Address");
-    fields.emplace_back(24, 16, "dest_ip", "Destination Address");
+    fields.emplace_back(0, 4, "version", "Version");
+    fields.emplace_back(4, 8, "traffic_class", "Traffic Class");
+    fields.emplace_back(12, 20, "flow_label", "Flow Label");
+    fields.emplace_back(32, 16, "payload_length", "Payload Length");
+    fields.emplace_back(48, 8, "next_header", "Next Header");
+    fields.emplace_back(56, 8, "hop_limit", "Hop Limit");
+    fields.emplace_back(64, 128, "src_ip", "Source Address");
+    fields.emplace_back(192, 128, "dest_ip", "Destination Address");
 }
 
 const std::vector<Field>& ProtocolIPv6::getFields() const {

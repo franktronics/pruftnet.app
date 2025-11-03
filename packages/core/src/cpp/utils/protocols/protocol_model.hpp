@@ -18,19 +18,16 @@ enum class ProtocolType : uint16_t {
 };
 
 struct Field {
-    size_t offset;           // Offset in bytes from start of packet data
-    size_t size;             // Size in bytes of this field
+    size_t bit_start;        // Bit index from start of packet data
+    size_t bit_length;       // Length in bits of the value to read
     std::string name;
     std::string description;
-    std::vector<uint8_t> value; // Extracted value from raw data
+    std::vector<uint8_t> value;
     
-    // Constructor that extracts value from raw packet data
-    Field(size_t offset, size_t size, const std::string& name, const std::string& description);
-    
-    // Default constructor
+    Field(size_t bit_start, size_t bit_length, const std::string& name, const std::string& description);
     Field();
 
-    void calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data);
+    bool calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data);
 };
 
 struct ProtocolModel {

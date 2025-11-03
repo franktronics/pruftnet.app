@@ -3,10 +3,10 @@
 ProtocolICMP::ProtocolICMP() {
     fields.reserve(4);
     
-    fields.emplace_back(0, 1, "type", "Type");
-    fields.emplace_back(1, 1, "code", "Code");
-    fields.emplace_back(2, 2, "checksum", "Checksum");
-    fields.emplace_back(4, 4, "rest_of_header", "Rest of Header");
+    fields.emplace_back(0, 8, "type", "Type");
+    fields.emplace_back(8, 8, "code", "Code");
+    fields.emplace_back(16, 16, "checksum", "Checksum");
+    fields.emplace_back(32, 32, "rest_of_header", "Rest of Header");
 }
 
 const std::vector<Field>& ProtocolICMP::getFields() const {

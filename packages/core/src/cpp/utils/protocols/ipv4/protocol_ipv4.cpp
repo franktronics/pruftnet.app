@@ -1,18 +1,20 @@
 #include "protocol_ipv4.hpp"
 
 ProtocolIPv4::ProtocolIPv4() {
-    fields.reserve(10);
+    fields.reserve(12);
     
-    fields.emplace_back(0, 1, "version_ihl", "Version and Header Length");
-    fields.emplace_back(1, 1, "tos", "Type of Service");
-    fields.emplace_back(2, 2, "total_length", "Total Length");
-    fields.emplace_back(4, 2, "identification", "Identification");
-    fields.emplace_back(6, 2, "flags_fragment", "Flags and Fragment Offset");
-    fields.emplace_back(8, 1, "ttl", "Time to Live");
-    fields.emplace_back(9, 1, "protocol", "Protocol");
-    fields.emplace_back(10, 2, "checksum", "Header Checksum");
-    fields.emplace_back(12, 4, "src_ip", "Source IP Address");
-    fields.emplace_back(16, 4, "dest_ip", "Destination IP Address");
+    fields.emplace_back(0, 4, "version", "IP Version");
+    fields.emplace_back(4, 4, "ihl", "Internet Header Length");
+    fields.emplace_back(8, 8, "tos", "Type of Service");
+    fields.emplace_back(16, 16, "total_length", "Total Length");
+    fields.emplace_back(32, 16, "identification", "Identification");
+    fields.emplace_back(48, 3, "flags", "Flags");
+    fields.emplace_back(51, 13, "fragment_offset", "Fragment Offset");
+    fields.emplace_back(64, 8, "ttl", "Time to Live");
+    fields.emplace_back(72, 8, "protocol", "Protocol");
+    fields.emplace_back(80, 16, "checksum", "Header Checksum");
+    fields.emplace_back(96, 32, "src_ip", "Source IP Address");
+    fields.emplace_back(128, 32, "dest_ip", "Destination IP Address");
 }
 
 const std::vector<Field>& ProtocolIPv4::getFields() const {

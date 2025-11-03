@@ -20,9 +20,11 @@ public:
         DEST_PORT = 1,
         SEQUENCE_NUMBER = 2,
         ACK_NUMBER = 3,
-        DATA_OFFSET_FLAGS = 4,
-        WINDOW_SIZE = 5,
-        CHECKSUM = 6,
-        URGENT_POINTER = 7
+        DATA_OFFSET = 4,
+        RESERVED = 5,
+        FLAGS = 6,
+        WINDOW_SIZE = 7,
+        CHECKSUM = 8,
+        URGENT_POINTER = 9
     };
 };

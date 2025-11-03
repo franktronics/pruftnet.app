@@ -3,13 +3,16 @@
 ProtocolEthernet::ProtocolEthernet() {
     fields.reserve(3);
     
-    fields.emplace_back(0, MAC_ADDRESS_SIZE, "dest_mac", 
+    // Destination MAC Address: 6 bytes = 48 bits, starting at bit 0
+    fields.emplace_back(0, 48, "dest_mac", 
                        "Destination MAC Address");
     
-    fields.emplace_back(MAC_ADDRESS_SIZE, MAC_ADDRESS_SIZE, "src_mac",
+    // Source MAC Address: 6 bytes = 48 bits, starting at bit 48
+    fields.emplace_back(48, 48, "src_mac",
                        "Source MAC Address");
     
-    fields.emplace_back(12, 2, "ethertype",
+    // EtherType: 2 bytes = 16 bits, starting at bit 96
+    fields.emplace_back(96, 16, "ethertype",
                        "EtherType or Frame Length");
 }
 

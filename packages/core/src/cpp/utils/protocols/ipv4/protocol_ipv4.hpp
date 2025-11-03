@@ -17,15 +17,17 @@ public:
     static constexpr size_t IPV4_ADDRESS_SIZE = 4;
     
     enum FieldIndex {
-        VERSION_IHL = 0,
-        TOS = 1,
-        TOTAL_LENGTH = 2,
-        IDENTIFICATION = 3,
-        FLAGS_FRAGMENT = 4,
-        TTL = 5,
-        PROTOCOL = 6,
-        CHECKSUM = 7,
-        SRC_IP = 8,
-        DEST_IP = 9
+        VERSION = 0,
+        IHL = 1,
+        TOS = 2,
+        TOTAL_LENGTH = 3,
+        IDENTIFICATION = 4,
+        FLAGS = 5,
+        FRAGMENT_OFFSET = 6,
+        TTL = 7,
+        PROTOCOL = 8,
+        CHECKSUM = 9,
+        SRC_IP = 10,
+        DEST_IP = 11
     };
 };

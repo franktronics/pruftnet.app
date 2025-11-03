@@ -17,11 +17,13 @@ public:
     static constexpr size_t IPV6_ADDRESS_SIZE = 16;
     
     enum FieldIndex {
-        VERSION_TRAFFIC_FLOW = 0,
-        PAYLOAD_LENGTH = 1,
-        NEXT_HEADER = 2,
-        HOP_LIMIT = 3,
-        SRC_IP = 4,
-        DEST_IP = 5
+        VERSION = 0,
+        TRAFFIC_CLASS = 1,
+        FLOW_LABEL = 2,
+        PAYLOAD_LENGTH = 3,
+        NEXT_HEADER = 4,
+        HOP_LIMIT = 5,
+        SRC_IP = 6,
+        DEST_IP = 7
     };
 };
