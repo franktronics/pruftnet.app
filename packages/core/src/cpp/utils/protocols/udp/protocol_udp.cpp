@@ -1,6 +1,7 @@
 #include "protocol_udp.hpp"
 
 ProtocolUDP::ProtocolUDP() {
+    name = "UDP";
     fields.reserve(4);
     
     fields.emplace_back(0, 16, "src_port", "Source Port");
@@ -11,6 +12,10 @@ ProtocolUDP::ProtocolUDP() {
 
 const std::vector<Field>& ProtocolUDP::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolUDP::getName() const {
+    return name;
 }
 
 void ProtocolUDP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

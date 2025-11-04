@@ -13,6 +13,10 @@ const std::vector<Field>& ProtocolICMPv6::getFields() const {
     return fields;
 }
 
+const std::string& ProtocolICMPv6::getName() const {
+    return name;
+}
+
 void ProtocolICMPv6::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
     for (Field& field : fields) {
         field.calculateValue(raw_data);

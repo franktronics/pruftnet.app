@@ -1,6 +1,7 @@
 #include "protocol_tcp.hpp"
 
 ProtocolTCP::ProtocolTCP() {
+    name = "TCP";
     fields.reserve(10);
     
     fields.emplace_back(0, 16, "src_port", "Source Port");
@@ -17,6 +18,10 @@ ProtocolTCP::ProtocolTCP() {
 
 const std::vector<Field>& ProtocolTCP::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolTCP::getName() const {
+    return name;
 }
 
 void ProtocolTCP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

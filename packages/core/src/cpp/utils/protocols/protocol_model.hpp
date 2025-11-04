@@ -34,6 +34,7 @@ struct Field {
 struct ProtocolModel {
     virtual ~ProtocolModel() = default;
     virtual const std::vector<Field>& getFields() const = 0;
+    virtual const std::string& getName() const = 0;
     virtual void parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) = 0;
     virtual ProtocolType getProtocolType() const = 0;
     virtual ProtocolType getNextProtocol() const = 0;

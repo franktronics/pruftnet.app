@@ -1,6 +1,7 @@
 #include "protocol_ipv4.hpp"
 
 ProtocolIPv4::ProtocolIPv4() {
+    name = "IPv4";
     fields.reserve(12);
     
     fields.emplace_back(0, 4, "version", "IP Version");
@@ -19,6 +20,10 @@ ProtocolIPv4::ProtocolIPv4() {
 
 const std::vector<Field>& ProtocolIPv4::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolIPv4::getName() const {
+    return name;
 }
 
 void ProtocolIPv4::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

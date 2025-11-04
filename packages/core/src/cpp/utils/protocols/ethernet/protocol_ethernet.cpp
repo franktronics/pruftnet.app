@@ -1,6 +1,7 @@
 #include "protocol_ethernet.hpp"
 
 ProtocolEthernet::ProtocolEthernet() {
+    name = "Ethernet";
     fields.reserve(3);
     
     // Destination MAC Address: 6 bytes = 48 bits, starting at bit 0
@@ -18,6 +19,10 @@ ProtocolEthernet::ProtocolEthernet() {
 
 const std::vector<Field>& ProtocolEthernet::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolEthernet::getName() const {
+    return name;
 }
 
 void ProtocolEthernet::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

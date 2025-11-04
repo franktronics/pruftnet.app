@@ -1,6 +1,7 @@
 #include "protocol_arp.hpp"
 
 ProtocolARP::ProtocolARP() {
+    name = "ARP";
     fields.reserve(9);
     
     fields.emplace_back(0, 16, "hardware_type", "Hardware Type");
@@ -16,6 +17,10 @@ ProtocolARP::ProtocolARP() {
 
 const std::vector<Field>& ProtocolARP::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolARP::getName() const {
+    return name;
 }
 
 void ProtocolARP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

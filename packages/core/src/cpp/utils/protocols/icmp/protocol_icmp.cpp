@@ -1,6 +1,7 @@
 #include "protocol_icmp.hpp"
 
 ProtocolICMP::ProtocolICMP() {
+    name = "ICMP";
     fields.reserve(4);
     
     fields.emplace_back(0, 8, "type", "Type");
@@ -11,6 +12,10 @@ ProtocolICMP::ProtocolICMP() {
 
 const std::vector<Field>& ProtocolICMP::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolICMP::getName() const {
+    return name;
 }
 
 void ProtocolICMP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {

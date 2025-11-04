@@ -18,3 +18,7 @@ struct RawPacket {
     RawPacket();
     std::string toString() const;
 };
+
+struct ParsedPacket {
+    
+};

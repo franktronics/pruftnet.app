@@ -1,6 +1,7 @@
 #include "protocol_ipv6.hpp"
 
 ProtocolIPv6::ProtocolIPv6() {
+    name = "IPv6";
     fields.reserve(8);
     
     fields.emplace_back(0, 4, "version", "Version");
@@ -15,6 +16,10 @@ ProtocolIPv6::ProtocolIPv6() {
 
 const std::vector<Field>& ProtocolIPv6::getFields() const {
     return fields;
+}
+
+const std::string& ProtocolIPv6::getName() const {
+    return name;
 }
 
 void ProtocolIPv6::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
