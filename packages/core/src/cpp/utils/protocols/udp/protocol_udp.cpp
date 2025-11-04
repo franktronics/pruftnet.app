@@ -18,9 +18,13 @@ const std::string& ProtocolUDP::getName() const {
     return name;
 }
 
-void ProtocolUDP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
+size_t ProtocolUDP::getHeaderSizeBits() const {
+    return UDP_HEADER_SIZE * 8;
+}
+
+void ProtocolUDP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits) {
     for (Field& field : fields) {
-        field.calculateValue(raw_data);
+        field.calculateValue(raw_data, base_offset_bits);
     }
 }
 

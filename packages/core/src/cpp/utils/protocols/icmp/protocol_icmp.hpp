@@ -11,7 +11,8 @@ public:
     ProtocolICMP();
     const std::vector<Field>& getFields() const override;
     const std::string& getName() const override;
-    void parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) override;
+    size_t getHeaderSizeBits() const override;
+    void parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits = 0) override;
     ProtocolType getProtocolType() const override;
     ProtocolType getNextProtocol() const override;
     

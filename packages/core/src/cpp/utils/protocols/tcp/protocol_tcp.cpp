@@ -24,9 +24,13 @@ const std::string& ProtocolTCP::getName() const {
     return name;
 }
 
-void ProtocolTCP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
+size_t ProtocolTCP::getHeaderSizeBits() const {
+    return TCP_MIN_HEADER_SIZE * 8;
+}
+
+void ProtocolTCP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits) {
     for (Field& field : fields) {
-        field.calculateValue(raw_data);
+        field.calculateValue(raw_data, base_offset_bits);
     }
 }
 

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <memory>
 #include "../common/common.hpp"
 
 enum class ProtocolType : uint16_t {
@@ -35,7 +36,13 @@ struct ProtocolModel {
     virtual ~ProtocolModel() = default;
     virtual const std::vector<Field>& getFields() const = 0;
     virtual const std::string& getName() const = 0;
-    virtual void parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) = 0;
+    virtual size_t getHeaderSizeBits() const = 0;
+    virtual void parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits = 0) = 0;
     virtual ProtocolType getProtocolType() const = 0;
     virtual ProtocolType getNextProtocol() const = 0;
+};
+
+class ProtocolFactory {
+public:
+    static std::unique_ptr<ProtocolModel> create(ProtocolType type);
 };

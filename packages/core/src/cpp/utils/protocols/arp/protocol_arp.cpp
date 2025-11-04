@@ -23,9 +23,13 @@ const std::string& ProtocolARP::getName() const {
     return name;
 }
 
-void ProtocolARP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
+size_t ProtocolARP::getHeaderSizeBits() const {
+    return ARP_HEADER_SIZE * 8;
+}
+
+void ProtocolARP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits) {
     for (Field& field : fields) {
-        field.calculateValue(raw_data);
+        field.calculateValue(raw_data, base_offset_bits);
     }
 }
 

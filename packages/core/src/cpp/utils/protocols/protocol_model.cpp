@@ -1,4 +1,12 @@
 #include "protocol_model.hpp"
+#include "ethernet/protocol_ethernet.hpp"
+#include "ipv4/protocol_ipv4.hpp"
+#include "ipv6/protocol_ipv6.hpp"
+#include "arp/protocol_arp.hpp"
+#include "tcp/protocol_tcp.hpp"
+#include "udp/protocol_udp.hpp"
+#include "icmp/protocol_icmp.hpp"
+#include "icmpv6/protocol_icmpv6.hpp"
 #include <cstring>
 
 Field::Field(size_t bit_start, size_t bit_length, const std::string& name, 
@@ -41,4 +49,28 @@ bool Field::calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data,
         }
     }
     return true;
+}
+
+std::unique_ptr<ProtocolModel> ProtocolFactory::create(ProtocolType type) {
+    switch (type) {
+        case ProtocolType::ETHERNET:
+            return std::make_unique<ProtocolEthernet>();
+        case ProtocolType::IPV4:
+            return std::make_unique<ProtocolIPv4>();
+        case ProtocolType::IPV6:
+            return std::make_unique<ProtocolIPv6>();
+        case ProtocolType::ARP:
+            return std::make_unique<ProtocolARP>();
+        case ProtocolType::TCP:
+            return std::make_unique<ProtocolTCP>();
+        case ProtocolType::UDP:
+            return std::make_unique<ProtocolUDP>();
+        case ProtocolType::ICMP:
+            return std::make_unique<ProtocolICMP>();
+        case ProtocolType::ICMPV6:
+            return std::make_unique<ProtocolICMPv6>();
+        case ProtocolType::UNKNOWN:
+        default:
+            return nullptr;
+    }
 }

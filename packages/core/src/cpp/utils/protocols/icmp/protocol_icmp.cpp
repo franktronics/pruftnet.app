@@ -18,9 +18,13 @@ const std::string& ProtocolICMP::getName() const {
     return name;
 }
 
-void ProtocolICMP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data) {
+size_t ProtocolICMP::getHeaderSizeBits() const {
+    return ICMP_HEADER_SIZE * 8;
+}
+
+void ProtocolICMP::parsePacket(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits) {
     for (Field& field : fields) {
-        field.calculateValue(raw_data);
+        field.calculateValue(raw_data, base_offset_bits);
     }
 }
 
