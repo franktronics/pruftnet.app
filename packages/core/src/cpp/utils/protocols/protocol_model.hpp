@@ -19,7 +19,7 @@ enum class ProtocolType : uint16_t {
 };
 
 struct Field {
-    size_t bit_start;        // Bit index from start of packet data
+    size_t bit_start;        // Bit index from start of protocol header
     size_t bit_length;       // Length in bits of the value to read
     std::string name;
     std::string description;
@@ -28,7 +28,7 @@ struct Field {
     Field(size_t bit_start, size_t bit_length, const std::string& name, const std::string& description);
     Field();
 
-    bool calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data);
+    bool calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits = 0);
 };
 
 struct ProtocolModel {
