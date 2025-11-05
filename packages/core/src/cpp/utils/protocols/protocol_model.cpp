@@ -1,12 +1,12 @@
 #include "protocol_model.hpp"
 #include "ethernet/protocol_ethernet.hpp"
-#include "ipv4/protocol_ipv4.hpp"
-#include "ipv6/protocol_ipv6.hpp"
-#include "arp/protocol_arp.hpp"
-#include "tcp/protocol_tcp.hpp"
-#include "udp/protocol_udp.hpp"
-#include "icmp/protocol_icmp.hpp"
-#include "icmpv6/protocol_icmpv6.hpp"
+#include "./ipv4/protocol_ipv4.hpp"
+#include "./ipv6/protocol_ipv6.hpp"
+#include "./arp/protocol_arp.hpp"
+#include "./tcp/protocol_tcp.hpp"
+#include "./udp/protocol_udp.hpp"
+#include "./icmp/protocol_icmp.hpp"
+#include "./icmpv6/protocol_icmpv6.hpp"
 #include <cstring>
 
 Field::Field(size_t bit_start, size_t bit_length, const std::string& name, 
@@ -49,6 +49,19 @@ bool Field::calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data,
         }
     }
     return true;
+}
+
+std::string Field::toString() const {
+    std::string result;
+    for (uint8_t byte : value) {
+        char buffer[4];
+        std::snprintf(buffer, sizeof(buffer), "%02X ", byte);
+        result += buffer;
+    }
+    if (!result.empty()) {
+        result.pop_back(); // Remove trailing space
+    }
+    return result;
 }
 
 std::unique_ptr<ProtocolModel> ProtocolFactory::create(ProtocolType type) {

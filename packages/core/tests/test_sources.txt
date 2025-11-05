@@ -9,6 +9,10 @@ utils/network_interface/n_interface_model.cpp
 modules/sniffer/packet_capture.cpp
 modules/sniffer/network_sniffer.cpp
 
-# Future files can be added like:
-# utils/parser/packet_parser.cpp
-# utils/network/network_helper.cpp
+# Parser and protocol files
+modules/parser/packet_parser.cpp
+utils/protocols/protocol_model.cpp
+utils/protocols/ethernet/protocol_ethernet.cpp
+utils/protocols/ipv4/protocol_ipv4.cpp
+utils/protocols/arp/protocol_arp.cpp
+utils/protocols/tcp/protocol_tcp.cpp

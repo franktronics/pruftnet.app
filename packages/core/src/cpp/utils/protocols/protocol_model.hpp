@@ -30,6 +30,7 @@ struct Field {
     Field();
 
     bool calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data, size_t base_offset_bits = 0);
+    std::string toString() const;
 };
 
 struct ProtocolModel {
