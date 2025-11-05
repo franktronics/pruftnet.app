@@ -14,5 +14,9 @@ modules/parser/packet_parser.cpp
 utils/protocols/protocol_model.cpp
 utils/protocols/ethernet/protocol_ethernet.cpp
 utils/protocols/ipv4/protocol_ipv4.cpp
+utils/protocols/ipv6/protocol_ipv6.cpp
 utils/protocols/arp/protocol_arp.cpp
 utils/protocols/tcp/protocol_tcp.cpp
+utils/protocols/udp/protocol_udp.cpp
+utils/protocols/icmp/protocol_icmp.cpp
+utils/protocols/icmpv6/protocol_icmpv6.cpp

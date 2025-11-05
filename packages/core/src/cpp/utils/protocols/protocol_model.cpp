@@ -52,15 +52,50 @@ bool Field::calculateValue(const std::array<uint8_t, MAX_PACKET_SIZE>& raw_data,
 }
 
 std::string Field::toString() const {
+    if (value.empty() || bit_length == 0) {
+        return "";
+    }
+    
     std::string result;
-    for (uint8_t byte : value) {
+    
+    // For fields 4 bits or less, extract from the MSB
+    if (bit_length <= 4) {
+        uint8_t extracted_value = value[0] >> (8 - bit_length);
+        char buffer[3];
+        std::snprintf(buffer, sizeof(buffer), "%X", extracted_value);
+        return std::string(buffer);
+    }
+    
+    // For fields between 5-12 bits, display as single hex value
+    if (bit_length <= 12) {
+        uint16_t combined_value = 0;
+        size_t bytes_needed = (bit_length + 7) / 8;
+        
+        for (size_t i = 0; i < bytes_needed && i < value.size(); ++i) {
+            combined_value = (combined_value << 8) | value[i];
+        }
+        
+        // Right-shift to align the value properly
+        combined_value >>= (bytes_needed * 8 - bit_length);
+        
+        char buffer[5];
+        if (bit_length <= 8) {
+            std::snprintf(buffer, sizeof(buffer), "%02X", (uint8_t)combined_value);
+        } else {
+            std::snprintf(buffer, sizeof(buffer), "%02X", combined_value);
+        }
+        return std::string(buffer);
+    }
+    
+    // For larger fields, display each byte separated by space
+    size_t bytes_needed = (bit_length + 7) / 8;
+    for (size_t i = 0; i < bytes_needed && i < value.size(); ++i) {
         char buffer[4];
-        std::snprintf(buffer, sizeof(buffer), "%02X ", byte);
+        std::snprintf(buffer, sizeof(buffer), "%02X", value[i]);
+        if (i > 0) result += " ";
         result += buffer;
     }
-    if (!result.empty()) {
-        result.pop_back(); // Remove trailing space
-    }
+    
     return result;
 }
 

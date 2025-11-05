@@ -165,7 +165,7 @@ TEST_CASE("PacketParser - Ethernet + IPv4 + TCP Packet", "[parser]") {
         {"ack_number", "87 65 43 21"},
         {"data_offset", "5"},
         {"reserved", "0"},
-        {"flags", "01 8"},
+        {"flags", "18"},
         {"window_size", "20 00"},
         {"checksum", "EF BE"},
         {"urgent_pointer", "00 00"}
