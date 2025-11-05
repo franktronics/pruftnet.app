@@ -1,10 +1,8 @@
 #include <napi.h>
-#include "modules/parser/packet_parser.hpp"
-#include "modules/scanner/network_scanner_wrapper.hpp"
+#include "modules/parser/packet_parser.napi.hpp"
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-    // Export NetworkScanner class wrapper
-    NetworkScannerWrapper::Init(env, exports);
+    PacketParserWrapper::Init(env, exports);
     
     return exports;
 }

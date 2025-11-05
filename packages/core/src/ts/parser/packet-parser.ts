@@ -1,4 +1,4 @@
-import { PacketData, TestData } from '../../types'
+import { ParsedPacket } from '../types/basics'
 import addon from '../addon'
 
 /**
@@ -13,18 +13,15 @@ export class PacketParser {
 
     /**
      * Parse packet data from raw bytes
-     * @returns Parsed packet information
+     * @param data Raw packet data as Buffer or Uint8Array
+     * @returns Parsed packet information with protocols and fields
      */
-    parse(): PacketData {
-        return this.nativeInstance.parse()
-    }
-
-    /**
-     * Get test data for development purposes
-     * @returns Test data object
-     */
-    getTestData(): TestData {
-        return this.nativeInstance.getTestData()
+    parse(data: Buffer | Uint8Array): ParsedPacket {
+        if (!data || data.length === 0) {
+            throw new Error('Packet data cannot be empty')
+        }
+        
+        return this.nativeInstance.parse(data)
     }
 }
 
