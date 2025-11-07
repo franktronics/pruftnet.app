@@ -31,3 +31,17 @@ export interface ProtocolInfo {
 export interface ParsedPacket {
     protocols: ProtocolInfo[]
 }
+
+export interface RawPacketData {
+    data: Buffer
+    length: number
+    originalLength: number
+    timestamp: Date
+    valid: boolean
+}
+
+export type PacketCallback = (packet: RawPacketData) => void
+
+export interface NetworkInterfaceConfig {
+    name: string
+}
