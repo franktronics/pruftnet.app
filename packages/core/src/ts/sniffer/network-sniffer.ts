@@ -47,9 +47,12 @@ export class NetworkSniffer {
                 }
             }
             
-            return this.nativeInstance.startSniffing(networkInterface, wrappedCallback)
+            return this.nativeInstance.startSniffing(networkInterface.native, wrappedCallback)
         } catch (error) {
             this.currentCallback = undefined
+            console.log("---------")
+            console.log(error)
+            console.log("---------")
             throw new Error(`Failed to start sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }

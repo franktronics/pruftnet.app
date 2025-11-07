@@ -61,21 +61,24 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info)
             return env.Null();
         }
         
-        // Store JavaScript callback
-        js_callback_ = Napi::Persistent(info[1].As<Napi::Function>());
+        // Create thread-safe function for callback
+        thread_safe_callback_ = Napi::ThreadSafeFunction::New(
+            env,
+            info[1].As<Napi::Function>(),
+            "PacketCallback",
+            0,  // Unlimited queue
+            1   // Only one thread will use this
+        );
         
-        // Create C++ callback that calls JavaScript function
-        PacketCallback cpp_callback = [this, env](const RawPacket& packet) {
-            if (!js_callback_.IsEmpty()) {
-                Napi::HandleScope scope(env);
-                
-                try {
-                    Napi::Object js_packet = RawPacketToJS(env, packet);
-                    js_callback_.Call({js_packet});
-                } catch (const std::exception& e) {
-                    // Log error but don't throw to avoid crashing capture thread
-                }
-            }
+        // Create C++ callback that uses thread-safe function
+        PacketCallback cpp_callback = [this](const RawPacket& packet) {
+            auto callback = [packet](Napi::Env env, Napi::Function jsCallback) {
+                Napi::Object js_packet = RawPacketToJS(env, packet);
+                jsCallback.Call({js_packet});
+            };
+            
+            // Call the JavaScript function safely from any thread
+            thread_safe_callback_.BlockingCall(callback);
         };
         
         // Get NetworkInterface from wrapper
@@ -104,9 +107,12 @@ Napi::Value NetworkSnifferWrapper::StopSniffing(const Napi::CallbackInfo& info) 
     
     try {
         sniffer_->stop();
-        if (!js_callback_.IsEmpty()) {
-            js_callback_.Reset();
+        
+        // Release the thread-safe function
+        if (thread_safe_callback_) {
+            thread_safe_callback_.Release();
         }
+        
         return env.Undefined();
     } catch (const std::exception& e) {
         Napi::Error::New(env, std::string("Failed to stop sniffing: ") + e.what()).ThrowAsJavaScriptException();

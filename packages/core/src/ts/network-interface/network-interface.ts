@@ -22,6 +22,14 @@ export class NetworkInterface {
     }
 
     /**
+     * Get the native instance (for internal use by other wrappers)
+     * @returns Native NetworkInterface instance
+     */
+    get native(): any {
+        return this.nativeInstance
+    }
+
+    /**
      * Get the interface name
      * @returns Interface name
      */

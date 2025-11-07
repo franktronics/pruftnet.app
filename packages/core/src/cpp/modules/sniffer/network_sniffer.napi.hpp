@@ -17,7 +17,7 @@ private:
     Napi::Value IsRunning(const Napi::CallbackInfo& info);
     
     NetworkSniffer* sniffer_;
-    Napi::FunctionReference js_callback_;
+    Napi::ThreadSafeFunction thread_safe_callback_;
     
     static Napi::Object RawPacketToJS(Napi::Env env, const RawPacket& packet);
 };

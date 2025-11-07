@@ -11,7 +11,6 @@ export default defineConfig({
         emptyOutDir: true,
     },
     server: {
-        // Ces options sont surtout utiles si on lance Vite seul, mais ne gênent pas en mode middleware
         host: true,
         strictPort: false,
     },
