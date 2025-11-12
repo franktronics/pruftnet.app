@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import type { ComponentPropsWithoutRef } from 'react'
-import { cn } from '@repo/utils'
+import { useState, type ComponentPropsWithoutRef } from 'react'
+import { cn, BaseConverter } from '@repo/utils'
 import { useIsMobile } from '@repo/ui/hooks'
 import { Separator } from '@repo/ui/atoms'
 
@@ -15,14 +14,6 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     const isMobile = useIsMobile()
 
     const effectiveBytesPerLine = bytesPerLine ?? (isMobile ? 8 : 16)
-
-    const formatHex = (byte: number): string => {
-        return byte.toString(16).padStart(2, '0').toUpperCase()
-    }
-
-    const formatAscii = (byte: number): string => {
-        return byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.'
-    }
 
     const getLineOffset = (lineIndex: number): string => {
         return (lineIndex * effectiveBytesPerLine).toString(16).padStart(5, '0').toUpperCase()
@@ -73,7 +64,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                                             onMouseEnter={() => setHighlightedByte(globalIndex)}
                                             onMouseLeave={() => setHighlightedByte(null)}
                                         >
-                                            {formatHex(byte)}
+                                            {BaseConverter.formatHex(byte)}
                                         </span>
                                     )
                                 })}
@@ -119,7 +110,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                                         onMouseEnter={() => setHighlightedByte(globalIndex)}
                                         onMouseLeave={() => setHighlightedByte(null)}
                                     >
-                                        {formatAscii(byte)}
+                                        {BaseConverter.formatAscii(byte)}
                                     </span>
                                 )
                             })}
