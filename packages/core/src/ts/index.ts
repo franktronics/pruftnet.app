@@ -4,14 +4,14 @@ export { NetworkSniffer } from './sniffer/network-sniffer'
 export { NetworkInterface } from './network-interface/network-interface'
 
 // Export types
-export type { 
-    ParsedPacket, 
-    ProtocolInfo, 
-    FieldInfo, 
+export type {
+    ParsedPacket,
+    ProtocolInfo,
+    FieldInfo,
     ProtocolType,
     RawPacketData,
     PacketCallback,
-    NetworkInterfaceConfig
+    NetworkInterfaceConfig,
 } from './types/basics'
 
 // Version info

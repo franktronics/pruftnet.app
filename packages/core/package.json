@@ -1,36 +1,36 @@
 {
-  "name": "@repo/core",
-  "version": "0.0.1",
-  "description": "Core C++ network analysis modules with N-API bindings",
-  "type": "module",
-  "main": "dist/ts/index.js",
-  "types": "dist/ts/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/ts/index.js",
-      "require": "./dist/ts/index.js",
-      "types": "./dist/ts/index.d.ts"
-    }
-  },
-  "scripts": {
-    "build:cpp": "cmake-js compile",
-    "build:ts": "tsc",
-    "build": "pnpm run build:cpp && pnpm run build:ts",
-    "clean": "cmake-js clean && rimraf dist",
-    "test": "cd tests && ./run_tests.sh"
-  },
-  "dependencies": {
-    "node-addon-api": "^8.0.0"
-  },
-  "devDependencies": {
-    "cmake-js": "^7.3.0",
-    "typescript": "^5.5.4",
-    "rimraf": "^6.0.1",
-    "@types/node": "^22.5.4"
-  },
-  "packageManager": "pnpm@10.17.1",
-  "files": [
-    "dist/**/*",
-    "build/Release/*.node"
-  ]
+    "name": "@repo/core",
+    "version": "0.0.1",
+    "description": "Core C++ network analysis modules with N-API bindings",
+    "type": "module",
+    "main": "dist/ts/index.js",
+    "types": "dist/ts/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/ts/index.js",
+            "require": "./dist/ts/index.js",
+            "types": "./dist/ts/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build:cpp": "cmake-js compile",
+        "build:ts": "tsc",
+        "build": "pnpm run build:cpp && pnpm run build:ts",
+        "clean": "cmake-js clean && rimraf dist",
+        "test": "cd tests && ./run_tests.sh"
+    },
+    "dependencies": {
+        "node-addon-api": "^8.0.0"
+    },
+    "devDependencies": {
+        "cmake-js": "^7.3.0",
+        "typescript": "^5.5.4",
+        "rimraf": "^6.0.1",
+        "@types/node": "^22.5.4"
+    },
+    "packageManager": "pnpm@10.17.1",
+    "files": [
+        "dist/**/*",
+        "build/Release/*.node"
+    ]
 }

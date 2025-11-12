@@ -5,25 +5,31 @@ This directory contains unit tests for the core C++ components using Catch2 fram
 ## Running Tests
 
 ### Using pnpm (recommended)
+
 From project root:
+
 ```bash
 pnpm test
 ```
 
 From core package:
+
 ```bash
 cd packages/core
 pnpm test
 ```
 
 ### Direct script execution
+
 ```bash
 cd packages/core/tests
 ./run_tests.sh
 ```
 
 ### Manual Method
+
 1. Navigate to tests directory and create a build directory:
+
 ```bash
 cd packages/core/tests
 mkdir -p build
@@ -31,16 +37,19 @@ cd build
 ```
 
 2. Configure with CMake:
+
 ```bash
 cmake ..
 ```
 
 3. Build:
+
 ```bash
 cmake --build . --parallel
 ```
 
 4. Run tests:
+
 ```bash
 ./core_tests
 ```
@@ -50,10 +59,10 @@ cmake --build . --parallel
 1. Create a new `.test.cpp` file in the `tests/` directory
 2. Include the Catch2 header: `#include <catch2/catch_test_macros.hpp>`
 3. If your test needs additional core source files, add them to `test_sources.txt`:
-   ```
-   # Edit test_sources.txt and add the relative path from core/src/cpp/
-   utils/your_module/your_file.cpp
-   ```
+    ```
+    # Edit test_sources.txt and add the relative path from core/src/cpp/
+    utils/your_module/your_file.cpp
+    ```
 4. Write test cases using Catch2 syntax:
 
 ```cpp
@@ -93,11 +102,13 @@ TEST_CASE("Your test description", "[tag]") {
 ## Test Categories
 
 Tests are organized with tags:
+
 - `[ring_buffer]`: RingBuffer functionality tests
 - `[basic]`: Basic C++ functionality tests
 - `[memory]`: Memory-related tests
 
 You can run specific test categories if needed:
+
 ```bash
 ./core_tests "[ring_buffer]"  # Run only ring buffer tests
 ./core_tests "[basic]"        # Run only basic tests

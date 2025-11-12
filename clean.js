@@ -10,7 +10,7 @@ const dirs = [
     './packages/core/dist',
     './packages/core/build',
     './packages/core/tests/build',
-    './pnpm-lock.yaml'
+    './pnpm-lock.yaml',
 ]
 
 const node_modules = [

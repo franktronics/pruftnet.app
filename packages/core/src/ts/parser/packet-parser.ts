@@ -20,8 +20,7 @@ export class PacketParser {
         if (!data || data.length === 0) {
             throw new Error('Packet data cannot be empty')
         }
-        
+
         return this.nativeInstance.parse(data)
     }
 }
-

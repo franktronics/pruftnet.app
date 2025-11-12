@@ -1,11 +1,4 @@
-import {
-    AudioWaveform,
-    Command,
-    GalleryVerticalEnd,
-    Settings2,
-    Database,
-    ShoppingCart,
-} from 'lucide-react'
+import { GalleryVerticalEnd, Settings2, Database, ShoppingCart, Radar } from 'lucide-react'
 
 import { NavMain } from './nav-main'
 import { NavUser } from './nav-user'
@@ -24,13 +17,13 @@ const data = {
             name: 'Pruftnet',
             logo: GalleryVerticalEnd,
             plan: 'Session',
-        }
+        },
     ],
     navMain: [
         {
             title: 'Scan',
             url: '/',
-            icon: ShoppingCart,
+            icon: Radar,
             isActive: true,
             items: [],
         },
@@ -57,10 +50,10 @@ const data = {
                 {
                     title: 'Advanced',
                     url: '#',
-                }
+                },
             ],
         },
-    ]
+    ],
 }
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {

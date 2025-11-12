@@ -36,14 +36,14 @@ builder.close();
 void captureThread() {
     PcapBuilder builder("network_capture.pcap");
     if (!builder.open()) return;
-    
+
     while (capturing) {
         RawPacket packet = captureFromNetwork();
         if (packet.valid) {
             builder.writePacket(packet);
         }
     }
-    
+
     builder.close();
 }
 ```

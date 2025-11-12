@@ -13,7 +13,9 @@ export class NetworkSniffer {
         try {
             this.nativeInstance = new addon.NetworkSniffer()
         } catch (error) {
-            throw new Error(`Failed to create NetworkSniffer: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to create NetworkSniffer: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 
@@ -23,22 +25,25 @@ export class NetworkSniffer {
      * @param callback Function to call when a packet is received
      * @returns Promise that resolves to true if sniffing started successfully
      */
-    async startSniffing(networkInterface: NetworkInterface, callback: PacketCallback): Promise<boolean> {
+    async startSniffing(
+        networkInterface: NetworkInterface,
+        callback: PacketCallback,
+    ): Promise<boolean> {
         if (!networkInterface) {
             throw new Error('NetworkInterface cannot be null or undefined')
         }
-        
+
         if (!callback || typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
-        
+
         if (this.isRunning()) {
             throw new Error('NetworkSniffer is already running. Call stopSniffing() first.')
         }
-        
+
         try {
             this.currentCallback = callback
-            
+
             const wrappedCallback = (packet: RawPacketData) => {
                 try {
                     callback(packet)
@@ -46,14 +51,16 @@ export class NetworkSniffer {
                     console.error('Error in packet callback:', error)
                 }
             }
-            
+
             return this.nativeInstance.startSniffing(networkInterface.native, wrappedCallback)
         } catch (error) {
             this.currentCallback = undefined
-            console.log("---------")
+            console.log('---------')
             console.log(error)
-            console.log("---------")
-            throw new Error(`Failed to start sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            console.log('---------')
+            throw new Error(
+                `Failed to start sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 
@@ -65,7 +72,9 @@ export class NetworkSniffer {
             this.nativeInstance.stopSniffing()
             this.currentCallback = undefined
         } catch (error) {
-            throw new Error(`Failed to stop sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to stop sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 
@@ -77,7 +86,9 @@ export class NetworkSniffer {
         try {
             return this.nativeInstance.isRunning()
         } catch (error) {
-            throw new Error(`Failed to check running status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to check running status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 }

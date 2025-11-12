@@ -1,16 +1,19 @@
 ---
-applyTo: "**/*.cpp,**/*.hpp,**/*.c,**/*.h"
+applyTo: '**/*.cpp,**/*.hpp,**/*.c,**/*.h'
 ---
+
 # Project coding standards for C++
 
 Apply the [general coding guidelines](./copilot-instructions.md) to all code.
 
 ## C++ Guidelines
+
 - Use C++ for all new code
 - Follow object-oriented programming principles where possible
 - Use classes and structs for data structures and type definitions
 
 ## Testing Guidelines
+
 - Use Catch2 framework for unit tests
 - All test files must end with `.test.cpp`
 - Tests are located in `packages/core/tests/` directory

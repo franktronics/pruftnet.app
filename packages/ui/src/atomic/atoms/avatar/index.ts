@@ -1,1 +1,1 @@
-export { Avatar, AvatarImage, AvatarFallback } from './avatar.tsx'
+export { Avatar, AvatarImage, AvatarFallback } from './avatar'

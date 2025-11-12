@@ -2,3 +2,4 @@
 @import "@repo/ui/styles.css";
 @import "./generics.css";
 @source "../../../ui";
+@source "../pages";

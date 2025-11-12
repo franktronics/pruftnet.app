@@ -25,7 +25,7 @@ export function DashboardLayout(props: LayoutDashboardProps) {
                     className={cn(
                         'gap-2 border-b px-4',
                         'border-border flex shrink-0 items-center justify-between',
-                        'h-16 group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12',
+                        'h-16 group-has-data-[collapsible=icon]/sidebar-wrapper:h-12',
                         'transition-[height,width] ease-linear',
                         'bg-background w-full',
                     )}
@@ -50,7 +50,11 @@ export function DashboardLayout(props: LayoutDashboardProps) {
                     <ThemeToggle className="ml-auto" />
                 </header>
                 <main
-                    className={cn(className, 'h-full', 'transition-[padding-top] ease-linear')}
+                    className={cn(
+                        className,
+                        'h-[calc(100vh-4rem)] group-has-data-[collapsible=icon]/sidebar-wrapper:h-[calc(100vh-3rem)]',
+                        'transition-[padding-top,height,width] ease-linear',
+                    )}
                     {...rest}
                 >
                     {children}

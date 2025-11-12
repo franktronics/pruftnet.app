@@ -9,15 +9,17 @@ export class NetworkInterface {
 
     constructor(config: NetworkInterfaceConfig | string) {
         const name = typeof config === 'string' ? config : config.name
-        
+
         if (!name || name.trim().length === 0) {
             throw new Error('Interface name cannot be empty')
         }
-        
+
         try {
             this.nativeInstance = new addon.NetworkInterface(name.trim())
         } catch (error) {
-            throw new Error(`Failed to create NetworkInterface: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to create NetworkInterface: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 
@@ -37,7 +39,9 @@ export class NetworkInterface {
         try {
             return this.nativeInstance.name
         } catch (error) {
-            throw new Error(`Failed to get interface name: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to get interface name: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 
@@ -49,11 +53,13 @@ export class NetworkInterface {
         if (!value || value.trim().length === 0) {
             throw new Error('Interface name cannot be empty')
         }
-        
+
         try {
             this.nativeInstance.name = value.trim()
         } catch (error) {
-            throw new Error(`Failed to set interface name: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            throw new Error(
+                `Failed to set interface name: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            )
         }
     }
 }

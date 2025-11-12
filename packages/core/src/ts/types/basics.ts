@@ -3,13 +3,13 @@
 export enum ProtocolType {
     ETHERNET = 0x0000,
     IPV4 = 0x0800,
-    IPV6 = 0x86DD,
+    IPV6 = 0x86dd,
     ARP = 0x0806,
     TCP = 0x06,
     UDP = 0x11,
     ICMP = 0x01,
-    ICMPV6 = 0x3A,
-    UNKNOWN = 0xFFFF
+    ICMPV6 = 0x3a,
+    UNKNOWN = 0xffff,
 }
 
 export interface FieldInfo {
