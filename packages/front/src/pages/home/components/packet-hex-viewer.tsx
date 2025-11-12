@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
 import { cn } from '@repo/utils'
+import { useIsMobile } from '@repo/ui/hooks'
+import { Separator } from '@repo/ui/atoms'
 
 export type PacketHexViewerProps = {
     data: Uint8Array
@@ -10,20 +12,9 @@ export type PacketHexViewerProps = {
 export const PacketHexViewer = (props: PacketHexViewerProps) => {
     const { data, bytesPerLine, className, ...rest } = props
     const [highlightedByte, setHighlightedByte] = useState<number | null>(null)
-    const [isMobile, setIsMobile] = useState(false)
+    const isMobile = useIsMobile()
 
     const effectiveBytesPerLine = bytesPerLine ?? (isMobile ? 8 : 16)
-
-    useEffect(() => {
-        const checkIsMobile = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        checkIsMobile()
-        window.addEventListener('resize', checkIsMobile)
-
-        return () => window.removeEventListener('resize', checkIsMobile)
-    }, [])
 
     const formatHex = (byte: number): string => {
         return byte.toString(16).padStart(2, '0').toUpperCase()
@@ -34,7 +25,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     }
 
     const getLineOffset = (lineIndex: number): string => {
-        return (lineIndex * effectiveBytesPerLine).toString(16).padStart(8, '0').toUpperCase()
+        return (lineIndex * effectiveBytesPerLine).toString(16).padStart(5, '0').toUpperCase()
     }
 
     const lines = []
@@ -46,20 +37,24 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     return (
         <div
             className={cn(
-                'bg-card rounded-lg border p-4 font-mono text-sm',
-                'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border overflow-x-auto',
+                'bg-card rounded-lg p-4 font-mono text-sm',
+                'scrollbar-thin overflow-auto',
+                'flex h-full flex-col',
                 className,
             )}
             {...rest}
         >
-            <div className="flex min-w-fit flex-col lg:flex-row">
-                <div className="flex-1 lg:mr-4">
-                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                Hex Dump
+            </div>
+            <div className="scrollbar-thin flex min-w-fit flex-1 flex-col overflow-auto lg:flex-row">
+                <aside>
+                    <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
                         Offset
                     </div>
                     {lines.map((line, lineIndex) => (
-                        <div key={lineIndex} className="mb-1 flex items-center">
-                            <div className="text-muted-foreground mr-3 w-16 shrink-0 text-xs sm:mr-4 sm:w-20">
+                        <div key={lineIndex} className="mb-1 flex items-start">
+                            <div className="text-muted-foreground mr-1 w-12 shrink-0 py-0.5 text-xs">
                                 {getLineOffset(lineIndex)}
                             </div>
                             <div className="flex flex-wrap gap-1">
@@ -83,7 +78,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                                     )
                                 })}
                                 {line.data.length < effectiveBytesPerLine && (
-                                    <div className="hidden sm:block">
+                                    <div className="hidden lg:block">
                                         {Array(effectiveBytesPerLine - line.data.length)
                                             .fill('')
                                             .map((_, i) => (
@@ -99,12 +94,13 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                             </div>
                         </div>
                     ))}
-                </div>
+                </aside>
 
-                <div className="bg-border my-4 h-px lg:mx-4 lg:my-0 lg:h-auto lg:w-px"></div>
+                <Separator className="mx-4 hidden lg:block" orientation="vertical" />
+                <Separator className="my-4 block lg:hidden" orientation="horizontal" />
 
-                <div className="shrink-0">
-                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                <aside className="shrink-0">
+                    <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
                         ASCII
                     </div>
                     {lines.map((line, lineIndex) => (
@@ -129,7 +125,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                             })}
                         </div>
                     ))}
-                </div>
+                </aside>
             </div>
         </div>
     )

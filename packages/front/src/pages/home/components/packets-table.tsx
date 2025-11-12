@@ -18,8 +18,11 @@ export const PacketsTable = (props: PacketsTableProps) => {
     })
 
     return (
-        <div {...props} className="h-160 overflow-hidden border">
-            <div className="bg-muted">
+        <div
+            {...props}
+            className={cn('flex flex-col overflow-hidden rounded-lg border', props.className)}
+        >
+            <div className="bg-muted shrink-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -35,7 +38,7 @@ export const PacketsTable = (props: PacketsTableProps) => {
                 </Table>
             </div>
 
-            <div ref={parentRef} className="h-[calc(40rem-3.5rem)] overflow-auto">
+            <div ref={parentRef} className={cn('flex-1 overflow-auto', 'scrollbar-thin')}>
                 <Table>
                     <TableBody>
                         <tr

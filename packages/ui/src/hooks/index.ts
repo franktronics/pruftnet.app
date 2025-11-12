@@ -1,1 +1,1 @@
-export { useIsMobile } from './use-mobile.tsx'
+export { useIsMobile } from './use-mobile'
