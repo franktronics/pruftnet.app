@@ -18,7 +18,7 @@ export type LayoutDashboardProps = {} & ComponentPropsWithoutRef<'main'>
 export function DashboardLayout(props: LayoutDashboardProps) {
     const { children, className, ...rest } = props
     return (
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
             <AppSidebar />
             <SidebarInset className="relative">
                 <header

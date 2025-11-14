@@ -17,8 +17,9 @@ export const PacketValuesViewer = (props: PacketValuesViewerProps) => {
     return (
         <div
             className={cn(
-                'bg-card h-full overflow-auto rounded-lg p-4',
+                'bg-card rounded-lg p-4',
                 'font-mono text-sm',
+                'scrollbar-thin h-full overflow-auto',
                 className,
             )}
             {...rest}

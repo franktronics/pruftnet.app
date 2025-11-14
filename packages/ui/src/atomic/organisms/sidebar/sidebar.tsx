@@ -4,7 +4,7 @@ import { VariantProps, cva } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 
 import { cn } from '@repo/utils'
-import { useIsMobile } from '../../../hooks/use-mobile.tsx'
+import { useIsMobile } from '../../../hooks/use-mobile'
 import { Button, Input, Separator, Skeleton } from '../../atoms'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../atoms'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../atoms'

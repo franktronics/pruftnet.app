@@ -1,59 +1,45 @@
-import { PacketsTable } from './components/packets-table'
-import { PacketHexViewer } from './components/packet-hex-viewer'
-import { PacketValuesViewer } from './components/packet-values-viewer'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@repo/ui/atoms'
-import { cn } from '@repo/utils'
+import {
+    TabsDisplay,
+    TabsDisplayList,
+    TabsDisplayTrigger,
+    TabsDisplayContent,
+} from '@repo/ui/atoms'
+import { Layout } from './layout'
+import { TabScan } from './components/tab-scan'
+import { TabGraph } from './components/tab-graph'
+import { ActionsControl } from './components/actions-control'
+import { ScanControlProvider } from './stores/scan-control.context'
+import { CaptureFilter } from './components/capture-filter'
+
+function HomeContent() {
+    return (
+        <Layout>
+            <TabsDisplay defaultValue="scan" className="flex flex-1 flex-col">
+                <div className="flex shrink-0 items-center gap-2">
+                    <TabsDisplayList>
+                        <TabsDisplayTrigger value="scan">Scan</TabsDisplayTrigger>
+                        <TabsDisplayTrigger value="graph">Graph</TabsDisplayTrigger>
+                    </TabsDisplayList>
+                    <ActionsControl />
+                </div>
+                <TabsDisplayContent value="scan" className="flex flex-1 flex-col pt-2">
+                    <CaptureFilter className="shrink-0 pb-2" />
+                    <TabScan className="flex-1" />
+                </TabsDisplayContent>
+
+                <TabsDisplayContent value="graph" className="flex-1">
+                    <TabGraph />
+                </TabsDisplayContent>
+            </TabsDisplay>
+        </Layout>
+    )
+}
 
 function Index() {
-    const fakePacketData = new Uint8Array([
-        0x33, 0x33, 0x00, 0x00, 0x00, 0xfb, 0x00, 0xe0, 0x4c, 0x68, 0x0a, 0x4d, 0x86, 0xdd, 0x60,
-        0x0a, 0x0c, 0x00, 0x00, 0x5b, 0x11, 0xff, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x04, 0x04, 0xa7, 0xc7, 0x87, 0x8a, 0xbf, 0xa3, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfb, 0x14, 0xe9, 0x14, 0xe9, 0x00, 0x5b,
-        0xdf, 0x94, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25,
-        0x5f, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x2d, 0x65, 0x36, 0x37, 0x61, 0x2d,
-        0x32, 0x32, 0x65, 0x39, 0x2d, 0x38, 0x37, 0x35, 0x34, 0x2d, 0x37, 0x36, 0x61, 0x31, 0x38,
-        0x32, 0x32, 0x34, 0x34, 0x37, 0x62, 0x36, 0x04, 0x5f, 0x73, 0x75, 0x62, 0x0b, 0x5f, 0x61,
-        0x70, 0x70, 0x6c, 0x65, 0x74, 0x76, 0x2d, 0x76, 0x32, 0x04, 0x5f, 0x74, 0x63, 0x70, 0x05,
-        0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00, 0x00, 0x0c, 0x00, 0x01,
-    ])
-
     return (
-        <section
-            className={cn(
-                'p-2',
-                'h-[calc(100vh-4rem)]',
-                'group-has-data-[collapsible=icon]/sidebar-wrapper:h-[calc(100vh-3rem)]',
-            )}
-        >
-            <ResizablePanelGroup direction="vertical" className="h-full">
-                <ResizablePanel defaultSize={60} minSize={30}>
-                    <div className="h-full p-2">
-                        <PacketsTable className="h-full" />
-                    </div>
-                </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                <ResizablePanel defaultSize={40} minSize={20}>
-                    <ResizablePanelGroup direction="horizontal">
-                        <ResizablePanel defaultSize={40} minSize={30}>
-                            <div className="h-full p-2">
-                                <PacketValuesViewer />
-                            </div>
-                        </ResizablePanel>
-
-                        <ResizableHandle withHandle />
-
-                        <ResizablePanel defaultSize={60} minSize={30}>
-                            <div className="h-full p-2">
-                                <PacketHexViewer data={fakePacketData} className="h-full" />
-                            </div>
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </section>
+        <ScanControlProvider>
+            <HomeContent />
+        </ScanControlProvider>
     )
 }
 
