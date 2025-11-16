@@ -31,6 +31,8 @@ export class NetworkMapControl {
         this.mapElt.style.width = `${this.effectiveMapSize}px`
         this.mapElt.style.height = `${this.effectiveMapSize}px`
         this.mapElt.style.transformOrigin = '0 0'
+
+        this.centerMap()
         this.updateTransform()
     }
 
@@ -239,5 +241,17 @@ export class NetworkMapControl {
     private constrainScale(scale: number): number {
         const minZoom = this.getMinZoom()
         return Math.max(minZoom, Math.min(this.maxZoom, scale))
+    }
+
+    private centerMap(): void {
+        const containerRect = this.containerElt.getBoundingClientRect()
+
+        const centerX =
+            (containerRect.width - this.effectiveMapSize * this.currentTransform.scale) / 2
+        const centerY =
+            (containerRect.height - this.effectiveMapSize * this.currentTransform.scale) / 2
+
+        this.currentTransform.x = centerX
+        this.currentTransform.y = centerY
     }
 }
