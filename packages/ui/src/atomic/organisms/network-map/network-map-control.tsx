@@ -5,8 +5,9 @@ export class NetworkMapControl {
     private dragStart = { x: 0, y: 0 }
     private currentTransform = { x: 0, y: 0, scale: 1 }
     private lastTouchDistance = 0
-    private mapSize = 2000
+    private mapSize = 3000
     private maxZoom = 5
+    private effectiveMapSize = this.mapSize
 
     constructor(private readonly containerElt: HTMLDivElement) {
         this.content = containerElt.firstChild as HTMLElement
@@ -21,8 +22,14 @@ export class NetworkMapControl {
         this.content.style.width = `${containerRect.width}px`
         this.content.style.height = `${containerRect.height}px`
 
-        this.mapElt.style.width = `${this.mapSize}px`
-        this.mapElt.style.height = `${this.mapSize}px`
+        // Update effective map size to be at least as large as the container
+        this.effectiveMapSize = Math.max(
+            this.mapSize,
+            Math.max(window.innerWidth, window.innerHeight),
+        )
+        console.log('effectiveSize', this.effectiveMapSize)
+        this.mapElt.style.width = `${this.effectiveMapSize}px`
+        this.mapElt.style.height = `${this.effectiveMapSize}px`
         this.mapElt.style.transformOrigin = '0 0'
         this.updateTransform()
     }
@@ -191,7 +198,7 @@ export class NetworkMapControl {
 
     private constrainX(x: number): number {
         const containerRect = this.containerElt.getBoundingClientRect()
-        const scaledMapWidth = this.mapSize * this.currentTransform.scale
+        const scaledMapWidth = this.effectiveMapSize * this.currentTransform.scale
 
         // center if map is smaller than container
         if (scaledMapWidth <= containerRect.width) {
@@ -206,7 +213,7 @@ export class NetworkMapControl {
 
     private constrainY(y: number): number {
         const containerRect = this.containerElt.getBoundingClientRect()
-        const scaledMapHeight = this.mapSize * this.currentTransform.scale
+        const scaledMapHeight = this.effectiveMapSize * this.currentTransform.scale
 
         // center if map is smaller than container
         if (scaledMapHeight <= containerRect.height) {
@@ -223,7 +230,10 @@ export class NetworkMapControl {
         const containerRect = this.containerElt.getBoundingClientRect()
         // The minimum zoom ensures the map fits entirely within the container
         // The smaller dimension (width or height) determines the minimum scale
-        return Math.max(containerRect.width / this.mapSize, containerRect.height / this.mapSize)
+        return Math.max(
+            containerRect.width / this.effectiveMapSize,
+            containerRect.height / this.effectiveMapSize,
+        )
     }
 
     private constrainScale(scale: number): number {
