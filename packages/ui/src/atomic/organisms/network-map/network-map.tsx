@@ -17,8 +17,10 @@ export const NetworkMap = (props: NetworkMapProps) => {
 
     return (
         <div className={cn('overflow-hidden bg-amber-900', className)} ref={container} {...rest}>
-            <div className="flex h-full w-full items-center justify-center bg-green-300">
-                network map
+            <div className="overflow-hidden">
+                <div className="h-full w-full bg-linear-65 from-purple-500 to-pink-500">
+                    network map
+                </div>
             </div>
         </div>
     )

@@ -1,39 +1,53 @@
 export class NetworkMapControl {
     private readonly mapElt: HTMLElement
+    private readonly content: HTMLElement
     private isDragging = false
     private dragStart = { x: 0, y: 0 }
     private currentTransform = { x: 0, y: 0, scale: 1 }
     private lastTouchDistance = 0
-    private touchCenter = { x: 0, y: 0 }
+    private mapSize = 2000
+    private maxZoom = 5
 
     constructor(private readonly containerElt: HTMLDivElement) {
-        this.mapElt = containerElt.firstChild as HTMLElement
+        this.content = containerElt.firstChild as HTMLElement
+        this.mapElt = this.content.firstChild as HTMLElement
+        this.initializeMap()
         this.initializeDragAndDrop()
         this.initializeZoom()
         this.initializeTouchEvents()
     }
+    private initializeMap(): void {
+        const containerRect = this.containerElt.getBoundingClientRect()
+        this.content.style.width = `${containerRect.width}px`
+        this.content.style.height = `${containerRect.height}px`
+
+        this.mapElt.style.width = `${this.mapSize}px`
+        this.mapElt.style.height = `${this.mapSize}px`
+        this.mapElt.style.transformOrigin = '0 0'
+        this.updateTransform()
+    }
 
     private initializeDragAndDrop(): void {
-        this.containerElt.addEventListener('mousedown', this.handleMouseDown.bind(this))
+        this.mapElt.addEventListener('mousedown', this.handleMouseDown.bind(this))
         document.addEventListener('mousemove', this.handleMouseMove.bind(this))
         document.addEventListener('mouseup', this.handleMouseUp.bind(this))
 
-        this.containerElt.style.cursor = 'grab'
+        this.mapElt.style.cursor = 'grab'
         this.containerElt.style.touchAction = 'none'
     }
 
     private initializeZoom(): void {
-        this.containerElt.addEventListener('wheel', this.handleWheel.bind(this), { passive: false })
+        this.mapElt.addEventListener('wheel', this.handleWheel.bind(this), { passive: false })
     }
 
     private initializeTouchEvents(): void {
-        this.containerElt.addEventListener('touchstart', this.handleTouchStart.bind(this), {
+        this.mapElt.addEventListener('touchstart', this.handleTouchStart.bind(this), {
             passive: false,
         })
-        this.containerElt.addEventListener('touchmove', this.handleTouchMove.bind(this), {
+        this.mapElt.addEventListener('touchmove', this.handleTouchMove.bind(this), {
             passive: false,
         })
-        this.containerElt.addEventListener('touchend', this.handleTouchEnd.bind(this), {
+        this.mapElt.addEventListener('touchend', this.handleTouchEnd.bind(this), {
             passive: false,
         })
     }
@@ -42,20 +56,23 @@ export class NetworkMapControl {
         this.isDragging = true
         this.dragStart.x = event.clientX - this.currentTransform.x
         this.dragStart.y = event.clientY - this.currentTransform.y
-        this.containerElt.style.cursor = 'grabbing'
+        this.mapElt.style.cursor = 'grabbing'
     }
 
     private handleMouseMove(event: MouseEvent): void {
         if (!this.isDragging) return
 
-        this.currentTransform.x = event.clientX - this.dragStart.x
-        this.currentTransform.y = event.clientY - this.dragStart.y
+        const newX = event.clientX - this.dragStart.x
+        const newY = event.clientY - this.dragStart.y
+
+        this.currentTransform.x = this.constrainX(newX)
+        this.currentTransform.y = this.constrainY(newY)
         this.updateTransform()
     }
 
     private handleMouseUp(): void {
         this.isDragging = false
-        this.containerElt.style.cursor = 'grab'
+        this.mapElt.style.cursor = 'grab'
     }
 
     private handleWheel(event: WheelEvent): void {
@@ -66,13 +83,16 @@ export class NetworkMapControl {
         const mouseY = event.clientY - rect.top
 
         const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1
-        const newScale = Math.max(0.1, Math.min(5, this.currentTransform.scale * scaleFactor))
+        const newScale = this.constrainScale(this.currentTransform.scale * scaleFactor)
 
         if (newScale !== this.currentTransform.scale) {
             const scaleChange = newScale / this.currentTransform.scale
 
-            this.currentTransform.x = mouseX - (mouseX - this.currentTransform.x) * scaleChange
-            this.currentTransform.y = mouseY - (mouseY - this.currentTransform.y) * scaleChange
+            const newX = mouseX - (mouseX - this.currentTransform.x) * scaleChange
+            const newY = mouseY - (mouseY - this.currentTransform.y) * scaleChange
+
+            this.currentTransform.x = this.constrainX(newX)
+            this.currentTransform.y = this.constrainY(newY)
             this.currentTransform.scale = newScale
 
             this.updateTransform()
@@ -98,7 +118,6 @@ export class NetworkMapControl {
             const touch2 = event.touches[1]!
 
             this.lastTouchDistance = this.getTouchDistance(touch1, touch2)
-            this.touchCenter = this.getTouchCenter(touch1, touch2)
         }
     }
 
@@ -107,8 +126,11 @@ export class NetworkMapControl {
 
         if (event.touches.length === 1 && this.isDragging) {
             const touch = event.touches[0]!
-            this.currentTransform.x = touch.clientX - this.dragStart.x
-            this.currentTransform.y = touch.clientY - this.dragStart.y
+            const newX = touch.clientX - this.dragStart.x
+            const newY = touch.clientY - this.dragStart.y
+
+            this.currentTransform.x = this.constrainX(newX)
+            this.currentTransform.y = this.constrainY(newY)
             this.updateTransform()
         } else if (event.touches.length === 2) {
             const touch1 = event.touches[0]!
@@ -119,10 +141,7 @@ export class NetworkMapControl {
 
             if (this.lastTouchDistance > 0) {
                 const scaleChange = currentDistance / this.lastTouchDistance
-                const newScale = Math.max(
-                    0.1,
-                    Math.min(5, this.currentTransform.scale * scaleChange),
-                )
+                const newScale = this.constrainScale(this.currentTransform.scale * scaleChange)
 
                 if (newScale !== this.currentTransform.scale) {
                     const rect = this.containerElt.getBoundingClientRect()
@@ -131,10 +150,11 @@ export class NetworkMapControl {
 
                     const scaleFactor = newScale / this.currentTransform.scale
 
-                    this.currentTransform.x =
-                        centerX - (centerX - this.currentTransform.x) * scaleFactor
-                    this.currentTransform.y =
-                        centerY - (centerY - this.currentTransform.y) * scaleFactor
+                    const newX = centerX - (centerX - this.currentTransform.x) * scaleFactor
+                    const newY = centerY - (centerY - this.currentTransform.y) * scaleFactor
+
+                    this.currentTransform.x = this.constrainX(newX)
+                    this.currentTransform.y = this.constrainY(newY)
                     this.currentTransform.scale = newScale
 
                     this.updateTransform()
@@ -142,7 +162,6 @@ export class NetworkMapControl {
             }
 
             this.lastTouchDistance = currentDistance
-            this.touchCenter = currentCenter
         }
     }
 
@@ -168,5 +187,47 @@ export class NetworkMapControl {
             x: (touch1.clientX + touch2.clientX) / 2,
             y: (touch1.clientY + touch2.clientY) / 2,
         }
+    }
+
+    private constrainX(x: number): number {
+        const containerRect = this.containerElt.getBoundingClientRect()
+        const scaledMapWidth = this.mapSize * this.currentTransform.scale
+
+        // center if map is smaller than container
+        if (scaledMapWidth <= containerRect.width) {
+            return (containerRect.width - scaledMapWidth) / 2
+        }
+
+        // Otherwise, constrain to limits
+        const minX = containerRect.width - scaledMapWidth
+        const maxX = 0
+        return Math.max(minX, Math.min(maxX, x))
+    }
+
+    private constrainY(y: number): number {
+        const containerRect = this.containerElt.getBoundingClientRect()
+        const scaledMapHeight = this.mapSize * this.currentTransform.scale
+
+        // center if map is smaller than container
+        if (scaledMapHeight <= containerRect.height) {
+            return (containerRect.height - scaledMapHeight) / 2
+        }
+
+        // Otherwise, constrain to limits
+        const minY = containerRect.height - scaledMapHeight
+        const maxY = 0
+        return Math.max(minY, Math.min(maxY, y))
+    }
+
+    private getMinZoom(): number {
+        const containerRect = this.containerElt.getBoundingClientRect()
+        // The minimum zoom ensures the map fits entirely within the container
+        // The smaller dimension (width or height) determines the minimum scale
+        return Math.max(containerRect.width / this.mapSize, containerRect.height / this.mapSize)
+    }
+
+    private constrainScale(scale: number): number {
+        const minZoom = this.getMinZoom()
+        return Math.max(minZoom, Math.min(this.maxZoom, scale))
     }
 }
