@@ -16,10 +16,27 @@ export const NetworkMap = (props: NetworkMapProps) => {
     }, [])
 
     return (
-        <div className={cn('overflow-hidden bg-amber-900', className)} ref={container} {...rest}>
-            <div className="overflow-hidden">
-                <div className="h-full w-full bg-linear-65 from-purple-500 to-pink-500">
-                    network map
+        <div className={cn('bg-background overflow-hidden', className)} ref={container} {...rest}>
+            <div className="overflow-hidden rounded-lg">
+                <div className="bg-card relative h-full w-full">
+                    <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                        <defs>
+                            <pattern
+                                id="grid-pattern"
+                                x="0"
+                                y="0"
+                                width="50"
+                                height="50"
+                                patternUnits="userSpaceOnUse"
+                            >
+                                <circle cx="0" cy="0" r="2" className="fill-muted-foreground" />
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center font-mono text-sm">
+                        network map
+                    </div>
                 </div>
             </div>
         </div>
