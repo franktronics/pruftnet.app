@@ -47,7 +47,7 @@ The project is a monorepo managed with pnpm and Turborepo.
 
 ## Comment Conventions
 
-- Code and comments should be in English no matter the native language of the author
+- Code and comments should ONLY be in English no matter the native language of the author
 - Only write comments for complex logic or non-obvious code
 
 ## Source for documentation
@@ -60,3 +60,4 @@ The project is a monorepo managed with pnpm and Turborepo.
 - Use [TypeScript documentation](https://www.typescriptlang.org/docs/) for TypeScript documentation
 - Use [Electron documentation](https://www.electronjs.org/docs/latest/) for Electron documentation
 - Use [Express.js documentation](https://expressjs.com/en/5x/api.html) for Express.js documentation
+- Use [Shadcn documentation](https://ui.shadcn.com/docs/components) for Shadcn component library documentation

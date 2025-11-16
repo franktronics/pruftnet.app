@@ -19,4 +19,5 @@ Apply the [general coding guidelines](./copilot-instructions.md) to all code.
 - Use functional components with hooks
 - Follow the React hooks rules (no conditional hooks)
 - Keep components small and focused
-- Use Tailwind CSS for styling
+- Use Tailwind CSS for styling with the style of Shadcn UI
+- Use Shadcn UI components where applicable

@@ -14,7 +14,7 @@ import { CaptureFilter } from './components/capture-filter'
 function HomeContent() {
     return (
         <Layout>
-            <TabsDisplay defaultValue="scan" className="flex flex-1 flex-col">
+            <TabsDisplay defaultValue="graph" className="flex flex-1 flex-col">
                 <div className="flex shrink-0 items-center gap-2">
                     <TabsDisplayList>
                         <TabsDisplayTrigger value="scan">Scan</TabsDisplayTrigger>
@@ -24,11 +24,11 @@ function HomeContent() {
                 </div>
                 <TabsDisplayContent value="scan" className="flex flex-1 flex-col pt-2">
                     <CaptureFilter className="shrink-0 pb-2" />
-                    <TabScan className="flex-1" />
+                    <TabScan className="h-full w-full flex-1" />
                 </TabsDisplayContent>
 
-                <TabsDisplayContent value="graph" className="flex-1">
-                    <TabGraph />
+                <TabsDisplayContent value="graph" className="flex flex-1 flex-col">
+                    <TabGraph className="h-full w-full flex-1" />
                 </TabsDisplayContent>
             </TabsDisplay>
         </Layout>

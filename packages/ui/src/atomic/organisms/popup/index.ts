@@ -1,1 +1,1 @@
-export { Popup } from './popup.tsx'
+export { Popup } from './popup'
