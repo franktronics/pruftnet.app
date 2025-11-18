@@ -10,7 +10,7 @@
         "format": "prettier --write .",
         "clean": "node clean.js"
     },
-    "packageManager": "pnpm@10.18.0",
+    "packageManager": "pnpm@10.22.0",
     "engines": {
         "node": ">=18"
     },

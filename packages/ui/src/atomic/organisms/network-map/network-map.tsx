@@ -4,7 +4,7 @@ import { NetworkMapControl } from './network-map-control'
 
 export type NetworkMapProps = {} & ComponentPropsWithoutRef<'div'>
 export const NetworkMap = (props: NetworkMapProps) => {
-    const { className, ...rest } = props
+    const { className, children, ...rest } = props
 
     const container = useRef<HTMLDivElement>(null)
     const controlInst = useRef<NetworkMapControl>(null)
@@ -28,15 +28,17 @@ export const NetworkMap = (props: NetworkMapProps) => {
                                 width="50"
                                 height="50"
                                 patternUnits="userSpaceOnUse"
+                                className="[&>circle]:fill-muted-foreground"
                             >
-                                <circle cx="0" cy="0" r="2" className="fill-muted-foreground" />
+                                <circle cx="0" cy="0" r="1.5" />
+                                <circle cx="50" cy="0" r="1.5" />
+                                <circle cx="0" cy="50" r="1.5" />
+                                <circle cx="50" cy="50" r="1.5" />
                             </pattern>
                         </defs>
                         <rect width="100%" height="100%" fill="url(#grid-pattern)" />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center font-mono text-sm">
-                        network map
-                    </div>
+                    <div className={cn('absolute inset-0 font-mono text-sm')}>{children}</div>
                 </div>
             </div>
         </div>

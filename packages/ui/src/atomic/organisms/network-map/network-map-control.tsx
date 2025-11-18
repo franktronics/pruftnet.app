@@ -5,7 +5,7 @@ export class NetworkMapControl {
     private dragStart = { x: 0, y: 0 }
     private currentTransform = { x: 0, y: 0, scale: 1 }
     private lastTouchDistance = 0
-    private mapSize = 3000
+    private mapSize = 20000
     private maxZoom = 5
     private effectiveMapSize = this.mapSize
 
