@@ -20,3 +20,6 @@ utils/protocols/tcp/protocol_tcp.cpp
 utils/protocols/udp/protocol_udp.cpp
 utils/protocols/icmp/protocol_icmp.cpp
 utils/protocols/icmpv6/protocol_icmpv6.cpp
+
+# Analyser modules
+modules/analyser/ipv6_nd/ipv6_ns.cpp

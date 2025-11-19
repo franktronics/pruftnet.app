@@ -27,7 +27,7 @@ cmake --build . --parallel $(nproc)
 echo "🚀 Running all tests..."
 echo "========================"
 ##./core_tests --verbosity high --durations yes
-sudo ./core_tests "[parser]"
+sudo ./core_tests "[ipv6_nd]"
 
 echo ""
 echo "✅ All tests completed successfully!"

@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <iostream>
+#include <map>
 
 std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4TCPPacket() {
   std::array<uint8_t, MAX_PACKET_SIZE> packet = {};
