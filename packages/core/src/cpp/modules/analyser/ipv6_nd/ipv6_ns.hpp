@@ -1,44 +1,23 @@
 #pragma once
 
-#include "../analyser_mode.hpp"
+#include "neighbor_discovery.hpp"
 #include "utils/common/common.hpp"
 #include <array>
-#include <atomic>
-#include <memory>
 #include <string>
-#include <thread>
 
-class IPv6NeighborSolicitation : public Analysis {
+class IPv6NeighborSolicitation : public NeighborDiscovery {
 public:
   IPv6NeighborSolicitation();
   ~IPv6NeighborSolicitation();
 
   void setTargetIPv6(const std::string &target_ipv6);
-  void setSourceIPv6(const std::string &source_ipv6);
-  void setSourceMAC(const std::array<uint8_t, 6> &source_mac);
   bool analyze(std::string &interface_name) override;
-  void stop();
-  bool isRunning() const;
 
 private:
   std::string target_ipv6_;
-  std::string source_ipv6_;
-  std::array<uint8_t, 6> source_mac_;
-  int raw_socket_;
-  std::atomic<bool> is_running_;
-  std::atomic<bool> should_stop_;
-  std::thread send_thread_;
 
-  bool createRawSocket();
-  int getInterfaceIndex(const std::string &interface_name);
-  bool sendPacket(const uint8_t *packet, size_t length,
-                  const std::string &interface_name);
   void sendWorker(const std::string &interface_name);
   std::array<uint8_t, MAX_PACKET_SIZE> buildNSPacket();
-  std::array<uint8_t, 16> parseIPv6Address(const std::string &ipv6_str);
   std::array<uint8_t, 6>
   calculateSolicitedNodeMAC(const std::string &target_ipv6);
-  uint16_t calculateICMPv6Checksum(
-      const std::array<uint8_t, MAX_PACKET_SIZE> &packet, size_t ipv6_offset,
-      size_t icmpv6_offset, size_t icmpv6_length);
 };

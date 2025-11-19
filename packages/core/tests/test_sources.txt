@@ -22,4 +22,6 @@ utils/protocols/icmp/protocol_icmp.cpp
 utils/protocols/icmpv6/protocol_icmpv6.cpp
 
 # Analyser modules
+modules/analyser/ipv6_nd/neighbor_discovery.cpp
 modules/analyser/ipv6_nd/ipv6_ns.cpp
+modules/analyser/ipv6_nd/ipv6_rs.cpp
