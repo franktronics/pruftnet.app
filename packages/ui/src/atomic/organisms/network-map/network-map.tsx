@@ -16,9 +16,17 @@ export const NetworkMap = (props: NetworkMapProps) => {
     }, [])
 
     return (
-        <div className={cn('bg-background overflow-hidden', className)} ref={container} {...rest}>
-            <div className="overflow-hidden rounded-lg">
-                <div className="bg-card relative h-full w-full">
+        <div
+            aria-description="map-container"
+            className={cn('bg-background overflow-hidden', className)}
+            ref={container}
+            {...rest}
+        >
+            <div
+                aria-description="map-content"
+                className="relative h-full w-full overflow-hidden rounded-lg"
+            >
+                <div aria-description="map-elt" className="bg-card absolute">
                     <svg className="pointer-events-none absolute inset-0 h-full w-full">
                         <defs>
                             <pattern

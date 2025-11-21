@@ -1,6 +1,5 @@
 export class NetworkMapControl {
     private readonly mapElt: HTMLElement
-    private readonly content: HTMLElement
     private isDragging = false
     private dragStart = { x: 0, y: 0 }
     private currentTransform = { x: 0, y: 0, scale: 1 }
@@ -10,24 +9,18 @@ export class NetworkMapControl {
     private effectiveMapSize = this.mapSize
 
     constructor(private readonly containerElt: HTMLDivElement) {
-        this.content = containerElt.firstChild as HTMLElement
-        this.mapElt = this.content.firstChild as HTMLElement
+        this.mapElt = containerElt.firstChild?.firstChild as HTMLElement
         this.initializeMap()
         this.initializeDragAndDrop()
         this.initializeZoom()
         this.initializeTouchEvents()
     }
     private initializeMap(): void {
-        const containerRect = this.containerElt.getBoundingClientRect()
-        this.content.style.width = `${containerRect.width}px`
-        this.content.style.height = `${containerRect.height}px`
-
         // Update effective map size to be at least as large as the container
         this.effectiveMapSize = Math.max(
             this.mapSize,
             Math.max(window.innerWidth, window.innerHeight),
         )
-        console.log('effectiveSize', this.effectiveMapSize)
         this.mapElt.style.width = `${this.effectiveMapSize}px`
         this.mapElt.style.height = `${this.effectiveMapSize}px`
         this.mapElt.style.transformOrigin = '0 0'
