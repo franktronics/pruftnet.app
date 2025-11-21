@@ -16,13 +16,16 @@ export type NetworkDeviceProps = { deviceType: DEVICE_TYPE } & BasicDeviceProps 
 
 export const NetworkDevice = (props: NetworkDeviceProps) => {
     const { children, mac, position, deviceType, className, ...rest } = props
+    const GRID_SIZE = 50
+    const resizedX = Math.round(position.x / GRID_SIZE) * GRID_SIZE
+    const resizedY = Math.round(position.y / GRID_SIZE) * GRID_SIZE
 
     return (
         <Popover>
             <PopoverTrigger
-                className={cn('absolute top-1/2 left-1/2', className)}
+                className={cn('absolute top-1/2 left-1/2 origin-center', className)}
                 style={{
-                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    transform: `translate(${resizedX}px, ${resizedY}px)`,
                 }}
                 aria-label={'Device: ' + mac}
                 {...rest}
@@ -33,14 +36,14 @@ export const NetworkDevice = (props: NetworkDeviceProps) => {
                         variant="outline"
                         size="icon"
                         aria-label={deviceType}
-                        className="size-14 rounded-full"
+                        className="size-12.5 rounded-full"
                     >
                         {cond(
                             [deviceType === DEVICE_TYPE.PC, <Computer className="size-6" />],
                             [deviceType === DEVICE_TYPE.ROUTER, <Router className="size-6" />],
                         )}
                     </Button>
-                    <p>{mac}</p>
+                    <p className="absolute top-[calc(100%+0.5rem)]">{mac}</p>
                 </div>
             </PopoverTrigger>
             <PopoverContent>{children}</PopoverContent>

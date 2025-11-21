@@ -1,4 +1,4 @@
-import { NetworkMap, NetworkPcDevice } from '@repo/ui/organisms'
+import { NetworkMap, NetworkPcDevice, NetworkRouterDevice } from '@repo/ui/organisms'
 import { Vector } from '@repo/utils'
 import type { ComponentPropsWithoutRef } from 'react'
 
@@ -16,8 +16,13 @@ export const TabGraph = (props: TabGraphProps) => {
                     data={{}}
                 />
                 <NetworkPcDevice
-                    mac="11:22:33:44:55:66"
+                    mac="81:20:33:44:55:00"
                     position={new Vector(-500, -250)}
+                    data={{}}
+                />
+                <NetworkRouterDevice
+                    mac="77:88:99:AA:BB:CC"
+                    position={new Vector(100, -400)}
                     data={{}}
                 />
             </NetworkMap>
