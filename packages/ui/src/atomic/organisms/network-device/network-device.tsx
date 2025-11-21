@@ -1,10 +1,11 @@
 import { type ComponentPropsWithoutRef } from 'react'
 import { Popover, PopoverTrigger, PopoverContent, Button } from '../../atoms'
 import { cn, cond, Vector } from '@repo/utils'
-import { Computer } from 'lucide-react'
+import { Computer, Router } from 'lucide-react'
 
 export enum DEVICE_TYPE {
     PC = 'pc',
+    ROUTER = 'router',
 }
 export type BasicDeviceProps = {
     mac: string
@@ -28,17 +29,17 @@ export const NetworkDevice = (props: NetworkDeviceProps) => {
                 asChild
             >
                 <div className="flex flex-col items-center gap-1">
-                    {cond([
-                        deviceType === DEVICE_TYPE.PC,
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            aria-label={deviceType}
-                            className="size-14 rounded-full"
-                        >
-                            <Computer className="size-6" />
-                        </Button>,
-                    ])}
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={deviceType}
+                        className="size-14 rounded-full"
+                    >
+                        {cond(
+                            [deviceType === DEVICE_TYPE.PC, <Computer className="size-6" />],
+                            [deviceType === DEVICE_TYPE.ROUTER, <Router className="size-6" />],
+                        )}
+                    </Button>
                     <p>{mac}</p>
                 </div>
             </PopoverTrigger>
