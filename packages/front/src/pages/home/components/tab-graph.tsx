@@ -33,13 +33,18 @@ export const TabGraph = (props: TabGraphProps) => {
                 <NetworkConnection
                     fromMac="00:1A:2B:3C:4D:5E"
                     toMac="11:22:33:44:55:66"
-                    color="white"
+                    color="var(--foreground)"
                 />
                 <NetworkConnection
                     fromMac="11:22:33:44:55:66"
                     toMac="81:20:33:44:55:00"
-                    color="white"
+                    color="var(--foreground)"
                     bidirectional={true}
+                />
+                <NetworkConnection
+                    fromMac="11:22:33:44:55:66"
+                    toMac="77:88:99:AA:BB:CC"
+                    color="var(--foreground)"
                 />
             </NetworkMap>
         </section>
