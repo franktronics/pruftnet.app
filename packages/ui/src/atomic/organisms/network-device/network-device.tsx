@@ -28,6 +28,7 @@ export const NetworkDevice = (props: NetworkDeviceProps) => {
                     transform: `translate(${resizedX}px, ${resizedY}px)`,
                 }}
                 aria-label={'Device: ' + mac}
+                id={'network-device-'.concat(mac)}
                 {...rest}
                 asChild
             >
