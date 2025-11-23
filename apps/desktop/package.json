@@ -9,8 +9,7 @@
         "dev": "electron-forge start",
         "package": "electron-forge package",
         "make": "electron-forge make",
-        "publish": "electron-forge publish",
-        "lint": "eslint --ext .ts,.tsx ."
+        "publish": "electron-forge publish"
     },
     "keywords": [],
     "author": {
@@ -31,19 +30,13 @@
         "@electron/get": "^4.0.2",
         "@tailwindcss/vite": "^4.1.17",
         "@types/electron-squirrel-startup": "^1.0.2",
-        "@types/react": "^19.2.4",
+        "@types/react": "^19.2.6",
         "@types/react-dom": "^19.2.3",
-        "@typescript-eslint/eslint-plugin": "^8.46.4",
-        "@typescript-eslint/parser": "^8.46.4",
         "@vitejs/plugin-react": "^5.1.1",
-        "electron": "39.1.2",
-        "eslint": "^9.39.1",
-        "eslint-import-resolver-node": "^0.3.9",
-        "eslint-import-resolver-typescript": "^4.4.4",
-        "eslint-plugin-import": "^2.32.0",
+        "electron": "39.2.3",
         "tailwindcss": "^4.1.17",
         "typescript": "~5.9.3",
-        "vite": "^7.2.2"
+        "vite": "^7.2.4"
     },
     "dependencies": {
         "@repo/front": "workspace:*",

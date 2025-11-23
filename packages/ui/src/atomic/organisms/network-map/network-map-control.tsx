@@ -84,7 +84,7 @@ export class NetworkMapControl {
         const mouseX = event.clientX - rect.left
         const mouseY = event.clientY - rect.top
 
-        const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1
+        const scaleFactor = event.deltaY > 0 ? 0.95 : 1.05
         const newScale = this.constrainScale(this.currentTransform.scale * scaleFactor)
 
         if (newScale !== this.currentTransform.scale) {

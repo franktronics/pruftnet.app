@@ -8,7 +8,7 @@ export type ActionsControlProps = {} & ComponentPropsWithoutRef<'section'>
 
 export const ActionsControl = (props: ActionsControlProps) => {
     const { className, ...rest } = props
-    const { captureStatus, setCaptureStatus } = useScanControlContext()
+    const { captureStatus, changeCaptureStatus } = useScanControlContext()
 
     return (
         <section className={cn(className)} {...rest}>
@@ -26,9 +26,9 @@ export const ActionsControl = (props: ActionsControlProps) => {
                         captureStatus === CAPTURE_STATUS.IDLE ||
                         captureStatus === CAPTURE_STATUS.ERROR
                     ) {
-                        setCaptureStatus(CAPTURE_STATUS.INNITIALIZING)
+                        changeCaptureStatus(CAPTURE_STATUS.INNITIALIZING)
                     } else if (captureStatus === CAPTURE_STATUS.CAPTURING) {
-                        setCaptureStatus(CAPTURE_STATUS.IDLE)
+                        changeCaptureStatus(CAPTURE_STATUS.IDLE)
                     }
                 }}
             >

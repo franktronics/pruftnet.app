@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
 
 export const CAPTURE_STATUS = {
@@ -11,7 +11,7 @@ export type CAPTURE_STATUS = (typeof CAPTURE_STATUS)[keyof typeof CAPTURE_STATUS
 
 export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
-    setCaptureStatus: (capturing: CAPTURE_STATUS) => void
+    changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
 }
 
 const ScanControlContext = createContext<ScanControlContextType | undefined>(undefined)
@@ -29,9 +29,13 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
 
+    const handleChangeCaptureStatus = useCallback((status: CAPTURE_STATUS) => {
+        setCaptureStatus(status)
+    }, [])
+
     const value: ScanControlContextType = {
         captureStatus,
-        setCaptureStatus,
+        changeCaptureStatus: handleChangeCaptureStatus,
     }
 
     return (
