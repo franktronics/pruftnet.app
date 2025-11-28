@@ -1,10 +1,10 @@
 import './styles/main.css'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from './routes/root.tsx'
-import { ThemeProvider } from '@repo/ui/molecules'
+import { ThemeProvider, type Theme } from '@repo/ui/molecules'
 import { StrictMode } from 'react'
 
-const handleChangeTheme = (theme: 'dark' | 'light' | 'system') => {
+const handleChangeTheme = (theme: Theme) => {
     window.electron.changeTheme(theme)
 }
 

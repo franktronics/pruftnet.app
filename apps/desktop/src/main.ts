@@ -14,8 +14,8 @@ if (started) {
 const createWindow = () => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
-        width: 1300, //1800
-        height: 850, //1100
+        width: 1800,
+        height: 1100,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
@@ -30,11 +30,6 @@ const createWindow = () => {
 
     // Open the DevTools.
     mainWindow.webContents.openDevTools()
-
-    // Even
-    ipcMain.on('theme:change', (_, theme) => {
-        nativeTheme.themeSource = theme
-    })
 }
 
 app.on('window-all-closed', () => {
@@ -50,5 +45,9 @@ app.whenReady().then(() => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow()
         }
+    })
+
+    ipcMain.on('theme:change', (_, theme) => {
+        nativeTheme.themeSource = theme
     })
 })

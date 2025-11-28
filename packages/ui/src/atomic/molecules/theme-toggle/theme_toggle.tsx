@@ -6,7 +6,7 @@ import {
     DropdownMenuTrigger,
 } from '../../atoms'
 import { Button } from '../../atoms'
-import { useTheme } from './theme_provider.tsx'
+import { useTheme } from './theme_provider'
 import { ComponentPropsWithoutRef } from 'react'
 
 type ThemeToggleProps = {

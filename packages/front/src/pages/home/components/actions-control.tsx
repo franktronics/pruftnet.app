@@ -1,5 +1,5 @@
-import { cn, cond } from '@repo/utils'
-import type { ComponentPropsWithoutRef } from 'react'
+import { cn, cond, useFetcher } from '@repo/utils'
+import { type ComponentPropsWithoutRef } from 'react'
 import { CAPTURE_STATUS, useScanControlContext } from '../stores/scan-control.context'
 import { Button, Spinner } from '@repo/ui/atoms'
 import { CircleX, Play, Square } from 'lucide-react'
@@ -9,6 +9,8 @@ export type ActionsControlProps = {} & ComponentPropsWithoutRef<'section'>
 export const ActionsControl = (props: ActionsControlProps) => {
     const { className, ...rest } = props
     const { captureStatus, changeCaptureStatus } = useScanControlContext()
+
+    const {} = useFetcher({})
 
     return (
         <section className={cn(className)} {...rest}>

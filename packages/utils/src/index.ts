@@ -2,4 +2,5 @@ export * from './classnames/classnames'
 export * from './converter/base'
 export * from './common/condition-eval'
 export * from './common/arithmetic'
-
+export * from './common/platform-detect'
+export * from './hooks/use-fetcher'
