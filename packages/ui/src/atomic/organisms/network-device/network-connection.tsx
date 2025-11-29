@@ -24,8 +24,8 @@ export const NetworkConnection = (props: NetworkConnectionProps) => {
 
     const svgRef = useRef<SVGSVGElement>(null)
     const [line, setLine] = useState({ x1: 0, y1: 0, x2: 0, y2: 0 })
-    const [arrowEndPoints, setArrowEndPoints] = useState('')
-    const [arrowStartPoints, setArrowStartPoints] = useState('')
+    const [arrowEndPoints, setArrowEndPoints] = useState('0,0 0,0 0,0')
+    const [arrowStartPoints, setArrowStartPoints] = useState('0,0 0,0 0,0')
 
     useEffect(() => {
         const fromElement = document.getElementById('network-device-'.concat(fromMac))
@@ -129,7 +129,7 @@ export const NetworkConnection = (props: NetworkConnectionProps) => {
                 strokeLinejoin="round"
                 className={cn(animated && 'animate-pulse')}
             />
-            {bidirectional && (
+            {bidirectional ? (
                 <path
                     d={`M ${arrowStartPoints.split(' ')[0]} L ${arrowStartPoints.split(' ')[1]} L ${arrowStartPoints.split(' ')[2]} Z`}
                     fill={color}
@@ -139,7 +139,7 @@ export const NetworkConnection = (props: NetworkConnectionProps) => {
                     strokeLinejoin="round"
                     className={cn(animated && 'animate-pulse')}
                 />
-            )}
+            ) : null}
         </svg>
     )
 }
