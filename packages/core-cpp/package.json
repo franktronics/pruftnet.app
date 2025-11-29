@@ -1,5 +1,5 @@
 {
-    "name": "@repo/core",
+    "name": "@repo/core-cpp",
     "version": "0.0.1",
     "description": "Core C++ network analysis modules with N-API bindings",
     "type": "module",

@@ -5,8 +5,8 @@
     "scripts": {
         "dev:web": "pnpm -F @repo/web run dev",
         "dev:desktop": "pnpm -F @repo/desktop run dev",
-        "build:core": "pnpm -F @repo/core run build",
-        "test": "pnpm -F @repo/core run test",
+        "build:core": "pnpm -F @repo/core-cpp run build",
+        "test": "pnpm -F @repo/core-cpp run test",
         "format": "prettier --write .",
         "clean": "node clean.js"
     },

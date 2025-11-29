@@ -16,6 +16,7 @@
     "dependencies": {
         "@repo/ui": "workspace:*",
         "@repo/utils": "workspace:*",
+        "@repo/core-node": "workspace:*",
         "@tailwindcss/vite": "^4.1.17",
         "@tanstack/react-router": "^1.139.3",
         "@tanstack/react-virtual": "^3.13.12",

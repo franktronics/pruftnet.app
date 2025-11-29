@@ -23,16 +23,16 @@ async function fetchWeb<T>(reqType: REQ_TYPE, endpoint: string, body?: string): 
 }
 
 export type FetcherProps = {
-    queryKey: string[]
+    queryKey?: string[]
     url: string
 }
 export function useFetcher(props: FetcherProps) {
-    const { queryKey } = props
+    const { queryKey = [], url } = props
 
     const {} = useQuery({
         queryKey: queryKey,
         queryFn: async () => {
-            return fetchWeb<any>(REQ_TYPE.GET, '/api/example-endpoint')
+            return fetchWeb<any>(REQ_TYPE.GET, url)
         },
     })
 }

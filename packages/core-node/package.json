@@ -1,0 +1,25 @@
+{
+    "name": "@repo/core-node",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@tanstack/react-query": "^5.90.10",
+        "@repo/core-cpp": "workspace:*",
+        "@repo/utils": "workspace:*",
+        "zod": "^4.1.13"
+    },
+    "devDependencies": {
+        "typescript": "~5.9.3",
+        "@types/node": "^24.10.1"
+    },
+    "imports": {
+        "#*": "./src/*"
+    }
+}

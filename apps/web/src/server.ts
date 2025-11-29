@@ -2,6 +2,8 @@ import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
+import { trpc } from '@repo/utils'
+import { appRouter } from '@repo/core-node'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -11,16 +13,11 @@ const HOST = process.env.HOST || (isProd ? '127.0.0.1' : '0.0.0.0')
 
 const app = express()
 
-// Middleware pour parser JSON
 app.use(express.json())
 
-// Simple healthcheck
 app.get('/health', (_req, res) => res.status(200).send('ok'))
 
-// Example API route
-app.get('/api/hello', (_req, res) => {
-    res.json({ message: 'Hello from ExpressJS' })
-})
+app.all('/trpc/:procedure', trpc.createExpressMiddleware(appRouter))
 
 if (!isProd) {
     // Dev: use Vite in middleware mode for HMR and assets
