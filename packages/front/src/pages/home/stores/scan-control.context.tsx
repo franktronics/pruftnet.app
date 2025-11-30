@@ -32,7 +32,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
-        const startScanResult = await fetcher.scan.start.query({ id: 'scan-123' })
+        const startScanResult = await fetcher.scan.start.query({ id: 'unique-scan-id' })
         console.log('startScanResult', startScanResult)
     }, [])
 

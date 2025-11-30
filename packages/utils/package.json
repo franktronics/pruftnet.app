@@ -22,6 +22,7 @@
         "@types/express": "^5.0.5",
         "@types/react": "^19.2.6",
         "@types/react-dom": "^19.2.3",
+        "electron": "39.2.3",
         "typescript": "~5.9.3"
     },
     "imports": {

@@ -1,10 +1,12 @@
-import { trpc } from '@repo/utils'
+import { detectPlatform, trpc } from '@repo/utils'
 import { type AppRouter } from '@repo/core-node'
 const { createClient } = trpc
 
 export const fetcher = createClient<AppRouter>({
-    baseUrl: '/trpc',
+    baseHttpUrl: '/trpc',
+    baseIPCPath: 'trpc',
     headers: {
         // Custom headers if needed
     },
+    isDesktop: detectPlatform().isElectron,
 })

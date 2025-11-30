@@ -4,7 +4,9 @@ import { z } from 'zod'
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export interface ClientConfig {
-    baseUrl: string
+    baseHttpUrl: string
+    baseIPCPath: string
+    isDesktop: boolean
     headers?: Record<string, string>
 }
 
@@ -15,8 +17,8 @@ type InferProcedureClient<T> =
                   ? (input: z.infer<TInput>) => Promise<TOutput>
                   : () => Promise<TOutput>
               mutate: TInput extends z.ZodSchema
-                  ? (input: z.infer<TInput>) => Promise<TOutput>
-                  : () => Promise<TOutput>
+                  ? (input: z.infer<TInput>, method?: HttpMethod) => Promise<TOutput>
+                  : (method?: HttpMethod) => Promise<TOutput>
           }
         : never
 
@@ -45,40 +47,72 @@ export function createClient<T extends RouterDef>(config: ClientConfig) {
                         const procedureName = procedurePath.join('.')
                         const methodToUse = prop === 'query' ? 'GET' : method || 'POST'
 
-                        let url = `${config.baseUrl}/${procedureName}`
-                        if (methodToUse === 'GET' && input !== undefined) {
-                            const params = new URLSearchParams()
-                            params.set('input', JSON.stringify(input))
-                            url += `?${params.toString()}`
-                        }
-
                         //Make the fetch request
-                        console.log({ procedureName, methodToUse, input, url })
-                        const response = await fetch(url, {
-                            method: methodToUse,
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...config.headers,
-                            },
-                            body:
-                                methodToUse !== 'GET' && input !== undefined
-                                    ? JSON.stringify(input)
-                                    : undefined,
-                        })
+                        console.log({ procedureName, methodToUse, input })
 
-                        if (!response.ok) {
-                            const errorData = await response.json()
-                            throw new Error(
-                                `Error ${response.status}: ${errorData.error || response.statusText}`,
-                            )
-                        }
-
-                        const data = await response.json()
-                        return data.result
+                        const result = config.isDesktop
+                            ? await makeIPCRequest({
+                                  basePath: config.baseIPCPath,
+                                  procedureName: procedureName,
+                                  input,
+                              })
+                            : await makeHttpRequest({
+                                  headers: config.headers,
+                                  baseUrl: config.baseHttpUrl,
+                                  procedureName: procedureName,
+                                  method: methodToUse,
+                                  input,
+                              })
+                        return result
                     }
                 },
             },
         )
     }
     return createProcedureProxy() as InferRouteClient<T>
+}
+
+type HttpMakerProps = {
+    headers: ClientConfig['headers']
+    baseUrl: string
+    procedureName: string
+    method: HttpMethod
+    input?: any
+}
+async function makeHttpRequest(props: HttpMakerProps) {
+    const { headers, baseUrl, procedureName, method, input } = props
+
+    let url = `${baseUrl}/${procedureName}`
+    if (method === 'GET' && input !== undefined) {
+        const params = new URLSearchParams()
+        params.set('input', JSON.stringify(input))
+        url += `?${params.toString()}`
+    }
+
+    const response = await fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: method !== 'GET' && input !== undefined ? JSON.stringify(input) : undefined,
+    })
+
+    if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(`Error ${response.status}: ${errorData.error || response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data.result
+}
+
+type IPCMakerProps = {
+    basePath: string
+    procedureName: string
+    input?: any
+}
+async function makeIPCRequest(props: IPCMakerProps) {
+    const { basePath, procedureName, input } = props
+    return await (window as any).electron.trpcHandler({ basePath, procedureName, input })
 }

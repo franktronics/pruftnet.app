@@ -3,6 +3,8 @@ import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { trpc } from '@repo/utils'
+import { appRouter } from '@repo/core-node'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -50,4 +52,6 @@ app.whenReady().then(() => {
     ipcMain.on('theme:change', (_, theme) => {
         nativeTheme.themeSource = theme
     })
+
+    ipcMain.handle('trpc', trpc.createElectronHandler(appRouter))
 })
