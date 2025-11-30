@@ -1,3 +1,4 @@
+import { ClientError } from './error-parser'
 import type { RouterDef, ProcedureDefinition } from './procedure'
 import { z } from 'zod'
 
@@ -100,7 +101,21 @@ async function makeHttpRequest(props: HttpMakerProps) {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(`Error ${response.status}: ${errorData.error || response.statusText}`)
+        console.log('errorData', errorData)
+        if (errorData.code && errorData.message) {
+            throw new ClientError({
+                code: errorData.code,
+                message: errorData.message,
+                origin: errorData.origin,
+                whatToDo: errorData.whatToDo,
+                data: errorData.data,
+            })
+        } else {
+            throw new ClientError({
+                code: response.status,
+                message: response.statusText,
+            })
+        }
     }
 
     const data = await response.json()
@@ -114,5 +129,25 @@ type IPCMakerProps = {
 }
 async function makeIPCRequest(props: IPCMakerProps) {
     const { basePath, procedureName, input } = props
-    return await (window as any).electron.trpcHandler({ basePath, procedureName, input })
+    const response = await (window as any).electron.trpcHandler({
+        basePath,
+        procedureName,
+        input,
+    })
+    if (!response.result && response.code && response.message) {
+        throw new ClientError({
+            code: response.code,
+            message: response.message,
+            origin: response.origin,
+            whatToDo: response.whatToDo,
+            data: response.data,
+        })
+    } else if (!response.result) {
+        throw new ClientError({
+            code: 500,
+            message: 'Unknown IPC error',
+            origin: 'makeIPCRequest',
+        })
+    }
+    return response.result
 }

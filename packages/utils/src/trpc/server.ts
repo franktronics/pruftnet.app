@@ -1,6 +1,7 @@
 import { ProcedureDefinition, RouterDef } from './procedure'
 import type { RequestHandler, Request, Response } from 'express'
 import { type IpcMainInvokeEvent } from 'electron'
+import { ServerError } from './error-parser'
 
 /*
  * Creates an Express middleware for the given tRPC router.
@@ -13,16 +14,22 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
         try {
             const procedure = req.params.procedure
             if (!procedure) {
-                res.status(400).json({ error: 'Procedure name is required' })
-                return
+                return new ServerError({
+                    code: 400,
+                    origin: 'createExpressMiddleware',
+                    message: 'Procedure name is required',
+                })
             }
 
             const procedurePath = procedure.split('.')
             let current: any = router
             for (const segment of procedurePath) {
                 if (!current[segment]) {
-                    res.status(404).json({ error: 'Procedure not found' })
-                    return
+                    return new ServerError({
+                        code: 404,
+                        origin: 'createExpressMiddleware',
+                        message: 'Procedure not found',
+                    })
                 }
                 current = current[segment]
             }
@@ -41,9 +48,12 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
             if (procDef.input) {
                 const validation = procDef.input.safeParse(inputData)
                 if (!validation.success) {
-                    return res.status(400).json({
-                        error: 'Invalid input',
-                        message: validation.error.message,
+                    return new ServerError({
+                        code: 400,
+                        origin: 'createExpressMiddleware',
+                        message: 'Invalid input',
+                        whatToDo: 'Ensure the input data matches the expected schema.',
+                        data: validation.error.format(),
                     })
                 }
                 inputData = validation.data
@@ -52,26 +62,47 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
             const result = await procDef.handler(inputData, { req, res })
             res.json({ result })
         } catch (err: any) {
-            res.status(500).json({ error: 'Internal Server Error', message: err.message })
+            if (err.cause.code && err.cause.message) {
+                return res.status(err.cause.code).json({ ...err.cause })
+            }
+            res.status(500).json({
+                code: 500,
+                message: 'Internal Server Error',
+                origin: 'createExpressMiddleware',
+                whatToDo: 'Try again later or contact support if the issue persists.',
+            })
         }
     }
 }
 
+/*
+ * Creates an Electron IPC handler for the given tRPC router.
+ *
+ * @param router - The tRPC router definition.
+ * @returns An Electron IPC handler function.
+ */
 type ElectronHandlerType = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any
 export function createElectronHandler<T extends RouterDef>(router: T): ElectronHandlerType {
     return async (event: IpcMainInvokeEvent, data: any) => {
-        console.log('handler', { event, data })
         try {
             const procedure = data.procedureName
             if (!procedure) {
-                return { error: 'Procedure name is required' }
+                return new ServerError({
+                    code: 400,
+                    origin: 'createElectronHandler',
+                    message: 'Procedure name is required',
+                })
             }
 
             const procedurePath = procedure.split('.')
             let current: any = router
             for (const segment of procedurePath) {
                 if (!current[segment]) {
-                    return { error: 'Procedure not found' }
+                    return new ServerError({
+                        code: 404,
+                        origin: 'createElectronHandler',
+                        message: 'Procedure not found',
+                    })
                 }
                 current = current[segment]
             }
@@ -82,10 +113,13 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
             if (procDef.input) {
                 const validation = procDef.input.safeParse(inputData)
                 if (!validation.success) {
-                    return {
-                        error: 'Invalid input',
-                        message: validation.error.message,
-                    }
+                    return new ServerError({
+                        code: 400,
+                        origin: 'createElectronHandler',
+                        message: 'Invalid input',
+                        whatToDo: 'Ensure the input data matches the expected schema.',
+                        data: validation.error.format(),
+                    })
                 }
                 inputData = validation.data
             }
@@ -93,7 +127,12 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
             const result = await procDef.handler(inputData, { event })
             return { result }
         } catch (err: any) {
-            return { error: 'Internal Server Error', message: err.message }
+            return {
+                code: 500,
+                message: 'Internal Server Error',
+                origin: 'createElectronHandler',
+                whatToDo: 'Try again later or contact support if the issue persists.',
+            }
         }
     }
 }
