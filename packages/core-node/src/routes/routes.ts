@@ -12,6 +12,8 @@ export const appRouter = createRouter({
                 }),
             )
             .query(async (input) => {
+                const timer = (ms: number) => new Promise((res) => setTimeout(res, ms))
+                await timer(5000)
                 return { message: `Scan started for id: ${input.id}` }
             }),
         stop: procedure

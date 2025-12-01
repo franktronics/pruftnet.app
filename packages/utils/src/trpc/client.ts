@@ -15,11 +15,11 @@ type InferProcedureClient<T> =
     T extends ProcedureDefinition<infer TInput, infer TOutput>
         ? {
               query: TInput extends z.ZodSchema
-                  ? (input: z.infer<TInput>) => Promise<TOutput>
-                  : () => Promise<TOutput>
+                  ? (input: z.infer<TInput>) => () => Promise<TOutput>
+                  : () => () => Promise<TOutput>
               mutate: TInput extends z.ZodSchema
-                  ? (input: z.infer<TInput>, method?: HttpMethod) => Promise<TOutput>
-                  : (method?: HttpMethod) => Promise<TOutput>
+                  ? (input: z.infer<TInput>, method?: HttpMethod) => () => Promise<TOutput>
+                  : (method?: HttpMethod) => () => Promise<TOutput>
           }
         : never
 
@@ -44,27 +44,25 @@ export function createClient<T extends RouterDef>(config: ClientConfig) {
                         return createProcedureProxy(newPath)
                     }
 
-                    return async (input?: any, method?: HttpMethod) => {
+                    return (input?: any, method?: HttpMethod) => {
                         const procedureName = procedurePath.join('.')
                         const methodToUse = prop === 'query' ? 'GET' : method || 'POST'
 
                         //Make the fetch request
-                        console.log({ procedureName, methodToUse, input })
 
-                        const result = config.isDesktop
-                            ? await makeIPCRequest({
+                        return config.isDesktop
+                            ? makeIPCRequest({
                                   basePath: config.baseIPCPath,
                                   procedureName: procedureName,
                                   input,
                               })
-                            : await makeHttpRequest({
+                            : makeHttpRequest({
                                   headers: config.headers,
                                   baseUrl: config.baseHttpUrl,
                                   procedureName: procedureName,
                                   method: methodToUse,
                                   input,
                               })
-                        return result
                     }
                 },
             },
@@ -80,7 +78,7 @@ type HttpMakerProps = {
     method: HttpMethod
     input?: any
 }
-async function makeHttpRequest(props: HttpMakerProps) {
+function makeHttpRequest(props: HttpMakerProps) {
     const { headers, baseUrl, procedureName, method, input } = props
 
     let url = `${baseUrl}/${procedureName}`
@@ -90,36 +88,37 @@ async function makeHttpRequest(props: HttpMakerProps) {
         url += `?${params.toString()}`
     }
 
-    const response = await fetch(url, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: method !== 'GET' && input !== undefined ? JSON.stringify(input) : undefined,
-    })
+    return async () => {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers,
+            },
+            body: method !== 'GET' && input !== undefined ? JSON.stringify(input) : undefined,
+        })
 
-    if (!response.ok) {
-        const errorData = await response.json()
-        console.log('errorData', errorData)
-        if (errorData.code && errorData.message) {
-            throw new ClientError({
-                code: errorData.code,
-                message: errorData.message,
-                origin: errorData.origin,
-                whatToDo: errorData.whatToDo,
-                data: errorData.data,
-            })
-        } else {
-            throw new ClientError({
-                code: response.status,
-                message: response.statusText,
-            })
+        if (!response.ok) {
+            const errorData = await response.json()
+            if (errorData.code && errorData.message) {
+                throw new ClientError({
+                    code: errorData.code,
+                    message: errorData.message,
+                    origin: errorData.origin,
+                    whatToDo: errorData.whatToDo,
+                    data: errorData.data,
+                })
+            } else {
+                throw new ClientError({
+                    code: response.status,
+                    message: response.statusText,
+                })
+            }
         }
-    }
 
-    const data = await response.json()
-    return data.result
+        const data = await response.json()
+        return data.result
+    }
 }
 
 type IPCMakerProps = {
@@ -127,27 +126,30 @@ type IPCMakerProps = {
     procedureName: string
     input?: any
 }
-async function makeIPCRequest(props: IPCMakerProps) {
+function makeIPCRequest(props: IPCMakerProps) {
     const { basePath, procedureName, input } = props
-    const response = await (window as any).electron.trpcHandler({
-        basePath,
-        procedureName,
-        input,
-    })
-    if (!response.result && response.code && response.message) {
-        throw new ClientError({
-            code: response.code,
-            message: response.message,
-            origin: response.origin,
-            whatToDo: response.whatToDo,
-            data: response.data,
+
+    return async () => {
+        const response = await (window as any).electron.trpcHandler({
+            basePath,
+            procedureName,
+            input,
         })
-    } else if (!response.result) {
-        throw new ClientError({
-            code: 500,
-            message: 'Unknown IPC error',
-            origin: 'makeIPCRequest',
-        })
+        if (!response.result && response.code && response.message) {
+            throw new ClientError({
+                code: response.code,
+                message: response.message,
+                origin: response.origin,
+                whatToDo: response.whatToDo,
+                data: response.data,
+            })
+        } else if (!response.result) {
+            throw new ClientError({
+                code: 500,
+                message: 'Unknown IPC error',
+                origin: 'makeIPCRequest',
+            })
+        }
+        return response.result
     }
-    return response.result
 }

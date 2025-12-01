@@ -10,7 +10,6 @@
         "type-check": "tsc --noEmit"
     },
     "dependencies": {
-        "@tanstack/react-query": "^5.90.10",
         "@repo/core-cpp": "workspace:*",
         "@repo/utils": "workspace:*",
         "zod": "^4.1.13"

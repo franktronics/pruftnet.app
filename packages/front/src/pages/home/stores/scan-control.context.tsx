@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
 import { fetcher } from '../../../config/client-trpc'
+import { useQueryFetcher } from '@repo/utils'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -30,12 +31,22 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
 
+    const { data, error, fetchData } = useQueryFetcher({
+        procedure: fetcher.scan.start.query({ id: 'test-1' }),
+        queryKey: ['scan', 'start'],
+        popupOnFetching: {
+            fetching: 'Starting scan...',
+            success: 'Scan started successfully!',
+        },
+    })
+
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
-        const startScanResult = await fetcher.scan.start.query({ id: 'text-2' })
-        console.log('startScanResult', startScanResult)
+        const d = await fetchData()
+        console.log('refetch data', d)
     }, [])
 
+    console.log({ data, error })
     const value: ScanControlContextType = {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
