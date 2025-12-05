@@ -15,7 +15,8 @@ export const appWsRouter = createWsRouter({
                 setInterval(() => {
                     if (ws.readyState === ws.OPEN) {
                         const date = new Date()
-                        returnCb(JSON.stringify({ ping: 'pong', message: input.message, time: date }) )
+                        const data = JSON.stringify({ ping: 'pong', message: input.message, time: date }) 
+                        returnCb(data)
                     }
                 }, 1000)
             }),
