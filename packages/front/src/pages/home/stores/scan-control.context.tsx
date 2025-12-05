@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
-import { fetcher } from '../../../config/client-trpc'
+import { fetcher, wsFetcher } from '../../../config/client-trpc'
 import { useQueryFetcher } from '@repo/utils'
 
 export const CAPTURE_STATUS = {
@@ -43,14 +43,9 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
 
-        const socket = new WebSocket('/trpc-ws')
-        socket.onopen = () => {
-            console.log('WebSocket Client Connected')
-            socket.send(JSON.stringify({ action: 'start-scan', id: 'test-1' }))
-        }
-        socket.onmessage = (message) => {
-            console.log('Received:', message.data)
-        }
+        wsFetcher.test.echo.handle({ message: `Status changed to ${status}` }, (data) => {
+            console.log('Received from WS echo:', data)
+        })
     }, [])
 
     const value: ScanControlContextType = {

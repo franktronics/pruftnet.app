@@ -3,8 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 import { trpc } from '@repo/utils'
-import { appRouter } from '@repo/core-node'
-import { WebSocketServer, type WebSocket } from 'ws'
+import { appRouter, appWsRouter } from '@repo/core-node'
+import { WebSocketServer } from 'ws'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -65,28 +65,6 @@ if (!isProd) {
 const server = app.listen(PORT, HOST, () => {
     console.log(`Server listening on http://${HOST}:${PORT} (${isProd ? 'prod' : 'dev'})`)
 })
-// Test WebSocket server
-
-function handler(ws: WebSocket, cb: (data: string) => void) {
-    setInterval(() => {
-        cb(JSON.stringify({ timestamp: new Date().toISOString() }))
-    }, 1000)
-}
 
 const wss = new WebSocketServer({ server })
-wss.on('connection', (ws, req) => {
-    console.log('WebSocket connection established')
-    console.log('Request URL:', req.url)
-
-    ws.on('message', (message) => {
-        console.log('Received:', message.toString())
-    })
-
-    handler(ws, (data) => {
-        ws.send(data)
-    })
-
-    ws.on('close', () => {
-        console.log('WebSocket connection closed')
-    })
-})
+wss.on('connection', trpc.createWSSMiddleware(appWsRouter))

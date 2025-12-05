@@ -1,4 +1,4 @@
-import { ProcedureDefinition, RouterDef } from './procedure'
+import type { ProcedureDefinition, RouterDef } from './procedure'
 import type { RequestHandler, Request, Response } from 'express'
 import { type IpcMainInvokeEvent } from 'electron'
 import { ServerError } from './error-parser'
