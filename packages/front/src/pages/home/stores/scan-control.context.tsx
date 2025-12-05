@@ -42,11 +42,17 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
-        const d = await fetchData()
-        console.log('refetch data', d)
+
+        const socket = new WebSocket('/trpc-ws')
+        socket.onopen = () => {
+            console.log('WebSocket Client Connected')
+            socket.send(JSON.stringify({ action: 'start-scan', id: 'test-1' }))
+        }
+        socket.onmessage = (message) => {
+            console.log('Received:', message.data)
+        }
     }, [])
 
-    console.log({ data, error })
     const value: ScanControlContextType = {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,

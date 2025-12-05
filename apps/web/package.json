@@ -13,12 +13,13 @@
         "start": "NODE_ENV=production node dist/server/server.js"
     },
     "dependencies": {
-        "@repo/front": "workspace:*",
         "@repo/core-node": "workspace:*",
+        "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
         "express": "^5.1.0",
         "react": "^19.2.0",
-        "react-dom": "^19.2.0"
+        "react-dom": "^19.2.0",
+        "ws": "^8.18.3"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.1.17",
@@ -26,10 +27,11 @@
         "@types/node": "^24.10.1",
         "@types/react": "^19.2.6",
         "@types/react-dom": "^19.2.3",
+        "@types/ws": "^8.18.1",
         "@vitejs/plugin-react-swc": "^4.2.2",
+        "esbuild": "^0.27.0",
         "postcss": "^8.5.6",
         "tailwindcss": "^4.1.17",
-        "esbuild": "^0.27.0",
         "tsx": "^4.20.6",
         "typescript": "^5.9.3",
         "vite": "^7.2.4"

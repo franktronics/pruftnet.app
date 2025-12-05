@@ -2,6 +2,8 @@ import { createClient } from './client'
 import { ClientError, ServerError } from './error-parser'
 import { createRouter, procedure } from './procedure'
 import { createExpressMiddleware, createElectronHandler } from './server'
+import { createWsRouter, wsProcedure } from './ws-procedure'
+import { createWSSMiddleware } from './ws-server'
 
 export const trpc = {
     createRouter,
@@ -11,6 +13,11 @@ export const trpc = {
     createElectronHandler,
     ServerError,
     ClientError,
+
+    createWsRouter,
+    wsProcedure,
+    createWSSMiddleware,
 }
 
 export type { RouterDef, ProcedureDefinition, ProcedureType } from './procedure'
+export type { WSRouterDef, WSProcedureDefinition } from './ws-procedure'
