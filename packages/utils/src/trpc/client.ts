@@ -1,4 +1,4 @@
-import { ClientError } from './error-parser'
+import { ClientError, ErrorType } from './error-parser'
 import type { RouterDef, ProcedureDefinition } from './procedure'
 import { z } from 'zod'
 
@@ -100,7 +100,7 @@ function makeHttpRequest(props: HttpMakerProps) {
 
         if (!response.ok) {
             const errorData = await response.json()
-            if (errorData.code && errorData.message) {
+            if (errorData.type && errorData.type === ErrorType.HTTP_ERROR) {
                 throw new ClientError({
                     code: errorData.code,
                     message: errorData.message,
@@ -135,7 +135,7 @@ function makeIPCRequest(props: IPCMakerProps) {
             procedureName,
             input,
         })
-        if (!response.result && response.code && response.message) {
+        if (!response.result && response.type && response.type === ErrorType.IPC_ERROR) {
             throw new ClientError({
                 code: response.code,
                 message: response.message,

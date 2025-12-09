@@ -5,6 +5,10 @@ export type CustomErrorType = {
     whatToDo?: string
     data?: any
 }
+export enum ErrorType {
+    IPC_ERROR = 'ipc-error',
+    HTTP_ERROR = 'http-error',
+}
 /*
  * ServerError class to handle errors in both desktop (Electron) and web (HTTP) environments.
  * Depending on the environment, it either throws an HTTP error or returns an IPC error object.
@@ -23,11 +27,11 @@ export class ServerError {
     }
 
     private throwHttpError(props: CustomErrorType) {
-        throw new Error(props.message, { cause: { ...props } })
+        throw new Error(props.message, { cause: { ...props, type: ErrorType.HTTP_ERROR } })
     }
 
     private throwIPCError(props: CustomErrorType) {
-        return { ...props }
+        return { ...props, type: ErrorType.IPC_ERROR }
     }
 }
 

@@ -31,19 +31,19 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
 
-    const { data, error, fetchData } = useQueryFetcher({
+    /*const { data, error, fetchData } = useQueryFetcher({
         procedure: fetcher.scan.start.query({ id: 'test-1' }),
         queryKey: ['scan', 'start'],
         popupOnFetching: {
             fetching: 'Starting scan...',
             success: 'Scan started successfully!',
         },
-    })
+    })*/
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
 
-        wsFetcher.test.echo.handle({ message: `Status changed to ${status}` }, (data) => {
+        wsFetcher.test.echo.handle({ message: 'ok' }, (data) => {
             console.log('Received from WS echo:', data)
         })
     }, [])

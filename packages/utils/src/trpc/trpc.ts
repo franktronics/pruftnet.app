@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import { ClientError, ServerError } from './error-parser'
+import { ClientError, ServerError, ErrorType } from './error-parser'
 import { createRouter, procedure } from './procedure'
 import { createExpressMiddleware, createElectronHandler } from './server'
 import { createWsClient } from './ws-client'
@@ -14,6 +14,7 @@ export const trpc = {
     createElectronHandler,
     ServerError,
     ClientError,
+    ErrorType,
 
     createWsRouter,
     wsProcedure,
