@@ -1,7 +1,7 @@
-import { trpc } from '@repo/utils'
+import { trpcServer } from '@repo/utils'
 import { z } from 'zod'
 
-const { createWsRouter, wsProcedure } = trpc
+const { createWsRouter, wsProcedure } = trpcServer
 
 export const appWsRouter = createWsRouter({
     test: {

@@ -1,7 +1,7 @@
 import type { WSProcedureDefinition, WSRouterDef } from './ws-procedure'
 import type { IncomingMessage } from 'node:http'
 import type { WebSocket } from 'ws'
-import { ServerError } from './error-parser'
+import { ServerError } from './server-error'
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 
 /**

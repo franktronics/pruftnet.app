@@ -2,7 +2,7 @@ import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
-import { trpc } from '@repo/utils'
+import { trpcServer } from '@repo/utils'
 import { appRouter, appWsRouter } from '@repo/core-node'
 import { WebSocketServer } from 'ws'
 
@@ -18,7 +18,7 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => res.status(200).send('ok'))
 
-app.all('/trpc/:procedure', trpc.createExpressMiddleware(appRouter))
+app.all('/trpc/:procedure', trpcServer.createExpressMiddleware(appRouter))
 
 if (!isProd) {
     // Dev: use Vite in middleware mode for HMR and assets
@@ -66,4 +66,4 @@ const server = app.listen(PORT, HOST, () => {
 })
 
 const wss = new WebSocketServer({ server })
-wss.on('connection', trpc.createWSSMiddleware(appWsRouter))
+wss.on('connection', trpcServer.createWSSMiddleware(appWsRouter))

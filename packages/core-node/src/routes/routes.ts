@@ -1,7 +1,7 @@
-import { trpc } from '@repo/utils'
+import { trpcServer } from '@repo/utils'
 import { z } from 'zod'
 
-const { createRouter, procedure } = trpc
+const { createRouter, procedure } = trpcServer
 
 export const appRouter = createRouter({
     scan: {

@@ -1,5 +1,6 @@
-import { ClientError, ErrorType } from './error-parser'
-import type { WSRouterDef, WSProcedureDefinition } from './ws-procedure'
+import { ErrorType } from '../trpc-types'
+import { ClientError } from './client-error'
+import type { WSRouterDef, WSProcedureDefinition } from '../server/ws-procedure'
 import { z } from 'zod'
 
 export interface WSClientConfig {

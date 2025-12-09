@@ -1,4 +1,4 @@
-import { ClientError } from '../trpc/error-parser'
+import { ClientError } from '../trpc/client/client-error'
 import {
     QueryClientProvider,
     QueryClient,

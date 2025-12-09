@@ -1,5 +1,6 @@
-import { ClientError, ErrorType } from './error-parser'
-import type { RouterDef, ProcedureDefinition } from './procedure'
+import { ErrorType } from '../trpc-types'
+import { ClientError } from './client-error'
+import type { RouterDef, ProcedureDefinition } from '../server/procedure'
 import { z } from 'zod'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'

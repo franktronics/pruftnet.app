@@ -1,6 +1,6 @@
-import { detectPlatform, trpc } from '@repo/utils'
+import { detectPlatform, trpcClient } from '@repo/utils'
 import type { AppRouter, AppWsRouter } from '@repo/core-node'
-const { createClient, createWsClient } = trpc
+const { createClient, createWsClient } = trpcClient
 
 export const fetcher = createClient<AppRouter>({
     baseHttpUrl: '/trpc',

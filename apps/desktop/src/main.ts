@@ -3,7 +3,7 @@ import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { trpc } from '@repo/utils'
+import { trpcServer } from '@repo/utils'
 import { appRouter, appWsRouter } from '@repo/core-node'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -54,6 +54,6 @@ app.whenReady().then(() => {
     })
 
     const mainWindows = BrowserWindow.getAllWindows()[0]
-    ipcMain.handle('trpc', trpc.createElectronHandler(appRouter))
-    ipcMain.handle('trpc-stream', trpc.createIPCStreamHandler(appWsRouter, mainWindows))
+    ipcMain.handle('trpc', trpcServer.createElectronHandler(appRouter))
+    ipcMain.handle('trpc-stream', trpcServer.createIPCStreamHandler(appWsRouter, mainWindows))
 })
