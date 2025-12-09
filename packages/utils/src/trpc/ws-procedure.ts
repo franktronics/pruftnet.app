@@ -1,6 +1,4 @@
 import { z } from 'zod'
-import type { IncomingMessage } from 'node:http'
-import type { WebSocket } from 'ws'
 
 export interface WSProcedureDefinition<
     TInput extends z.ZodSchema | undefined = z.ZodSchema | undefined,
@@ -10,10 +8,6 @@ export interface WSProcedureDefinition<
     handler: (
         input: TInput extends z.ZodSchema ? z.infer<TInput> : void,
         returnCb: (data: TOutput) => void,
-        socketData: {
-            ws: WebSocket
-            req: IncomingMessage
-        },
     ) => Promise<void>
 }
 
@@ -32,10 +26,6 @@ export const wsProcedure = {
                 handler: (
                     input: z.infer<TInput>,
                     returnCb: (data: TOutput) => void,
-                    socketData: {
-                        ws: WebSocket
-                        req: IncomingMessage
-                    },
                 ) => Promise<void>,
             ): WSProcedureDefinition<TInput, TOutput> =>
                 ({
@@ -45,13 +35,7 @@ export const wsProcedure = {
         }
     },
     handle: <TOutput>(
-        handler: (
-            returnCb: (data: TOutput) => void,
-            socketData: {
-                ws: WebSocket
-                req: IncomingMessage
-            },
-        ) => Promise<void>,
+        handler: (returnCb: (data: TOutput) => void) => Promise<void>,
     ): WSProcedureDefinition<undefined, TOutput> =>
         ({
             handler: handler as any,

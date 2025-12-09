@@ -1,9 +1,11 @@
+import { ClientError, ErrorType } from './error-parser'
 import type { WSRouterDef, WSProcedureDefinition } from './ws-procedure'
 import { z } from 'zod'
 
 export interface WSClientConfig {
     baseWsUrl: string
     isDesktop: boolean
+    iPCStreamPath: string
 }
 
 type InferProcedureWsClient<T> =
@@ -42,7 +44,7 @@ export function createWsClient<T extends WSRouterDef>(config: WSClientConfig) {
                         return config.isDesktop
                             ? makeIPCConnection({
                                   procedureName,
-                                  baseWsUrl: config.baseWsUrl,
+                                  streamPath: config.iPCStreamPath,
                                   input,
                                   returnCb,
                               })
@@ -95,7 +97,25 @@ function makeWsConnection(props: WSConnectionMaker) {
     }
 }
 
-type IPCConnectionMaker = {}
-function makeIPCConnection(props: IPCConnectionMaker) {
-    // Implementation for IPC connection can be added here
+type IPCConnectionMaker = {
+    procedureName: string
+    streamPath: string
+    input?: any
+    returnCb?: (data: any) => void
+}
+async function makeIPCConnection(props: IPCConnectionMaker) {
+    const { procedureName, streamPath, input, returnCb } = props
+    const response = await (window as any).electron.trpcConnectIPCStream({
+        streamPath,
+        procedureName,
+        input,
+    })
+    if (response.error && response.error.type === ErrorType.IPC_ERROR) {
+        throw new ClientError({ ...response.error })
+    }
+    ;(window as any).electron.trpcHandleIPCStream((data: any) => {
+        if (returnCb) {
+            returnCb(data)
+        }
+    })
 }

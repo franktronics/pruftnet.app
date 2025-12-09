@@ -1,5 +1,5 @@
 import { detectPlatform, trpc } from '@repo/utils'
-import type { AppRouter, AppWsRouter} from '@repo/core-node'
+import type { AppRouter, AppWsRouter } from '@repo/core-node'
 const { createClient, createWsClient } = trpc
 
 export const fetcher = createClient<AppRouter>({
@@ -14,4 +14,5 @@ export const fetcher = createClient<AppRouter>({
 export const wsFetcher = createWsClient<AppWsRouter>({
     baseWsUrl: '/trpc-ws',
     isDesktop: detectPlatform().isElectron,
+    iPCStreamPath: 'trpc-stream',
 })

@@ -11,16 +11,18 @@ export const appWsRouter = createWsRouter({
                     message: z.string(),
                 }),
             )
-            .handle(async (input, returnCb, { ws, req }) => {
+            .handle(async (input, returnCb) => {
                 setInterval(() => {
-                    if (ws.readyState === ws.OPEN) {
-                        const date = new Date()
-                        const data = JSON.stringify({ ping: 'pong', message: input.message, time: date }) 
-                        returnCb(data)
-                    }
+                    const date = new Date()
+                    const data = JSON.stringify({
+                        ping: 'pong',
+                        message: input.message,
+                        time: date,
+                    })
+                    returnCb(data)
                 }, 1000)
             }),
-    }
+    },
 })
 
 export type AppWsRouter = typeof appWsRouter
