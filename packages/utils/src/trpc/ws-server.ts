@@ -15,7 +15,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                     code: 1008,
                     origin: 'createWSSMiddleware',
                     message: 'Procedure name is required',
-                })
+                }).wsClose(ws)
             }
 
             const pathParts = procedureName.split('.')
@@ -28,7 +28,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                         code: 1008,
                         origin: 'createWSSMiddleware',
                         message: 'Procedure not found',
-                    })
+                    }).wsClose(ws)
                 }
             }
 
@@ -45,7 +45,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                                 code: 1008,
                                 origin: 'createWSSMiddleware',
                                 message: 'Invalid input',
-                            })
+                            }).wsClose(ws)
                         }
                         inputData = validation.data
                     } catch (error) {
@@ -54,7 +54,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                             origin: 'createWSSMiddleware',
                             message: 'Invalid input format',
                             data: error,
-                        })
+                        }).wsClose(ws)
                     }
                 }
 
@@ -70,21 +70,15 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                         origin: 'createWSSMiddleware',
                         message: 'Procedure handler error',
                         data: error,
-                    })
+                    }).wsClose(ws)
                 }
             })
         } catch (err: any) {
-            if (err.cause.code && err.cause.message) {
-                ws.close(err.cause.code, JSON.stringify({ ...err.cause }))
-                return
-            }
-            ws.send(
-                JSON.stringify({
-                    code: 1011,
-                    message: 'Internal Server Error',
-                    origin: 'createWSSMiddleware',
-                }),
-            )
+            return new ServerError({
+                code: 1011,
+                origin: 'createWSSMiddleware',
+                message: 'Internal Server Error',
+            }).wsClose(ws)
         }
     }
 }

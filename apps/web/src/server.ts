@@ -13,7 +13,6 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3010
 const HOST = process.env.HOST || (isProd ? '127.0.0.1' : '0.0.0.0')
 
 const app = express()
-process.env.WEB = 'on'
 
 app.use(express.json())
 

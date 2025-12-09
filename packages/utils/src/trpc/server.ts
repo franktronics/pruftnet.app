@@ -1,7 +1,7 @@
 import type { ProcedureDefinition, RouterDef } from './procedure'
 import type { RequestHandler, Request, Response } from 'express'
 import { type IpcMainInvokeEvent } from 'electron'
-import { ServerError } from './error-parser'
+import { ErrorType, ServerError } from './error-parser'
 
 /*
  * Creates an Express middleware for the given tRPC router.
@@ -18,7 +18,7 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
                     code: 400,
                     origin: 'createExpressMiddleware',
                     message: 'Procedure name is required',
-                })
+                }).http()
             }
 
             const procedurePath = procedure.split('.')
@@ -29,7 +29,7 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
                         code: 404,
                         origin: 'createExpressMiddleware',
                         message: 'Procedure not found',
-                    })
+                    }).http()
                 }
                 current = current[segment]
             }
@@ -54,7 +54,7 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
                         message: 'Invalid input',
                         whatToDo: 'Ensure the input data matches the expected schema.',
                         data: validation.error.format(),
-                    })
+                    }).http()
                 }
                 inputData = validation.data
             }
@@ -62,14 +62,16 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
             const result = await procDef.handler(inputData, { req, res })
             res.json({ result })
         } catch (err: any) {
-            if (err.cause.code && err.cause.message) {
-                return res.status(err.cause.code).json({ ...err.cause })
+            if (err.cause.type && err.cause.type === ErrorType.HTTP_ERROR) {
+                return res.status(err.cause.code).json({ error: { ...err.cause } })
             }
             res.status(500).json({
-                code: 500,
-                message: 'Internal Server Error',
-                origin: 'createExpressMiddleware',
-                whatToDo: 'Try again later or contact support if the issue persists.',
+                error: {
+                    code: 500,
+                    message: 'Internal Server Error',
+                    origin: 'createExpressMiddleware',
+                    whatToDo: 'Try again later or contact support if the issue persists.',
+                },
             })
         }
     }
@@ -91,7 +93,7 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
                     code: 400,
                     origin: 'createElectronHandler',
                     message: 'Procedure name is required',
-                })
+                }).ipc()
             }
 
             const procedurePath = procedure.split('.')
@@ -102,7 +104,7 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
                         code: 404,
                         origin: 'createElectronHandler',
                         message: 'Procedure not found',
-                    })
+                    }).ipc()
                 }
                 current = current[segment]
             }
@@ -119,7 +121,7 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
                         message: 'Invalid input',
                         whatToDo: 'Ensure the input data matches the expected schema.',
                         data: validation.error.format(),
-                    })
+                    }).ipc()
                 }
                 inputData = validation.data
             }
@@ -127,12 +129,12 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
             const result = await procDef.handler(inputData, { event })
             return { result }
         } catch (err: any) {
-            return {
+            return new ServerError({
                 code: 500,
                 message: 'Internal Server Error',
                 origin: 'createElectronHandler',
                 whatToDo: 'Try again later or contact support if the issue persists.',
-            }
+            }).ipc()
         }
     }
 }

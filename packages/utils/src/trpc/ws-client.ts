@@ -6,7 +6,7 @@ export interface WSClientConfig {
     isDesktop: boolean
 }
 
-type InferProcedureWsClient<T> = 
+type InferProcedureWsClient<T> =
     T extends WSProcedureDefinition<infer TInput, infer TOutput>
         ? {
               handle: TInput extends z.ZodSchema
@@ -39,22 +39,22 @@ export function createWsClient<T extends WSRouterDef>(config: WSClientConfig) {
                     return (input?: any, returnCb?: (data: any) => void) => {
                         const procedureName = procedurePath.join('.')
 
-                        return config.isDesktop 
+                        return config.isDesktop
                             ? makeIPCConnection({
-                                procedureName,
-                                baseWsUrl: config.baseWsUrl,
-                                input,
-                                returnCb,
-                            })
+                                  procedureName,
+                                  baseWsUrl: config.baseWsUrl,
+                                  input,
+                                  returnCb,
+                              })
                             : makeWsConnection({
-                                procedureName,
-                                baseWsUrl: config.baseWsUrl,
-                                input,
-                                returnCb,
-                            })
+                                  procedureName,
+                                  baseWsUrl: config.baseWsUrl,
+                                  input,
+                                  returnCb,
+                              })
                     }
-                }
-            }
+                },
+            },
         )
     }
 
@@ -90,13 +90,12 @@ function makeWsConnection(props: WSConnectionMaker) {
         console.error('WebSocket error:', event)
     }
 
-    ws.onclose = () => {
-        console.log('WebSocket connection closed')
+    ws.onclose = (event) => {
+        console.log('WebSocket connection closed', event)
     }
 }
 
-type IPCConnectionMaker = {
-}
+type IPCConnectionMaker = {}
 function makeIPCConnection(props: IPCConnectionMaker) {
     // Implementation for IPC connection can be added here
 }

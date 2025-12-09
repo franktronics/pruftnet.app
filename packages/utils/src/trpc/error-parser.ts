@@ -1,37 +1,65 @@
+import type { WebSocket } from 'ws'
+
+export enum ErrorType {
+    IPC_ERROR = 'ipc-error',
+    HTTP_ERROR = 'http-error',
+    WS_ERROR = 'ws-error',
+}
+
 export type CustomErrorType = {
     code: number
     message: string
+    type: ErrorType
     origin?: string
     whatToDo?: string
     data?: any
 }
-export enum ErrorType {
-    IPC_ERROR = 'ipc-error',
-    HTTP_ERROR = 'http-error',
-}
+
 /*
  * ServerError class to handle errors in both desktop (Electron) and web (HTTP) environments.
  * Depending on the environment, it either throws an HTTP error or returns an IPC error object.
  * Use it only in the server-side code(node).
  */
 export class ServerError {
-    private readonly isDesktop: boolean
+    constructor(private props: Omit<CustomErrorType, 'type'>) {}
 
-    constructor(props: CustomErrorType) {
-        this.isDesktop = process.env.WEB === undefined
-        if (this.isDesktop) {
-            this.throwIPCError(props)
-        } else {
-            this.throwHttpError(props)
-        }
+    /**
+     * Throws an HTTP error with the appropriate status code and message.
+     * The error will be parsed on the client side to create a ClientError.
+     * @throws An error with the specified message and cause.
+     */
+    public http() {
+        throw new Error(this.props.message, {
+            cause: { ...this.props, type: ErrorType.HTTP_ERROR },
+        })
     }
 
-    private throwHttpError(props: CustomErrorType) {
-        throw new Error(props.message, { cause: { ...props, type: ErrorType.HTTP_ERROR } })
+    /**
+     * Send the error object suitable for IPC communication.
+     * The error will be parsed on the client side to create a ClientError.
+     * @returns An object representing the error for IPC.
+     */
+    public ipc() {
+        return { error: { ...this.props, type: ErrorType.IPC_ERROR } }
     }
 
-    private throwIPCError(props: CustomErrorType) {
-        return { ...props, type: ErrorType.IPC_ERROR }
+    /**
+     * Sends the error over the provided WebSocket instance.
+     * @param wsInst The WebSocket instance to send the error through.
+     */
+    public ws(wsInst: WebSocket) {
+        wsInst.send(JSON.stringify({ error: { ...this.props, type: ErrorType.WS_ERROR } }))
+    }
+
+    /**
+     * Closes the WebSocket connection with the appropriate error code and message.
+     * @param wsInst The WebSocket instance to close.
+     */
+    public wsClose(wsInst: WebSocket) {
+        wsInst.close(
+            this.props.code,
+            JSON.stringify({ error: { ...this.props, type: ErrorType.WS_ERROR } }),
+        )
     }
 }
 
@@ -43,12 +71,17 @@ export class ServerError {
 export class ClientError extends Error {
     constructor(props: CustomErrorType) {
         super(props.message)
-        this.name = 'ClientError'
+        this.name = 'ClientError -> ' + props.type
         this.cause = { ...props }
     }
 
     public getErrorData(): CustomErrorType {
         return this.cause as CustomErrorType
+    }
+
+    get type(): ErrorType {
+        const cause = this.cause as CustomErrorType
+        return cause.type
     }
 
     get origin(): string | undefined {

@@ -100,17 +100,13 @@ function makeHttpRequest(props: HttpMakerProps) {
 
         if (!response.ok) {
             const errorData = await response.json()
-            if (errorData.type && errorData.type === ErrorType.HTTP_ERROR) {
-                throw new ClientError({
-                    code: errorData.code,
-                    message: errorData.message,
-                    origin: errorData.origin,
-                    whatToDo: errorData.whatToDo,
-                    data: errorData.data,
-                })
+            if (errorData.error && errorData.error.type === ErrorType.HTTP_ERROR) {
+                throw new ClientError({ ...errorData.error })
             } else {
                 throw new ClientError({
                     code: response.status,
+                    type: ErrorType.HTTP_ERROR,
+                    origin: 'makeHttpRequest',
                     message: response.statusText,
                 })
             }
@@ -135,19 +131,14 @@ function makeIPCRequest(props: IPCMakerProps) {
             procedureName,
             input,
         })
-        if (!response.result && response.type && response.type === ErrorType.IPC_ERROR) {
-            throw new ClientError({
-                code: response.code,
-                message: response.message,
-                origin: response.origin,
-                whatToDo: response.whatToDo,
-                data: response.data,
-            })
+        if (response.error && response.error.type === ErrorType.IPC_ERROR) {
+            throw new ClientError({ ...response.error })
         } else if (!response.result) {
             throw new ClientError({
                 code: 500,
                 message: 'Unknown IPC error',
                 origin: 'makeIPCRequest',
+                type: ErrorType.IPC_ERROR,
             })
         }
         return response.result
