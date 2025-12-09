@@ -19,6 +19,7 @@ export const TabGraph = (props: TabGraphProps) => {
                     mac="11:22:33:44:55:66"
                     position={new Vector(-200, -150)}
                     data={{}}
+                    animation="send"
                 />
                 <NetworkPcDevice
                     mac="81:20:33:44:55:00"
