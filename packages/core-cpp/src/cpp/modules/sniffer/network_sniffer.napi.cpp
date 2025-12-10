@@ -111,11 +111,11 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo &info)
 }
 
 void NetworkSnifferWrapper::StopSniffing(const Napi::CallbackInfo &info) {
-  sniffer_->stopSniffing();
-
   if (tsfn_) {
     tsfn_.Release();
   }
+  
+  sniffer_->stopSniffing();
 }
 
 Napi::Value NetworkSnifferWrapper::IsRunning(const Napi::CallbackInfo &info) {

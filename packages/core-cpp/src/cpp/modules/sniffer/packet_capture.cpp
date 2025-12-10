@@ -16,9 +16,6 @@ PacketCapture::PacketCapture(const std::string& interface_name)
 
 PacketCapture::~PacketCapture() {
     stopCapture();
-    if (raw_socket_ != -1) {
-        close(raw_socket_);
-    }
 }
 
 bool PacketCapture::initialize() {
@@ -70,9 +67,10 @@ bool PacketCapture::startCapture(const PacketHandler& handler) {
 void PacketCapture::stopCapture() {
     is_capturing_.store(false);
     
-    // Close the socket to unblock the recv() call
     if (raw_socket_ != -1) {
         shutdown(raw_socket_, SHUT_RDWR);
+        close(raw_socket_);
+        raw_socket_ = -1;
     }
 }
 

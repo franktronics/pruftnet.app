@@ -42,21 +42,39 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     })*/
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
-        setCaptureStatus(status)
-
-        wsFetcher.network_sniffer.start.handle(
-            { interface: 'enp2s0' },
-            {
-                onmessage: (data) => {
-                    console.log('Received from ws echo:', data)
+        let counter = 0
+        if (status === CAPTURE_STATUS.IDLE) {
+            wsFetcher.network_sniffer.stop.handle(
+                {},
+                {
+                    onmessage: (data) => {
+                        console.log('Sniffer stopped via ws:', data, counter)
+                        setCaptureStatus(CAPTURE_STATUS.IDLE)
+                    },
+                    onerror: (error) => {
+                        toast.error(<ClientErrorParser error={error} />, {
+                            duration: 5000,
+                        })
+                    },
                 },
-                onerror: (error) => {
-                    toast.error(<ClientErrorParser error={error} />, {
-                        duration: 5000,
-                    })
+            )
+        } else if (status === CAPTURE_STATUS.INNITIALIZING) {
+            wsFetcher.network_sniffer.start.handle(
+                { interface: 'lo' },
+                {
+                    onmessage: (data) => {
+                        console.log('Received from ws echo:', data, counter)
+                        counter += 1
+                    },
+                    onerror: (error) => {
+                        toast.error(<ClientErrorParser error={error} />, {
+                            duration: 5000,
+                        })
+                    },
                 },
-            },
-        )
+            )
+            setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+        }
     }, [])
 
     const value: ScanControlContextType = {

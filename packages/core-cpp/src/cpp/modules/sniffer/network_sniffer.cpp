@@ -42,20 +42,19 @@ void NetworkSniffer::stopSniffing() {
 
   should_stop_.store(true);
 
-  // Stop packet capture
   if (packet_capture_) {
     packet_capture_->stopCapture();
   }
 
-  // Wait for capture thread to finish
   if (capture_thread_.joinable()) {
     capture_thread_.join();
   }
 
-  // Wait for processing thread to finish processing remaining packets
   if (processing_thread_.joinable()) {
     processing_thread_.join();
   }
+
+  packet_callback_ = nullptr;
 
   packet_capture_.reset();
   is_running_.store(false);
