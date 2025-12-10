@@ -42,9 +42,7 @@ export class ServerError {
      * @param wsInst The WebSocket instance to close.
      */
     public wsClose(wsInst: WebSocket) {
-        wsInst.close(
-            this.props.code,
-            JSON.stringify({ error: { ...this.props, type: ErrorType.WS_ERROR } }),
-        )
+        wsInst.send(JSON.stringify({ error: { ...this.props, type: ErrorType.WS_ERROR } }))
+        wsInst.close(this.props.code || 1011)
     }
 }

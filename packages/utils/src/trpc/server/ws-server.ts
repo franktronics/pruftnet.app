@@ -52,6 +52,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                                 code: 1008,
                                 origin: 'createWSSMiddleware',
                                 message: 'Invalid input',
+                                whatToDo: 'Ensure the input data matches the expected schema.',
                             }).wsClose(ws)
                         }
                         inputData = validation.data
@@ -60,7 +61,6 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                             code: 1008,
                             origin: 'createWSSMiddleware',
                             message: 'Invalid input format',
-                            data: error,
                         }).wsClose(ws)
                     }
                 }

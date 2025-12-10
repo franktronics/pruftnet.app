@@ -11,7 +11,7 @@ export const appWsRouter = createWsRouter({
                     message: z.string(),
                 }),
             )
-            .handle(async (input, returnCb) => {
+            .handle(async (input, returnCb: (data: string) => void) => {
                 setInterval(() => {
                     const date = new Date()
                     const data = JSON.stringify({

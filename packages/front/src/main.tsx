@@ -7,7 +7,7 @@ import { StrictMode } from 'react'
 import { FetcherProvider } from '@repo/utils'
 
 const handleChangeTheme = (theme: Theme) => {
-    window.electron.changeTheme(theme)
+    window.electron?.changeTheme(theme)
 }
 
 export const Main = () => {

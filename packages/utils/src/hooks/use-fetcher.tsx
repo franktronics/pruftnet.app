@@ -1,3 +1,4 @@
+import { cn } from '../classnames/classnames'
 import { ClientError } from '../trpc/client/client-error'
 import {
     QueryClientProvider,
@@ -7,7 +8,7 @@ import {
     useMutation,
     UseMutationOptions,
 } from '@tanstack/react-query'
-import { PropsWithChildren, useCallback } from 'react'
+import { ComponentPropsWithoutRef, PropsWithChildren, useCallback } from 'react'
 import { toast } from 'sonner'
 
 export type QueryFetcherProps<T> = {
@@ -106,7 +107,7 @@ export function useMutateFetcher<T>(props: MutateFetcherProps<T>) {
             if (toastId) toast.dismiss(toastId)
 
             if (popupOnError && error instanceof ClientError) {
-                toast.error(<ErrorDetails error={error} />, {
+                toast.error(<ClientErrorParser error={error} />, {
                     duration: 5000,
                 })
             }
@@ -134,14 +135,16 @@ export function FetcherProvider(props: PropsWithChildren) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
 
-type ErrorDetailsProps = {
+type ClientErrorParserProps = {
     error: ClientError
-}
-function ErrorDetails({ error }: ErrorDetailsProps) {
+} & ComponentPropsWithoutRef<'div'>
+export function ClientErrorParser(props: ClientErrorParserProps) {
+    const { error, className, ...rest } = props
+
     const errorData = error.getErrorData()
 
     return (
-        <div className="flex flex-col gap-2">
+        <div className={cn('flex flex-col gap-2', className)} {...rest}>
             <p className="text-sm font-medium">{error.message}</p>
             {(errorData.origin || errorData.whatToDo) && (
                 <div className="bg-destructive/10 border-destructive/20 space-y-2 rounded-md border p-2">

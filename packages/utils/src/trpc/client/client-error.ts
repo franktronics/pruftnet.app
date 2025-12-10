@@ -8,7 +8,7 @@ import { type CustomErrorType, ErrorType } from '../trpc-types'
 export class ClientError extends Error {
     constructor(props: CustomErrorType) {
         super(props.message)
-        this.name = 'ClientError -> ' + props.type
+        this.name = 'ClientError:' + props.type
         this.cause = { ...props }
     }
 

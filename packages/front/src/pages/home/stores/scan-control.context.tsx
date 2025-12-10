@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
 import { fetcher, wsFetcher } from '../../../config/client-trpc'
-import { useQueryFetcher } from '@repo/utils'
+import { ClientErrorParser, useQueryFetcher } from '@repo/utils'
+import { toast } from '@repo/ui/atoms'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -44,10 +45,15 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         setCaptureStatus(status)
 
         wsFetcher.test.echo.handle(
-            { message: 'ok' },
+            { message: 2 },
             {
-                onMessage: (data) => {
+                onmessage: (data) => {
                     console.log('Received from ws echo:', data)
+                },
+                onerror: (error) => {
+                    toast.error(<ClientErrorParser error={error} />, {
+                        duration: 5000,
+                    })
                 },
             },
         )

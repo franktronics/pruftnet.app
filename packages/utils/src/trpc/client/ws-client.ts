@@ -10,7 +10,8 @@ export interface WSClientConfig {
 }
 
 type HandlerEvents<T = any> = {
-    onMessage?: (data: T) => void
+    onmessage?: (data: T) => void
+    onerror?: (error: ClientError) => void
 }
 
 type InferProcedureWsClient<T> =
@@ -88,18 +89,53 @@ async function makeWsConnection(props: WSConnectionMaker) {
     }
 
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-        if (events && events.onMessage) {
-            events.onMessage(data)
+        try {
+            const data = JSON.parse(event.data)
+            if (data && data.error) {
+                if (events && events.onerror) {
+                    events.onerror(new ClientError(data.error))
+                }
+                return
+            }
+            if (events && events.onmessage) {
+                events.onmessage(data)
+            }
+        } catch (err) {
+            if (events && events.onerror) {
+                events.onerror(
+                    new ClientError({
+                        type: ErrorType.WS_ERROR,
+                        message: 'Invalid message format',
+                        data: err,
+                        code: 1003,
+                    }),
+                )
+            }
         }
     }
 
     ws.onerror = (event) => {
-        console.error('WebSocket error:', event)
+        if (events && events.onerror) {
+            events.onerror(
+                new ClientError({
+                    type: ErrorType.WS_ERROR,
+                    message: 'WebSocket error occurred',
+                    data: event,
+                    code: 1006,
+                }),
+            )
+        }
     }
 
     ws.onclose = (event) => {
-        console.log('WebSocket connection closed', event)
+        try {
+            const reason = JSON.parse(event.reason)
+            if (reason && reason.error && events && events.onerror) {
+                events.onerror(new ClientError(reason.error))
+            }
+        } catch (err) {
+            //If the reason is not JSON, ignore
+        }
     }
 }
 
@@ -117,11 +153,20 @@ async function makeIPCConnection(props: IPCConnectionMaker) {
         input,
     })
     if (response && response.error && response.error.type === ErrorType.IPC_ERROR) {
-        throw new ClientError({ ...response.error })
+        if (events && events.onerror) {
+            events.onerror(new ClientError(response.error))
+        }
+        return
     }
     void (window as any).electron.trpcHandleIPCStream((data: any) => {
-        if (events && events.onMessage) {
-            events.onMessage(data)
+        if (data && data.error) {
+            if (events && events.onerror) {
+                events.onerror(new ClientError(response.error))
+            }
+            return
+        }
+        if (events && events.onmessage) {
+            events.onmessage(data)
         }
     })
 }
