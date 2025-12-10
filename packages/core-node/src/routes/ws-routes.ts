@@ -4,7 +4,13 @@ import { NetworkSniffer, PacketParser, type RawPacketData, type ParsedPacket } f
 
 const { createWsRouter, wsProcedure } = trpcServer
 
-const packetMap = new Map<number, RawPacketData>()
+const packetMap = new Map<
+    number,
+    {
+        parsed: ParsedPacket
+        raw: RawPacketData
+    }
+>()
 const sniffer = new NetworkSniffer()
 let packetIndex = 0
 
@@ -19,20 +25,38 @@ export const appWsRouter = createWsRouter({
             .handle(
                 async (
                     input,
-                    returnCb: (data: { packet: ParsedPacket; index: number }) => void,
+                    returnCb: (data: {
+                        parsed: ParsedPacket
+                        raw: Omit<RawPacketData, 'data'>
+                        id: number
+                    }) => void,
                 ) => {
                     try {
                         if (sniffer.isRunning()) {
                             throw new Error('Sniffer is already running')
                         }
-
                         const parser = new PacketParser()
 
                         sniffer.startSniffing(input.interface, (rawPacket) => {
                             try {
                                 const parsedPacket = parser.parse(rawPacket.data)
-                                packetMap.set(packetIndex, rawPacket)
-                                returnCb({ packet: parsedPacket, index: packetIndex })
+                                const packetMeta = {
+                                    parsed: parsedPacket,
+                                    raw: {
+                                        length: rawPacket.length,
+                                        originalLength: rawPacket.originalLength,
+                                        timestamp: rawPacket.timestamp,
+                                        valid: rawPacket.valid,
+                                    },
+                                }
+                                packetMap.set(packetIndex, {
+                                    parsed: parsedPacket,
+                                    raw: {
+                                        ...packetMeta.raw,
+                                        data: rawPacket.data,
+                                    },
+                                })
+                                returnCb({ ...packetMeta, id: packetIndex })
                                 packetIndex += 1
                             } catch (parseError) {
                                 console.error('Failed to parse packet:', parseError)

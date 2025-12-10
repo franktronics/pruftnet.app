@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
-import { fetcher, wsFetcher } from '../../../config/client-trpc'
-import { ClientErrorParser, useQueryFetcher } from '@repo/utils'
+import { wsFetcher } from '../../../config/client-trpc'
+import { ClientErrorParser } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
 
 export const CAPTURE_STATUS = {
@@ -15,6 +15,7 @@ export type CAPTURE_STATUS = (typeof CAPTURE_STATUS)[keyof typeof CAPTURE_STATUS
 export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
     changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
+    rawPackets: { parsed: any; raw: any; id: number }[]
 }
 
 const ScanControlContext = createContext<ScanControlContextType | undefined>(undefined)
@@ -32,14 +33,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
 
-    /*const { data, error, fetchData } = useQueryFetcher({
-        procedure: fetcher.scan.start.query({ id: 'test-1' }),
-        queryKey: ['scan', 'start'],
-        popupOnFetching: {
-            fetching: 'Starting scan...',
-            success: 'Scan started successfully!',
-        },
-    })*/
+    const [rawPackets, setRawPackets] = useState<{ parsed: any; raw: any; id: number }[]>([])
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         let counter = 0
@@ -64,6 +58,10 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                 {
                     onmessage: (data) => {
                         console.log('Received from ws echo:', data, counter)
+                        setRawPackets((prev) => [
+                            ...prev,
+                            { parsed: data.parsed, id: data.id, raw: data.raw },
+                        ])
                         counter += 1
                     },
                     onerror: (error) => {
@@ -80,6 +78,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const value: ScanControlContextType = {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
+        rawPackets,
     }
 
     return (

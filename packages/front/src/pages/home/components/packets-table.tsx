@@ -1,14 +1,26 @@
 import { Table, TableBody, TableHead, TableHeader, TableRow, Badge } from '@repo/ui/atoms'
 import { useRef, type ComponentPropsWithoutRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { usePacketTable } from '../hooks/use-packet-table'
 import { cn } from '@repo/utils'
 
-export type PacketsTableProps = ComponentPropsWithoutRef<'div'>
-export const PacketsTable = (props: PacketsTableProps) => {
-    const parentRef = useRef<HTMLDivElement>(null)
+export type RowDataType = {
+    index: number
+    time: string
+    src: string
+    dest: string
+    protocol: string
+    length: number
+    info: string
+}
 
-    const { data } = usePacketTable()
+export type PacketsTableProps = {
+    data: RowDataType[]
+    onHandleRowSelect: (n: number) => void
+} & ComponentPropsWithoutRef<'div'>
+export const PacketsTable = (props: PacketsTableProps) => {
+    const { data, className, onHandleRowSelect, ...rest } = props
+
+    const parentRef = useRef<HTMLDivElement>(null)
 
     const virtualizer = useVirtualizer({
         count: data.length,
@@ -18,10 +30,7 @@ export const PacketsTable = (props: PacketsTableProps) => {
     })
 
     return (
-        <div
-            {...props}
-            className={cn('flex flex-col overflow-hidden rounded-lg border', props.className)}
-        >
+        <div {...rest} className={cn('flex flex-col overflow-hidden rounded-lg border', className)}>
             <div className="bg-muted shrink-0">
                 <Table>
                     <TableHeader>
@@ -41,10 +50,7 @@ export const PacketsTable = (props: PacketsTableProps) => {
             <div ref={parentRef} className={cn('flex-1 overflow-auto', 'scrollbar-thin')}>
                 <Table>
                     <TableBody>
-                        <tr
-                            style={{ height: `${virtualizer.getTotalSize()}px` }}
-                            className="cursor-pointer"
-                        >
+                        <tr style={{ height: `${virtualizer.getTotalSize()}px` }}>
                             <td colSpan={7} className="relative p-0">
                                 {virtualizer.getVirtualItems().map((virtualItem) => (
                                     <div
@@ -56,8 +62,9 @@ export const PacketsTable = (props: PacketsTableProps) => {
                                         className={cn(
                                             'hover:bg-muted/50 flex w-full items-center border-b transition-colors',
                                             'absolute top-0 left-0',
-                                            '*:px-2',
+                                            'cursor-pointer *:px-2',
                                         )}
+                                        onClick={() => onHandleRowSelect(virtualItem.index)}
                                     >
                                         <div className="w-16 text-center font-medium">
                                             {data[virtualItem.index].index}

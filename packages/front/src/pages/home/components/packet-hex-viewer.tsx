@@ -4,7 +4,7 @@ import { useIsMobile } from '@repo/ui/hooks'
 import { Separator } from '@repo/ui/atoms'
 
 export type PacketHexViewerProps = {
-    data: Uint8Array
+    data: Uint8Array | null
     bytesPerLine?: number
 } & ComponentPropsWithoutRef<'div'>
 
@@ -20,9 +20,11 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     }
 
     const lines = []
-    for (let i = 0; i < data.length; i += effectiveBytesPerLine) {
-        const lineData = data.slice(i, i + effectiveBytesPerLine)
-        lines.push({ offset: i, data: lineData })
+    if (data) {
+        for (let i = 0; i < data.length; i += effectiveBytesPerLine) {
+            const lineData = data.slice(i, i + effectiveBytesPerLine)
+            lines.push({ offset: i, data: lineData })
+        }
     }
 
     return (
