@@ -14,6 +14,23 @@ export default defineConfig({
             output: {
                 entryFileNames: 'main.js',
             },
+            external: ['electron', 'path', 'fs', 'net'],
+        },
+        minify: false,
+    },
+    resolve: {
+        preserveSymlinks: true,
+    },
+    optimizeDeps: {
+        exclude: ['@repo/core-node', '@repo/utils', '@repo/core-cpp'],
+    },
+    server: {
+        watch: {
+            ignored: ['!**/node_modules/**', '!**/packages/**'],
+            usePolling: false,
+        },
+        fs: {
+            allow: ['..', '../..', '../../..'],
         },
     },
 })
