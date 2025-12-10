@@ -6,15 +6,16 @@ NetworkSniffer::NetworkSniffer()
     : packet_capture_(nullptr), ring_buffer_(std::make_unique<RingBuffer>()),
       is_running_(false), should_stop_(false) {}
 
-NetworkSniffer::~NetworkSniffer() { stop(); }
+NetworkSniffer::~NetworkSniffer() { stopSniffing(); }
 
 bool NetworkSniffer::startSniffing(const std::string &interface_name,
-                                   ProcessingModel &processing_model) {
+                                   const PacketCallback &callback) {
   if (is_running_.load()) {
     return false;
   }
 
-  processing_struct_ = &processing_model;
+  packet_callback_ = callback;
+
   packet_capture_ = std::make_unique<PacketCapture>(interface_name);
 
   if (!packet_capture_->initialize()) {
@@ -34,7 +35,7 @@ bool NetworkSniffer::startSniffing(const std::string &interface_name,
   return true;
 }
 
-void NetworkSniffer::stop() {
+void NetworkSniffer::stopSniffing() {
   if (!is_running_.load()) {
     return;
   }
@@ -75,8 +76,8 @@ void NetworkSniffer::processingWorker() {
     RawPacket packet;
 
     if (ring_buffer_->pop(packet)) {
-      if (processing_struct_) {
-        processing_struct_->execute(packet);
+      if (packet_callback_) {
+        packet_callback_(packet);
       }
     } else {
       // No packets available, sleep briefly to avoid busy waiting
@@ -87,8 +88,8 @@ void NetworkSniffer::processingWorker() {
   // Process remaining packets in buffer before exiting
   RawPacket packet;
   while (ring_buffer_->pop(packet)) {
-    if (processing_struct_) {
-      processing_struct_->execute(packet);
+    if (packet_callback_) {
+      packet_callback_(packet);
     }
   }
 }
