@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../analyser_mode.hpp"
-#include "utils/common/common.hpp"
+#include "../../../utils/common/common.hpp"
 #include <array>
 #include <atomic>
 #include <string>

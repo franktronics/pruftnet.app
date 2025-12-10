@@ -1,6 +1,5 @@
 #include "../src/cpp/utils/common/common.hpp"
 #include "modules/sniffer/network_sniffer.hpp"
-#include "utils/network_interface/n_interface_model.hpp"
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
@@ -10,8 +9,6 @@
 
 TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
   SECTION("Basic packet capture test") {
-    NetworkInterface nic("wlp1s0");
-
     NetworkSniffer sniffer;
     std::atomic<int> packet_count(0);
     std::atomic<size_t> total_bytes_captured(0);
@@ -26,7 +23,7 @@ TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
     };
 
     // Start sniffing
-    bool started = sniffer.startSniffing(nic.getName(), callback);
+    bool started = sniffer.startSniffing("enp2s0", callback);
 
     if (!started) {
       std::cout
@@ -44,7 +41,7 @@ TEST_CASE("NetworkSniffer can capture packets", "[network_scanner]") {
 
     // Stop the sniffer
     std::cout << "Stopping capture..." << std::endl;
-    sniffer.stop();
+    sniffer.stopSniffing();
 
     REQUIRE_FALSE(sniffer.isRunning());
 
