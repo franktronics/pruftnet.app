@@ -32,6 +32,11 @@ export interface ParsedPacket {
     protocols: ProtocolInfo[]
 }
 
+export interface ParsedPacketData {
+    packet: ParsedPacket
+    raw: RawPacketData
+}
+
 export interface RawPacketData {
     data: Buffer
     length: number

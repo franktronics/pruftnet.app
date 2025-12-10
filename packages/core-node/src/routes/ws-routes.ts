@@ -1,6 +1,6 @@
 import { trpcServer } from '@repo/utils'
 import { z } from 'zod'
-import {NetworkSniffer, type RawPacketData} from "@repo/core-cpp"
+import { NetworkSniffer, PacketParser, type RawPacketData, type ParsedPacket } from '@repo/core-cpp'
 
 const { createWsRouter, wsProcedure } = trpcServer
 
@@ -12,11 +12,21 @@ export const appWsRouter = createWsRouter({
                     interface: z.string(),
                 }),
             )
-            .handle(async (input, returnCb: (data: RawPacketData) => void) => {
+            .handle(async (input, returnCb: (data: { packet: ParsedPacket; raw: RawPacketData }) => void) => {
                 try {
                     const sniffer = new NetworkSniffer()
-                    sniffer.startSniffing(input.interface, (packet) => {
-                        returnCb(packet)
+                    const parser = new PacketParser()
+                    
+                    sniffer.startSniffing(input.interface, (rawPacket) => {
+                        try {
+                            const parsedPacket = parser.parse(rawPacket.data)
+                            returnCb({
+                                packet: parsedPacket,
+                                raw: rawPacket
+                            })
+                        } catch (parseError) {
+                            console.error('Failed to parse packet:', parseError)
+                        }
                     })
                 } catch (error) {
                     throw new Error(
