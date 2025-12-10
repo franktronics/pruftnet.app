@@ -148,7 +148,7 @@ export function createIPCStreamHandler<T extends WSRouterDef>(
             }
 
             try {
-                await procDef.handler(inputData, returnCb)
+                return await procDef.handler(inputData, returnCb)
             } catch (error) {
                 return new ServerError({
                     code: 1011,

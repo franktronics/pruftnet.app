@@ -9,12 +9,16 @@ export interface WSClientConfig {
     iPCStreamPath: string
 }
 
+type HandlerEvents<T = any> = {
+    onMessage?: (data: T) => void
+}
+
 type InferProcedureWsClient<T> =
     T extends WSProcedureDefinition<infer TInput, infer TOutput>
         ? {
               handle: TInput extends z.ZodSchema
-                  ? (input: z.infer<TInput>, returnCb?: (data: TOutput) => void) => void
-                  : (returnCb?: (data: TOutput) => void) => void
+                  ? (input: z.infer<TInput>, events?: HandlerEvents<TOutput>) => Promise<void>
+                  : (events?: HandlerEvents<TOutput>) => Promise<void>
           }
         : never
 
@@ -33,28 +37,29 @@ export function createWsClient<T extends WSRouterDef>(config: WSClientConfig) {
             {
                 get(_, prop: string) {
                     const newPath = [...procedurePath, prop]
-
                     //if it is not a handle, continue building the path
                     if (prop !== 'handle') {
                         return createProcedureProxy(newPath)
                     }
 
-                    return (input?: any, returnCb?: (data: any) => void) => {
+                    return async (input?: any, events?: HandlerEvents) => {
                         const procedureName = procedurePath.join('.')
 
-                        return config.isDesktop
-                            ? makeIPCConnection({
-                                  procedureName,
-                                  streamPath: config.iPCStreamPath,
-                                  input,
-                                  returnCb,
-                              })
-                            : makeWsConnection({
-                                  procedureName,
-                                  baseWsUrl: config.baseWsUrl,
-                                  input,
-                                  returnCb,
-                              })
+                        if (config.isDesktop) {
+                            return await makeIPCConnection({
+                                procedureName,
+                                streamPath: config.iPCStreamPath,
+                                input,
+                                events,
+                            })
+                        } else {
+                            return await makeWsConnection({
+                                procedureName,
+                                baseWsUrl: config.baseWsUrl,
+                                input,
+                                events,
+                            })
+                        }
                     }
                 },
             },
@@ -68,10 +73,10 @@ type WSConnectionMaker = {
     procedureName: string
     baseWsUrl: string
     input?: any
-    returnCb?: (data: any) => void
+    events?: HandlerEvents
 }
-function makeWsConnection(props: WSConnectionMaker) {
-    const { procedureName, baseWsUrl, input, returnCb } = props
+async function makeWsConnection(props: WSConnectionMaker) {
+    const { procedureName, baseWsUrl, input, events } = props
     const wsUrl = baseWsUrl + `?procedure=${procedureName}`
     const ws = new WebSocket(wsUrl)
 
@@ -84,8 +89,8 @@ function makeWsConnection(props: WSConnectionMaker) {
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data)
-        if (returnCb) {
-            returnCb(data)
+        if (events && events.onMessage) {
+            events.onMessage(data)
         }
     }
 
@@ -102,21 +107,21 @@ type IPCConnectionMaker = {
     procedureName: string
     streamPath: string
     input?: any
-    returnCb?: (data: any) => void
+    events?: HandlerEvents
 }
 async function makeIPCConnection(props: IPCConnectionMaker) {
-    const { procedureName, streamPath, input, returnCb } = props
+    const { procedureName, streamPath, input, events } = props
     const response = await (window as any).electron.trpcConnectIPCStream({
         streamPath,
         procedureName,
         input,
     })
-    if (response.error && response.error.type === ErrorType.IPC_ERROR) {
+    if (response && response.error && response.error.type === ErrorType.IPC_ERROR) {
         throw new ClientError({ ...response.error })
     }
-    ;(window as any).electron.trpcHandleIPCStream((data: any) => {
-        if (returnCb) {
-            returnCb(data)
+    void (window as any).electron.trpcHandleIPCStream((data: any) => {
+        if (events && events.onMessage) {
+            events.onMessage(data)
         }
     })
 }

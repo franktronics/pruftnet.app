@@ -43,9 +43,14 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
 
-        wsFetcher.test.echo.handle({ message: 'ok' }, (data) => {
-            console.log('Received from WS echo:', data)
-        })
+        wsFetcher.test.echo.handle(
+            { message: 'ok' },
+            {
+                onMessage: (data) => {
+                    console.log('Received from ws echo:', data)
+                },
+            },
+        )
     }, [])
 
     const value: ScanControlContextType = {
