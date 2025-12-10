@@ -1,26 +1,28 @@
 import { trpcServer } from '@repo/utils'
 import { z } from 'zod'
+import {NetworkSniffer, type RawPacketData} from "@repo/core-cpp"
 
 const { createWsRouter, wsProcedure } = trpcServer
 
 export const appWsRouter = createWsRouter({
-    test: {
-        echo: wsProcedure
+    network_sniffer: {
+        start: wsProcedure
             .input(
                 z.object({
-                    message: z.string(),
+                    interface: z.string(),
                 }),
             )
-            .handle(async (input, returnCb: (data: string) => void) => {
-                setInterval(() => {
-                    const date = new Date()
-                    const data = JSON.stringify({
-                        ping: 'pong',
-                        message: input.message,
-                        time: date,
+            .handle(async (input, returnCb: (data: RawPacketData) => void) => {
+                try {
+                    const sniffer = new NetworkSniffer()
+                    sniffer.startSniffing(input.interface, (packet) => {
+                        returnCb(packet)
                     })
-                    returnCb(data)
-                }, 1000)
+                } catch (error) {
+                    throw new Error(
+                        `WebSocket sniffer error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                    )
+                }
             }),
     },
 })

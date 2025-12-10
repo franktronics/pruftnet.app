@@ -75,7 +75,7 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                     return new ServerError({
                         code: 1011,
                         origin: 'createWSSMiddleware',
-                        message: 'Procedure handler error',
+                        message: error instanceof Error ? error.message : 'Procedure handler error',
                         data: error,
                     }).wsClose(ws)
                 }

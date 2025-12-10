@@ -1,5 +1,4 @@
 import { RawPacketData, PacketCallback } from '../types/basics'
-import { NetworkInterface } from '../network-interface/network-interface'
 import addon from '../addon'
 
 /**
@@ -21,16 +20,13 @@ export class NetworkSniffer {
 
     /**
      * Start sniffing packets on the specified interface
-     * @param networkInterface Network interface to sniff on
+     * @param interfaceName Name of the network interface to sniff on
      * @param callback Function to call when a packet is received
-     * @returns Promise that resolves to true if sniffing started successfully
+     * @returns True if sniffing started successfully
      */
-    async startSniffing(
-        networkInterface: NetworkInterface,
-        callback: PacketCallback,
-    ): Promise<boolean> {
-        if (!networkInterface) {
-            throw new Error('NetworkInterface cannot be null or undefined')
+    startSniffing(interfaceName: string, callback: PacketCallback): boolean {
+        if (!interfaceName || typeof interfaceName !== 'string') {
+            throw new Error('Interface name must be a non-empty string')
         }
 
         if (!callback || typeof callback !== 'function') {
@@ -52,12 +48,9 @@ export class NetworkSniffer {
                 }
             }
 
-            return this.nativeInstance.startSniffing(networkInterface.native, wrappedCallback)
+            return this.nativeInstance.startSniffing(interfaceName, wrappedCallback)
         } catch (error) {
             this.currentCallback = undefined
-            console.log('---------')
-            console.log(error)
-            console.log('---------')
             throw new Error(
                 `Failed to start sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`,
             )

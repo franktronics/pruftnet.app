@@ -8,7 +8,9 @@
         "build:core": "pnpm -F @repo/core-cpp run build",
         "test": "pnpm -F @repo/core-cpp run test",
         "format": "prettier --write .",
-        "clean": "node clean.js"
+        "clean": "node clean.js",
+        "setup:caps": "sudo setcap cap_net_raw,cap_net_admin=eip $(which node)",
+        "check:caps": "getcap $(which node)",
     },
     "packageManager": "pnpm@10.25.0",
     "engines": {

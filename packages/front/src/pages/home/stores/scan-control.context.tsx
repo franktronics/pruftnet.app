@@ -44,8 +44,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
         setCaptureStatus(status)
 
-        wsFetcher.test.echo.handle(
-            { message: 2 },
+        wsFetcher.network_sniffer.start.handle(
+            { interface: 'enp2s0' },
             {
                 onmessage: (data) => {
                     console.log('Received from ws echo:', data)
