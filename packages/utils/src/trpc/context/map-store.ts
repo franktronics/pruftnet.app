@@ -1,6 +1,6 @@
-import { Store } from './context'
+import { Store } from './store'
 
-export class MapStore<Key extends string, Val> extends Store<Key, Val> {
+export class MapStore<Key, Val> extends Store<Key, Val> {
     private store: Map<Key, Val> = new Map()
 
     get(key: Key): Val | undefined {
@@ -15,8 +15,16 @@ export class MapStore<Key extends string, Val> extends Store<Key, Val> {
         return this.store.has(key)
     }
 
+    size(): number {
+        return this.store.size
+    }
+
     delete(key: Key): void {
         this.store.delete(key)
+    }
+
+    toArray(): [Key, Val][] {
+        return Array.from(this.store.entries())
     }
 
     clear(): void {

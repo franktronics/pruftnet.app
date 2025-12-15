@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Store } from '../context/store'
 
 export type ProcedureType = 'query' | 'mutation'
 
@@ -10,7 +11,6 @@ export interface ProcedureDefinition<
     input?: TInput
     handler: (
         input: TInput extends z.ZodSchema ? z.infer<TInput> : void,
-        ctx?: any,
     ) => Promise<TOutput> | TOutput
 }
 
@@ -22,39 +22,58 @@ export function createRouter<T extends RouterDef>(def: T): T {
     return def
 }
 
-export const procedure = {
-    input<TInput extends z.ZodSchema>(schema: TInput) {
-        return {
-            query: <TOutput>(
-                handler: (input: z.infer<TInput>, ctx?: any) => Promise<TOutput> | TOutput,
-            ): ProcedureDefinition<TInput, TOutput> =>
-                ({
-                    type: 'query' as const,
-                    input: schema,
-                    handler: handler as any,
-                }) as any,
-            mutation: <TOutput>(
-                handler: (input: z.infer<TInput>, ctx?: any) => Promise<TOutput> | TOutput,
-            ): ProcedureDefinition<TInput, TOutput> =>
-                ({
-                    type: 'mutation' as const,
-                    input: schema,
-                    handler: handler as any,
-                }) as any,
-        }
-    },
-    query: <TOutput>(
-        handler: (ctx?: any) => Promise<TOutput> | TOutput,
-    ): ProcedureDefinition<undefined, TOutput> =>
-        ({
-            type: 'query' as const,
-            handler: handler as any,
-        }) as any,
-    mutation: <TOutput>(
-        handler: (ctx?: any) => Promise<TOutput> | TOutput,
-    ): ProcedureDefinition<undefined, TOutput> =>
-        ({
-            type: 'mutation' as const,
-            handler: handler as any,
-        }) as any,
+export const createProcedure = <TStores extends Record<string, Store<any, any>>>(
+    storeObj: TStores,
+) => {
+    return {
+        input: <TInput extends z.ZodSchema>(schema: TInput) => {
+            return {
+                query: <TOutput>(
+                    handler: ({
+                        input,
+                        store,
+                    }: {
+                        input: z.infer<TInput>
+                        store: TStores
+                    }) => Promise<TOutput> | TOutput,
+                ): ProcedureDefinition<TInput, TOutput> =>
+                    ({
+                        type: 'query' as const,
+                        input: schema,
+                        handler: (input: z.infer<TInput>) => {
+                            handler({ input: input, store: storeObj })
+                        },
+                    }) as any,
+                mutation: <TOutput>(
+                    handler: ({
+                        input,
+                        store,
+                    }: {
+                        input: z.infer<TInput>
+                        store: TStores
+                    }) => Promise<TOutput> | TOutput,
+                ): ProcedureDefinition<TInput, TOutput> =>
+                    ({
+                        type: 'mutation' as const,
+                        input: schema,
+                        handler: (input: z.infer<TInput>) =>
+                            handler({ input: input, store: storeObj }),
+                    }) as any,
+            }
+        },
+        query: <TOutput>(
+            handler: ({ store }: { store: TStores }) => Promise<TOutput> | TOutput,
+        ): ProcedureDefinition<undefined, TOutput> =>
+            ({
+                type: 'query' as const,
+                handler: () => handler({ store: storeObj }),
+            }) as any,
+        mutation: <TOutput>(
+            handler: ({ store }: { store: TStores }) => Promise<TOutput> | TOutput,
+        ): ProcedureDefinition<undefined, TOutput> =>
+            ({
+                type: 'mutation' as const,
+                handler: () => handler({ store: storeObj }),
+            }) as any,
+    }
 }

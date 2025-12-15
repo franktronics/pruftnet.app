@@ -2,6 +2,7 @@ export enum ErrorType {
     IPC_ERROR = 'ipc-error',
     HTTP_ERROR = 'http-error',
     WS_ERROR = 'ws-error',
+    GENERIC_ERROR = 'generic-error',
 }
 
 export type CustomErrorType = {

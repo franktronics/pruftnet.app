@@ -1,34 +1,13 @@
 import { trpcServer } from '@repo/utils'
-import { z } from 'zod'
+import { ScanController } from '../controllers/scan-controller'
 
-const { createRouter, procedure } = trpcServer
+const { createRouter } = trpcServer
 
 export const appRouter = createRouter({
     scan: {
-        start: procedure
-            .input(
-                z.object({
-                    id: z.string(),
-                }),
-            )
-            .query(async (input) => {
-                const timer = (ms: number) => new Promise((res) => setTimeout(res, ms))
-                await timer(5000)
-                return { message: `Scan started for id: ${input.id}` }
-            }),
-        stop: procedure
-            .input(
-                z.object({
-                    id: z.string(),
-                }),
-            )
-            .mutation(async (input) => {
-                return { message: `Scan stopped for id: ${input.id}` }
-            }),
+        stop: ScanController.make().stop,
+        active: ScanController.make().active,
     },
-    status: procedure.query(async () => {
-        return { status: 'All systems operational' }
-    }),
 })
 
 export type AppRouter = typeof appRouter

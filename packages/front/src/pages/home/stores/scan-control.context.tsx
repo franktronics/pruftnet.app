@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef } from 'react'
-import { wsFetcher } from '../../../config/client-trpc'
-import { ClientErrorParser } from '@repo/utils'
+import { wsFetcher, fetcher } from '../../../config/client-trpc'
+import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
 
 export const CAPTURE_STATUS = {
@@ -34,35 +34,25 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
 
     const [rawPackets, setRawPackets] = useState<{ parsed: any; raw: any; id: number }[]>([])
+    const { mutateData: stopScan } = useMutateFetcher({
+        procedure: fetcher.scan.stop.mutate({}, 'DELETE'),
+        popupOnFetching: {
+            fetching: 'Stopping scan...',
+            success: 'Scan stopped successfully',
+        },
+        popupOnError: true,
+    })
 
     const handleChangeCaptureStatus = useCallback(async (status: CAPTURE_STATUS) => {
-        let counter = 0
         if (status === CAPTURE_STATUS.IDLE) {
-            wsFetcher.network_sniffer.stop.handle(
-                {},
-                {
-                    onmessage: (data) => {
-                        console.log('Sniffer stopped via ws:', data, counter)
-                        setCaptureStatus(CAPTURE_STATUS.IDLE)
-                    },
-                    onerror: (error) => {
-                        toast.error(<ClientErrorParser error={error} />, {
-                            duration: 5000,
-                        })
-                    },
-                },
-            )
+            await stopScan()
+            setCaptureStatus(CAPTURE_STATUS.IDLE)
         } else if (status === CAPTURE_STATUS.INNITIALIZING) {
-            wsFetcher.network_sniffer.start.handle(
+            wsFetcher.scan.start.handle(
                 { interface: 'lo' },
                 {
                     onmessage: (data) => {
-                        console.log('Received from ws echo:', data, counter)
-                        setRawPackets((prev) => [
-                            ...prev,
-                            { parsed: data.parsed, id: data.id, raw: data.raw },
-                        ])
-                        counter += 1
+                        console.log('Received from ws echo:', data)
                     },
                     onerror: (error) => {
                         toast.error(<ClientErrorParser error={error} />, {

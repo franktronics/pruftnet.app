@@ -1,19 +1,19 @@
 import { ServerError } from './server/server-error'
-import { createRouter, procedure } from './server/procedure'
+import { createRouter, createProcedure } from './server/procedure'
 import { createExpressMiddleware, createElectronHandler } from './server/server'
-import { createWsRouter, wsProcedure } from './server/ws-procedure'
+import { createWsRouter, createWsProcedure } from './server/ws-procedure'
 import { createWSSMiddleware, createIPCStreamHandler } from './server/ws-server'
 
 export const trpcServer = {
     ServerError,
 
     createRouter,
-    procedure,
+    createProcedure,
     createExpressMiddleware,
     createElectronHandler,
 
     createWsRouter,
-    wsProcedure,
+    createWsProcedure,
     createWSSMiddleware,
     createIPCStreamHandler,
 }

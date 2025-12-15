@@ -21,6 +21,17 @@ export class ServerError {
     }
 
     /**
+     * Throws a generic error with the specified message and cause.
+     * The error will be parsed on the client side to create a ClientError.
+     * @throws An error with the specified message and cause.
+     */
+    public throw() {
+        throw new Error(this.props.message, {
+            cause: { ...this.props, type: ErrorType.GENERIC_ERROR },
+        })
+    }
+
+    /**
      * Send the error object suitable for IPC communication.
      * The error will be parsed on the client side to create a ClientError.
      * @returns An object representing the error for IPC.

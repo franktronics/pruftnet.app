@@ -90,31 +90,43 @@ function makeHttpRequest(props: HttpMakerProps) {
     }
 
     return async () => {
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...headers,
-            },
-            body: method !== 'GET' && input !== undefined ? JSON.stringify(input) : undefined,
-        })
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...headers,
+                },
+                body: method !== 'GET' && input !== undefined ? JSON.stringify(input) : undefined,
+            })
 
-        if (!response.ok) {
-            const errorData = await response.json()
-            if (errorData.error && errorData.error.type === ErrorType.HTTP_ERROR) {
-                throw new ClientError({ ...errorData.error })
-            } else {
-                throw new ClientError({
-                    code: response.status,
-                    type: ErrorType.HTTP_ERROR,
-                    origin: 'makeHttpRequest',
-                    message: response.statusText,
-                })
+            if (!response.ok) {
+                const errorData = await response.json()
+                if (errorData.error && errorData.error.type) {
+                    throw new ClientError({ ...errorData.error })
+                } else {
+                    throw new ClientError({
+                        code: response.status,
+                        type: ErrorType.HTTP_ERROR,
+                        origin: 'makeHttpRequest',
+                        message: response.statusText,
+                    })
+                }
             }
-        }
 
-        const data = await response.json()
-        return data.result
+            const data = await response.json()
+            return data.result
+        } catch (err) {
+            if (err instanceof ClientError) {
+                throw err
+            }
+            throw new ClientError({
+                code: 500,
+                message: err instanceof Error ? err.message : 'Unknown HTTP error',
+                origin: 'makeHttpRequest',
+                type: ErrorType.HTTP_ERROR,
+            })
+        }
     }
 }
 
@@ -127,21 +139,33 @@ function makeIPCRequest(props: IPCMakerProps) {
     const { basePath, procedureName, input } = props
 
     return async () => {
-        const response = await (window as any).electron.trpcHandler({
-            basePath,
-            procedureName,
-            input,
-        })
-        if (response.error && response.error.type === ErrorType.IPC_ERROR) {
-            throw new ClientError({ ...response.error })
-        } else if (!response.result) {
+        try {
+            const response = await (window as any).electron.trpcHandler({
+                basePath,
+                procedureName,
+                input,
+            })
+            if (response.error && response.error) {
+                throw new ClientError({ ...response.error })
+            } else if (!response.result) {
+                throw new ClientError({
+                    code: 500,
+                    message: 'Unknown IPC error',
+                    origin: 'makeIPCRequest',
+                    type: ErrorType.IPC_ERROR,
+                })
+            }
+            return response.result
+        } catch (err) {
+            if (err instanceof ClientError) {
+                throw err
+            }
             throw new ClientError({
                 code: 500,
-                message: 'Unknown IPC error',
+                message: err instanceof Error ? err.message : 'Unknown IPC error',
                 origin: 'makeIPCRequest',
                 type: ErrorType.IPC_ERROR,
             })
         }
-        return response.result
     }
 }

@@ -42,7 +42,7 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
             if (result.error) {
                 if (toastId) toast.dismiss(toastId)
                 if (popupOnError) {
-                    toast.error(<ErrorDetails error={result.error} />, {
+                    toast.error(<ClientErrorParser error={result.error} />, {
                         duration: 5000,
                     })
                 }
@@ -58,7 +58,7 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
             if (toastId) toast.dismiss(toastId)
 
             if (popupOnError && error instanceof ClientError) {
-                toast.error(<ErrorDetails error={error} />, {
+                toast.error(<ClientErrorParser error={error} />, {
                     duration: 5000,
                 })
             }

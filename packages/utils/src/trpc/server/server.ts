@@ -60,10 +60,10 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
                 inputData = validation.data
             }
 
-            const result = await procDef.handler(inputData, { req, res })
+            const result = await procDef.handler(inputData)
             res.json({ result })
         } catch (err: any) {
-            if (err.cause.type && err.cause.type === ErrorType.HTTP_ERROR) {
+            if (err.cause.type && err.cause.type) {
                 return res.status(err.cause.code).json({ error: { ...err.cause } })
             }
             res.status(500).json({
@@ -86,7 +86,7 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
  */
 type ElectronHandlerType = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any
 export function createElectronHandler<T extends RouterDef>(router: T): ElectronHandlerType {
-    return async (event: IpcMainInvokeEvent, data: any) => {
+    return async (_, data: any) => {
         try {
             const procedure = data.procedureName
             if (!procedure) {
@@ -127,7 +127,7 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
                 inputData = validation.data
             }
 
-            const result = await procDef.handler(inputData, { event })
+            const result = await procDef.handler(inputData)
             return { result }
         } catch (err: any) {
             return new ServerError({

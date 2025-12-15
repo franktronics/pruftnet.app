@@ -70,15 +70,20 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                 }
 
                 try {
+                    console.log('checkpoint 1')
                     await procDef.handler(inputData, returnCb)
                 } catch (error) {
-                    return new ServerError({
+                    console.log('checkpoint 2', error)
+                    new ServerError({
                         code: 1011,
                         origin: 'createWSSMiddleware',
                         message: error instanceof Error ? error.message : 'Procedure handler error',
                         data: error,
                     }).wsClose(ws)
                 }
+            })
+            ws.on('error', (err) => {
+                console.error('WebSocket error:', err)
             })
         } catch (err: any) {
             return new ServerError({
