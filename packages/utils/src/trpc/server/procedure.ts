@@ -41,7 +41,7 @@ export const createProcedure = <TStores extends Record<string, Store<any, any>>>
                         type: 'query' as const,
                         input: schema,
                         handler: (input: z.infer<TInput>) => {
-                            handler({ input: input, store: storeObj })
+                            return handler({ input: input, store: storeObj })
                         },
                     }) as any,
                 mutation: <TOutput>(
@@ -56,8 +56,9 @@ export const createProcedure = <TStores extends Record<string, Store<any, any>>>
                     ({
                         type: 'mutation' as const,
                         input: schema,
-                        handler: (input: z.infer<TInput>) =>
-                            handler({ input: input, store: storeObj }),
+                        handler: (input: z.infer<TInput>) => {
+                            return handler({ input: input, store: storeObj })
+                        },
                     }) as any,
             }
         },

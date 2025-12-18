@@ -70,20 +70,32 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                 }
 
                 try {
-                    console.log('checkpoint 1')
                     await procDef.handler(inputData, returnCb)
-                } catch (error) {
-                    console.log('checkpoint 2', error)
-                    new ServerError({
+                } catch (error: any) {
+                    if (error.cause.type && error.cause.code && error.cause.message) {
+                        return new ServerError({
+                            code: error.cause.code,
+                            origin: 'createWSSMiddleware',
+                            message: error.cause.message,
+                            data: error.cause.data,
+                        }).wsClose(ws)
+                    }
+                    return new ServerError({
                         code: 1011,
                         origin: 'createWSSMiddleware',
-                        message: error instanceof Error ? error.message : 'Procedure handler error',
+                        message: 'Procedure handler error',
                         data: error,
                     }).wsClose(ws)
                 }
             })
+
             ws.on('error', (err) => {
-                console.error('WebSocket error:', err)
+                return new ServerError({
+                    code: 1011,
+                    origin: 'createWSSMiddleware',
+                    message: err.message,
+                    data: err,
+                }).wsClose(ws)
             })
         } catch (err: any) {
             return new ServerError({
@@ -107,7 +119,7 @@ export function createIPCStreamHandler<T extends WSRouterDef>(
     router: T,
     mainWindows: BrowserWindow,
 ): IPCStreamHandler {
-    return async (event: IpcMainInvokeEvent, data: any) => {
+    return async (_, data: any) => {
         try {
             const procedure = data.procedureName
             if (!procedure) {
@@ -154,9 +166,17 @@ export function createIPCStreamHandler<T extends WSRouterDef>(
 
             try {
                 return await procDef.handler(inputData, returnCb)
-            } catch (error) {
+            } catch (error: any) {
+                if (error.cause.type && error.cause.code && error.cause.message) {
+                    return new ServerError({
+                        code: error.cause.code,
+                        origin: 'createIPCStreamHandler',
+                        message: error.cause.message,
+                        data: error.cause.data,
+                    }).ipc()
+                }
                 return new ServerError({
-                    code: 1011,
+                    code: 500,
                     origin: 'createIPCStreamHandler',
                     message: 'Procedure handler error',
                     data: error,

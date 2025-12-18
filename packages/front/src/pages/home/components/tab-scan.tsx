@@ -3,7 +3,6 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@repo/ui/a
 import { PacketsTable, type RowDataType } from './packets-table'
 import { PacketHexViewer } from './packet-hex-viewer'
 import { PacketValuesViewer } from './packet-values-viewer'
-import { usePacketTable } from '../hooks/use-packet-table'
 import { useScanControlContext } from '../stores/scan-control.context'
 
 const fakePacketData = new Uint8Array([

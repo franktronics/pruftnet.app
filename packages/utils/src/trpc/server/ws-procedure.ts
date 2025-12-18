@@ -41,7 +41,7 @@ export const createWsProcedure = <TStores extends Record<string, Store<any, any>
                     ({
                         input: schema,
                         handler: (input: z.infer<TInput>, returnCb: (data: TOutput) => void) => {
-                            handler({ input, store: storeObj }, returnCb)
+                            return handler({ input, store: storeObj }, returnCb)
                         },
                     }) as any,
             }
@@ -58,7 +58,7 @@ export const createWsProcedure = <TStores extends Record<string, Store<any, any>
         ): WSProcedureDefinition<undefined, TOutput> =>
             ({
                 handler: (returnCb: (data: TOutput) => void) => {
-                    handler({ store: storeObj }, returnCb)
+                    return handler({ store: storeObj }, returnCb)
                 },
             }) as any,
     }

@@ -21,7 +21,6 @@ export class ScanController {
                     }),
                 )
                 .handle(async ({ input, store }, returnCb: (data: number) => void) => {
-                    throw new Error('Not implemented')
                     const timer = setInterval(() => {
                         const fakeData = Math.floor(Math.random() * 1000)
                         returnCb(fakeData)
@@ -30,12 +29,6 @@ export class ScanController {
                     store.scan.set(scanId, timer)
                 }),
             stop: procedure.input(z.object({})).mutation(async ({ store }) => {
-                return new ServerError({
-                    code: 400,
-                    origin: 'ScanController.stop',
-                    message: 'Stopping scan',
-                    whatToDo: 'Clearing all active scans',
-                }).throw()
                 for (const [scanId, timer] of store.scan.toArray()) {
                     clearInterval(timer)
                     store.scan.delete(scanId)
