@@ -64,7 +64,7 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     align="start"
-                    className="scrollbar-thin max-h-100 w-70 overflow-auto"
+                    className="scrollbar-thin max-h-100 w-70 overflow-auto p-2"
                 >
                     {Object.entries(interfaces).map(([name, infos]) => (
                         <DropdownMenuItem
