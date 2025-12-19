@@ -23,7 +23,7 @@ export function createRouter<T extends RouterDef>(def: T): T {
 }
 
 export const createProcedure = <TStores extends Record<string, Store<any, any>>>(
-    storeObj: TStores,
+    storeObj: TStores = {} as TStores,
 ) => {
     return {
         input: <TInput extends z.ZodSchema>(schema: TInput) => {

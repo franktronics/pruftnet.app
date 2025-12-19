@@ -1,7 +1,6 @@
 // Main entry point for @repo/core package
 export { PacketParser } from './parser/packet-parser.js'
 export { NetworkSniffer, isSnifferAvailable } from './sniffer/network-sniffer.js'
-export { NetworkInterface } from './network-interface/network-interface.js'
 
 // Export types
 export type {

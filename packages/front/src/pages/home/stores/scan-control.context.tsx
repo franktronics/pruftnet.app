@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
+import type { NetworkInterfaceInfo } from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -16,6 +17,13 @@ export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
     changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
     rawPackets: { parsed: any; raw: any; id: number }[]
+    interface: ContextNetinterface | null
+    setInterface: (interf: ContextNetinterface | null) => void
+}
+
+export type ContextNetinterface = {
+    name: string
+    infos: NetworkInterfaceInfo[]
 }
 
 const ScanControlContext = createContext<ScanControlContextType | undefined>(undefined)
@@ -32,6 +40,7 @@ type ScanControlProviderProps = {} & ComponentPropsWithoutRef<'div'>
 export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
+    const [interf, setInterface] = useState<ContextNetinterface | null>(null)
 
     const [rawPackets, setRawPackets] = useState<{ parsed: any; raw: any; id: number }[]>([])
     const { mutateData: stopScan } = useMutateFetcher({
@@ -69,6 +78,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
         rawPackets,
+        interface: interf,
+        setInterface,
     }
 
     return (

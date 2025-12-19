@@ -63,16 +63,16 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
             const result = await procDef.handler(inputData)
             res.json({ result })
         } catch (err: any) {
-            return res.status(Math.min(err.cause.code || 500, 500)).json({
+            return res.status(Math.min(err.cause?.code || 500, 500)).json({
                 error: {
-                    code: err.cause.code || 500,
+                    code: err.cause?.code || 500,
                     type: ErrorType.HTTP_ERROR,
-                    message: err.cause.message || 'Internal Server Error',
+                    message: err?.message || 'Internal Server Error',
                     origin: 'createExpressMiddleware',
                     whatToDo:
-                        err.cause.whatToDo ||
+                        err.cause?.whatToDo ||
                         'Try again later or contact support if the issue persists.',
-                    data: err.cause.data || undefined,
+                    data: err.cause?.data || undefined,
                 },
             })
         }
@@ -132,13 +132,13 @@ export function createElectronHandler<T extends RouterDef>(router: T): ElectronH
             return { result }
         } catch (err: any) {
             return new ServerError({
-                code: err.cause.code || 500,
-                message: err.cause.message || 'Internal Server Error',
+                code: err.cause?.code || 500,
+                message: err?.message || 'Internal Server Error',
                 origin: 'createElectronHandler',
                 whatToDo:
-                    err.cause.whatToDo ||
+                    err.cause?.whatToDo ||
                     'Try again later or contact support if the issue persists.',
-                data: err.cause.data || undefined,
+                data: err.cause?.data || undefined,
             }).ipc()
         }
     }
