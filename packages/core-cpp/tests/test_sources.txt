@@ -6,22 +6,15 @@ utils/buffer/ring_buffer.cpp
 utils/packets/packet_model.cpp
 utils/cap_file_builder/pcap_builder.cpp
 utils/network_interface/n_interface_model.cpp
-modules/sniffer/packet_capture.cpp
-modules/sniffer/network_sniffer.cpp
 
-# Parser and protocol files
+# Parser
 modules/parser/packet_parser.cpp
-utils/protocols/protocol_model.cpp
-utils/protocols/ethernet/protocol_ethernet.cpp
-utils/protocols/ipv4/protocol_ipv4.cpp
-utils/protocols/ipv6/protocol_ipv6.cpp
-utils/protocols/arp/protocol_arp.cpp
-utils/protocols/tcp/protocol_tcp.cpp
-utils/protocols/udp/protocol_udp.cpp
-utils/protocols/icmp/protocol_icmp.cpp
-utils/protocols/icmpv6/protocol_icmpv6.cpp
 
-# Analyser modules
-modules/analyser/ipv6_nd/neighbor_discovery.cpp
-modules/analyser/ipv6_nd/ipv6_ns.cpp
-modules/analyser/ipv6_nd/ipv6_rs.cpp
+# Sniffer files are Linux-only (commented out for macOS builds)
+# modules/sniffer/packet_capture.cpp
+# modules/sniffer/network_sniffer.cpp
+
+# Analyser modules (Linux-only, commented out for macOS builds)
+# modules/analyser/ipv6_nd/neighbor_discovery.cpp
+# modules/analyser/ipv6_nd/ipv6_ns.cpp
+# modules/analyser/ipv6_nd/ipv6_rs.cpp

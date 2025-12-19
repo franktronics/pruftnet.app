@@ -10,7 +10,8 @@
 #include <mutex>
 #include <thread>
 
-using PacketCallback = std::function<void(const ParsedPacket &)>;
+using PacketCallback =
+    std::function<void(const RawPacket &, const ParsedPacket &)>;
 
 class NetworkSniffer {
 public:

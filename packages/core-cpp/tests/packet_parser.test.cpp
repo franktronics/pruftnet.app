@@ -1,10 +1,8 @@
 #include "../src/cpp/modules/parser/packet_parser.hpp"
-#include "../src/cpp/utils/protocols/protocol_model.hpp"
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <iostream>
-#include <map>
 
 std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4TCPPacket() {
   std::array<uint8_t, MAX_PACKET_SIZE> packet = {};
@@ -32,17 +30,17 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4TCPPacket() {
 
   // IPv4 Header (20 bytes)
   packet[14] = 0x45; // Version (4) + IHL (5)
-  packet[15] = 0x00; // Type of Service
+  packet[15] = 0x00; // TOS
   packet[16] = 0x00;
   packet[17] = 0x34; // Total Length (52 bytes)
   packet[18] = 0x12;
   packet[19] = 0x34; // Identification
   packet[20] = 0x40;
-  packet[21] = 0x00; // Flags (010) + Fragment Offset (0)
+  packet[21] = 0x00; // Flags + Fragment Offset
   packet[22] = 0x40; // TTL (64)
   packet[23] = 0x06; // Protocol (TCP = 6)
   packet[24] = 0xAB;
-  packet[25] = 0xCD; // Header Checksum
+  packet[25] = 0xCD; // Checksum
 
   // Source IP: 192.168.1.1
   packet[26] = 192;
@@ -62,17 +60,17 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4TCPPacket() {
   packet[36] = 0x00;
   packet[37] = 0x50; // Destination Port (80)
   packet[38] = 0x12;
-  packet[39] = 0x34; // Sequence Number
+  packet[39] = 0x34;
   packet[40] = 0x56;
-  packet[41] = 0x78;
+  packet[41] = 0x78; // Sequence Number
   packet[42] = 0x87;
-  packet[43] = 0x65; // Acknowledgment Number
+  packet[43] = 0x65;
   packet[44] = 0x43;
-  packet[45] = 0x21;
-  packet[46] = 0x50; // Data Offset (5) + Reserved (000)
+  packet[45] = 0x21; // Ack Number
+  packet[46] = 0x50; // Data Offset (5) + Reserved
   packet[47] = 0x18; // Flags (ACK + PSH)
   packet[48] = 0x20;
-  packet[49] = 0x00; // Window Size (8192)
+  packet[49] = 0x00; // Window Size
   packet[50] = 0xEF;
   packet[51] = 0xBE; // Checksum
   packet[52] = 0x00;
@@ -110,12 +108,12 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetARPPacket() {
   packet[15] = 0x01; // Hardware Type (Ethernet)
   packet[16] = 0x08;
   packet[17] = 0x00; // Protocol Type (IPv4)
-  packet[18] = 0x06; // Hardware Address Length
-  packet[19] = 0x04; // Protocol Address Length
+  packet[18] = 0x06; // Hardware Size
+  packet[19] = 0x04; // Protocol Size
   packet[20] = 0x00;
-  packet[21] = 0x01; // Operation (ARP Request)
+  packet[21] = 0x01; // Opcode (ARP Request)
 
-  // Sender Hardware Address (MAC): 00:11:22:33:44:55
+  // Sender MAC: 00:11:22:33:44:55
   packet[22] = 0x00;
   packet[23] = 0x11;
   packet[24] = 0x22;
@@ -123,13 +121,13 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetARPPacket() {
   packet[26] = 0x44;
   packet[27] = 0x55;
 
-  // Sender Protocol Address (IP): 192.168.1.100
+  // Sender IP: 192.168.1.100
   packet[28] = 192;
   packet[29] = 168;
   packet[30] = 1;
   packet[31] = 100;
 
-  // Target Hardware Address (MAC): 00:00:00:00:00:00 (unknown)
+  // Target MAC: 00:00:00:00:00:00 (unknown)
   packet[32] = 0x00;
   packet[33] = 0x00;
   packet[34] = 0x00;
@@ -137,7 +135,7 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetARPPacket() {
   packet[36] = 0x00;
   packet[37] = 0x00;
 
-  // Target Protocol Address (IP): 192.168.1.1
+  // Target IP: 192.168.1.1
   packet[38] = 192;
   packet[39] = 168;
   packet[40] = 1;
@@ -146,130 +144,235 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetARPPacket() {
   return packet;
 }
 
-void printProtocolFields(
-    const std::vector<std::unique_ptr<ProtocolModel>> &protocols) {
-  for (const auto &protocol : protocols) {
-    std::cout << "\n=== " << protocol->getName()
-              << " PROTOCOL ===" << std::endl;
-    const auto &fields = protocol->getFields();
-    for (const auto &field : fields) {
-      std::cout << field.name << ": " << field.toString() << std::endl;
+std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4UDPPacket() {
+  std::array<uint8_t, MAX_PACKET_SIZE> packet = {};
+
+  // Ethernet Header
+  packet[0] = 0xAA;
+  packet[1] = 0xBB;
+  packet[2] = 0xCC;
+  packet[3] = 0xDD;
+  packet[4] = 0xEE;
+  packet[5] = 0xFF;
+  packet[6] = 0x11;
+  packet[7] = 0x22;
+  packet[8] = 0x33;
+  packet[9] = 0x44;
+  packet[10] = 0x55;
+  packet[11] = 0x66;
+  packet[12] = 0x08;
+  packet[13] = 0x00; // IPv4
+
+  // IPv4 Header
+  packet[14] = 0x45; // Version + IHL
+  packet[15] = 0x00;
+  packet[16] = 0x00;
+  packet[17] = 0x1C; // Total Length
+  packet[18] = 0x00;
+  packet[19] = 0x00;
+  packet[20] = 0x40;
+  packet[21] = 0x00;
+  packet[22] = 0x40;
+  packet[23] = 0x11; // Protocol (UDP = 17)
+  packet[24] = 0x00;
+  packet[25] = 0x00;
+  packet[26] = 192;
+  packet[27] = 168;
+  packet[28] = 1;
+  packet[29] = 1;
+  packet[30] = 10;
+  packet[31] = 0;
+  packet[32] = 0;
+  packet[33] = 1;
+
+  // UDP Header
+  packet[34] = 0x00;
+  packet[35] = 0x35; // Source Port (53 - DNS)
+  packet[36] = 0x00;
+  packet[37] = 0x35; // Dest Port (53)
+  packet[38] = 0x00;
+  packet[39] = 0x08; // Length
+  packet[40] = 0x00;
+  packet[41] = 0x00; // Checksum
+
+  return packet;
+}
+
+void printParsedPacket(const ParsedPacket &parsed, const RawPacket &raw) {
+  std::cout << "\n=== Parsed Packet ===" << std::endl;
+  std::cout << "Protocol count: " << static_cast<int>(parsed.protocol_count)
+            << std::endl;
+  std::cout << "Valid: " << (parsed.valid ? "true" : "false") << std::endl;
+
+  for (uint8_t i = 0; i < parsed.protocol_count; ++i) {
+    const ProtocolEntry &proto = parsed.protocols[i];
+    std::cout << "\n--- Protocol " << static_cast<int>(i) << " ---"
+              << std::endl;
+    std::cout << "  ID: "
+              << static_cast<int>(static_cast<uint8_t>(proto.protocol_id))
+              << std::endl;
+    std::cout << "  Header offset: " << proto.header_offset << std::endl;
+    std::cout << "  Field count: " << static_cast<int>(proto.field_count)
+              << std::endl;
+
+    for (uint8_t j = 0; j < proto.field_count; ++j) {
+      const FieldEntry &field = proto.fields[j];
+      std::cout << "    Field " << static_cast<int>(field.field_id)
+                << ": offset=" << field.byte_offset
+                << ", length=" << static_cast<int>(field.byte_length)
+                << ", value=";
+
+      for (uint8_t k = 0;
+           k < field.byte_length && (field.byte_offset + k) < raw.length; ++k) {
+        printf("%02X ", raw.data[field.byte_offset + k]);
+      }
+      std::cout << std::endl;
     }
   }
 }
 
-TEST_CASE("PacketParser - Ethernet + IPv4 + TCP Packet", "[parser]") {
-  auto packet = createEthernetIPv4TCPPacket();
+TEST_CASE("PacketParser - Ethernet + IPv4 + TCP", "[parser]") {
+  auto packet_data = createEthernetIPv4TCPPacket();
+
+  RawPacket raw;
+  raw.data = packet_data;
+  raw.length = 54;
+  raw.valid = true;
 
   PacketParser parser;
-  auto protocols = parser.parse(packet);
+  ParsedPacket parsed = parser.parsePacket(raw);
 
-  REQUIRE(protocols.size() == 3);
-  printProtocolFields(protocols);
+  printParsedPacket(parsed, raw);
 
-  // Test Ethernet Protocol
-  REQUIRE(protocols[0]->getName() == "Ethernet");
-  REQUIRE(protocols[0]->getProtocolType() == ProtocolType::ETHERNET);
+  REQUIRE(parsed.valid == true);
+  REQUIRE(parsed.protocol_count == 3);
 
-  const auto &ethernet_fields = protocols[0]->getFields();
-  REQUIRE(ethernet_fields.size() == 3);
+  REQUIRE(parsed.protocols[0].protocol_id == ProtocolId::ETHERNET);
+  REQUIRE(parsed.protocols[0].header_offset == 0);
+  REQUIRE(parsed.protocols[0].field_count == 3);
 
-  // Verify all Ethernet field values
-  REQUIRE(ethernet_fields[0].toString() == "AA BB CC DD EE FF"); // dest_mac
-  REQUIRE(ethernet_fields[1].toString() == "11 22 33 44 55 66"); // src_mac
-  REQUIRE(ethernet_fields[2].toString() == "08 00");             // ethertype
+  REQUIRE(parsed.protocols[1].protocol_id == ProtocolId::IPV4);
+  REQUIRE(parsed.protocols[1].header_offset == 14);
+  REQUIRE(parsed.protocols[1].field_count == 13);
 
-  // Test IPv4 Protocol
-  REQUIRE(protocols[1]->getName() == "IPv4");
-  REQUIRE(protocols[1]->getProtocolType() == ProtocolType::IPV4);
-
-  const auto &ipv4_fields = protocols[1]->getFields();
-  REQUIRE(ipv4_fields.size() == 12);
-
-  // Verify all IPv4 field values
-  std::map<std::string, std::string> expected_ipv4 = {
-      {"version", "4"},
-      {"ihl", "5"},
-      {"tos", "00"},
-      {"total_length", "00 34"},
-      {"identification", "12 34"},
-      {"flags", "2"},
-      {"fragment_offset", "00 00"},
-      {"ttl", "40"},
-      {"protocol", "06"},
-      {"checksum", "AB CD"},
-      {"src_ip", "C0 A8 01 01"},
-      {"dest_ip", "0A 00 00 01"}};
-
-  for (const auto &field : ipv4_fields) {
-    REQUIRE(expected_ipv4.find(field.name) != expected_ipv4.end());
-    REQUIRE(field.toString() == expected_ipv4[field.name]);
-  }
-
-  // Test TCP Protocol
-  REQUIRE(protocols[2]->getName() == "TCP");
-  REQUIRE(protocols[2]->getProtocolType() == ProtocolType::TCP);
-
-  const auto &tcp_fields = protocols[2]->getFields();
-  REQUIRE(tcp_fields.size() == 10);
-
-  // Verify all TCP field values
-  std::map<std::string, std::string> expected_tcp = {
-      {"src_port", "1F 90"},
-      {"dest_port", "00 50"},
-      {"sequence_number", "12 34 56 78"},
-      {"ack_number", "87 65 43 21"},
-      {"data_offset", "5"},
-      {"reserved", "0"},
-      {"flags", "18"},
-      {"window_size", "20 00"},
-      {"checksum", "EF BE"},
-      {"urgent_pointer", "00 00"}};
-
-  for (const auto &field : tcp_fields) {
-    REQUIRE(expected_tcp.find(field.name) != expected_tcp.end());
-    REQUIRE(field.toString() == expected_tcp[field.name]);
-  }
+  REQUIRE(parsed.protocols[2].protocol_id == ProtocolId::TCP);
+  REQUIRE(parsed.protocols[2].header_offset == 34);
+  REQUIRE(parsed.protocols[2].field_count == 10);
 }
 
-TEST_CASE("PacketParser - Ethernet + ARP Packet", "[parser]") {
-  auto packet = createEthernetARPPacket();
+TEST_CASE("PacketParser - Ethernet + ARP", "[parser]") {
+  auto packet_data = createEthernetARPPacket();
+
+  RawPacket raw;
+  raw.data = packet_data;
+  raw.length = 42;
+  raw.valid = true;
 
   PacketParser parser;
-  auto protocols = parser.parse(packet);
+  ParsedPacket parsed = parser.parsePacket(raw);
 
-  REQUIRE(protocols.size() == 2);
-  printProtocolFields(protocols);
+  printParsedPacket(parsed, raw);
 
-  // Test Ethernet Protocol
-  REQUIRE(protocols[0]->getName() == "Ethernet");
-  REQUIRE(protocols[0]->getProtocolType() == ProtocolType::ETHERNET);
+  REQUIRE(parsed.valid == true);
+  REQUIRE(parsed.protocol_count == 2);
 
-  const auto &ethernet_fields = protocols[0]->getFields();
-  REQUIRE(ethernet_fields.size() == 3);
+  REQUIRE(parsed.protocols[0].protocol_id == ProtocolId::ETHERNET);
+  REQUIRE(parsed.protocols[0].header_offset == 0);
 
-  // Verify all Ethernet field values
-  REQUIRE(ethernet_fields[0].toString() == "FF FF FF FF FF FF"); // dest_mac
-  REQUIRE(ethernet_fields[1].toString() == "00 11 22 33 44 55"); // src_mac
-  REQUIRE(ethernet_fields[2].toString() == "08 06");             // ethertype
+  REQUIRE(parsed.protocols[1].protocol_id == ProtocolId::ARP);
+  REQUIRE(parsed.protocols[1].header_offset == 14);
+  REQUIRE(parsed.protocols[1].field_count == 9);
+}
 
-  // Test ARP Protocol
-  REQUIRE(protocols[1]->getName() == "ARP");
-  REQUIRE(protocols[1]->getProtocolType() == ProtocolType::ARP);
+TEST_CASE("PacketParser - Ethernet + IPv4 + UDP", "[parser]") {
+  auto packet_data = createEthernetIPv4UDPPacket();
 
-  const auto &arp_fields = protocols[1]->getFields();
-  REQUIRE(arp_fields.size() == 9);
+  RawPacket raw;
+  raw.data = packet_data;
+  raw.length = 42;
+  raw.valid = true;
 
-  // Verify all ARP field values
-  std::map<std::string, std::string> expected_arp = {
-      {"hardware_type", "00 01"},   {"protocol_type", "08 00"},
-      {"hardware_size", "06"},      {"protocol_size", "04"},
-      {"opcode", "00 01"},          {"sender_mac", "00 11 22 33 44 55"},
-      {"sender_ip", "C0 A8 01 64"}, {"target_mac", "00 00 00 00 00 00"},
-      {"target_ip", "C0 A8 01 01"}};
+  PacketParser parser;
+  ParsedPacket parsed = parser.parsePacket(raw);
 
-  for (const auto &field : arp_fields) {
-    REQUIRE(expected_arp.find(field.name) != expected_arp.end());
-    REQUIRE(field.toString() == expected_arp[field.name]);
-  }
+  printParsedPacket(parsed, raw);
+
+  REQUIRE(parsed.valid == true);
+  REQUIRE(parsed.protocol_count == 3);
+
+  REQUIRE(parsed.protocols[0].protocol_id == ProtocolId::ETHERNET);
+  REQUIRE(parsed.protocols[1].protocol_id == ProtocolId::IPV4);
+  REQUIRE(parsed.protocols[2].protocol_id == ProtocolId::UDP);
+  REQUIRE(parsed.protocols[2].field_count == 4);
+}
+
+TEST_CASE("PacketParser - Invalid packet", "[parser]") {
+  RawPacket raw;
+  raw.length = 0;
+  raw.valid = false;
+
+  PacketParser parser;
+  ParsedPacket parsed = parser.parsePacket(raw);
+
+  REQUIRE(parsed.valid == false);
+  REQUIRE(parsed.protocol_count == 0);
+}
+
+TEST_CASE("PacketParser - Truncated packet", "[parser]") {
+  auto packet_data = createEthernetIPv4TCPPacket();
+
+  RawPacket raw;
+  raw.data = packet_data;
+  raw.length = 10; // Too short for Ethernet header
+  raw.valid = true;
+
+  PacketParser parser;
+  ParsedPacket parsed = parser.parsePacket(raw);
+
+  REQUIRE(parsed.valid == false);
+  REQUIRE(parsed.protocol_count == 0);
+}
+
+TEST_CASE("PacketParser - Field extraction", "[parser]") {
+  auto packet_data = createEthernetIPv4TCPPacket();
+
+  RawPacket raw;
+  raw.data = packet_data;
+  raw.length = 54;
+  raw.valid = true;
+
+  PacketParser parser;
+  ParsedPacket parsed = parser.parsePacket(raw);
+
+  REQUIRE(parsed.valid == true);
+
+  // Ethernet dest_mac field
+  const FieldEntry &dest_mac =
+      parsed.protocols[0].fields[EthernetFields::DEST_MAC];
+  REQUIRE(dest_mac.byte_offset == 0);
+  REQUIRE(dest_mac.byte_length == 6);
+  REQUIRE(raw.data[dest_mac.byte_offset] == 0xAA);
+  REQUIRE(raw.data[dest_mac.byte_offset + 5] == 0xFF);
+
+  // Ethernet ethertype field
+  const FieldEntry &ethertype =
+      parsed.protocols[0].fields[EthernetFields::ETHERTYPE];
+  REQUIRE(ethertype.byte_offset == 12);
+  REQUIRE(ethertype.byte_length == 2);
+  REQUIRE(raw.data[ethertype.byte_offset] == 0x08);
+  REQUIRE(raw.data[ethertype.byte_offset + 1] == 0x00);
+
+  // IPv4 src_ip field
+  const FieldEntry &src_ip = parsed.protocols[1].fields[Ipv4Fields::SRC_IP];
+  REQUIRE(src_ip.byte_offset == 26);
+  REQUIRE(src_ip.byte_length == 4);
+  REQUIRE(raw.data[src_ip.byte_offset] == 192);
+  REQUIRE(raw.data[src_ip.byte_offset + 1] == 168);
+
+  // TCP src_port field
+  const FieldEntry &src_port = parsed.protocols[2].fields[TcpFields::SRC_PORT];
+  REQUIRE(src_port.byte_offset == 34);
+  REQUIRE(src_port.byte_length == 2);
+  REQUIRE(raw.data[src_port.byte_offset] == 0x1F);
+  REQUIRE(raw.data[src_port.byte_offset + 1] == 0x90);
 }

@@ -1,5 +1,5 @@
-import { NetworkInterfaceConfig } from '../types/basics'
-import addon from '../addon'
+import type { NetworkInterfaceConfig } from '../types/basics.js'
+import addon from '../addon.js'
 
 /**
  * NetworkInterface class for network interface management

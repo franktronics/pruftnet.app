@@ -96,7 +96,7 @@ void NetworkSniffer::processingWorker() {
 
       std::lock_guard<std::mutex> lock(callback_mutex_);
       if (packet_callback_) {
-        packet_callback_(parsed_packet);
+        packet_callback_(raw_packet, parsed_packet);
       }
     } else {
       ring_buffer_->waitForData(std::chrono::milliseconds(100));
@@ -109,7 +109,7 @@ void NetworkSniffer::processingWorker() {
 
     std::lock_guard<std::mutex> lock(callback_mutex_);
     if (packet_callback_) {
-      packet_callback_(parsed_packet);
+      packet_callback_(raw_packet, parsed_packet);
     }
   }
 }

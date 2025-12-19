@@ -19,6 +19,12 @@ include_directories(${NODE_ADDON_API_DIR})
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES "src/cpp/*.cpp" "src/cpp/*.hpp")
 
+# Remove Linux-specific sniffer files on non-Linux platforms
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/sniffer/.*")
+    list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/analyser/.*")
+endif()
+
 # Create the addon
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
