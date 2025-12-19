@@ -6,10 +6,11 @@ import {
     DropdownMenuTrigger,
     Button,
 } from '@repo/ui/atoms'
-import { useQueryFetcher } from '@repo/utils'
+import { cn, useQueryFetcher } from '@repo/utils'
 import { fetcher } from '../../../config/client-trpc'
 import type { NetworkInterfaceInfo } from '@repo/core-node/types'
 import { useScanControlContext } from '../stores/scan-control.context'
+import { ChevronDown, CircleSmall } from 'lucide-react'
 
 type InterfaceSelectorProps = {} & ComponentPropsWithoutRef<'div'>
 
@@ -45,8 +46,20 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
         <div {...rest}>
             <DropdownMenu open={open} onOpenChange={handleOpenChange}>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-45">
-                        {selectedInterface?.name || 'Select Interface'}
+                    <Button
+                        variant="outline"
+                        className="w-45 justify-between"
+                        role="combobox"
+                        aria-expanded={open}
+                    >
+                        <span className="truncate">
+                            {selectedInterface?.name || 'Select Interface'}
+                        </span>
+                        <ChevronDown
+                            className={cn('ml-2 size-4 shrink-0 opacity-50', {
+                                'rotate-180': open,
+                            })}
+                        />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -58,7 +71,11 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
                             key={name}
                             onSelect={() => handleSelectInterface(name, infos || [])}
                         >
-                            <InterfaceCard name={name} data={infos || []} />
+                            <InterfaceCard
+                                name={name}
+                                data={infos || []}
+                                isSelected={selectedInterface?.name === name}
+                            />
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>
@@ -70,25 +87,35 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
 type InterfaceCardProps = {
     data: NetworkInterfaceInfo[]
     name: string
+    isSelected: boolean
 } & ComponentPropsWithoutRef<'div'>
 
 const InterfaceCard = (props: InterfaceCardProps) => {
-    const { data, name, ...rest } = props
+    const { data, name, isSelected, ...rest } = props
 
     const macAddress = data.find((info) => info.mac && info.mac !== '00:00:00:00:00:00')?.mac
     const ipv4Info = data.find((info) => info.family === 'IPv4')
     const ipv6Info = data.find((info) => info.family === 'IPv6')
 
     return (
-        <div {...rest} className="flex flex-col">
-            <span className="font-medium">{name}</span>
-            {macAddress && <span className="text-muted-foreground text-xs">MAC: {macAddress}</span>}
-            {ipv4Info && (
-                <span className="text-muted-foreground text-xs">IPv4: {ipv4Info.address}</span>
-            )}
-            {ipv6Info && (
-                <span className="text-muted-foreground text-xs">IPv6: {ipv6Info.address}</span>
-            )}
+        <div {...rest} className="flex w-full items-center justify-between gap-2">
+            <div className="flex flex-col">
+                <span className="font-medium">{name}</span>
+                <span className="text-muted-foreground text-xs">MAC: {macAddress ?? ''}</span>
+                <span className="text-muted-foreground text-xs">
+                    IPv4: {ipv4Info ? ipv4Info.address : ''}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                    IPv6: {ipv6Info ? ipv6Info.address : ''}
+                </span>
+            </div>
+            <div className="shrink-0">
+                <CircleSmall
+                    className={cn('text-muted-foreground size-4', {
+                        'fill-white text-white': isSelected,
+                    })}
+                />
+            </div>
         </div>
     )
 }
