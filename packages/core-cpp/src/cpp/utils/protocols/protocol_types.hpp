@@ -21,15 +21,27 @@ struct FieldDefinition {
     uint8_t field_id;
 };
 
+/**
+ * Mapping from a field value to the next protocol
+ * Example: EtherType 0x0800 -> IPV4
+ */
+struct NextProtocolMapping {
+    uint32_t field_value;
+    ProtocolId next_protocol;
+};
+
 constexpr size_t MAX_FIELDS_PER_PROTOCOL = 16;
+constexpr size_t MAX_NEXT_PROTOCOL_MAPPINGS = 16;
 constexpr size_t MAX_PROTOCOLS_PER_PACKET = 8;
 
 struct ProtocolDefinition {
     ProtocolId id;
     uint8_t header_size_bytes;
     uint8_t field_count;
-    uint8_t next_protocol_field_id;
+    uint8_t next_protocol_field_id;  // 255 = no next protocol (terminal)
+    uint8_t next_protocol_mapping_count;
     std::array<FieldDefinition, MAX_FIELDS_PER_PROTOCOL> fields;
+    std::array<NextProtocolMapping, MAX_NEXT_PROTOCOL_MAPPINGS> next_protocol_mappings;
 };
 
 struct FieldEntry {

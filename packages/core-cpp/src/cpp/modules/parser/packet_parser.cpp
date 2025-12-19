@@ -70,35 +70,21 @@ void PacketParser::parseProtocol(const RawPacket &raw_packet,
 ProtocolId PacketParser::determineNextProtocol(const RawPacket &raw_packet,
                                                const ProtocolDefinition *def,
                                                size_t header_offset_bytes) {
-  if (def->next_protocol_field_id == 255) {
+  if (!def || def->next_protocol_field_id == 255) {
     return ProtocolId::UNKNOWN;
   }
 
-  const FieldDefinition *next_field = nullptr;
+  // Find the next_protocol field and extract its value
   for (uint8_t i = 0; i < def->field_count; ++i) {
     if (def->fields[i].field_id == def->next_protocol_field_id) {
-      next_field = &def->fields[i];
-      break;
+      uint32_t value = extractFieldValue(raw_packet, header_offset_bytes,
+                                         def->fields[i].bit_offset,
+                                         def->fields[i].bit_length);
+      return lookupNextProtocol(def, value);
     }
   }
 
-  if (!next_field) {
-    return ProtocolId::UNKNOWN;
-  }
-
-  uint32_t value =
-      extractFieldValue(raw_packet, header_offset_bytes, next_field->bit_offset,
-                        next_field->bit_length);
-
-  switch (def->id) {
-  case ProtocolId::ETHERNET:
-    return getNextProtocolFromEthertype(static_cast<uint16_t>(value));
-  case ProtocolId::IPV4:
-  case ProtocolId::IPV6:
-    return getNextProtocolFromIpProtocol(static_cast<uint8_t>(value));
-  default:
-    return ProtocolId::UNKNOWN;
-  }
+  return ProtocolId::UNKNOWN;
 }
 
 uint32_t PacketParser::extractFieldValue(const RawPacket &raw_packet,
