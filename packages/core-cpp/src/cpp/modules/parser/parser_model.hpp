@@ -1,4 +1,4 @@
-
+#pragma once
 #include "../../utils/packets/packet_model.hpp"
 
 class ParserModel {
