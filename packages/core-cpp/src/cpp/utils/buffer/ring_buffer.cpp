@@ -1,59 +1,50 @@
 #include "ring_buffer.hpp"
 
-RingBuffer::RingBuffer() : writeIndex(0), readIndex(0) {};
-
-bool RingBuffer::push(const uint8_t *src, size_t len) {
-  if (len > MAX_PACKET_SIZE)
-    return false;
-
-  size_t nextWrite = (writeIndex + 1) % RING_SIZE;
-
-  if (nextWrite == readIndex.load(std::memory_order_acquire)) {
-    // Overwrite if the buffer is full
-    readIndex.store((readIndex + 1) % RING_SIZE, std::memory_order_release);
-  }
-
-  RawPacket &pkt = buffer[writeIndex];
-  std::memcpy(pkt.data.data(), src, len);
-  pkt.length = len;
-  pkt.original_length = len;
-  pkt.timestamp = std::chrono::system_clock::now();
-  pkt.valid = true;
-
-  writeIndex = nextWrite;
-  return true;
-}
+RingBuffer::RingBuffer() : write_index_(0), read_index_(0) {}
 
 bool RingBuffer::push(const RawPacket& packet) {
   if (packet.length > MAX_PACKET_SIZE)
     return false;
 
-  size_t nextWrite = (writeIndex + 1) % RING_SIZE;
+  size_t current_write = write_index_.load(std::memory_order_relaxed);
+  size_t next_write = (current_write + 1) % RING_SIZE;
+  size_t current_read = read_index_.load(std::memory_order_acquire);
 
-  if (nextWrite == readIndex.load(std::memory_order_acquire)) {
-    // Overwrite if the buffer is full
-    readIndex.store((readIndex + 1) % RING_SIZE, std::memory_order_release);
+  if (next_write == current_read) {
+    read_index_.store((current_read + 1) % RING_SIZE, std::memory_order_release);
   }
 
-  buffer[writeIndex] = packet;
-  writeIndex = nextWrite;
+  buffer_[current_write] = packet;
+  write_index_.store(next_write, std::memory_order_release);
+  
+  cv_.notify_one();
   return true;
 }
 
 bool RingBuffer::pop(RawPacket &out) {
-  size_t currRead = readIndex.load(std::memory_order_acquire);
+  size_t current_read = read_index_.load(std::memory_order_acquire);
+  size_t current_write = write_index_.load(std::memory_order_acquire);
 
-  if (currRead == writeIndex) {
-    return false; // empty
+  if (current_read == current_write) {
+    return false;
   }
 
-  RawPacket &pkt = buffer[currRead];
+  const RawPacket &pkt = buffer_[current_read];
   if (!pkt.valid)
     return false;
 
   out = pkt;
-  pkt.valid = false;
-
-  readIndex.store((currRead + 1) % RING_SIZE, std::memory_order_release);
+  read_index_.store((current_read + 1) % RING_SIZE, std::memory_order_release);
   return true;
+}
+
+bool RingBuffer::waitForData(std::chrono::milliseconds timeout) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  return cv_.wait_for(lock, timeout, [this] {
+    return read_index_.load(std::memory_order_acquire) != write_index_.load(std::memory_order_acquire);
+  });
+}
+
+void RingBuffer::notifyConsumer() {
+  cv_.notify_one();
 }

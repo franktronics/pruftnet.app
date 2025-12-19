@@ -2,21 +2,29 @@
 
 #include "../packets/packet_model.hpp"
 #include "../common/common.hpp"
+#include <array>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 
 class RingBuffer {
 public:
   RingBuffer();
 
-  bool push(const uint8_t *src, size_t len);
   bool push(const RawPacket& packet);
   bool pop(RawPacket &out);
+  bool waitForData(std::chrono::milliseconds timeout);
+  void notifyConsumer();
 
 private:
-  RawPacket buffer[RING_SIZE];
-  size_t writeIndex;
-  std::atomic<size_t> readIndex;
+  std::array<RawPacket, RING_SIZE> buffer_;
+  std::atomic<size_t> write_index_;
+  std::atomic<size_t> read_index_;
+  
+  std::mutex mutex_;
+  std::condition_variable cv_;
 };
