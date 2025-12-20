@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
-import type { NetworkInterfaceInfo } from '@repo/core-node/types'
+import type { NetworkInterfaceInfo, PacketData } from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -17,7 +17,7 @@ export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
     changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
     rawPackets: { parsed: any; raw: any; id: number }[]
-    interface: ContextNetinterface | null
+    interf: ContextNetinterface | null
     setInterface: (interf: ContextNetinterface | null) => void
 }
 
@@ -58,12 +58,13 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             setCaptureStatus(CAPTURE_STATUS.IDLE)
         } else if (status === CAPTURE_STATUS.INNITIALIZING) {
             wsFetcher.scan.start.handle(
-                { interface: 'lo' },
+                { interface: interf?.name || '' },
                 {
                     onmessage: (data) => {
                         console.log('Received from ws echo:', data)
                     },
                     onerror: (error) => {
+                        setCaptureStatus(CAPTURE_STATUS.ERROR)
                         toast.error(<ClientErrorParser error={error} />, {
                             duration: 5000,
                         })
@@ -78,7 +79,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
         rawPackets,
-        interface: interf,
+        interf,
         setInterface,
     }
 

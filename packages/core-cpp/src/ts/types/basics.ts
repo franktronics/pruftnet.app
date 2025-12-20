@@ -87,13 +87,6 @@ export interface PacketData {
  */
 export type PacketCallback = (packet: PacketData) => void
 
-/**
- * Network interface configuration
- */
-export interface NetworkInterfaceConfig {
-    name: string
-}
-
 // Field ID constants for each protocol
 // These match the order in C++ protocol_definitions.hpp
 

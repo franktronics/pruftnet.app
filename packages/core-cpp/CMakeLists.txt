@@ -6,10 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Include N-API
-execute_process(COMMAND node -p "require('node-addon-api').include"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE NODE_ADDON_API_DIR
-        )
+execute_process(
+  COMMAND node -p "require('node-addon-api').include"
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE NODE_ADDON_API_DIR)
 string(REGEX REPLACE "[\r\n\"]" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 
 # Include directories
@@ -21,8 +21,8 @@ file(GLOB_RECURSE SOURCE_FILES "src/cpp/*.cpp" "src/cpp/*.hpp")
 
 # Remove Linux-specific sniffer files on non-Linux platforms
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/sniffer/.*")
-    list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/analyser/.*")
+  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/sniffer/.*")
+  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/analyser/.*")
 endif()
 
 # Create the addon
@@ -33,9 +33,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
 
 # Compiler-specific options
-if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+if(MSVC
+   AND CMAKE_JS_NODELIB_DEF
+   AND CMAKE_JS_NODELIB_TARGET)
   # Generate node.lib
-  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+  execute_process(
+    COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF}
+            /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
 # Define NAPI_VERSION

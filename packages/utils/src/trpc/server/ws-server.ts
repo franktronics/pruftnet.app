@@ -72,19 +72,11 @@ export function createWSSMiddleware<T extends WSRouterDef>(router: T): WSSHandle
                 try {
                     await procDef.handler(inputData, returnCb)
                 } catch (error: any) {
-                    if (error.cause.type && error.cause.code && error.cause.message) {
-                        return new ServerError({
-                            code: error.cause.code,
-                            origin: 'createWSSMiddleware',
-                            message: error.cause.message,
-                            data: error.cause.data,
-                        }).wsClose(ws)
-                    }
                     return new ServerError({
-                        code: 1011,
+                        code: error.cause?.code || 1011,
                         origin: 'createWSSMiddleware',
-                        message: 'Procedure handler error',
-                        data: error,
+                        message: error?.message || 'Procedure handler error',
+                        data: error.cause?.data || error,
                     }).wsClose(ws)
                 }
             })
@@ -167,19 +159,11 @@ export function createIPCStreamHandler<T extends WSRouterDef>(
             try {
                 return await procDef.handler(inputData, returnCb)
             } catch (error: any) {
-                if (error.cause.type && error.cause.code && error.cause.message) {
-                    return new ServerError({
-                        code: error.cause.code,
-                        origin: 'createIPCStreamHandler',
-                        message: error.cause.message,
-                        data: error.cause.data,
-                    }).ipc()
-                }
                 return new ServerError({
-                    code: 500,
+                    code: error.cause?.code || 500,
                     origin: 'createIPCStreamHandler',
-                    message: 'Procedure handler error',
-                    data: error,
+                    message: error?.message || 'Procedure handler error',
+                    data: error.cause?.data || error,
                 }).ipc()
             }
         } catch (err: any) {

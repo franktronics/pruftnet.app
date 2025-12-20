@@ -8,7 +8,9 @@ export type ActionsControlProps = {} & ComponentPropsWithoutRef<'section'>
 
 export const ActionsControl = (props: ActionsControlProps) => {
     const { className, ...rest } = props
-    const { captureStatus, changeCaptureStatus } = useScanControlContext()
+    const { captureStatus, changeCaptureStatus, interf } = useScanControlContext()
+
+    const btnDisabled = !interf || !interf.name || captureStatus === CAPTURE_STATUS.INNITIALIZING
 
     return (
         <section className={cn(className)} {...rest}>
@@ -19,7 +21,7 @@ export const ActionsControl = (props: ActionsControlProps) => {
                     [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'secondary'],
                     [captureStatus === CAPTURE_STATUS.ERROR, 'destructive'],
                 )}
-                disabled={captureStatus === CAPTURE_STATUS.INNITIALIZING}
+                disabled={btnDisabled}
                 size="sm"
                 onClick={() => {
                     if (

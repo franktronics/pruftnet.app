@@ -20,7 +20,7 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
     const [interfaces, setInterfaces] = useState<
         Record<string, NetworkInterfaceInfo[] | undefined>
     >({})
-    const { setInterface, interface: selectedInterface } = useScanControlContext()
+    const { setInterface, interf: selectedInterface } = useScanControlContext()
 
     const { fetchData: getInterfaces } = useQueryFetcher({
         procedure: fetcher.interfaces.query({}),
@@ -66,6 +66,11 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
                     align="start"
                     className="scrollbar-thin max-h-100 w-70 overflow-auto p-2"
                 >
+                    {Object.keys(interfaces).length === 0 ? (
+                        <span className="text-muted-foreground px-2 py-1 text-sm">
+                            No interfaces found
+                        </span>
+                    ) : null}
                     {Object.entries(interfaces).map(([name, infos]) => (
                         <DropdownMenuItem
                             key={name}

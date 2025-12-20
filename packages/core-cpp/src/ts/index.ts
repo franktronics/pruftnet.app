@@ -10,7 +10,6 @@ export type {
     RawPacketData,
     PacketData,
     PacketCallback,
-    NetworkInterfaceConfig,
 } from './types/basics.js'
 
 // Export enums and constants

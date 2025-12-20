@@ -71,10 +71,7 @@ export class NetworkSniffer {
 
     constructor() {
         if (!isSnifferAvailable()) {
-            throw new Error(
-                'NetworkSniffer is only available on Linux. ' +
-                    'Use isSnifferAvailable() to check platform support.',
-            )
+            throw new Error('NetworkSniffer is only available on Linux. ')
         }
 
         try {
