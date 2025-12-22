@@ -10,7 +10,7 @@ export const ActionsControl = (props: ActionsControlProps) => {
     const { className, ...rest } = props
     const { captureStatus, changeCaptureStatus, interf } = useScanControlContext()
 
-    const btnDisabled = !interf || !interf.name || captureStatus === CAPTURE_STATUS.INNITIALIZING
+    const btnDisabled = interf.name === '' || captureStatus === CAPTURE_STATUS.INNITIALIZING
 
     return (
         <section className={cn(className)} {...rest}>

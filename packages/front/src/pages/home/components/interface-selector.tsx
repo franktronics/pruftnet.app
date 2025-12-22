@@ -38,7 +38,9 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
     }
 
     const handleSelectInterface = (name: string, infos: NetworkInterfaceInfo[]) => {
-        setInterface({ name, infos })
+        setInterface((old) => {
+            return { ...old, name, infos }
+        })
         setOpen(false)
     }
 
@@ -64,7 +66,7 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     align="start"
-                    className="scrollbar-thin max-h-100 w-70 overflow-auto p-2"
+                    className="scrollbar-thin max-h-100 min-w-70 overflow-y-auto p-2"
                 >
                     {Object.keys(interfaces).length === 0 ? (
                         <span className="text-muted-foreground px-2 py-1 text-sm">
