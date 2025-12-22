@@ -1,0 +1,22 @@
+BasedOnStyle: LLVM
+Language: Cpp
+
+BreakBeforeBraces: Attach
+SpaceBeforeParens: ControlStatements
+
+IndentWidth: 2
+ContinuationIndentWidth: 4
+UseTab: Never
+
+ColumnLimit: 120
+
+AllowShortCaseLabelsOnASingleLine: true
+IndentCaseLabels: true
+IndentCaseBlocks: false
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false

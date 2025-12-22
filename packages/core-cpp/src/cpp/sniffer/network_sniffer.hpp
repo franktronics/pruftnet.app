@@ -10,8 +10,7 @@
 #include <mutex>
 #include <thread>
 
-using PacketCallback =
-    std::function<void(const RawPacket &, const ParsedPacket &)>;
+using PacketCallback = std::function<void(const RawPacket&, const ParsedPacket&)>;
 
 class NetworkSniffer {
 public:
@@ -19,8 +18,7 @@ public:
   ~NetworkSniffer();
 
   void setParser(std::unique_ptr<ParserModel> parser);
-  bool startSniffing(const std::string &interface_name,
-                     PacketCallback callback);
+  bool startSniffing(const std::string& interface_name, PacketCallback callback);
   void stopSniffing();
   bool isRunning() const;
 
@@ -40,5 +38,5 @@ private:
 
   void captureWorker();
   void processingWorker();
-  void handleRawPacket(const uint8_t *data, size_t length);
+  void handleRawPacket(const uint8_t* data, size_t length);
 };

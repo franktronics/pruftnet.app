@@ -10,11 +10,11 @@
 #include <thread>
 #include <unistd.h>
 
-PacketCapture::PacketCapture(const std::string &interface_name)
+PacketCapture::PacketCapture(const std::string& interface_name)
     : interface_name_(interface_name), raw_socket_(-1), is_capturing_(false) {}
 
-PacketCapture::~PacketCapture() { 
-  stopCapture(); 
+PacketCapture::~PacketCapture() {
+  stopCapture();
 }
 
 bool PacketCapture::initialize() {
@@ -31,7 +31,7 @@ bool PacketCapture::initialize() {
   return true;
 }
 
-bool PacketCapture::startCapture(const PacketHandler &handler) {
+bool PacketCapture::startCapture(const PacketHandler& handler) {
   if (raw_socket_ == -1 || is_capturing_.load()) {
     return false;
   }
@@ -75,8 +75,8 @@ void PacketCapture::stopCapture() {
   }
 }
 
-bool PacketCapture::isCapturing() const { 
-  return is_capturing_.load(); 
+bool PacketCapture::isCapturing() const {
+  return is_capturing_.load();
 }
 
 bool PacketCapture::createRawSocket() {
@@ -90,8 +90,7 @@ bool PacketCapture::createRawSocket() {
 
   int flags = fcntl(raw_socket_, F_GETFL, 0);
   if (flags == -1 || fcntl(raw_socket_, F_SETFL, flags | O_NONBLOCK) == -1) {
-    std::cerr << "Warning: Could not set socket to non-blocking mode"
-              << std::endl;
+    std::cerr << "Warning: Could not set socket to non-blocking mode" << std::endl;
   }
 
   return true;
@@ -103,8 +102,7 @@ int PacketCapture::getInterfaceIndex() {
   strncpy(ifr.ifr_name, interface_name_.c_str(), IFNAMSIZ - 1);
 
   if (ioctl(raw_socket_, SIOCGIFINDEX, &ifr) < 0) {
-    std::cerr << "Error getting interface index for " << interface_name_
-              << ": " << strerror(errno) << std::endl;
+    std::cerr << "Error getting interface index for " << interface_name_ << ": " << strerror(errno) << std::endl;
     return -1;
   }
 
@@ -123,10 +121,8 @@ bool PacketCapture::bindToInterface() {
   socket_address.sll_protocol = htons(ETH_P_ALL);
   socket_address.sll_ifindex = interface_index;
 
-  if (bind(raw_socket_, reinterpret_cast<struct sockaddr *>(&socket_address),
-           sizeof(socket_address)) < 0) {
-    std::cerr << "Error binding to interface " << interface_name_ << ": "
-              << strerror(errno) << std::endl;
+  if (bind(raw_socket_, reinterpret_cast<struct sockaddr*>(&socket_address), sizeof(socket_address)) < 0) {
+    std::cerr << "Error binding to interface " << interface_name_ << ": " << strerror(errno) << std::endl;
     return false;
   }
 

@@ -3,8 +3,7 @@
 RingBuffer::RingBuffer() : write_index_(0), read_index_(0) {}
 
 bool RingBuffer::push(const RawPacket& packet) {
-  if (packet.length > MAX_PACKET_SIZE)
-    return false;
+  if (packet.length > MAX_PACKET_SIZE) return false;
 
   size_t current_write = write_index_.load(std::memory_order_relaxed);
   size_t next_write = (current_write + 1) % RING_SIZE;
@@ -16,12 +15,12 @@ bool RingBuffer::push(const RawPacket& packet) {
 
   buffer_[current_write] = packet;
   write_index_.store(next_write, std::memory_order_release);
-  
+
   cv_.notify_one();
   return true;
 }
 
-bool RingBuffer::pop(RawPacket &out) {
+bool RingBuffer::pop(RawPacket& out) {
   size_t current_read = read_index_.load(std::memory_order_acquire);
   size_t current_write = write_index_.load(std::memory_order_acquire);
 
@@ -29,9 +28,8 @@ bool RingBuffer::pop(RawPacket &out) {
     return false;
   }
 
-  const RawPacket &pkt = buffer_[current_read];
-  if (!pkt.valid)
-    return false;
+  const RawPacket& pkt = buffer_[current_read];
+  if (!pkt.valid) return false;
 
   out = pkt;
   read_index_.store((current_read + 1) % RING_SIZE, std::memory_order_release);

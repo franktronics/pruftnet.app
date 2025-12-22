@@ -9,8 +9,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-NeighborDiscovery::NeighborDiscovery()
-    : raw_socket_(-1), is_running_(false), should_stop_(false) {
+NeighborDiscovery::NeighborDiscovery() : raw_socket_(-1), is_running_(false), should_stop_(false) {
   source_mac_ = {0, 0, 0, 0, 0, 0};
 }
 
@@ -21,11 +20,11 @@ NeighborDiscovery::~NeighborDiscovery() {
   }
 }
 
-void NeighborDiscovery::setSourceIPv6(const std::string &source_ipv6) {
+void NeighborDiscovery::setSourceIPv6(const std::string& source_ipv6) {
   source_ipv6_ = source_ipv6;
 }
 
-void NeighborDiscovery::setSourceMAC(const std::array<uint8_t, 6> &source_mac) {
+void NeighborDiscovery::setSourceMAC(const std::array<uint8_t, 6>& source_mac) {
   source_mac_ = source_mac;
 }
 
@@ -41,22 +40,20 @@ bool NeighborDiscovery::createRawSocket() {
   return true;
 }
 
-int NeighborDiscovery::getInterfaceIndex(const std::string &interface_name) {
+int NeighborDiscovery::getInterfaceIndex(const std::string& interface_name) {
   struct ifreq ifr;
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, interface_name.c_str(), IFNAMSIZ - 1);
 
   if (ioctl(raw_socket_, SIOCGIFINDEX, &ifr) < 0) {
-    std::cerr << "Error getting interface index for " << interface_name << ": "
-              << strerror(errno) << std::endl;
+    std::cerr << "Error getting interface index for " << interface_name << ": " << strerror(errno) << std::endl;
     return -1;
   }
 
   return ifr.ifr_ifindex;
 }
 
-bool NeighborDiscovery::sendPacket(const uint8_t *packet, size_t length,
-                                   const std::string &interface_name) {
+bool NeighborDiscovery::sendPacket(const uint8_t* packet, size_t length, const std::string& interface_name) {
   int interface_index = getInterfaceIndex(interface_name);
   if (interface_index < 0) {
     return false;
@@ -69,8 +66,7 @@ bool NeighborDiscovery::sendPacket(const uint8_t *packet, size_t length,
   socket_address.sll_ifindex = interface_index;
   socket_address.sll_halen = 6;
 
-  ssize_t sent = sendto(raw_socket_, packet, length, 0,
-                        reinterpret_cast<struct sockaddr *>(&socket_address),
+  ssize_t sent = sendto(raw_socket_, packet, length, 0, reinterpret_cast<struct sockaddr*>(&socket_address),
                         sizeof(socket_address));
 
   if (sent < 0) {
@@ -81,8 +77,7 @@ bool NeighborDiscovery::sendPacket(const uint8_t *packet, size_t length,
   return true;
 }
 
-std::array<uint8_t, 16>
-NeighborDiscovery::parseIPv6Address(const std::string &ipv6_str) {
+std::array<uint8_t, 16> NeighborDiscovery::parseIPv6Address(const std::string& ipv6_str) {
   std::array<uint8_t, 16> result = {};
   struct in6_addr addr;
 
@@ -93,9 +88,8 @@ NeighborDiscovery::parseIPv6Address(const std::string &ipv6_str) {
   return result;
 }
 
-uint16_t NeighborDiscovery::calculateICMPv6Checksum(
-    const std::array<uint8_t, MAX_PACKET_SIZE> &packet, size_t ipv6_offset,
-    size_t icmpv6_offset, size_t icmpv6_length) {
+uint16_t NeighborDiscovery::calculateICMPv6Checksum(const std::array<uint8_t, MAX_PACKET_SIZE>& packet,
+                                                    size_t ipv6_offset, size_t icmpv6_offset, size_t icmpv6_length) {
   uint32_t sum = 0;
 
   auto src_ip = ipv6_offset + 8;
@@ -134,4 +128,6 @@ void NeighborDiscovery::stop() {
   is_running_.store(false);
 }
 
-bool NeighborDiscovery::isRunning() const { return is_running_.load(); }
+bool NeighborDiscovery::isRunning() const {
+  return is_running_.load();
+}

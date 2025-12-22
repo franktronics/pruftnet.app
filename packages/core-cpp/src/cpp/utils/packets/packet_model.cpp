@@ -14,8 +14,7 @@ std::string RawPacket::toString() const {
   const size_t bytes_per_line = 11;
   for (size_t i = 0; i < length && i < MAX_PACKET_SIZE; i += bytes_per_line) {
     for (size_t j = 0; j < bytes_per_line && (i + j) < length; ++j) {
-      if (j > 0)
-        result += " ";
+      if (j > 0) result += " ";
 
       // Hexadecimal format with 2 digits and zero padding
       uint8_t byte_val = data[i + j];

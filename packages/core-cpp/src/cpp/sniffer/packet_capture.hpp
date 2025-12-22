@@ -8,16 +8,15 @@
 #include <string>
 #include <sys/socket.h>
 
-using PacketHandler =
-    std::function<void(const uint8_t *packet_data, size_t length)>;
+using PacketHandler = std::function<void(const uint8_t* packet_data, size_t length)>;
 
 class PacketCapture {
 public:
-  explicit PacketCapture(const std::string &interface_name);
+  explicit PacketCapture(const std::string& interface_name);
   ~PacketCapture();
 
   bool initialize();
-  bool startCapture(const PacketHandler &handler);
+  bool startCapture(const PacketHandler& handler);
   void stopCapture();
   bool isCapturing() const;
 

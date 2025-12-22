@@ -198,32 +198,24 @@ std::array<uint8_t, MAX_PACKET_SIZE> createEthernetIPv4UDPPacket() {
   return packet;
 }
 
-void printParsedPacket(const ParsedPacket &parsed, const RawPacket &raw) {
+void printParsedPacket(const ParsedPacket& parsed, const RawPacket& raw) {
   std::cout << "\n=== Parsed Packet ===" << std::endl;
-  std::cout << "Protocol count: " << static_cast<int>(parsed.protocol_count)
-            << std::endl;
+  std::cout << "Protocol count: " << static_cast<int>(parsed.protocol_count) << std::endl;
   std::cout << "Valid: " << (parsed.valid ? "true" : "false") << std::endl;
 
   for (uint8_t i = 0; i < parsed.protocol_count; ++i) {
-    const ProtocolEntry &proto = parsed.protocols[i];
-    std::cout << "\n--- Protocol " << static_cast<int>(i) << " ---"
-              << std::endl;
-    std::cout << "  ID: "
-              << static_cast<int>(static_cast<uint8_t>(proto.protocol_id))
-              << std::endl;
+    const ProtocolEntry& proto = parsed.protocols[i];
+    std::cout << "\n--- Protocol " << static_cast<int>(i) << " ---" << std::endl;
+    std::cout << "  ID: " << static_cast<int>(static_cast<uint8_t>(proto.protocol_id)) << std::endl;
     std::cout << "  Header offset: " << proto.header_offset << std::endl;
-    std::cout << "  Field count: " << static_cast<int>(proto.field_count)
-              << std::endl;
+    std::cout << "  Field count: " << static_cast<int>(proto.field_count) << std::endl;
 
     for (uint8_t j = 0; j < proto.field_count; ++j) {
-      const FieldEntry &field = proto.fields[j];
-      std::cout << "    Field " << static_cast<int>(field.field_id)
-                << ": offset=" << field.byte_offset
-                << ", length=" << static_cast<int>(field.byte_length)
-                << ", value=";
+      const FieldEntry& field = proto.fields[j];
+      std::cout << "    Field " << static_cast<int>(field.field_id) << ": offset=" << field.byte_offset
+                << ", length=" << static_cast<int>(field.byte_length) << ", value=";
 
-      for (uint8_t k = 0;
-           k < field.byte_length && (field.byte_offset + k) < raw.length; ++k) {
+      for (uint8_t k = 0; k < field.byte_length && (field.byte_offset + k) < raw.length; ++k) {
         printf("%02X ", raw.data[field.byte_offset + k]);
       }
       std::cout << std::endl;
@@ -347,30 +339,28 @@ TEST_CASE("PacketParser - Field extraction", "[parser]") {
   REQUIRE(parsed.valid == true);
 
   // Ethernet dest_mac field
-  const FieldEntry &dest_mac =
-      parsed.protocols[0].fields[EthernetFields::DEST_MAC];
+  const FieldEntry& dest_mac = parsed.protocols[0].fields[EthernetFields::DEST_MAC];
   REQUIRE(dest_mac.byte_offset == 0);
   REQUIRE(dest_mac.byte_length == 6);
   REQUIRE(raw.data[dest_mac.byte_offset] == 0xAA);
   REQUIRE(raw.data[dest_mac.byte_offset + 5] == 0xFF);
 
   // Ethernet ethertype field
-  const FieldEntry &ethertype =
-      parsed.protocols[0].fields[EthernetFields::ETHERTYPE];
+  const FieldEntry& ethertype = parsed.protocols[0].fields[EthernetFields::ETHERTYPE];
   REQUIRE(ethertype.byte_offset == 12);
   REQUIRE(ethertype.byte_length == 2);
   REQUIRE(raw.data[ethertype.byte_offset] == 0x08);
   REQUIRE(raw.data[ethertype.byte_offset + 1] == 0x00);
 
   // IPv4 src_ip field
-  const FieldEntry &src_ip = parsed.protocols[1].fields[Ipv4Fields::SRC_IP];
+  const FieldEntry& src_ip = parsed.protocols[1].fields[Ipv4Fields::SRC_IP];
   REQUIRE(src_ip.byte_offset == 26);
   REQUIRE(src_ip.byte_length == 4);
   REQUIRE(raw.data[src_ip.byte_offset] == 192);
   REQUIRE(raw.data[src_ip.byte_offset + 1] == 168);
 
   // TCP src_port field
-  const FieldEntry &src_port = parsed.protocols[2].fields[TcpFields::SRC_PORT];
+  const FieldEntry& src_port = parsed.protocols[2].fields[TcpFields::SRC_PORT];
   REQUIRE(src_port.byte_offset == 34);
   REQUIRE(src_port.byte_length == 2);
   REQUIRE(raw.data[src_port.byte_offset] == 0x1F);

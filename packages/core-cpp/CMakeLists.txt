@@ -21,8 +21,8 @@ file(GLOB_RECURSE SOURCE_FILES "src/cpp/*.cpp" "src/cpp/*.hpp")
 
 # Remove Linux-specific sniffer files on non-Linux platforms
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/sniffer/.*")
-  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/modules/analyser/.*")
+  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/sniffer/.*")
+  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/analyser/.*")
 endif()
 
 # Create the addon

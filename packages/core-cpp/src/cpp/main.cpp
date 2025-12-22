@@ -1,5 +1,5 @@
-#include <napi.h>
 #include "modules/parser/packet_parser.napi.hpp"
+#include <napi.h>
 
 // Sniffer is only available on Linux (requires raw sockets)
 #ifdef __linux__
@@ -7,13 +7,13 @@
 #endif
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-    PacketParserWrapper::Init(env, exports);
-    
+  PacketParserWrapper::Init(env, exports);
+
 #ifdef __linux__
-    NetworkSnifferWrapper::Init(env, exports);
+  NetworkSnifferWrapper::Init(env, exports);
 #endif
-    
-    return exports;
+
+  return exports;
 }
 
 NODE_API_MODULE(repo_core, Init)

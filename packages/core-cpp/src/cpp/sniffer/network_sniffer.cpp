@@ -2,10 +2,12 @@
 #include <cstring>
 
 NetworkSniffer::NetworkSniffer()
-    : packet_capture_(nullptr), ring_buffer_(std::make_unique<RingBuffer>()),
-      parser_(nullptr), is_running_(false), should_stop_(false) {}
+    : packet_capture_(nullptr), ring_buffer_(std::make_unique<RingBuffer>()), parser_(nullptr), is_running_(false),
+      should_stop_(false) {}
 
-NetworkSniffer::~NetworkSniffer() { stopSniffing(); }
+NetworkSniffer::~NetworkSniffer() {
+  stopSniffing();
+}
 
 void NetworkSniffer::setParser(std::unique_ptr<ParserModel> parser) {
   if (is_running_.load()) {
@@ -14,8 +16,7 @@ void NetworkSniffer::setParser(std::unique_ptr<ParserModel> parser) {
   parser_ = std::move(parser);
 }
 
-bool NetworkSniffer::startSniffing(const std::string &interface_name,
-                                   PacketCallback callback) {
+bool NetworkSniffer::startSniffing(const std::string& interface_name, PacketCallback callback) {
   if (is_running_.load()) {
     return false;
   }
@@ -77,12 +78,12 @@ void NetworkSniffer::stopSniffing() {
   is_running_.store(false);
 }
 
-bool NetworkSniffer::isRunning() const { return is_running_.load(); }
+bool NetworkSniffer::isRunning() const {
+  return is_running_.load();
+}
 
 void NetworkSniffer::captureWorker() {
-  auto handler = [this](const uint8_t *data, size_t length) {
-    this->handleRawPacket(data, length);
-  };
+  auto handler = [this](const uint8_t* data, size_t length) { this->handleRawPacket(data, length); };
 
   packet_capture_->startCapture(handler);
 }
@@ -114,7 +115,7 @@ void NetworkSniffer::processingWorker() {
   }
 }
 
-void NetworkSniffer::handleRawPacket(const uint8_t *data, size_t length) {
+void NetworkSniffer::handleRawPacket(const uint8_t* data, size_t length) {
   if (should_stop_.load()) {
     return;
   }

@@ -4,5 +4,5 @@
 class ParserModel {
 public:
   virtual ~ParserModel() = default;
-  virtual ParsedPacket parsePacket(const RawPacket &raw_packet) = 0;
+  virtual ParsedPacket parsePacket(const RawPacket& raw_packet) = 0;
 };

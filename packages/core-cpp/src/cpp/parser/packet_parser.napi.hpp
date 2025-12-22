@@ -13,7 +13,7 @@
 class PacketParserWrapper : public Napi::ObjectWrap<PacketParserWrapper> {
 public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
-  PacketParserWrapper(const Napi::CallbackInfo &info);
+  PacketParserWrapper(const Napi::CallbackInfo& info);
 
 private:
   static Napi::FunctionReference constructor;
@@ -21,11 +21,10 @@ private:
   std::unique_ptr<PacketParser> parser_;
 
   // JavaScript methods
-  Napi::Value Parse(const Napi::CallbackInfo &info);
+  Napi::Value Parse(const Napi::CallbackInfo& info);
 
   // Helper to convert ParsedPacket to JS object
-  static Napi::Object ParsedPacketToJs(Napi::Env env,
-                                       const ParsedPacket &parsed);
+  static Napi::Object ParsedPacketToJs(Napi::Env env, const ParsedPacket& parsed);
 };
 
 // Implementation
@@ -35,11 +34,10 @@ Napi::FunctionReference PacketParserWrapper::constructor;
 Napi::Object PacketParserWrapper::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
-  Napi::Function func =
-      DefineClass(env, "PacketParser",
-                  {
-                      InstanceMethod("parse", &PacketParserWrapper::Parse),
-                  });
+  Napi::Function func = DefineClass(env, "PacketParser",
+                                    {
+                                        InstanceMethod("parse", &PacketParserWrapper::Parse),
+                                    });
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
@@ -48,25 +46,21 @@ Napi::Object PacketParserWrapper::Init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 
-PacketParserWrapper::PacketParserWrapper(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<PacketParserWrapper>(info) {
+PacketParserWrapper::PacketParserWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<PacketParserWrapper>(info) {
 
   parser_ = std::make_unique<PacketParser>();
 }
 
-Napi::Value PacketParserWrapper::Parse(const Napi::CallbackInfo &info) {
+Napi::Value PacketParserWrapper::Parse(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
-    Napi::TypeError::New(
-        env, "Expected 1 argument: Buffer containing raw packet data")
-        .ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "Expected 1 argument: Buffer containing raw packet data").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
   if (!info[0].IsBuffer()) {
-    Napi::TypeError::New(env, "First argument must be a Buffer")
-        .ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "First argument must be a Buffer").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -86,8 +80,7 @@ Napi::Value PacketParserWrapper::Parse(const Napi::CallbackInfo &info) {
   return ParsedPacketToJs(env, parsed);
 }
 
-Napi::Object PacketParserWrapper::ParsedPacketToJs(Napi::Env env,
-                                                   const ParsedPacket &parsed) {
+Napi::Object PacketParserWrapper::ParsedPacketToJs(Napi::Env env, const ParsedPacket& parsed) {
   Napi::Object obj = Napi::Object::New(env);
 
   obj.Set("protocolCount", Napi::Number::New(env, parsed.protocol_count));
@@ -96,18 +89,17 @@ Napi::Object PacketParserWrapper::ParsedPacketToJs(Napi::Env env,
   Napi::Array protocols = Napi::Array::New(env, parsed.protocol_count);
 
   for (uint8_t i = 0; i < parsed.protocol_count; ++i) {
-    const ProtocolEntry &proto = parsed.protocols[i];
+    const ProtocolEntry& proto = parsed.protocols[i];
     Napi::Object protoObj = Napi::Object::New(env);
 
-    protoObj.Set("protocolId", Napi::Number::New(env, static_cast<uint8_t>(
-                                                          proto.protocol_id)));
+    protoObj.Set("protocolId", Napi::Number::New(env, static_cast<uint8_t>(proto.protocol_id)));
     protoObj.Set("headerOffset", Napi::Number::New(env, proto.header_offset));
     protoObj.Set("fieldCount", Napi::Number::New(env, proto.field_count));
 
     Napi::Array fields = Napi::Array::New(env, proto.field_count);
 
     for (uint8_t j = 0; j < proto.field_count; ++j) {
-      const FieldEntry &field = proto.fields[j];
+      const FieldEntry& field = proto.fields[j];
       Napi::Object fieldObj = Napi::Object::New(env);
 
       fieldObj.Set("byteOffset", Napi::Number::New(env, field.byte_offset));

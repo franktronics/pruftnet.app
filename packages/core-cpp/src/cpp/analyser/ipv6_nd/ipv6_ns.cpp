@@ -8,15 +8,13 @@ IPv6NeighborSolicitation::IPv6NeighborSolicitation() : NeighborDiscovery() {}
 
 IPv6NeighborSolicitation::~IPv6NeighborSolicitation() {}
 
-void IPv6NeighborSolicitation::setTargetIPv6(const std::string &target_ipv6) {
+void IPv6NeighborSolicitation::setTargetIPv6(const std::string& target_ipv6) {
   target_ipv6_ = target_ipv6;
 }
 
-std::array<uint8_t, 6> IPv6NeighborSolicitation::calculateSolicitedNodeMAC(
-    const std::string &target_ipv6) {
+std::array<uint8_t, 6> IPv6NeighborSolicitation::calculateSolicitedNodeMAC(const std::string& target_ipv6) {
   auto ipv6_bytes = parseIPv6Address(target_ipv6);
-  std::array<uint8_t, 6> mac = {0x33,           0x33,           0xff,
-                                ipv6_bytes[13], ipv6_bytes[14], ipv6_bytes[15]};
+  std::array<uint8_t, 6> mac = {0x33, 0x33, 0xff, ipv6_bytes[13], ipv6_bytes[14], ipv6_bytes[15]};
   return mac;
 }
 
@@ -72,19 +70,17 @@ std::array<uint8_t, MAX_PACKET_SIZE> IPv6NeighborSolicitation::buildNSPacket() {
   std::memcpy(&packet[offset], source_mac_.data(), 6);
   offset += 6;
 
-  uint16_t checksum =
-      calculateICMPv6Checksum(packet, 14, icmpv6_start, payload_length);
+  uint16_t checksum = calculateICMPv6Checksum(packet, 14, icmpv6_start, payload_length);
   packet[icmpv6_start + 2] = (checksum >> 8) & 0xFF;
   packet[icmpv6_start + 3] = checksum & 0xFF;
 
   return packet;
 }
 
-void IPv6NeighborSolicitation::sendWorker(const std::string &interface_name) {
+void IPv6NeighborSolicitation::sendWorker(const std::string& interface_name) {
   auto packet = buildNSPacket();
 
-  std::cout << "Sending Neighbor Solicitation to " << target_ipv6_ << "..."
-            << std::endl;
+  std::cout << "Sending Neighbor Solicitation to " << target_ipv6_ << "..." << std::endl;
 
   if (!sendPacket(packet.data(), 14 + 40 + 32, interface_name)) {
     std::cerr << "Failed to send NS packet" << std::endl;
@@ -95,7 +91,7 @@ void IPv6NeighborSolicitation::sendWorker(const std::string &interface_name) {
   is_running_.store(false);
 }
 
-bool IPv6NeighborSolicitation::analyze(std::string &interface_name) {
+bool IPv6NeighborSolicitation::analyze(std::string& interface_name) {
   if (is_running_.load()) {
     std::cerr << "Analysis already running" << std::endl;
     return false;
@@ -113,8 +109,7 @@ bool IPv6NeighborSolicitation::analyze(std::string &interface_name) {
   should_stop_.store(false);
   is_running_.store(true);
 
-  send_thread_ =
-      std::thread(&IPv6NeighborSolicitation::sendWorker, this, interface_name);
+  send_thread_ = std::thread(&IPv6NeighborSolicitation::sendWorker, this, interface_name);
 
   return true;
 }

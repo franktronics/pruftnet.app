@@ -8,17 +8,14 @@ IPv6RouterSolicitation::IPv6RouterSolicitation() : NeighborDiscovery() {}
 
 IPv6RouterSolicitation::~IPv6RouterSolicitation() {}
 
-std::array<uint8_t, MAX_PACKET_SIZE>
-IPv6RouterSolicitation::buildRSPacket() {
+std::array<uint8_t, MAX_PACKET_SIZE> IPv6RouterSolicitation::buildRSPacket() {
   std::array<uint8_t, MAX_PACKET_SIZE> packet = {};
   size_t offset = 0;
 
   auto source_ip_bytes = parseIPv6Address(source_ipv6_);
-  std::array<uint8_t, 16> all_routers_ip = {0xff, 0x02, 0x00, 0x00, 0x00, 0x00,
-                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                            0x00, 0x00, 0x00, 0x02};
-  std::array<uint8_t, 6> all_routers_mac = {0x33, 0x33, 0x00,
-                                            0x00, 0x00, 0x02};
+  std::array<uint8_t, 16> all_routers_ip = {0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
+  std::array<uint8_t, 6> all_routers_mac = {0x33, 0x33, 0x00, 0x00, 0x00, 0x02};
 
   std::memcpy(&packet[offset], all_routers_mac.data(), 6);
   offset += 6;
@@ -61,15 +58,14 @@ IPv6RouterSolicitation::buildRSPacket() {
   std::memcpy(&packet[offset], source_mac_.data(), 6);
   offset += 6;
 
-  uint16_t checksum =
-      calculateICMPv6Checksum(packet, 14, icmpv6_start, payload_length);
+  uint16_t checksum = calculateICMPv6Checksum(packet, 14, icmpv6_start, payload_length);
   packet[icmpv6_start + 2] = (checksum >> 8) & 0xFF;
   packet[icmpv6_start + 3] = checksum & 0xFF;
 
   return packet;
 }
 
-void IPv6RouterSolicitation::sendWorker(const std::string &interface_name) {
+void IPv6RouterSolicitation::sendWorker(const std::string& interface_name) {
   auto packet = buildRSPacket();
 
   std::cout << "Sending Router Solicitation to ff02::2..." << std::endl;
@@ -83,7 +79,7 @@ void IPv6RouterSolicitation::sendWorker(const std::string &interface_name) {
   is_running_.store(false);
 }
 
-bool IPv6RouterSolicitation::analyze(std::string &interface_name) {
+bool IPv6RouterSolicitation::analyze(std::string& interface_name) {
   if (is_running_.load()) {
     std::cerr << "Analysis already running" << std::endl;
     return false;
@@ -101,8 +97,7 @@ bool IPv6RouterSolicitation::analyze(std::string &interface_name) {
   should_stop_.store(false);
   is_running_.store(true);
 
-  send_thread_ =
-      std::thread(&IPv6RouterSolicitation::sendWorker, this, interface_name);
+  send_thread_ = std::thread(&IPv6RouterSolicitation::sendWorker, this, interface_name);
 
   return true;
 }

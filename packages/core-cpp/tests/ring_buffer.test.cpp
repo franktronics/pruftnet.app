@@ -17,7 +17,7 @@ std::vector<uint8_t> createTestData(size_t size, uint8_t fillValue = 0x42) {
 }
 
 // Helper function to create a RawPacket from test data
-RawPacket createRawPacket(const std::vector<uint8_t> &data) {
+RawPacket createRawPacket(const std::vector<uint8_t>& data) {
   RawPacket packet;
   packet.length = std::min(data.size(), static_cast<size_t>(MAX_PACKET_SIZE));
   packet.original_length = data.size();
@@ -38,7 +38,7 @@ RawPacket createEmptyRawPacket() {
 }
 
 // Helper function to check if two packets are equal
-bool packetsEqual(const RawPacket &a, const RawPacket &b) {
+bool packetsEqual(const RawPacket& a, const RawPacket& b) {
   if (a.length != b.length || a.valid != b.valid) {
     return false;
   }
