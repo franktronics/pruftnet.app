@@ -37,8 +37,9 @@
 - **C++:** OOP principles, classes/structs, Catch2 tests with descriptive names and tags
 - **Naming:** PascalCase (components/types), camelCase (variables/functions), ALL_CAPS (constants)
 - **Comments:** English only, only for complex/non-obvious logic
-- **Error Handling:** ⚠️ **CRITICAL** - Always `return` promises from wrapper functions to propagate errors correctly in async handlers (bug exists in `ws-procedure.ts:44,61` and `procedure.ts:44,60,69,76`)
+- **Error Handling:** ⚠️ **CRITICAL** - Always `return` promises from wrapper functions to propagate errors correctly in async handlers
 - **Language**: English for all code, comments, documentation
+- **Code creation**: Only focus on what is asked, avoid unnecessary code and do not take self initiative
 
 ## tRPC Implementation
 
@@ -47,13 +48,6 @@
 - `createWsProcedure` for WebSocket streaming with `returnCb`
 - Routes defined in `@repo/core-node`, served via Express middleware and WebSocket server
 - Context uses `MapStore` for stateful data across procedures
-
-## Testing
-
-- **C++ tests:** `packages/core-cpp/tests/*.test.cpp` using Catch2
-- Test format: `TEST_CASE("Description", "[tag]")`
-- Tests managed via `test_sources.txt` to avoid N-API dependencies
-- Run with verbose output: `pnpm test` or `sudo ./core_tests --verbosity high --durations yes`
 
 ## Documentation Sources
 

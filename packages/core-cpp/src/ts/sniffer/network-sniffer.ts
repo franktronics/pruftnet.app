@@ -1,24 +1,5 @@
-import type { PacketCallback, PacketData, ParsedPacket } from '../types/basics.js'
+import type { PacketCallback } from '../types/basics.js'
 import addon from '../addon.js'
-
-/**
- * Raw packet data from native addon (timestamp is milliseconds)
- */
-interface NativeRawPacket {
-    data: Buffer
-    length: number
-    originalLength: number
-    timestamp: number
-    valid: boolean
-}
-
-/**
- * Native packet callback data
- */
-interface NativePacketData {
-    raw: NativeRawPacket
-    parsed: ParsedPacket
-}
 
 /**
  * Check if NetworkSniffer is available on this platform
@@ -102,22 +83,7 @@ export class NetworkSniffer {
         }
 
         try {
-            // Wrap callback to convert native types to TypeScript types
-            const nativeCallback = (nativeData: NativePacketData) => {
-                const packetData: PacketData = {
-                    raw: {
-                        data: nativeData.raw.data,
-                        length: nativeData.raw.length,
-                        originalLength: nativeData.raw.originalLength,
-                        timestamp: new Date(nativeData.raw.timestamp),
-                        valid: nativeData.raw.valid,
-                    },
-                    parsed: nativeData.parsed,
-                }
-                callback(packetData)
-            }
-
-            return this.nativeInstance.startSniffing(interfaceName.trim(), nativeCallback)
+            return this.nativeInstance.startSniffing(interfaceName.trim(), callback)
         } catch (error) {
             throw new Error(
                 `Failed to start sniffing: ${error instanceof Error ? error.message : 'Unknown error'}`,
