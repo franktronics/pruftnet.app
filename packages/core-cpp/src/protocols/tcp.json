@@ -1,0 +1,55 @@
+{
+  "name": "TCP Protocol",
+  "header": {
+    "source_port": {
+      "offset": 0,
+      "length": 16,
+      "description": "Source Port"
+    },
+    "destination_port": {
+      "offset": 16,
+      "length": 16,
+      "description": "Destination Port"
+    },
+    "sequence_number": {
+      "offset": 32,
+      "length": 32,
+      "description": "Sequence Number"
+    },
+    "acknowledgment_number": {
+      "offset": 64,
+      "length": 32,
+      "description": "Acknowledgment Number"
+    },
+    "data_offset": {
+      "offset": 96,
+      "length": 4,
+      "description": "Data Offset"
+    },
+    "reserved": {
+      "offset": 100,
+      "length": 3,
+      "description": "Reserved"
+    },
+    "flags": {
+      "offset": 103,
+      "length": 9,
+      "description": "Flags (NS,CWR,ECE,URG,ACK,PSH,RST,SYN,FIN)"
+    },
+    "window_size": {
+      "offset": 112,
+      "length": 16,
+      "description": "Window Size"
+    },
+    "checksum": {
+      "offset": 128,
+      "length": 16,
+      "description": "Checksum"
+    },
+    "urgent_pointer": {
+      "offset": 144,
+      "length": 16,
+      "description": "Urgent Pointer"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../utils/packets/packet_model.hpp"
+#include "../utils/packets/packet_model.hpp"
 #include <atomic>
 #include <functional>
 #include <linux/if_packet.h>

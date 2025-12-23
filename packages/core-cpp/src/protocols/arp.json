@@ -1,0 +1,50 @@
+{
+  "name": "ARP Protocol",
+  "header": {
+    "hardware_type": {
+      "offset": 0,
+      "length": 16,
+      "description": "Hardware Type (HTYPE)"
+    },
+    "protocol_type": {
+      "offset": 16,
+      "length": 16,
+      "description": "Protocol Type (PTYPE)"
+    },
+    "hardware_length": {
+      "offset": 32,
+      "length": 8,
+      "description": "Hardware Address Length"
+    },
+    "protocol_length": {
+      "offset": 40,
+      "length": 8,
+      "description": "Protocol Address Length"
+    },
+    "operation": {
+      "offset": 48,
+      "length": 16,
+      "description": "Operation (1=request, 2=reply)"
+    },
+    "sender_hardware_address": {
+      "offset": 64,
+      "length": 48,
+      "description": "Sender Hardware Address (MAC)"
+    },
+    "sender_protocol_address": {
+      "offset": 112,
+      "length": 32,
+      "description": "Sender Protocol Address (IP)"
+    },
+    "target_hardware_address": {
+      "offset": 144,
+      "length": 48,
+      "description": "Target Hardware Address (MAC)"
+    },
+    "target_protocol_address": {
+      "offset": 192,
+      "length": 32,
+      "description": "Target Protocol Address (IP)"
+    }
+  }
+}

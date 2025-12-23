@@ -1,0 +1,25 @@
+{
+  "name": "ICMP Protocol",
+  "header": {
+    "type": {
+      "offset": 0,
+      "length": 8,
+      "description": "ICMP Type"
+    },
+    "code": {
+      "offset": 8,
+      "length": 8,
+      "description": "ICMP Code"
+    },
+    "checksum": {
+      "offset": 16,
+      "length": 16,
+      "description": "Checksum"
+    },
+    "rest_of_header": {
+      "offset": 32,
+      "length": 32,
+      "description": "Rest of Header"
+    }
+  }
+}

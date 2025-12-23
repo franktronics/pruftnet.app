@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../utils/buffer/ring_buffer.hpp"
-#include "../../utils/packets/packet_model.hpp"
 #include "../parser/parser_model.hpp"
+#include "../utils/buffer/ring_buffer.hpp"
+#include "../utils/packets/packet_model.hpp"
 #include "./packet_capture.hpp"
 #include <atomic>
 #include <functional>

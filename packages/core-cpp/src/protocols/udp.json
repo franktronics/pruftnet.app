@@ -1,0 +1,25 @@
+{
+  "name": "UDP Protocol",
+  "header": {
+    "source_port": {
+      "offset": 0,
+      "length": 16,
+      "description": "Source Port"
+    },
+    "destination_port": {
+      "offset": 16,
+      "length": 16,
+      "description": "Destination Port"
+    },
+    "length": {
+      "offset": 32,
+      "length": 16,
+      "description": "Length"
+    },
+    "checksum": {
+      "offset": 48,
+      "length": 16,
+      "description": "Checksum"
+    }
+  }
+}

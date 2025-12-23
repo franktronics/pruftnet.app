@@ -1,5 +1,5 @@
 #pragma once
-#include "../../utils/packets/packet_model.hpp"
+#include "../utils/packets/packet_model.hpp"
 
 class ParserModel {
 public:

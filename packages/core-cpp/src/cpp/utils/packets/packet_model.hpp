@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../common/common.hpp"
-#include "../protocols/protocol_types.hpp"
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -19,8 +18,4 @@ struct RawPacket {
   std::string toString() const;
 };
 
-struct ParsedPacket {
-  uint8_t protocol_count = 0;
-  std::array<ProtocolEntry, MAX_PROTOCOLS_PER_PACKET> protocols;
-  bool valid = false;
-};
+struct ParsedPacket {};
