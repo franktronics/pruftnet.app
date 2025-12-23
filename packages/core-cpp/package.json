@@ -1,7 +1,6 @@
 {
     "name": "@repo/core-cpp",
     "version": "0.0.1",
-    "description": "Core C++ network analysis modules with N-API bindings",
     "type": "module",
     "main": "dist/ts/index.js",
     "types": "dist/ts/index.d.ts",
@@ -16,7 +15,8 @@
         "build:cpp": "cmake-js compile",
         "build:ts": "tsc",
         "build": "pnpm run build:cpp && pnpm run build:ts",
-        "clean": "cmake-js clean && rimraf dist"
+        "test:build": "cd tests && mkdir -p build && cd build && cmake .. && cmake --build .",
+        "test:run": "cd tests && bash test.sh"
     },
     "dependencies": {
         "node-addon-api": "^8.0.0"
