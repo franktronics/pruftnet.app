@@ -122,7 +122,6 @@ void NetworkSniffer::handleRawPacket(const uint8_t* data, size_t length) {
 
   RawPacket packet;
   packet.length = length;
-  packet.original_length = length;
   packet.valid = true;
 
   if (length <= MAX_PACKET_SIZE) {

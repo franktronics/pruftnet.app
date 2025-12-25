@@ -3,7 +3,6 @@ export interface ParsedPacket {}
 export interface RawPacketData {
     data: Buffer
     length: number
-    originalLength: number
     timestamp: Date
     valid: boolean
 }

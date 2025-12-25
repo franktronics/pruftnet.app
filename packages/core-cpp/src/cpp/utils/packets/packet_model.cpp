@@ -7,7 +7,6 @@ std::string RawPacket::toString() const {
   std::string result = "────────────────────────────────────────\n";
   result += "RawPacket\n";
   result += "length=" + std::to_string(length) + ", ";
-  result += "original_length=" + std::to_string(original_length) + ", ";
   result += "valid=" + std::string(valid ? "true" : "false") + "\n";
 
   // Each line contains up to 11 bytes in hexadecimal format

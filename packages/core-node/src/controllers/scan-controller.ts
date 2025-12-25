@@ -42,7 +42,6 @@ export class ScanController {
                         parsed: packet.parsed,
                         raw: {
                             length: packet.raw.length,
-                            originalLength: packet.raw.originalLength,
                             timestamp: packet.raw.timestamp,
                             valid: packet.raw.valid,
                         },

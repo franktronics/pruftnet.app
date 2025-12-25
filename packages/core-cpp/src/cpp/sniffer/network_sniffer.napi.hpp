@@ -154,7 +154,6 @@ Napi::Object NetworkSnifferWrapper::RawPacketToJs(Napi::Env env, const RawPacket
 
   obj.Set("data", buffer);
   obj.Set("length", Napi::Number::New(env, static_cast<double>(raw.length)));
-  obj.Set("originalLength", Napi::Number::New(env, static_cast<double>(raw.original_length)));
 
   // Convert timestamp to milliseconds since epoch
   auto epoch = raw.timestamp.time_since_epoch();

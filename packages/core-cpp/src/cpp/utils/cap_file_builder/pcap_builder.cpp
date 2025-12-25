@@ -82,8 +82,6 @@ PcapPacketHeader PcapBuilder::createPacketHeader(const RawPacket& packet) {
   header.timestamp_seconds = static_cast<uint32_t>(seconds.count());
   header.timestamp_microseconds = static_cast<uint32_t>(microseconds.count());
   header.captured_length = static_cast<uint32_t>(packet.length);
-  header.original_length =
-      packet.original_length > 0 ? static_cast<uint32_t>(packet.original_length) : static_cast<uint32_t>(packet.length);
 
   return header;
 }

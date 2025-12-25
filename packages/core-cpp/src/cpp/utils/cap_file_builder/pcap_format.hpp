@@ -19,5 +19,4 @@ struct PcapPacketHeader {
   uint32_t timestamp_seconds;      // Timestamp seconds since epoch
   uint32_t timestamp_microseconds; // Timestamp microseconds
   uint32_t captured_length;        // Number of bytes captured
-  uint32_t original_length;        // Original packet length
 };
