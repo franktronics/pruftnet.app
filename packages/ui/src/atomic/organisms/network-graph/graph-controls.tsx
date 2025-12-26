@@ -15,6 +15,12 @@ export const GraphControls = (props: GraphControlsProps) => {
     const { zoomIn, zoomOut, fitView } = useReactFlow()
     const store = useStoreApi()
     const isInteractive = useStore(isInteractiveSelector)
+    const zoom = useStore((s: ReactFlowState) => s.transform[2])
+    const minZoom = useStore((s: ReactFlowState) => s.minZoom)
+    const maxZoom = useStore((s: ReactFlowState) => s.maxZoom)
+
+    const isZoomInDisabled = zoom >= maxZoom
+    const isZoomOutDisabled = zoom <= minZoom
 
     const onToggleInteractivity = () => {
         store.setState({
@@ -34,8 +40,9 @@ export const GraphControls = (props: GraphControlsProps) => {
             <Button
                 variant="outline"
                 size="icon"
-                className="hover:bg-accent size-6 border-0"
+                className="hover:bg-accent size-8 border-0"
                 onClick={() => zoomIn()}
+                disabled={isZoomInDisabled}
                 title="Zoom in"
                 aria-label="Zoom in"
             >
@@ -44,8 +51,9 @@ export const GraphControls = (props: GraphControlsProps) => {
             <Button
                 variant="outline"
                 size="icon"
-                className="hover:bg-accent size-6 border-0"
+                className="hover:bg-accent size-8 border-0"
                 onClick={() => zoomOut()}
+                disabled={isZoomOutDisabled}
                 title="Zoom out"
                 aria-label="Zoom out"
             >
@@ -54,7 +62,7 @@ export const GraphControls = (props: GraphControlsProps) => {
             <Button
                 variant="outline"
                 size="icon"
-                className="hover:bg-accent size-6 border-0"
+                className="hover:bg-accent size-8 border-0"
                 onClick={() => fitView()}
                 title="Fit view"
                 aria-label="Fit view"
@@ -64,7 +72,7 @@ export const GraphControls = (props: GraphControlsProps) => {
             <Button
                 variant="outline"
                 size="icon"
-                className="hover:bg-accent size-6 border-0"
+                className="hover:bg-accent size-8 border-0"
                 onClick={onToggleInteractivity}
                 title={isInteractive ? 'Lock' : 'Unlock'}
                 aria-label={isInteractive ? 'Lock' : 'Unlock'}
