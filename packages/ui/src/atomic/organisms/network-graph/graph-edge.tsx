@@ -1,5 +1,6 @@
 import type { EdgeProps, Node, Edge } from '@xyflow/react'
-import { BaseEdge, getBezierPath, EdgeLabelRenderer } from '@xyflow/react'
+import { getBezierPath, EdgeLabelRenderer, useInternalNode } from '@xyflow/react'
+import { getEdgeParams } from './graph-utils'
 
 export type DeviceEdgeData<T extends Node = Node> = Edge<{
     /**
@@ -14,30 +15,35 @@ export type DeviceEdgeData<T extends Node = Node> = Edge<{
 }>
 
 export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
-    const {
-        id,
-        markerEnd,
-        markerStart,
-        sourceX,
-        sourceY,
-        targetX,
-        targetY,
-        sourcePosition,
-        targetPosition,
-    } = props
+    const { id, style, markerEnd, markerStart, source, target } = props
+    const sourceNode = useInternalNode(source)
+    const targetNode = useInternalNode(target)
+
+    if (!sourceNode || !targetNode) {
+        return null
+    }
+
+    const { sx, sy, tx, ty, sourcePos, targetPos } = getEdgeParams(sourceNode, targetNode)
 
     const [edgePath, labelX, labelY] = getBezierPath({
-        sourceX,
-        sourceY,
-        targetX,
-        targetY,
-        sourcePosition,
-        targetPosition,
+        sourceX: sx,
+        sourceY: sy,
+        targetX: tx,
+        targetY: ty,
+        sourcePosition: sourcePos,
+        targetPosition: targetPos,
     })
 
     return (
         <>
-            <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} markerStart={markerStart} />
+            <path
+                id={id}
+                className="react-flow__edge-path"
+                d={edgePath}
+                markerEnd={markerEnd}
+                markerStart={markerStart}
+                style={style}
+            />
             <EdgeLabelRenderer>
                 <div
                     className="bg-background text-foreground absolute rounded border px-1"

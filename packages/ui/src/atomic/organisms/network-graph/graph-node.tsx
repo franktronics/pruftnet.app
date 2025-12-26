@@ -1,8 +1,6 @@
 import { Popover, PopoverTrigger, PopoverContent, Button } from '../../atoms'
 import { Computer } from 'lucide-react'
-import { type NodeProps, type Node } from '@xyflow/react'
-import { cn } from '@repo/utils'
-import { GraphHandle } from './graph-handle'
+import { type NodeProps, type Node, Handle, Position } from '@xyflow/react'
 
 export type DeviceNodeData = Node<{
     mac: string
@@ -25,12 +23,7 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                     tabIndex={0}
                 >
                     <Computer className="size-6" />
-                    <GraphHandle
-                        className={cn(
-                            'h-2.75 w-2.75 rounded-full transition',
-                            'border-input! bg-secondary! border',
-                        )}
-                    />
+                    <Handle type="source" position={Position.Top} className="hidden" />
                     <p className="absolute top-[calc(100%+0.5rem)]">{mac}</p>
                 </Button>
             </PopoverTrigger>

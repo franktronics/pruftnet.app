@@ -3,7 +3,6 @@ import {
     ReactFlow,
     addEdge,
     Background,
-    Controls,
     useNodesState,
     useEdgesState,
     ConnectionMode,
@@ -12,6 +11,7 @@ import {
 } from '@xyflow/react'
 import { GraphDeviceNode } from './graph-node'
 import { GraphDeviceEdge } from './graph-edge'
+import { GraphControls } from './graph-controls'
 
 export type NetworkGraphProps = {} & ComponentPropsWithoutRef<'div'>
 
@@ -63,7 +63,7 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
                 proOptions={{ hideAttribution: true }}
                 connectionMode={ConnectionMode.Loose}
             >
-                <Controls className="text-background" />
+                <GraphControls />
                 <Background />
             </ReactFlow>
         </div>
