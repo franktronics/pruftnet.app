@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "./custom-anim.css";
 @import '@xyflow/react/dist/style.css';
 
 @custom-variant dark (&:is(.dark *));

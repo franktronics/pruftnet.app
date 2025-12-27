@@ -48,6 +48,15 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
     const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [])
+    const onNodeDragStop = useCallback(() => {
+        setNodes((nds) =>
+            resolveCollisions(nds, {
+                maxIterations: Infinity,
+                overlapThreshold: 0.5,
+                margin: 15,
+            }),
+        )
+    }, [setNodes])
 
     return (
         <div {...rest}>
