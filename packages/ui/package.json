@@ -35,6 +35,7 @@
         "@repo/utils": "workspace:*",
         "@xyflow/react": "^12.10.0",
         "class-variance-authority": "^0.7.1",
+        "d3-force": "^3.0.0",
         "lucide-react": "^0.554.0",
         "react-resizable-panels": "^3.0.6",
         "sonner": "^2.0.7",
@@ -46,6 +47,7 @@
         "react-dom": "^19.2.0"
     },
     "devDependencies": {
+        "@types/d3-force": "^3.0.10",
         "@types/react": "^19.2.6",
         "@types/react-dom": "^19.2.3",
         "tailwindcss": "^4.1.17",

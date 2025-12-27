@@ -7,7 +7,13 @@ export const TabGraph = (props: TabGraphProps) => {
 
     return (
         <section {...rest}>
-            <NetworkGraph className="h-full w-full"></NetworkGraph>
+            <NetworkGraph
+                forceStrength={-30}
+                forceDistance={200}
+                alphaDecay={0.01}
+                velocityDecay={0.4}
+                className="h-full w-full"
+            ></NetworkGraph>
         </section>
     )
 }
