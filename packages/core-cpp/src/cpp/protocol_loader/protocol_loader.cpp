@@ -32,11 +32,18 @@ ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath)
     ProtocolConfig config;
     config.name = j.at("name").get<std::string>();
 
-    for (const auto& [field_name, field_data] : j.at("header").items()) {
+    for (const auto& [field_key, field_data] : j.at("header").items()) {
+        size_t underscore_pos = field_key.find('_');
+        if (underscore_pos == std::string::npos) {
+            throw std::runtime_error("Invalid header key format: " + field_key);
+        }
+        
+        uint32_t offset = std::stoul(field_key.substr(0, underscore_pos));
+        uint32_t length = std::stoul(field_key.substr(underscore_pos + 1));
+        
         ProtocolField field;
-        field.offset = field_data.at("offset").get<uint32_t>();
-        field.length = field_data.at("length").get<uint32_t>();
-        config.header[field_name] = field;
+        field.description = field_data.at("description").get<std::string>();
+        config.header[{offset, length}] = field;
     }
 
     if (j.contains("next_protocol")) {
@@ -45,7 +52,8 @@ ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath)
         next_proto.start_after = j["next_protocol"].at("start_after").get<std::string>();
 
         for (const auto& [key, value] : j["next_protocol"].at("mappings").items()) {
-            next_proto.mappings[key] = value.at("file").get<std::string>();
+            uint16_t hex_value = std::stoul(key, nullptr, 16);
+            next_proto.mappings[hex_value] = value.at("file").get<std::string>();
         }
 
         config.next_protocol = next_proto;

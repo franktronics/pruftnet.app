@@ -5,12 +5,14 @@
 #include "../utils/packets/packet_model.hpp"
 #include "./packet_capture.hpp"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
 
-using PacketCallback = std::function<void(const RawPacket&, const ParsedPacket&)>;
+struct PacketCallback {
+  virtual ~PacketCallback() = default;
+  virtual void operator()(const RawPacket& raw, const ParsedPacket& parsed) const = 0;
+};
 
 class NetworkSniffer {
 public:
@@ -18,7 +20,8 @@ public:
   ~NetworkSniffer();
 
   void setParser(std::unique_ptr<ParserModel> parser);
-  bool startSniffing(const std::string& interface_name, PacketCallback callback);
+  ParserModel* getParser() const;
+  bool startSniffing(const std::string& interface_name, std::unique_ptr<PacketCallback> callback);
   void stopSniffing();
   bool isRunning() const;
 
@@ -33,7 +36,7 @@ private:
   std::atomic<bool> is_running_;
   std::atomic<bool> should_stop_;
 
-  PacketCallback packet_callback_;
+  std::unique_ptr<PacketCallback> packet_callback_;
   std::mutex callback_mutex_;
 
   void captureWorker();

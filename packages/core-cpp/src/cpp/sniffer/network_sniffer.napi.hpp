@@ -2,18 +2,36 @@
 
 #include "../parser/packet_parser.hpp"
 #include "./network_sniffer.hpp"
+#include <cstring>
 #include <memory>
 #include <napi.h>
 
-/**
- * N-API wrapper for NetworkSniffer
- * Handles thread-safe callbacks to JavaScript and automatic parser injection
- */
+class NetworkSnifferWrapper;
+
+struct CallbackData {
+  RawPacket raw;
+  ParsedPacket parsed;
+};
+
+class NapiPacketCallback : public PacketCallback {
+public:
+  NapiPacketCallback(Napi::ThreadSafeFunction tsfn, ParserModel* parser) : tsfn_(std::move(tsfn)), parser_(parser) {}
+
+  void operator()(const RawPacket& raw, const ParsedPacket& parsed) const override;
+
+private:
+  mutable Napi::ThreadSafeFunction tsfn_;
+  ParserModel* parser_;
+};
+
 class NetworkSnifferWrapper : public Napi::ObjectWrap<NetworkSnifferWrapper> {
 public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   NetworkSnifferWrapper(const Napi::CallbackInfo& info);
   ~NetworkSnifferWrapper();
+
+  static Napi::Object RawPacketToJs(Napi::Env env, const RawPacket& raw);
+  ParserModel* getParser() const;
 
 private:
   static Napi::FunctionReference constructor;
@@ -21,20 +39,30 @@ private:
   std::unique_ptr<NetworkSniffer> sniffer_;
   Napi::ThreadSafeFunction tsfn_;
   bool tsfn_active_ = false;
+  std::string protocols_path_;
 
-  // JavaScript methods
   Napi::Value StartSniffing(const Napi::CallbackInfo& info);
   Napi::Value StopSniffing(const Napi::CallbackInfo& info);
   Napi::Value IsRunning(const Napi::CallbackInfo& info);
-
-  // Helper to convert ParsedPacket to JS object
-  static Napi::Object ParsedPacketToJs(Napi::Env env, const ParsedPacket& parsed);
-
-  // Helper to convert RawPacket to JS object
-  static Napi::Object RawPacketToJs(Napi::Env env, const RawPacket& raw);
 };
 
 // Implementation
+
+void NapiPacketCallback::operator()(const RawPacket& raw, const ParsedPacket& parsed) const {
+  CallbackData* data = new CallbackData{raw, parsed};
+
+  tsfn_.BlockingCall(data, [this](Napi::Env env, Napi::Function jsCallback, CallbackData* cb_data) {
+    Napi::Object raw_obj = NetworkSnifferWrapper::RawPacketToJs(env, cb_data->raw);
+    Napi::Array parsed_arr = parser_->toNapiArray(env, cb_data->parsed);
+
+    Napi::Object result = Napi::Object::New(env);
+    result.Set("raw", raw_obj);
+    result.Set("parsed", parsed_arr);
+
+    jsCallback.Call({result});
+    delete cb_data;
+  });
+}
 
 Napi::FunctionReference NetworkSnifferWrapper::constructor;
 
@@ -58,10 +86,19 @@ Napi::Object NetworkSnifferWrapper::Init(Napi::Env env, Napi::Object exports) {
 NetworkSnifferWrapper::NetworkSnifferWrapper(const Napi::CallbackInfo& info)
     : Napi::ObjectWrap<NetworkSnifferWrapper>(info) {
 
-  sniffer_ = std::make_unique<NetworkSniffer>();
+  Napi::Env env = info.Env();
 
-  // Automatically inject the parser
-  sniffer_->setParser(std::make_unique<PacketParser>());
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "Expected protocols path as first argument").ThrowAsJavaScriptException();
+    return;
+  }
+
+  protocols_path_ = info[0].As<Napi::String>().Utf8Value();
+
+  sniffer_ = std::make_unique<NetworkSniffer>();
+  auto parser = std::make_unique<PacketParser>();
+  parser->setProtocolsBasePath(protocols_path_);
+  sniffer_->setParser(std::move(parser));
 }
 
 NetworkSnifferWrapper::~NetworkSnifferWrapper() {
@@ -73,6 +110,10 @@ NetworkSnifferWrapper::~NetworkSnifferWrapper() {
     tsfn_.Release();
     tsfn_active_ = false;
   }
+}
+
+ParserModel* NetworkSnifferWrapper::getParser() const {
+  return sniffer_->getParser();
 }
 
 Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info) {
@@ -96,28 +137,11 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info)
   std::string interface_name = info[0].As<Napi::String>().Utf8Value();
   Napi::Function callback = info[1].As<Napi::Function>();
 
-  // Create ThreadSafe function for calling JS from background thread
-  tsfn_ = Napi::ThreadSafeFunction::New(env, callback, "PacketCallback",
-                                        0, // Unlimited queue
-                                        1, // 1 thread using this
-                                        [](Napi::Env) {
-                                          // Cleanup callback - nothing needed
-                                        });
+  tsfn_ = Napi::ThreadSafeFunction::New(env, callback, "PacketCallback", 0, 1, [](Napi::Env) {});
   tsfn_active_ = true;
 
-  // Capture ThreadSafe function for use in callback
-  auto* tsfn_ptr = &tsfn_;
-
-  // Start sniffing with callback that marshals to JS
-  bool success = sniffer_->startSniffing(interface_name, [tsfn_ptr](const RawPacket& raw, const ParsedPacket& parsed) {
-    // This runs in background thread - must use ThreadSafe function
-    tsfn_ptr->BlockingCall([raw, parsed](Napi::Env env, Napi::Function jsCallback) {
-      Napi::Object result = Napi::Object::New(env);
-      result.Set("raw", RawPacketToJs(env, raw));
-      result.Set("parsed", ParsedPacketToJs(env, parsed));
-      jsCallback.Call({result});
-    });
-  });
+  auto packet_callback = std::make_unique<NapiPacketCallback>(tsfn_, getParser());
+  bool success = sniffer_->startSniffing(interface_name, std::move(packet_callback));
 
   if (!success) {
     tsfn_.Release();
@@ -149,56 +173,18 @@ Napi::Value NetworkSnifferWrapper::IsRunning(const Napi::CallbackInfo& info) {
 Napi::Object NetworkSnifferWrapper::RawPacketToJs(Napi::Env env, const RawPacket& raw) {
   Napi::Object obj = Napi::Object::New(env);
 
-  // Copy raw data to Buffer
-  Napi::Buffer<uint8_t> buffer = Napi::Buffer<uint8_t>::Copy(env, raw.data.data(), raw.length);
+  Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, raw.length);
+  std::memcpy(buffer.Data(), raw.data.data(), raw.length);
+  Napi::Uint8Array data_array = Napi::Uint8Array::New(env, raw.length, buffer, 0);
 
-  obj.Set("data", buffer);
+  obj.Set("data", data_array);
   obj.Set("length", Napi::Number::New(env, static_cast<double>(raw.length)));
 
-  // Convert timestamp to milliseconds since epoch
   auto epoch = raw.timestamp.time_since_epoch();
   auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
   obj.Set("timestamp", Napi::Number::New(env, static_cast<double>(millis)));
 
   obj.Set("valid", Napi::Boolean::New(env, raw.valid));
-
-  return obj;
-}
-
-Napi::Object NetworkSnifferWrapper::ParsedPacketToJs(Napi::Env env, const ParsedPacket& parsed) {
-  Napi::Object obj = Napi::Object::New(env);
-
-  obj.Set("protocolCount", Napi::Number::New(env, parsed.protocol_count));
-  obj.Set("valid", Napi::Boolean::New(env, parsed.valid));
-
-  Napi::Array protocols = Napi::Array::New(env, parsed.protocol_count);
-
-  for (uint8_t i = 0; i < parsed.protocol_count; ++i) {
-    const ProtocolEntry& proto = parsed.protocols[i];
-    Napi::Object protoObj = Napi::Object::New(env);
-
-    protoObj.Set("protocolId", Napi::Number::New(env, static_cast<uint8_t>(proto.protocol_id)));
-    protoObj.Set("headerOffset", Napi::Number::New(env, proto.header_offset));
-    protoObj.Set("fieldCount", Napi::Number::New(env, proto.field_count));
-
-    Napi::Array fields = Napi::Array::New(env, proto.field_count);
-
-    for (uint8_t j = 0; j < proto.field_count; ++j) {
-      const FieldEntry& field = proto.fields[j];
-      Napi::Object fieldObj = Napi::Object::New(env);
-
-      fieldObj.Set("byteOffset", Napi::Number::New(env, field.byte_offset));
-      fieldObj.Set("byteLength", Napi::Number::New(env, field.byte_length));
-      fieldObj.Set("fieldId", Napi::Number::New(env, field.field_id));
-
-      fields.Set(j, fieldObj);
-    }
-
-    protoObj.Set("fields", fields);
-    protocols.Set(i, protoObj);
-  }
-
-  obj.Set("protocols", protocols);
 
   return obj;
 }

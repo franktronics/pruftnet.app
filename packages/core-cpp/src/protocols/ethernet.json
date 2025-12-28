@@ -1,32 +1,26 @@
 {
-  "name": "Ethernet Header",
-  "header": {
-    "destination_mac": {
-      "offset": 0,
-      "length": 48,
-      "description": "Destination MAC Address"
+    "name": "Ethernet Header",
+    "header": {
+        "0_48": {
+            "description": "Destination MAC Address"
+        },
+        "48_48": {
+            "description": "Source MAC Address"
+        },
+        "96_16": {
+            "description": "EtherType - Protocol Identifier"
+        }
     },
-    "source_mac": {
-      "offset": 48,
-      "length": 48,
-      "description": "Source MAC Address"
-    },
-    "ethertype": {
-      "offset": 96,
-      "length": 16,
-      "description": "EtherType - Protocol Identifier"
+    "next_protocol": {
+        "selector": "96_16",
+        "start_after": "112",
+        "mappings": {
+            "0x0800": {
+                "file": "ipv4.json"
+            },
+            "0x0806": {
+                "file": "arp.json"
+            }
+        }
     }
-  },
-  "next_protocol": {
-    "selector": "ethertype",
-    "start_after": "112",
-    "mappings": {
-      "2048": {
-        "file": "ipv4.json"
-      },
-      "2054": {
-        "file": "arp.json"
-      }
-    }
-  }
 }

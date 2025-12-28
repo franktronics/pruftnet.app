@@ -9,14 +9,7 @@ NetworkSniffer::~NetworkSniffer() {
   stopSniffing();
 }
 
-void NetworkSniffer::setParser(std::unique_ptr<ParserModel> parser) {
-  if (is_running_.load()) {
-    return;
-  }
-  parser_ = std::move(parser);
-}
-
-bool NetworkSniffer::startSniffing(const std::string& interface_name, PacketCallback callback) {
+bool NetworkSniffer::startSniffing(const std::string& interface_name, std::unique_ptr<PacketCallback> callback) {
   if (is_running_.load()) {
     return false;
   }
@@ -25,18 +18,16 @@ bool NetworkSniffer::startSniffing(const std::string& interface_name, PacketCall
     return false;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(callback_mutex_);
-    packet_callback_ = std::move(callback);
-  }
-
   packet_capture_ = std::make_unique<PacketCapture>(interface_name);
 
   if (!packet_capture_->initialize()) {
     packet_capture_.reset();
-    std::lock_guard<std::mutex> lock(callback_mutex_);
-    packet_callback_ = nullptr;
     return false;
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(callback_mutex_);
+    packet_callback_ = std::move(callback);
   }
 
   should_stop_.store(false);
@@ -46,6 +37,64 @@ bool NetworkSniffer::startSniffing(const std::string& interface_name, PacketCall
   capture_thread_ = std::thread(&NetworkSniffer::captureWorker, this);
 
   return true;
+}
+
+void NetworkSniffer::captureWorker() {
+  auto handler = [this](const uint8_t* data, size_t length) { this->handleRawPacket(data, length); };
+
+  packet_capture_->startCapture(handler);
+}
+
+void NetworkSniffer::handleRawPacket(const uint8_t* data, size_t length) {
+  if (should_stop_.load()) {
+    return;
+  }
+
+  RawPacket packet;
+  packet.length = length;
+  packet.valid = true;
+
+  if (length <= MAX_PACKET_SIZE) {
+    std::memcpy(packet.data.data(), data, length);
+    ring_buffer_->push(packet);
+  }
+}
+
+void NetworkSniffer::processingWorker() {
+  while (!should_stop_.load()) {
+    RawPacket raw_packet;
+
+    if (ring_buffer_->pop(raw_packet)) {
+      ParsedPacket parsed = parser_->parsePacket(raw_packet);
+
+      PacketCallback* callback_ptr = nullptr;
+      {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        callback_ptr = packet_callback_.get();
+      }
+
+      if (callback_ptr != nullptr) {
+        (*callback_ptr)(raw_packet, parsed);
+      }
+    } else {
+      ring_buffer_->waitForData(std::chrono::milliseconds(100));
+    }
+  }
+
+  RawPacket raw_packet;
+  while (ring_buffer_->pop(raw_packet)) {
+    ParsedPacket parsed = parser_->parsePacket(raw_packet);
+
+    PacketCallback* callback_ptr = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(callback_mutex_);
+      callback_ptr = packet_callback_.get();
+    }
+
+    if (callback_ptr != nullptr) {
+      (*callback_ptr)(raw_packet, parsed);
+    }
+  }
 }
 
 void NetworkSniffer::stopSniffing() {
@@ -82,50 +131,13 @@ bool NetworkSniffer::isRunning() const {
   return is_running_.load();
 }
 
-void NetworkSniffer::captureWorker() {
-  auto handler = [this](const uint8_t* data, size_t length) { this->handleRawPacket(data, length); };
-
-  packet_capture_->startCapture(handler);
-}
-
-void NetworkSniffer::processingWorker() {
-  while (!should_stop_.load()) {
-    RawPacket raw_packet;
-
-    if (ring_buffer_->pop(raw_packet)) {
-      ParsedPacket parsed_packet = parser_->parsePacket(raw_packet);
-
-      std::lock_guard<std::mutex> lock(callback_mutex_);
-      if (packet_callback_) {
-        packet_callback_(raw_packet, parsed_packet);
-      }
-    } else {
-      ring_buffer_->waitForData(std::chrono::milliseconds(100));
-    }
-  }
-
-  RawPacket raw_packet;
-  while (ring_buffer_->pop(raw_packet)) {
-    ParsedPacket parsed_packet = parser_->parsePacket(raw_packet);
-
-    std::lock_guard<std::mutex> lock(callback_mutex_);
-    if (packet_callback_) {
-      packet_callback_(raw_packet, parsed_packet);
-    }
-  }
-}
-
-void NetworkSniffer::handleRawPacket(const uint8_t* data, size_t length) {
-  if (should_stop_.load()) {
+void NetworkSniffer::setParser(std::unique_ptr<ParserModel> parser) {
+  if (is_running_.load()) {
     return;
   }
+  parser_ = std::move(parser);
+}
 
-  RawPacket packet;
-  packet.length = length;
-  packet.valid = true;
-
-  if (length <= MAX_PACKET_SIZE) {
-    std::memcpy(packet.data.data(), data, length);
-    ring_buffer_->push(packet);
-  }
+ParserModel* NetworkSniffer::getParser() const {
+  return parser_.get();
 }

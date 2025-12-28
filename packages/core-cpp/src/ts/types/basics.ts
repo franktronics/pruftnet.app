@@ -1,9 +1,13 @@
-export interface ParsedPacket {}
+export interface ParsedProtocolLayer {
+    [fieldKey: string]: number | bigint
+}
+
+export type ParsedPacket = ParsedProtocolLayer[]
 
 export interface RawPacketData {
-    data: Buffer
+    data: Uint8Array
     length: number
-    timestamp: Date
+    timestamp: number
     valid: boolean
 }
 

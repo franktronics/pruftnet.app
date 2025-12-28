@@ -2,21 +2,27 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <array>
 
 struct ProtocolField {
-    uint32_t offset;
-    uint32_t length;
+    std::string description;
 };
 
 struct NextProtocol {
     std::string selector;
     std::string start_after;
-    std::unordered_map<std::string, std::string> mappings;
+    std::unordered_map<uint16_t, std::string> mappings;
+};
+
+struct OffsetLengthHash {
+    std::size_t operator()(const std::array<uint32_t, 2>& arr) const {
+        return std::hash<uint32_t>{}(arr[0]) ^ (std::hash<uint32_t>{}(arr[1]) << 1);
+    }
 };
 
 struct ProtocolConfig {
     std::string name;
-    std::unordered_map<std::string, ProtocolField> header;
+    std::unordered_map<std::array<uint32_t, 2>, ProtocolField, OffsetLengthHash> header;
     std::optional<NextProtocol> next_protocol;
 };
 

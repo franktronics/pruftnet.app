@@ -1,5 +1,14 @@
 import type { PacketCallback } from '../types/basics.js'
 import addon from '../addon.js'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+function getProtocolsPath(): string {
+    return `${__dirname}/../../protocols`
+}
 
 /**
  * Check if NetworkSniffer is available on this platform
@@ -14,14 +23,14 @@ export function isSnifferAvailable(): boolean {
  *
  * Uses the native sniffer with integrated parser for high-performance
  * packet capture and dissection. Packets are delivered with both raw
- * bytes and parsed metadata for O(1) field access.
+ * bytes and parsed protocol layers.
  *
  * **Note: Only available on Linux.** On other platforms, the constructor
  * will throw an error. Use `isSnifferAvailable()` to check platform support.
  *
  * @example
  * ```typescript
- * import { NetworkSniffer, isSnifferAvailable, ProtocolId, IPV4_FIELDS, formatIPv4 } from '@repo/core-cpp'
+ * import { NetworkSniffer, isSnifferAvailable } from '@repo/core-cpp'
  *
  * if (!isSnifferAvailable()) {
  *     console.error('NetworkSniffer is only available on Linux')
@@ -31,15 +40,16 @@ export function isSnifferAvailable(): boolean {
  * const sniffer = new NetworkSniffer()
  *
  * sniffer.startSniffing('eth0', (packet) => {
- *     console.log('Captured packet with', packet.parsed.protocolCount, 'layers')
+ *     // packet.parsed is an array of protocol layers
+ *     // Each layer has fields like "0_48" (offset_length) with extracted values
+ *     const ethernet = packet.parsed[0]
+ *     if (ethernet) {
+ *         console.log('EtherType:', ethernet['96_16']) // 0x0800 for IPv4
+ *     }
  *
- *     // Read source IP from IPv4 header
- *     const ipv4 = packet.parsed.protocols.find(p => p.protocolId === ProtocolId.IPV4)
+ *     const ipv4 = packet.parsed[1]
  *     if (ipv4) {
- *         const srcIpField = ipv4.fields.find(f => f.fieldId === IPV4_FIELDS.SRC_IP)
- *         if (srcIpField) {
- *             console.log('Source IP:', formatIPv4(packet.raw.data, srcIpField))
- *         }
+ *         console.log('Protocol:', ipv4['72_8']) // 6 for TCP, 17 for UDP
  *     }
  * })
  *
@@ -50,13 +60,15 @@ export function isSnifferAvailable(): boolean {
 export class NetworkSniffer {
     private nativeInstance: InstanceType<typeof addon.NetworkSniffer>
 
-    constructor() {
+    constructor(protocolsPath?: string) {
         if (!isSnifferAvailable()) {
-            throw new Error('NetworkSniffer is only available on Linux. ')
+            throw new Error('NetworkSniffer is only available on Linux.')
         }
 
+        const path = protocolsPath ?? getProtocolsPath()
+
         try {
-            this.nativeInstance = new addon.NetworkSniffer()
+            this.nativeInstance = new addon.NetworkSniffer(path)
         } catch (error) {
             throw new Error(
                 `Failed to create NetworkSniffer: ${error instanceof Error ? error.message : 'Unknown error'}`,
