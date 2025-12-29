@@ -1,6 +1,7 @@
 #include "packet_parser.hpp"
 #include <exprtk.hpp>
 #include <filesystem>
+#include <iostream>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -109,7 +110,8 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
     ProtocolConfig config;
     try {
       config = protocol_loader_.loadProtocol(current_protocol_path);
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+      std::cerr << "Failed to load protocol from " << current_protocol_path << ": " << e.what() << std::endl;
       break;
     }
 
@@ -157,7 +159,6 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
 
     current_protocol_path = resolveProtocolPath(current_protocol_path, mapping_it->second);
   }
-
   return result;
 }
 

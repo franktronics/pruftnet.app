@@ -36,6 +36,7 @@ export class ScanController {
                 store.scan.set(scanId, sniffer)
 
                 let counter = 0
+                try{
                 sniffer.startSniffing(input.interface, (packet: PacketData) => {
                     store.packets.set(counter++, packet)
                     returnCb({
@@ -47,6 +48,9 @@ export class ScanController {
                         },
                     })
                 })
+            }catch(err){
+                console.error('Error starting sniffer:', err)
+            }
             })
     }
 

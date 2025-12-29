@@ -1,7 +1,7 @@
 #include <napi.h>
 
 #ifdef __linux__
-#include "modules/sniffer/network_sniffer.napi.hpp"
+#include "./sniffer/network_sniffer.napi.hpp"
 #endif
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {

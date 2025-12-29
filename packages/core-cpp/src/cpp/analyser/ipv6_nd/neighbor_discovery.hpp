@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../utils/common/common.hpp"
+#include "../../utils/common/common.hpp"
 #include "../analyser_mode.hpp"
 #include <array>
 #include <atomic>

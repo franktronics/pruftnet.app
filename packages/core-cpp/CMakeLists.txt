@@ -1,6 +1,21 @@
 cmake_minimum_required(VERSION 3.15)
 project(repo-core)
 
+# Enable parallel compilation
+include(ProcessorCount)
+ProcessorCount(N)
+if(NOT N EQUAL 0)
+    set(CMAKE_BUILD_PARALLEL_LEVEL ${N})
+    message(STATUS "Building with ${N} parallel jobs")
+endif()
+
+# Use ccache if available to cache compilation results
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    message(STATUS "Using ccache for faster rebuilds")
+endif()
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -43,6 +58,8 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
   list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/sniffer/.*")
   list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/analyser/.*")
 endif()
+# remove analyser files for now
+list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/analyser/.*")
 
 # Create the addon
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})

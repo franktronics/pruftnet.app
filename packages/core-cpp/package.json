@@ -14,7 +14,8 @@
     "scripts": {
         "build:cpp": "cmake-js compile",
         "build:ts": "tsc",
-        "build": "pnpm run build:cpp && pnpm run build:ts",
+        "build:copy": "mkdir -p dist && cp -r src/protocols dist/protocols",
+        "build": "pnpm run build:cpp && pnpm run build:ts && pnpm run build:copy",
         "test:build": "cd tests && mkdir -p build && cd build && cmake .. && cmake --build .",
         "test:run": "cd tests && bash test.sh"
     },
@@ -30,6 +31,7 @@
     "packageManager": "pnpm@10.17.1",
     "files": [
         "dist/**/*",
-        "build/Release/*.node"
+        "build/Release/*.node",
+        "src/protocols/**/*"
     ]
 }
