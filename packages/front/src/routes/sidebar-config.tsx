@@ -1,4 +1,4 @@
-import { Database, Radar, Settings, HelpCircle, Info } from 'lucide-react'
+import { Database, Radar, Settings, Info, LifeBuoy } from 'lucide-react'
 
 export const SidebarConfig = {
     navMain: [
@@ -20,17 +20,17 @@ export const SidebarConfig = {
     navSecondary: [
         {
             title: 'Settings',
-            url: '#',
+            url: '/settings',
             icon: Settings,
         },
         {
-            title: 'Get Help',
-            url: '#',
-            icon: HelpCircle,
+            title: 'Support',
+            url: '/support',
+            icon: LifeBuoy,
         },
         {
-            title: 'Search',
-            url: '#',
+            title: 'About',
+            url: '/about',
             icon: Info,
         },
     ],

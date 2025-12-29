@@ -1,5 +1,6 @@
 import { Outlet, createRoute, createRootRoute, createRouter } from '@tanstack/react-router'
 import Home from '../pages/home'
+import Settings from '../pages/settings'
 import Error404 from '../pages/error/404'
 import { DashboardLayout } from '@repo/ui/templates'
 import { SidebarConfig } from './sidebar-config'
@@ -21,7 +22,13 @@ const indexRoute = createRoute({
     component: Home,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute])
+const settingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/settings',
+    component: Settings,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, settingsRoute])
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
