@@ -2,11 +2,12 @@ import { Outlet, createRoute, createRootRoute, createRouter } from '@tanstack/re
 import Home from '../pages/home'
 import Error404 from '../pages/error/404'
 import { DashboardLayout } from '@repo/ui/templates'
+import { SidebarConfig } from './sidebar-config'
 
 const rootRoute = createRootRoute({
     component: () => (
         <>
-            <DashboardLayout>
+            <DashboardLayout sidebarConfig={SidebarConfig}>
                 <Outlet />
             </DashboardLayout>
         </>

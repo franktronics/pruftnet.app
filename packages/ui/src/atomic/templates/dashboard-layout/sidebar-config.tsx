@@ -1,73 +1,62 @@
-import { GalleryVerticalEnd, Settings2, Database, ShoppingCart, Radar } from 'lucide-react'
-
+import { Waypoints, type LucideIcon } from 'lucide-react'
 import { NavMain } from './nav-main'
-import { NavUser } from './nav-user'
-import { TeamSwitcher } from './team-switcher'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '../../organisms'
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarRail,
+} from '../../organisms'
 import { type ComponentProps } from 'react'
+import { NavSecondary } from './nav-secondary'
 
-const data = {
-    user: {
-        name: 'franktronics',
-        email: 'm@example.com',
-        avatar: '/avatars/shadcn.jpg',
-    },
-    teams: [
-        {
-            name: 'Pruftnet',
-            logo: GalleryVerticalEnd,
-            plan: 'Session',
-        },
-    ],
-    navMain: [
-        {
-            title: 'Scan',
-            url: '/',
-            icon: Radar,
-            isActive: true,
-            items: [],
-        },
-        {
-            title: 'Analyze',
-            url: '/analyze',
-            icon: Database,
-            isActive: true,
-            items: [],
-        },
-        {
-            title: 'Settings',
-            url: '#',
-            icon: Settings2,
-            items: [
-                {
-                    title: 'General',
-                    url: '#',
-                },
-                {
-                    title: 'Exports',
-                    url: '#',
-                },
-                {
-                    title: 'Advanced',
-                    url: '#',
-                },
-            ],
-        },
-    ],
+export type SidebarConfigType = {
+    navMain: {
+        title: string
+        url: string
+        icon?: LucideIcon
+        isActive?: boolean
+        items?: {
+            title: string
+            url: string
+        }[]
+    }[]
+    navSecondary: {
+        title: string
+        url: string
+        icon: LucideIcon
+    }[]
 }
 
-export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+    config,
+    ...props
+}: { config: SidebarConfigType } & ComponentProps<typeof Sidebar>) {
     return (
         <Sidebar variant="sidebar" collapsible="icon" {...props}>
             <SidebarHeader>
-                <TeamSwitcher teams={data.teams} />
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            asChild
+                            className="data-[slot=sidebar-menu-button]:p-1.5!"
+                        >
+                            <a href="#">
+                                <Waypoints className="size-6!" />
+                                <span className="text-base font-semibold">Pruftnet</span>
+                            </a>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
+                <NavMain items={config.navMain} />
+                <NavSecondary items={config.navSecondary} className="mt-auto" />
             </SidebarContent>
-            <SidebarFooter>
-                <NavUser user={data.user} />
-            </SidebarFooter>
+            <SidebarFooter></SidebarFooter>
             <SidebarRail />
         </Sidebar>
     )

@@ -1,4 +1,4 @@
-import { AppSidebar } from './sidebar-config.tsx'
+import { AppSidebar, type SidebarConfigType } from './sidebar-config'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -13,13 +13,15 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '../../organisms'
 import { cn } from '@repo/utils'
 import { ComponentPropsWithoutRef } from 'react'
 
-export type LayoutDashboardProps = {} & ComponentPropsWithoutRef<'main'>
+export type LayoutDashboardProps = {
+    sidebarConfig: SidebarConfigType
+} & ComponentPropsWithoutRef<'main'>
 
 export function DashboardLayout(props: LayoutDashboardProps) {
-    const { children, className, ...rest } = props
+    const { children, className, sidebarConfig, ...rest } = props
     return (
         <SidebarProvider defaultOpen={false}>
-            <AppSidebar />
+            <AppSidebar config={sidebarConfig} />
             <SidebarInset className="relative">
                 <header
                     className={cn(
