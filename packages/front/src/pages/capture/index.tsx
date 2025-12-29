@@ -39,7 +39,7 @@ function HomeContent() {
     )
 }
 
-function Index() {
+function Capture() {
     return (
         <ScanControlProvider>
             <HomeContent />
@@ -47,4 +47,4 @@ function Index() {
     )
 }
 
-export default Index
+export default Capture

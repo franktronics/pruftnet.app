@@ -5,9 +5,9 @@ import {
     createRouter,
     useRouterState,
 } from '@tanstack/react-router'
-import Home from '../pages/home'
-import Settings from '../pages/settings'
 import Error404 from '../pages/error/404'
+import Capture from '../pages/capture'
+import { createSettingsRoutes } from '../pages/settings/routes'
 import { DashboardLayout, type BreadcrumbItem } from '@repo/ui/templates'
 import { SidebarConfig } from './sidebar-config'
 import { useMemo } from 'react'
@@ -52,7 +52,7 @@ function RootComponent() {
     )
 }
 
-const rootRoute = createRootRoute({
+export const rootRoute = createRootRoute({
     component: RootComponent,
     notFoundComponent: Error404,
 })
@@ -60,16 +60,12 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: Home,
+    component: Capture,
 })
 
-const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/settings',
-    component: Settings,
-})
+const settingsRouteTree = createSettingsRoutes(rootRoute)
 
-const routeTree = rootRoute.addChildren([indexRoute, settingsRoute])
+const routeTree = rootRoute.addChildren([indexRoute, settingsRouteTree])
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {

@@ -46,11 +46,8 @@ export function DashboardLayout(props: LayoutDashboardProps) {
                                 {breadcrumbs.map((item, index) => {
                                     const isLast = index === breadcrumbs.length - 1
                                     return (
-                                        <>
-                                            <BreadcrumbItem
-                                                key={item.title}
-                                                className="hidden md:block"
-                                            >
+                                        <div key={item.title} className="flex items-center">
+                                            <BreadcrumbItem className="hidden md:block">
                                                 {isLast ? (
                                                     <BreadcrumbPage>{item.title}</BreadcrumbPage>
                                                 ) : (
@@ -60,12 +57,9 @@ export function DashboardLayout(props: LayoutDashboardProps) {
                                                 )}
                                             </BreadcrumbItem>
                                             {!isLast && (
-                                                <BreadcrumbSeparator
-                                                    key={`${item.title}-separator`}
-                                                    className="hidden md:block"
-                                                />
+                                                <BreadcrumbSeparator className="ml-2 hidden md:block" />
                                             )}
-                                        </>
+                                        </div>
                                     )
                                 })}
                             </BreadcrumbList>

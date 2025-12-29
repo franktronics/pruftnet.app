@@ -3,7 +3,7 @@ import { Database, Radar, Settings, Info, LifeBuoy } from 'lucide-react'
 export const SidebarConfig = {
     navMain: [
         {
-            title: 'Scan',
+            title: 'Capture',
             url: '/',
             icon: Radar,
             isActive: true,
