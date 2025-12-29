@@ -13,12 +13,18 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '../../organisms'
 import { cn } from '@repo/utils'
 import { ComponentPropsWithoutRef } from 'react'
 
+export type BreadcrumbItem = {
+    title: string
+    href?: string
+}
+
 export type LayoutDashboardProps = {
     sidebarConfig: SidebarConfigType
+    breadcrumbs?: BreadcrumbItem[]
 } & ComponentPropsWithoutRef<'main'>
 
 export function DashboardLayout(props: LayoutDashboardProps) {
-    const { children, className, sidebarConfig, ...rest } = props
+    const { children, className, sidebarConfig, breadcrumbs = [], ...rest } = props
     return (
         <SidebarProvider defaultOpen={false}>
             <AppSidebar config={sidebarConfig} />
@@ -37,15 +43,31 @@ export function DashboardLayout(props: LayoutDashboardProps) {
                         <Separator orientation="vertical" className="mr-2 h-4" />
                         <Breadcrumb>
                             <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="#">
-                                        Building Your Application
-                                    </BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                                </BreadcrumbItem>
+                                {breadcrumbs.map((item, index) => {
+                                    const isLast = index === breadcrumbs.length - 1
+                                    return (
+                                        <>
+                                            <BreadcrumbItem
+                                                key={item.title}
+                                                className="hidden md:block"
+                                            >
+                                                {isLast ? (
+                                                    <BreadcrumbPage>{item.title}</BreadcrumbPage>
+                                                ) : (
+                                                    <BreadcrumbLink href={item.href}>
+                                                        {item.title}
+                                                    </BreadcrumbLink>
+                                                )}
+                                            </BreadcrumbItem>
+                                            {!isLast && (
+                                                <BreadcrumbSeparator
+                                                    key={`${item.title}-separator`}
+                                                    className="hidden md:block"
+                                                />
+                                            )}
+                                        </>
+                                    )
+                                })}
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
