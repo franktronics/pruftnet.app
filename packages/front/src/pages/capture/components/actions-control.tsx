@@ -1,6 +1,6 @@
 import { cn, cond } from '@repo/utils'
 import { type ComponentPropsWithoutRef } from 'react'
-import { CAPTURE_STATUS, useScanControlContext } from '../stores/scan-control.context'
+import { CAPTURE_STATUS, useScanControlContext } from '../context/scan-control-context'
 import { Button, Spinner } from '@repo/ui/atoms'
 import { CircleX, Play, Square } from 'lucide-react'
 

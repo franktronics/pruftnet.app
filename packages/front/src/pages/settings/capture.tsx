@@ -1,29 +1,26 @@
 import {
-    Button,
     Card,
     CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
-    Checkbox,
     Input,
     Label,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
     Separator,
+    Switch,
 } from '@repo/ui/atoms'
+import { useId } from 'react'
 
 export function CaptureSettings() {
+    const maxPacketId = useId()
+    const promiscuousId = useId()
+    const protocolConfigId = useId()
+
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium">Analysis</h3>
-                <p className="text-muted-foreground text-sm">
-                    Configure packet capture and protocol analysis settings.
-                </p>
+                <h3 className="text-lg font-medium">Capture</h3>
+                <p className="text-muted-foreground text-sm">Configure packet capture settings.</p>
             </div>
             <Separator />
 
@@ -34,9 +31,9 @@ export function CaptureSettings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="packet-limit">Maximum Packet Buffer Size</Label>
+                        <Label htmlFor={maxPacketId}>Maximum Packet Buffer Size</Label>
                         <Input
-                            id="packet-limit"
+                            id={maxPacketId}
                             type="number"
                             placeholder="10000"
                             defaultValue="10000"
@@ -47,73 +44,46 @@ export function CaptureSettings() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="capture-filter">Default Capture Filter</Label>
-                        <Input id="capture-filter" placeholder="tcp or udp" defaultValue="" />
+                        <div className="flex items-center gap-6">
+                            <Label
+                                htmlFor={promiscuousId}
+                                className="text-sm leading-none font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                                Promiscuous mode
+                            </Label>
+                            <Switch id={promiscuousId} />
+                        </div>
                         <p className="text-muted-foreground text-xs">
-                            BPF filter syntax (e.g., "tcp port 80" or "host 192.168.1.1").
+                            Capture all packets on the network segment, not just those addressed to
+                            this host.
                         </p>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="promiscuous" defaultChecked />
-                        <Label
-                            htmlFor="promiscuous"
-                            className="text-sm leading-none font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                            Enable promiscuous mode
-                        </Label>
-                    </div>
-
-                    <Button>Save changes</Button>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Protocol Analysis</CardTitle>
+                    <CardTitle>Packet Parsing</CardTitle>
                     <CardDescription>
-                        Configure protocol detection and analysis options.
+                        Configure how captured packets are parsed and interpreted.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="protocol-depth">Analysis Depth</Label>
-                        <Select defaultValue="full">
-                            <SelectTrigger id="protocol-depth">
-                                <SelectValue placeholder="Select depth" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="basic">Basic (Layer 2-3)</SelectItem>
-                                <SelectItem value="standard">Standard (Layer 2-4)</SelectItem>
-                                <SelectItem value="full">Full (All Layers)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor={protocolConfigId}>
+                            protocol configuration input file (Ethernet file)
+                        </Label>
+                        <Input
+                            id={protocolConfigId}
+                            type="text"
+                            placeholder=".../protocols/ethernet.json"
+                        />
                         <p className="text-muted-foreground text-xs">
-                            Higher depth provides more detailed analysis but uses more resources.
+                            Path to the configuration file for the Ethernet input protocol. The path
+                            to the configuration files for other protocols is defined in the
+                            Ethernet configuration file.
                         </p>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="auto-detect" defaultChecked />
-                        <Label
-                            htmlFor="auto-detect"
-                            className="text-sm leading-none font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                            Auto-detect protocols
-                        </Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="decode-payload" />
-                        <Label
-                            htmlFor="decode-payload"
-                            className="text-sm leading-none font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                            Decode application-layer payloads
-                        </Label>
-                    </div>
-
-                    <Button>Save changes</Button>
                 </CardContent>
             </Card>
         </div>

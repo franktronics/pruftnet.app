@@ -1,6 +1,22 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Separator } from '@repo/ui/atoms'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+    Label,
+    RadioGroup,
+    RadioGroupItem,
+    Separator,
+} from '@repo/ui/atoms'
+import { useTheme } from '@repo/ui/molecules'
+import { cn } from '@repo/utils'
+import { Moon, PanelsTopLeft, Sun, type LucideIcon } from 'lucide-react'
+import { useId, type ComponentProps } from 'react'
 
 export function GeneralSettings() {
+    const { setTheme, theme } = useTheme()
+
     return (
         <div className="space-y-6">
             <div>
@@ -12,46 +28,48 @@ export function GeneralSettings() {
             <Separator />
             <Card>
                 <CardHeader>
-                    <CardTitle>Application Name</CardTitle>
-                    <CardDescription>
-                        The name displayed throughout the application.
-                    </CardDescription>
+                    <CardTitle>Theme</CardTitle>
+                    <CardDescription>Choose your preferred application theme.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="app-name">Name</Label>
-                        <Input
-                            id="app-name"
-                            placeholder="Pruftnet"
-                            defaultValue="Pruftnet"
-                        />
-                    </div>
-                    <Button>Save changes</Button>
+                    <RadioGroup
+                        defaultValue={theme}
+                        onValueChange={setTheme}
+                        className="grid grid-cols-3 gap-4"
+                    >
+                        <RadioThemeCard value="light" text="Light" icon={Sun} />
+                        <RadioThemeCard value="dark" text="Dark" icon={Moon} />
+                        <RadioThemeCard value="system" text="System" icon={PanelsTopLeft} />
+                    </RadioGroup>
                 </CardContent>
             </Card>
+        </div>
+    )
+}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Language</CardTitle>
-                    <CardDescription>
-                        Select your preferred language for the application.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
-                        <Input
-                            id="language"
-                            placeholder="English"
-                            defaultValue="English"
-                            disabled
-                        />
-                        <p className="text-muted-foreground text-xs">
-                            Additional languages will be available in future updates.
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+type RadioThemeCardProps = {
+    value: string
+    icon: LucideIcon
+    text: string
+} & ComponentProps<'div'>
+
+const RadioThemeCard = (props: RadioThemeCardProps) => {
+    const { className, value, icon: Icon, text, ...rest } = props
+    const id = useId()
+
+    return (
+        <div className="relative flex-1">
+            <RadioGroupItem value={value} id={id} className="peer sr-only" aria-label={text} />
+            <Label
+                htmlFor={id}
+                className={cn(
+                    'border-muted bg-popover hover:bg-accent hover:text-accent-foreground flex cursor-pointer flex-col items-center justify-between rounded-md border-2 p-4 transition-colors',
+                    'peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary',
+                )}
+            >
+                <Icon className="mb-3 h-6 w-6" />
+                <span className="text-sm font-medium">{text}</span>
+            </Label>
         </div>
     )
 }

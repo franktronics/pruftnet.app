@@ -8,7 +8,7 @@ import { Layout } from './layout'
 import { TabScan } from './components/tab-scan'
 import { TabGraph } from './components/tab-graph'
 import { ActionsControl } from './components/actions-control'
-import { ScanControlProvider } from './stores/scan-control.context'
+import { ScanControlProvider } from './context/scan-control-context'
 import { CaptureFilter } from './components/capture-filter'
 import { InterfaceSelector } from './components/interface-selector'
 

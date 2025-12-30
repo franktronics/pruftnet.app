@@ -9,7 +9,7 @@ import {
 import { cn, useQueryFetcher } from '@repo/utils'
 import { fetcher } from '../../../config/client-trpc'
 import type { NetworkInterfaceInfo } from '@repo/core-node/types'
-import { useScanControlContext } from '../stores/scan-control.context'
+import { useScanControlContext } from '../context/scan-control-context'
 import { ChevronDown, CircleSmall } from 'lucide-react'
 
 type InterfaceSelectorProps = {} & ComponentPropsWithoutRef<'div'>
@@ -119,7 +119,7 @@ const InterfaceCard = (props: InterfaceCardProps) => {
             <div className="shrink-0">
                 <CircleSmall
                     className={cn('text-muted-foreground size-4', {
-                        'fill-white text-white': isSelected,
+                        'fill-foreground text-foreground': isSelected,
                     })}
                 />
             </div>
