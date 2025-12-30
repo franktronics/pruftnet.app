@@ -7,3 +7,5 @@ export type {
 
 export type { PacketData } from '@repo/core-cpp'
 export type { PacketDataForClient } from './controllers/scan-controller'
+
+export type { AppSettings } from './controllers/settings-controller'

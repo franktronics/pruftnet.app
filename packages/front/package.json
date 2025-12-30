@@ -14,10 +14,11 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@repo/core-node": "workspace:*",
         "@repo/ui": "workspace:*",
         "@repo/utils": "workspace:*",
-        "@repo/core-node": "workspace:*",
         "@tailwindcss/vite": "^4.1.17",
+        "@tanstack/react-form": "^1.27.7",
         "@tanstack/react-router": "^1.139.3",
         "@tanstack/react-virtual": "^3.13.12",
         "lucide-react": "^0.554.0",

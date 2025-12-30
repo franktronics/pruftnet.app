@@ -1,0 +1,14 @@
+import { trpcServer, trpcContext, type MapStoreType } from '@repo/utils'
+import { NetworkSniffer, type PacketData } from '@repo/core-cpp'
+import { AppSettings } from '#controllers/settings-controller.js'
+
+const { createWsProcedure, createProcedure } = trpcServer
+const { MapStore } = trpcContext
+
+const packetStore: MapStoreType<number, PacketData> = new MapStore()
+const scanStore: MapStoreType<number, NetworkSniffer> = new MapStore()
+const settingsStore: MapStoreType<'settings', AppSettings> = new MapStore()
+const stores = { packets: packetStore, scan: scanStore, settings: settingsStore }
+
+export const procedure = createProcedure(stores)
+export const wsProcedure = createWsProcedure(stores)

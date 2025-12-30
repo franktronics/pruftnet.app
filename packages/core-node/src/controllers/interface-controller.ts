@@ -1,9 +1,9 @@
 import os, { type NetworkInterfaceInfo } from 'os'
-import { trpcServer } from '@repo/utils'
 import { z } from 'zod'
-const { createProcedure, ServerError } = trpcServer
+import { procedure } from '../routes/root'
+import { trpcServer } from '@repo/utils'
 
-const procedure = createProcedure()
+const { ServerError } = trpcServer
 
 export class InterfaceController {
     constructor() {}

@@ -27,6 +27,16 @@ export class MapStore<Key, Val> extends Store<Key, Val> {
         return Array.from(this.store.entries())
     }
 
+    toObject(): Record<string, any> {
+        const obj: Record<string, any> = {}
+        for (const [key, value] of this.store.entries()) {
+            if (typeof key === 'string' || typeof key === 'number' || typeof key === 'symbol') {
+                obj[String(key)] = value
+            }
+        }
+        return obj
+    }
+
     clear(): void {
         this.store.clear()
     }

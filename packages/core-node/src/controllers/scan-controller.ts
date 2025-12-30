@@ -1,4 +1,3 @@
-import { trpcServer, trpcContext } from '@repo/utils'
 import {
     NetworkSniffer,
     type PacketData,
@@ -6,14 +5,7 @@ import {
     type ParsedPacket,
 } from '@repo/core-cpp'
 import { z } from 'zod'
-
-const { createWsProcedure, createProcedure, ServerError } = trpcServer
-const { MapStore } = trpcContext
-
-const packetStore = new MapStore<number, PacketData>()
-const scanStore = new MapStore<number, NetworkSniffer>()
-const procedure = createProcedure({ packets: packetStore, scan: scanStore })
-const wsProcedure = createWsProcedure({ packets: packetStore, scan: scanStore })
+import { procedure, wsProcedure } from '../routes/root'
 
 export type PacketDataForClient = {
     parsed: ParsedPacket
@@ -36,21 +28,21 @@ export class ScanController {
                 store.scan.set(scanId, sniffer)
 
                 let counter = 0
-                try{
-                sniffer.startSniffing(input.interface, (packet: PacketData) => {
-                    store.packets.set(counter++, packet)
-                    returnCb({
-                        parsed: packet.parsed,
-                        raw: {
-                            length: packet.raw.length,
-                            timestamp: packet.raw.timestamp,
-                            valid: packet.raw.valid,
-                        },
+                try {
+                    sniffer.startSniffing(input.interface, (packet: PacketData) => {
+                        store.packets.set(counter++, packet)
+                        returnCb({
+                            parsed: packet.parsed,
+                            raw: {
+                                length: packet.raw.length,
+                                timestamp: packet.raw.timestamp,
+                                valid: packet.raw.valid,
+                            },
+                        })
                     })
-                })
-            }catch(err){
-                console.error('Error starting sniffer:', err)
-            }
+                } catch (err) {
+                    console.error('Error starting sniffer:', err)
+                }
             })
     }
 

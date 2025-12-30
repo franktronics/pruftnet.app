@@ -58,13 +58,13 @@ const RadioThemeCard = (props: RadioThemeCardProps) => {
     const id = useId()
 
     return (
-        <div className="relative flex-1">
+        <div className="relative flex-1" {...rest}>
             <RadioGroupItem value={value} id={id} className="peer sr-only" aria-label={text} />
             <Label
                 htmlFor={id}
                 className={cn(
-                    'border-muted bg-popover hover:bg-accent hover:text-accent-foreground flex cursor-pointer flex-col items-center justify-between rounded-md border-2 p-4 transition-colors',
-                    'peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary',
+                    'border-muted bg-popover hover:bg-accent hover:text-accent-foreground flex cursor-pointer flex-col items-center justify-between rounded-md border p-4 transition-colors',
+                    'peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 [&:has([data-state=checked])]:border-primary',
                 )}
             >
                 <Icon className="mb-3 h-6 w-6" />

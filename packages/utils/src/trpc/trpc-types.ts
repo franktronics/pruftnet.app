@@ -1,3 +1,6 @@
+import { MapStore } from './context/map-store'
+import { ClientError } from './client/client-error'
+
 export enum ErrorType {
     IPC_ERROR = 'ipc-error',
     HTTP_ERROR = 'http-error',
@@ -8,8 +11,12 @@ export enum ErrorType {
 export type CustomErrorType = {
     code: number
     message: string
-    type: ErrorType
+    type?: ErrorType
     origin?: string
     whatToDo?: string
     data?: any
 }
+
+export type ClientErrorType = ClientError
+
+export type MapStoreType<K, V> = MapStore<K, V>

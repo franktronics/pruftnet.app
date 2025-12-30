@@ -14,8 +14,7 @@
     "scripts": {
         "build:cpp": "cmake-js compile",
         "build:ts": "tsc",
-        "build:copy": "mkdir -p dist && cp -r src/protocols dist/protocols",
-        "build": "pnpm run build:cpp && pnpm run build:ts && pnpm run build:copy",
+        "build": "pnpm run build:cpp && pnpm run build:ts",
         "test:build": "cd tests && mkdir -p build && cd build && cmake .. && cmake --build .",
         "test:run": "cd tests && bash test.sh"
     },

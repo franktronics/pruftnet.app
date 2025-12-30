@@ -9,7 +9,7 @@ export class ClientError extends Error {
     constructor(props: CustomErrorType) {
         super(props.message)
         this.name = 'ClientError:' + props.type
-        this.cause = { ...props }
+        this.cause = { ...props, type: props.type || ErrorType.GENERIC_ERROR }
     }
 
     public getErrorData(): CustomErrorType {
@@ -18,7 +18,7 @@ export class ClientError extends Error {
 
     get type(): ErrorType {
         const cause = this.cause as CustomErrorType
-        return cause.type
+        return cause.type || ErrorType.GENERIC_ERROR
     }
 
     get origin(): string | undefined {

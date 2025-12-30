@@ -4,6 +4,7 @@ export abstract class Store<Key, Val = any> {
     abstract has(key: Key): boolean
     abstract size(): number
     abstract toArray(): Array<[Key, Val]>
+    abstract toObject(): Record<string, any>
     abstract delete(key: Key): void
     abstract clear(): void
 }
