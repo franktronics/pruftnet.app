@@ -5,7 +5,7 @@ import { useLoaderSteps } from './hooks/use-loader-steps'
 
 export function AppLoader(props: ComponentProps<'div'>) {
     const { children, ...rest } = props
-    const { getSettings } = useSettingsContext()
+    const { getSettings, appSettings } = useSettingsContext()
 
     const steps = useMemo(
         () => [
@@ -18,6 +18,9 @@ export function AppLoader(props: ComponentProps<'div'>) {
     const { state, runSteps, completed } = useLoaderSteps({ steps })
 
     useEffect(() => {
+        if (Object.entries(appSettings).length !== 0) {
+            return
+        }
         void runSteps()
     }, [runSteps])
 

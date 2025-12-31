@@ -20,3 +20,5 @@ export type CustomErrorType = {
 export type ClientErrorType = ClientError
 
 export type MapStoreType<K, V> = MapStore<K, V>
+
+export { type HttpMethod } from './client/client'

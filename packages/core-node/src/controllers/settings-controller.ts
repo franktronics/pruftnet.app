@@ -80,13 +80,8 @@ export class SettingsController {
         }
     }
 
-    private async fakeWait(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms))
-    }
-
     private getSettings() {
         return procedure.input(z.object({})).query(async ({ store }) => {
-            await this.fakeWait(5000)
             const settings = await this.loadSettingsFromFile(this.settingsPath)
             store.settings.set('settings', settings)
             return settings

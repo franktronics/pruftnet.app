@@ -1,0 +1,15 @@
+[
+{"name":"process_name","args":{"name":"tsc"},"cat":"__metadata","ph":"M","ts":50338.375,"pid":1,"tid":1},
+{"name":"thread_name","args":{"name":"Main"},"cat":"__metadata","ph":"M","ts":50338.375,"pid":1,"tid":1},
+{"name":"TracingStartedInBrowser","cat":"disabled-by-default-devtools.timeline","ph":"M","ts":50338.375,"pid":1,"tid":1},
+{"pid":1,"tid":1,"ph":"B","cat":"program","ts":51108.292,"name":"createProgram","args":{"configFilePath":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.json"}},
+{"pid":1,"tid":1,"ph":"B","cat":"parse","ts":51941.709,"name":"createSourceFile","args":{"path":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.app.json"}},
+{"pid":1,"tid":1,"ph":"E","cat":"parse","ts":52692.709,"name":"createSourceFile","args":{"path":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.app.json"}},
+{"pid":1,"tid":1,"ph":"B","cat":"parse","ts":59548.917,"name":"createSourceFile","args":{"path":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.node.json"}},
+{"pid":1,"tid":1,"ph":"E","cat":"parse","ts":59846.625,"name":"createSourceFile","args":{"path":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.node.json"}},
+{"pid":1,"tid":1,"ph":"X","cat":"parse","ts":59868.291999999994,"name":"parseJsonSourceFileConfigFileContent","dur":555.0420000000013,"args":{"path":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.node.json"}},
+{"pid":1,"tid":1,"ph":"E","cat":"program","ts":61254.458999999995,"name":"createProgram","args":{"configFilePath":"/Users/wilson/Documents/projects/pruftnet/packages/front/tsconfig.json"}},
+{"pid":1,"tid":1,"ph":"B","cat":"emit","ts":61560.875,"name":"emit","args":{}},
+{"pid":1,"tid":1,"ph":"B","cat":"emit","ts":61678.708999999995,"name":"emitBuildInfo","args":{}},
+{"pid":1,"tid":1,"ph":"E","cat":"emit","ts":61976.375,"name":"emitBuildInfo","args":{}},
+{"pid":1,"tid":1,"ph":"E","cat":"emit","ts":61998.708999999995,"name":"emit","args":{}}

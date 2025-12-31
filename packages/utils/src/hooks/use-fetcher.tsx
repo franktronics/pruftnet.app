@@ -1,3 +1,4 @@
+import { HttpMethod } from '@repo/utils'
 import { cn } from '../classnames/classnames'
 import { ClientError } from '../trpc/client/client-error'
 import {
@@ -70,56 +71,70 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
     return { ...query, fetchData }
 }
 
-export type MutateFetcherProps<T> = {
-    procedure: () => Promise<T>
+export type MutateFetcherProps<K, T> = {
+    procedure: {
+        mutate: (input: K, method?: HttpMethod) => () => Promise<T>
+    }
+    method?: HttpMethod
     popupOnError?: boolean
     popupOnFetching?: {
         fetching: string
         success: string
     }
-} & Omit<UseMutationOptions<T, ClientError>, 'mutationFn'>
+} & Omit<UseMutationOptions<T, ClientError, K>, 'mutationFn'>
 
-export function useMutateFetcher<T>(props: MutateFetcherProps<T>) {
-    const { procedure, popupOnError = true, popupOnFetching, ...mutationOptions } = props
+export function useMutateFetcher<K, T>(props: MutateFetcherProps<K, T>) {
+    const {
+        procedure,
+        method = 'POST',
+        popupOnError = true,
+        popupOnFetching,
+        ...mutationOptions
+    } = props
 
     const mutation = useMutation({
-        mutationFn: procedure,
+        mutationFn: async (input) => {
+            return await procedure.mutate(input, method)()
+        },
         retry: false,
         ...mutationOptions,
     })
 
-    const mutateData = useCallback(async () => {
-        let toastId: string | number | undefined
+    const mutateData = useCallback(
+        async (input: K) => {
+            let toastId: string | number | undefined
 
-        if (popupOnFetching) {
-            toastId = toast.loading(popupOnFetching.fetching)
-        }
-
-        try {
-            const result = await mutation.mutateAsync()
-
-            if (toastId) {
-                toast.success(popupOnFetching?.success, { id: toastId })
+            if (popupOnFetching) {
+                toastId = toast.loading(popupOnFetching.fetching)
             }
 
-            return result
-        } catch (error) {
-            if (toastId) toast.dismiss(toastId)
+            try {
+                const result = await mutation.mutateAsync(input)
 
-            if (popupOnError && error instanceof ClientError) {
-                toast.error(<ClientErrorParser error={error} />, {
-                    duration: 5000,
-                })
+                if (toastId) {
+                    toast.success(popupOnFetching?.success, { id: toastId })
+                }
+
+                return result
+            } catch (error) {
+                if (toastId) toast.dismiss(toastId)
+
+                if (popupOnError && error instanceof ClientError) {
+                    toast.error(<ClientErrorParser error={error} />, {
+                        duration: 5000,
+                    })
+                }
+
+                throw error
             }
-
-            throw error
-        }
-    }, [procedure, popupOnError, popupOnFetching, mutation])
+        },
+        [procedure, popupOnError, popupOnFetching, mutation],
+    )
 
     return { ...mutation, mutateData }
 }
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             refetchOnWindowFocus: false,

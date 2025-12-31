@@ -44,7 +44,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
 
     const [rawPackets, setRawPackets] = useState<{ parsed: any; raw: any; id: number }[]>([])
     const { mutateData: stopScan } = useMutateFetcher({
-        procedure: fetcher.scan.stop.mutate({}, 'DELETE'),
+        procedure: fetcher.scan.stop,
+        method: 'DELETE',
         popupOnFetching: {
             fetching: 'Stopping scan...',
             success: 'Scan stopped successfully',
@@ -59,7 +60,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                 return
             }
             if (status === CAPTURE_STATUS.IDLE) {
-                await stopScan()
+                await stopScan({})
                 setCaptureStatus(CAPTURE_STATUS.IDLE)
             } else if (status === CAPTURE_STATUS.INNITIALIZING) {
                 wsFetcher.scan.start.handle(

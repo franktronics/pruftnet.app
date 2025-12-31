@@ -1,5 +1,5 @@
 {
-    "maxPacketBufferSize": 10000,
-    "promiscuousMode": true,
-    "protocolEntryFile": "ethernet.json"
+    "maxPacketBufferSize": 99999,
+    "promiscuousMode": false,
+    "protocolEntryFile": "./protocols/ethernet.json"
 }

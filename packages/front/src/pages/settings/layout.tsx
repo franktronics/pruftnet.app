@@ -1,6 +1,7 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { cn } from '@repo/utils'
 import { Button, Separator } from '@repo/ui/atoms'
+import { useSettingsContext } from './context/settings-context'
 
 type SettingsNavItem = {
     title: string
@@ -21,6 +22,7 @@ const settingsNav: SettingsNavItem[] = [
 export function SettingsLayout() {
     const routerState = useRouterState()
     const pathname = routerState.location.pathname
+    const { form, resetAppSettings, isPending } = useSettingsContext()
 
     return (
         <div
@@ -73,13 +75,45 @@ export function SettingsLayout() {
             <div>
                 <Separator className="my-6" />
                 <aside className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <Button variant="secondary">Reset to Defaults</Button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline">Cancel</Button>
-                        <Button variant="default">Save Changes</Button>
-                    </div>
+                    <form.Subscribe
+                        selector={(state) => [state.canSubmit, state.isSubmitting]}
+                        children={([canSubmit, isSubmitting]) => (
+                            <>
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={isPending || isSubmitting || !canSubmit}
+                                        onClick={async () => {
+                                            await resetAppSettings()
+                                        }}
+                                    >
+                                        Reset to Defaults
+                                    </Button>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={isPending}
+                                        onClick={() => {
+                                            form.reset()
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="default"
+                                        disabled={isPending || isSubmitting || !canSubmit}
+                                        onClick={form.handleSubmit}
+                                    >
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    />
                 </aside>
             </div>
         </div>

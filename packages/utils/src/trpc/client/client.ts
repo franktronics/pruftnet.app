@@ -3,7 +3,7 @@ import { ClientError } from './client-error'
 import type { RouterDef, ProcedureDefinition } from '../server/procedure'
 import { z } from 'zod'
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export interface ClientConfig {
     baseHttpUrl: string
