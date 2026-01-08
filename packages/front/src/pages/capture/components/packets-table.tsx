@@ -2,6 +2,8 @@ import { Table, TableBody, TableHead, TableHeader, TableRow, Badge } from '@repo
 import { useRef, type ComponentPropsWithoutRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@repo/utils'
+import type { PacketDataForClient } from '@repo/core-node/types'
+import { PacketFormater } from '../utils/packets-formatter'
 
 export type RowDataType = {
     index: number
@@ -14,16 +16,17 @@ export type RowDataType = {
 }
 
 export type PacketsTableProps = {
-    data: RowDataType[]
-    onHandleRowSelect: (n: number) => void
+    packets: PacketDataForClient[]
+    onHandleRowSelect: (n: number | null) => void
+    selectedRow: number | null
 } & ComponentPropsWithoutRef<'div'>
 export const PacketsTable = (props: PacketsTableProps) => {
-    const { data, className, onHandleRowSelect, ...rest } = props
+    const { packets, className, onHandleRowSelect, selectedRow, ...rest } = props
 
     const parentRef = useRef<HTMLDivElement>(null)
 
     const virtualizer = useVirtualizer({
-        count: data.length,
+        count: packets.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 53,
         overscan: 10,
@@ -63,25 +66,42 @@ export const PacketsTable = (props: PacketsTableProps) => {
                                             'hover:bg-muted/50 flex w-full items-center border-b transition-colors',
                                             'absolute top-0 left-0',
                                             'cursor-pointer *:px-2',
+                                            { 'bg-muted!': selectedRow === virtualItem.index },
                                         )}
-                                        onClick={() => onHandleRowSelect(virtualItem.index)}
+                                        onClick={() => {
+                                            if (selectedRow === virtualItem.index) {
+                                                onHandleRowSelect(null)
+                                                return
+                                            }
+                                            onHandleRowSelect(virtualItem.index)
+                                        }}
                                     >
                                         <div className="w-16 text-center font-medium">
-                                            {data[virtualItem.index].index}
+                                            {packets[virtualItem.index].id}
                                         </div>
-                                        <div className="w-32">{data[virtualItem.index].time}</div>
-                                        <div className="w-40">{data[virtualItem.index].src}</div>
-                                        <div className="w-40">{data[virtualItem.index].dest}</div>
+                                        <div className="w-32">
+                                            {PacketFormater.getTime(packets[virtualItem.index])}
+                                        </div>
+                                        <div className="w-40">
+                                            {PacketFormater.getSource(packets[virtualItem.index])}
+                                        </div>
+                                        <div className="w-40">
+                                            {PacketFormater.getDestination(
+                                                packets[virtualItem.index],
+                                            )}
+                                        </div>
                                         <div className="w-24">
                                             <Badge
                                                 variant="outline"
                                                 className="text-muted-foreground px-1.5"
                                             >
-                                                {data[virtualItem.index].protocol}
+                                                {'TCP'}
                                             </Badge>
                                         </div>
-                                        <div className="w-24">{data[virtualItem.index].length}</div>
-                                        <div className="flex-1">{data[virtualItem.index].info}</div>
+                                        <div className="w-24">
+                                            {PacketFormater.getLength(packets[virtualItem.index])}
+                                        </div>
+                                        <div className="flex-1">{'Lorem ipsum'}</div>
                                     </div>
                                 ))}
                             </td>

@@ -42,8 +42,12 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
 
             if (result.error) {
                 if (toastId) toast.dismiss(toastId)
-                if (popupOnError) {
+                if (popupOnError && result.error instanceof ClientError) {
                     toast.error(<ClientErrorParser error={result.error} />, {
+                        duration: 5000,
+                    })
+                } else if (popupOnError) {
+                    toast.error(result.error.message, {
                         duration: 5000,
                     })
                 }
@@ -116,11 +120,15 @@ export function useMutateFetcher<K, T>(props: MutateFetcherProps<K, T>) {
                 }
 
                 return result
-            } catch (error) {
+            } catch (error: any) {
                 if (toastId) toast.dismiss(toastId)
 
                 if (popupOnError && error instanceof ClientError) {
                     toast.error(<ClientErrorParser error={error} />, {
+                        duration: 5000,
+                    })
+                } else if (popupOnError) {
+                    toast.error(error.message, {
                         duration: 5000,
                     })
                 }

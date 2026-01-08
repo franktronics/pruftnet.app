@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
-import type { NetworkInterfaceInfo, PacketData } from '@repo/core-node/types'
+import type { NetworkInterfaceInfo, PacketData, PacketDataForClient } from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -16,7 +16,7 @@ export type CAPTURE_STATUS = (typeof CAPTURE_STATUS)[keyof typeof CAPTURE_STATUS
 export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
     changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
-    rawPackets: { parsed: any; raw: any; id: number }[]
+    packets: { parsed: any; raw: any; id: number }[]
     interf: ContextNetinterface
     setInterface: Dispatch<SetStateAction<ContextNetinterface>>
 }
@@ -42,7 +42,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
 
-    const [rawPackets, setRawPackets] = useState<{ parsed: any; raw: any; id: number }[]>([])
+    const [packets, setPackets] = useState<PacketDataForClient[]>([])
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
         method: 'DELETE',
@@ -66,8 +66,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                 wsFetcher.scan.start.handle(
                     { interface: interf.name },
                     {
-                        onmessage: (data) => {
-                            console.log('Received from ws echo:', data)
+                        onmessage: (data: PacketDataForClient) => {
+                            setPackets((old) => [...old, data])
                         },
                         onerror: (error) => {
                             setCaptureStatus(CAPTURE_STATUS.ERROR)
@@ -86,7 +86,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const value: ScanControlContextType = {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
-        rawPackets,
+        packets,
         interf,
         setInterface,
     }
