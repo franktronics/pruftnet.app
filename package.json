@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev:web": "pnpm -F @repo/web run dev",
-        "dev:desktop": "pnpm -F @repo/desktop run dev",
+        "dev:desktop": "node setup-dev.js && pnpm -F @repo/desktop run dev",
         "build:core": "pnpm -F @repo/core-cpp run build",
         "test:build": "pnpm -F @repo/core-cpp run test:build",
         "test:run": "pnpm -F @repo/core-cpp run test:run",
@@ -13,7 +13,7 @@
         "setup:caps": "sudo setcap cap_net_raw,cap_net_admin=eip $(which node)",
         "check:caps": "getcap $(which node)"
     },
-    "packageManager": "pnpm@10.25.0",
+    "packageManager": "pnpm@10.27.0",
     "engines": {
         "node": ">=18"
     },
