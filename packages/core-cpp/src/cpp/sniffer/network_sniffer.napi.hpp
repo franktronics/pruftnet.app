@@ -14,14 +14,28 @@ struct CallbackData {
 };
 
 class NapiPacketCallback : public PacketCallback {
-public:
-  NapiPacketCallback(Napi::ThreadSafeFunction tsfn, ParserModel* parser) : tsfn_(std::move(tsfn)), parser_(parser) {}
-
-  void operator()(const RawPacket& raw, const ParsedPacket& parsed) const override;
-
 private:
   mutable Napi::ThreadSafeFunction tsfn_;
   ParserModel* parser_;
+
+public:
+  NapiPacketCallback(Napi::ThreadSafeFunction tsfn, ParserModel* parser) : tsfn_(std::move(tsfn)), parser_(parser) {}
+
+  void operator()(const RawPacket& raw, const ParsedPacket& parsed) const override {
+    CallbackData* data = new CallbackData{raw, parsed};
+
+    tsfn_.BlockingCall(data, [this](Napi::Env env, Napi::Function jsCallback, CallbackData* cb_data) {
+      Napi::Object raw_obj = cb_data->raw.toNapiObject(env);
+      Napi::Array parsed_arr = cb_data->parsed.toNapiArray(env);
+
+      Napi::Object result = Napi::Object::New(env);
+      result.Set("raw", raw_obj);
+      result.Set("parsed", parsed_arr);
+
+      jsCallback.Call({result});
+      delete cb_data;
+    });
+  };
 };
 
 class NetworkSnifferWrapper : public Napi::ObjectWrap<NetworkSnifferWrapper> {
@@ -29,8 +43,6 @@ public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   NetworkSnifferWrapper(const Napi::CallbackInfo& info);
   ~NetworkSnifferWrapper();
-
-  static Napi::Object RawPacketToJs(Napi::Env env, const RawPacket& raw);
   ParserModel* getParser() const;
 
 private:
@@ -47,22 +59,6 @@ private:
 };
 
 // Implementation
-
-void NapiPacketCallback::operator()(const RawPacket& raw, const ParsedPacket& parsed) const {
-  CallbackData* data = new CallbackData{raw, parsed};
-
-  tsfn_.BlockingCall(data, [this](Napi::Env env, Napi::Function jsCallback, CallbackData* cb_data) {
-    Napi::Object raw_obj = NetworkSnifferWrapper::RawPacketToJs(env, cb_data->raw);
-    Napi::Array parsed_arr = parser_->toNapiArray(env, cb_data->parsed);
-
-    Napi::Object result = Napi::Object::New(env);
-    result.Set("raw", raw_obj);
-    result.Set("parsed", parsed_arr);
-
-    jsCallback.Call({result});
-    delete cb_data;
-  });
-}
 
 Napi::FunctionReference NetworkSnifferWrapper::constructor;
 
@@ -168,23 +164,4 @@ Napi::Value NetworkSnifferWrapper::StopSniffing(const Napi::CallbackInfo& info) 
 Napi::Value NetworkSnifferWrapper::IsRunning(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   return Napi::Boolean::New(env, sniffer_->isRunning());
-}
-
-Napi::Object NetworkSnifferWrapper::RawPacketToJs(Napi::Env env, const RawPacket& raw) {
-  Napi::Object obj = Napi::Object::New(env);
-
-  Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, raw.length);
-  std::memcpy(buffer.Data(), raw.data.data(), raw.length);
-  Napi::Uint8Array data_array = Napi::Uint8Array::New(env, raw.length, buffer, 0);
-
-  obj.Set("data", data_array);
-  obj.Set("length", Napi::Number::New(env, static_cast<double>(raw.length)));
-
-  auto epoch = raw.timestamp.time_since_epoch();
-  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
-  obj.Set("timestamp", Napi::Number::New(env, static_cast<double>(millis)));
-
-  obj.Set("valid", Napi::Boolean::New(env, raw.valid));
-
-  return obj;
 }

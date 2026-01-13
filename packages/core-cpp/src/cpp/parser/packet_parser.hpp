@@ -21,6 +21,5 @@ public:
   ~PacketParser() override = default;
 
   ParsedPacket parsePacket(const RawPacket& raw_packet) override;
-  Napi::Array toNapiArray(Napi::Env& env, const ParsedPacket& parsed) override;
   void setProtocolsBasePath(const std::string& path) override;
 };

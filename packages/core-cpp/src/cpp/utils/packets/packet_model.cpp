@@ -27,3 +27,22 @@ std::string RawPacket::toString() const {
   result += "────────────────────────────────────────\n";
   return result;
 }
+
+Napi::Object RawPacket::toNapiObject(Napi::Env& env) const {
+  Napi::Object obj = Napi::Object::New(env);
+
+  Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, length);
+  std::memcpy(buffer.Data(), data.data(), length);
+  Napi::Uint8Array data_array = Napi::Uint8Array::New(env, length, buffer, 0);
+
+  obj.Set("data", data_array);
+  obj.Set("length", Napi::Number::New(env, static_cast<double>(length)));
+
+  auto epoch = timestamp.time_since_epoch();
+  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
+  obj.Set("timestamp", Napi::Number::New(env, static_cast<double>(millis)));
+
+  obj.Set("valid", Napi::Boolean::New(env, valid));
+
+  return obj;
+}

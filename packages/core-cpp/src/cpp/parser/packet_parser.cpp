@@ -161,24 +161,3 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
   }
   return result;
 }
-
-Napi::Array PacketParser::toNapiArray(Napi::Env& env, const ParsedPacket& parsed) {
-  Napi::Array result = Napi::Array::New(env, parsed.layers.size());
-
-  for (size_t i = 0; i < parsed.layers.size(); i++) {
-    const ParsedProtocolLayer& layer = parsed.layers[i];
-    Napi::Object layer_obj = Napi::Object::New(env);
-
-    for (const auto& [key, value] : layer.fields) {
-      if (value <= 0xFFFFFFFF) {
-        layer_obj.Set(key, Napi::Number::New(env, static_cast<double>(value)));
-      } else {
-        layer_obj.Set(key, Napi::BigInt::New(env, static_cast<uint64_t>(value)));
-      }
-    }
-
-    result.Set(static_cast<uint32_t>(i), layer_obj);
-  }
-
-  return result;
-}

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "../utils/packets/packet_model.hpp"
 #include <napi.h>
 #include <string>
@@ -12,6 +13,27 @@ struct ParsedProtocolLayer {
 
 struct ParsedPacket {
   std::vector<ParsedProtocolLayer> layers;
+  Napi::Array toNapiArray(Napi::Env& env) const {
+    Napi::Array result = Napi::Array::New(env, layers.size());
+
+    for (size_t i = 0; i < layers.size(); i++) {
+      const ParsedProtocolLayer& layer = layers[i];
+      Napi::Object layer_obj = Napi::Object::New(env);
+
+      for (const auto& [key, value] : layer.fields) {
+        if (value <= 0xFFFFFFFF) {
+          layer_obj.Set(key, Napi::Number::New(env, static_cast<double>(value)));
+        } else {
+          layer_obj.Set(key, Napi::BigInt::New(env, value));
+        }
+      }
+
+      layer_obj.Set("protocol_name", Napi::String::New(env, layer.protocol_name));
+      result.Set(i, layer_obj);
+    }
+
+    return result;
+  }
 };
 
 class ParserModel {

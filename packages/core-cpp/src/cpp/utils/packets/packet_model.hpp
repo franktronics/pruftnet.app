@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <napi.h>
 
 struct RawPacket {
   std::array<uint8_t, MAX_PACKET_SIZE> data;
@@ -15,5 +16,6 @@ struct RawPacket {
 
   RawPacket();
   std::string toString() const;
+  Napi::Object toNapiObject(Napi::Env& env) const;
 };
 
