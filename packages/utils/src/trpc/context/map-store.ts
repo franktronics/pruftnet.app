@@ -7,6 +7,20 @@ export class MapStore<Key, Val> extends Store<Key, Val> {
         return this.store.get(key)
     }
 
+    getByIndex(index: number): Val | undefined {
+        const iterator = this.store.values()
+        let currentIndex = 0
+        let result = iterator.next()
+        while (!result.done) {
+            if (currentIndex === index) {
+                return result.value
+            }
+            currentIndex++
+            result = iterator.next()
+        }
+        return undefined
+    }
+
     set(key: Key, value: Val): void {
         this.store.set(key, value)
     }
