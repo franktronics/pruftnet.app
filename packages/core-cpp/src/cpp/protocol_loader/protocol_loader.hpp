@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <array>
 #include <cstdint>
+#include <nlohmann/json_fwd.hpp>
 
 struct ProtocolField {
     std::string description;
@@ -32,7 +33,9 @@ public:
     ProtocolLoader();
     ~ProtocolLoader();
     ProtocolConfig loadProtocol(const std::string& protocolFilePath);
+    ProtocolConfig loadProtocolFromString(const std::string& protocolJsonString, const std::string& protocolFilePath);
 
 private:
+    ProtocolConfig parseProtocolJson(const nlohmann::json& j);
     std::unordered_map<std::string, ProtocolConfig> protocol_cache_;
 };

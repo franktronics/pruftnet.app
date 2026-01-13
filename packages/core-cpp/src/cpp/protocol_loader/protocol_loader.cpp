@@ -11,24 +11,7 @@ ProtocolLoader::ProtocolLoader() = default;
 
 ProtocolLoader::~ProtocolLoader() = default;
 
-ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath) {
-    auto cache_it = protocol_cache_.find(protocolFilePath);
-    if (cache_it != protocol_cache_.end()) {
-        return cache_it->second;
-    }
-
-    std::ifstream file(protocolFilePath);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open protocol file: " + protocolFilePath);
-    }
-
-    json j;
-    try {
-        file >> j;
-    } catch (const json::exception& e) {
-        throw std::runtime_error("Failed to parse JSON from file " + protocolFilePath + ": " + e.what());
-    }
-
+ProtocolConfig ProtocolLoader::parseProtocolJson(const json& j) {
     ProtocolConfig config;
     config.name = j.at("name").get<std::string>();
 
@@ -37,10 +20,10 @@ ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath)
         if (underscore_pos == std::string::npos) {
             throw std::runtime_error("Invalid header key format: " + field_key);
         }
-        
+
         uint32_t offset = std::stoul(field_key.substr(0, underscore_pos));
         uint32_t length = std::stoul(field_key.substr(underscore_pos + 1));
-        
+
         ProtocolField field;
         field.description = field_data.at("description").get<std::string>();
         config.header[{offset, length}] = field;
@@ -59,6 +42,41 @@ ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath)
         config.next_protocol = next_proto;
     }
 
+    return config;
+}
+
+ProtocolConfig ProtocolLoader::loadProtocol(const std::string& protocolFilePath) {
+    auto cache_it = protocol_cache_.find(protocolFilePath);
+    if (cache_it != protocol_cache_.end()) {
+        return cache_it->second;
+    }
+
+    std::ifstream file(protocolFilePath);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open protocol file: " + protocolFilePath);
+    }
+
+    json j;
+    try {
+        file >> j;
+    } catch (const json::exception& e) {
+        throw std::runtime_error("Failed to parse JSON from file " + protocolFilePath + ": " + e.what());
+    }
+
+    ProtocolConfig config = parseProtocolJson(j);
+    protocol_cache_[protocolFilePath] = config;
+    return config;
+}
+
+ProtocolConfig ProtocolLoader::loadProtocolFromString(const std::string& protocolJsonString, const std::string& protocolFilePath) {
+    json j;
+    try {
+        j = json::parse(protocolJsonString);
+    } catch (const json::exception& e) {
+        throw std::runtime_error("Failed to parse JSON string: " + std::string(e.what()));
+    }
+
+    ProtocolConfig config = parseProtocolJson(j);
     protocol_cache_[protocolFilePath] = config;
     return config;
 }
