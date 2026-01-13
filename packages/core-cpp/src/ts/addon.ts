@@ -12,7 +12,7 @@ let addon: any
 const possiblePaths = [
     join(__dirname, '../../build/Release/repo-core.node'),
     resolve(process.cwd(), 'packages/core-cpp/build/Release/repo-core.node'),
-    join(process.resourcesPath || '', 'repo-core.node'),
+    join((process as any).resourcesPath || '', 'repo-core.node'),
     resolve(__dirname, '../../../../../packages/core-cpp/build/Release/repo-core.node'),
 ]
 
@@ -29,7 +29,9 @@ for (const addonPath of possiblePaths) {
 }
 
 if (!addon) {
-    const pathList = possiblePaths.map((p, i) => `  ${i + 1}. ${p} ${existsSync(p) ? '(exists)' : '(not found)'}`).join('\n')
+    const pathList = possiblePaths
+        .map((p, i) => `  ${i + 1}. ${p} ${existsSync(p) ? '(exists)' : '(not found)'}`)
+        .join('\n')
     throw new Error(`Could not load native addon.\n\nTried paths:\n${pathList}`)
 }
 

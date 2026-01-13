@@ -40,6 +40,5 @@ class ParserModel {
 public:
   virtual ~ParserModel() = default;
   virtual ParsedPacket parsePacket(const RawPacket& raw_packet) = 0;
-  virtual Napi::Array toNapiArray(Napi::Env& env, const ParsedPacket& parsed) = 0;
   virtual void setProtocolsBasePath(const std::string& path) = 0;
 };
