@@ -93,7 +93,7 @@ NetworkSnifferWrapper::NetworkSnifferWrapper(const Napi::CallbackInfo& info)
 
   sniffer_ = std::make_unique<NetworkSniffer>();
   auto parser = std::make_unique<PacketParser>();
-  parser->setProtocolsBasePath(protocols_path_);
+  parser->setProtocolEntryFile(protocols_path_);
   sniffer_->setParser(std::move(parser));
 }
 

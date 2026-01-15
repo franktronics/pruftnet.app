@@ -1,5 +1,6 @@
 export interface ParsedProtocolLayer {
-    [fieldKey: string]: number | bigint
+    file: string
+    [fieldKey: string]: string | number | bigint
 }
 
 export type ParsedPacket = ParsedProtocolLayer[]

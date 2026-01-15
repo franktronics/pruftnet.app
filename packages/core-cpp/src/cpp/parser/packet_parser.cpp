@@ -8,8 +8,8 @@
 
 namespace fs = std::filesystem;
 
-void PacketParser::setProtocolsBasePath(const std::string& path) {
-  protocols_base_path_ = path;
+void PacketParser::setProtocolEntryFile(const std::string& path) {
+  protocol_entry_file_ = path;
 }
 
 uint64_t PacketParser::extractBits(const uint8_t* data, size_t data_length, uint32_t bit_offset,
@@ -103,7 +103,7 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
     return result;
   }
 
-  std::string current_protocol_path = protocols_base_path_ + "/ethernet.json";
+  std::string current_protocol_path = protocol_entry_file_;
   uint32_t current_bit_offset = 0;
 
   while (!current_protocol_path.empty()) {
@@ -116,7 +116,7 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
     }
 
     ParsedProtocolLayer layer;
-    layer.protocol_name = config.name;
+    layer.file = current_protocol_path;
     std::unordered_map<std::string, uint64_t> field_values;
 
     for (const auto& [offset_length, field] : config.header) {

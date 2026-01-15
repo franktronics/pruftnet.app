@@ -9,7 +9,7 @@
 class PacketParser : public ParserModel {
 private:
   ProtocolLoader protocol_loader_;
-  std::string protocols_base_path_;
+  std::string protocol_entry_file_;
 
   uint64_t extractBits(const uint8_t* data, size_t data_length, uint32_t bit_offset, uint32_t bit_length) const;
   uint32_t evaluateStartAfter(const std::string& expression,
@@ -21,5 +21,5 @@ public:
   ~PacketParser() override = default;
 
   ParsedPacket parsePacket(const RawPacket& raw_packet) override;
-  void setProtocolsBasePath(const std::string& path) override;
+  void setProtocolEntryFile(const std::string& path) override;
 };

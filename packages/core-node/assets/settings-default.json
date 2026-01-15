@@ -1,5 +1,5 @@
 {
     "maxPacketBufferSize": 10000,
     "promiscuousMode": true,
-    "protocolEntryFile": "/assets/protocols/ethernet.json"
+    "protocolEntryFile": "/home/wb207/Documents/pruftnet/packages/core-node/assets/protocols/ethernet.json"
 }

@@ -25,9 +25,9 @@ export class ScanController {
                 }),
             )
             .handle(async ({ input, store }, returnCb: (data: PacketDataForClient) => void) => {
-                const sniffer = new NetworkSniffer({
-                    protocolEntryFile: store.settings.get("settings")?.protocolEntryFile || '',
-                })
+                const sniffer = new NetworkSniffer(
+                    store.settings.get('settings')?.protocolEntryFile || '',
+                )
                 const scanId = Date.now()
                 store.scan.set(scanId, sniffer)
 

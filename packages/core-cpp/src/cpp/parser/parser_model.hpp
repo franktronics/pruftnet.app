@@ -7,7 +7,7 @@
 #include <vector>
 
 struct ParsedProtocolLayer {
-  std::string protocol_name;
+  std::string file;
   std::unordered_map<std::string, uint64_t> fields;
 };
 
@@ -28,7 +28,7 @@ struct ParsedPacket {
         }
       }
 
-      layer_obj.Set("protocol_name", Napi::String::New(env, layer.protocol_name));
+      layer_obj.Set("file", Napi::String::New(env, layer.file));
       result.Set(i, layer_obj);
     }
 
@@ -40,5 +40,5 @@ class ParserModel {
 public:
   virtual ~ParserModel() = default;
   virtual ParsedPacket parsePacket(const RawPacket& raw_packet) = 0;
-  virtual void setProtocolsBasePath(const std::string& path) = 0;
+  virtual void setProtocolEntryFile(const std::string& path) = 0;
 };
