@@ -2,56 +2,62 @@ import { Store } from './store'
 
 export class MapStore<Key, Val> extends Store<Key, Val> {
     private store: Map<Key, Val> = new Map()
+    private keysArray: Key[] = []
 
-    get(key: Key): Val | undefined {
+    override get(key: Key): Val | undefined {
+        return this.store.get(key)
+    }
+    override getByIndex(index: number): Val | undefined {
+        const key = this.keysArray[index]
+        if (key === undefined) return undefined
         return this.store.get(key)
     }
 
-    getByIndex(index: number): Val | undefined {
-        const iterator = this.store.values()
-        let currentIndex = 0
-        let result = iterator.next()
-        while (!result.done) {
-            if (currentIndex === index) {
-                return result.value
-            }
-            currentIndex++
-            result = iterator.next()
-        }
-        return undefined
+    override getKeyByIndex(index: number): Key | undefined {
+        return this.keysArray[index]
+    }
+    override getIndexByKey(key: Key): number | undefined {
+        const index = this.keysArray.indexOf(key)
+        return index === -1 ? undefined : index
     }
 
-    set(key: Key, value: Val): void {
+    override set(key: Key, value: Val): void {
+        if (!this.store.has(key)) {
+            this.keysArray.push(key)
+        }
         this.store.set(key, value)
     }
-
-    has(key: Key): boolean {
-        return this.store.has(key)
+    override delete(key: Key): void {
+        if (this.store.has(key)) {
+            const index = this.keysArray.indexOf(key)
+            if (index > -1) {
+                this.keysArray.splice(index, 1)
+            }
+            this.store.delete(key)
+        }
+    }
+    override clear(): void {
+        this.store.clear()
+        this.keysArray = []
     }
 
-    size(): number {
+    override has(key: Key): boolean {
+        return this.store.has(key)
+    }
+    override size(): number {
         return this.store.size
     }
 
-    delete(key: Key): void {
-        this.store.delete(key)
+    override toArray(): [Key, Val][] {
+        return this.keysArray.map((key) => [key, this.store.get(key)!])
     }
-
-    toArray(): [Key, Val][] {
-        return Array.from(this.store.entries())
-    }
-
-    toObject(): Record<string, any> {
+    override toObject(): Record<string, any> {
         const obj: Record<string, any> = {}
-        for (const [key, value] of this.store.entries()) {
+        for (const key of this.keysArray) {
             if (typeof key === 'string' || typeof key === 'number' || typeof key === 'symbol') {
-                obj[String(key)] = value
+                obj[String(key)] = this.store.get(key)
             }
         }
         return obj
-    }
-
-    clear(): void {
-        this.store.clear()
     }
 }

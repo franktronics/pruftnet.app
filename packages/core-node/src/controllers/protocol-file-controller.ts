@@ -9,32 +9,26 @@ export class ProtocolFileController {
         this.loaderService = new ProtocolFileLoaderService()
     }
 
-    private getProtocolFile() {
-        return procedure
-            .input(
-                z
-                    .object({ path: z.string().optional(), id: z.number().optional() })
-                    .refine((data) => data.path !== undefined || data.id !== undefined, {
-                        message: 'Either path or id must be provided',
-                    }),
-            )
-            .query(async ({ input }) => {
-                if (input.path) {
-                    const protocolFile = await this.loaderService.loadProtocolFileByPath(input.path)
-                    return protocolFile
-                } else if (input.id !== undefined) {
-                    const protocolFile = await this.loaderService.loadProtocolFileById(input.id)
-                    return protocolFile
-                }
-                return undefined
-            })
+    private getProtocolFileById() {
+        return procedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+            const protocolFile = await this.loaderService.loadProtocolFileById(input.id)
+            return protocolFile
+        })
+    }
+
+    private getProtocolFileByPath() {
+        return procedure.input(z.object({ path: z.string() })).query(async ({ input }) => {
+            const protocolFile = await this.loaderService.loadProtocolFileByPath(input.path)
+            return protocolFile
+        })
     }
 
     static make() {
         const inst = new ProtocolFileController()
 
         return {
-            get: inst.getProtocolFile(),
+            getById: inst.getProtocolFileById(),
+            getByPath: inst.getProtocolFileByPath(),
         }
     }
 }

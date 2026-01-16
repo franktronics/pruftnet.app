@@ -24,6 +24,11 @@ export const protocolFileSchema = z.object({
 })
 
 export type ProtocolFile = z.infer<typeof protocolFileSchema>
+export type ProtocolFileData = {
+    id: number
+    path: string
+    content: ProtocolFile
+}
 
 export class ProtocolFileLoaderService {
     constructor() {}
@@ -44,20 +49,36 @@ export class ProtocolFileLoaderService {
         }
     }
 
-    public async loadProtocolFileById(id: number): Promise<ProtocolFile | undefined> {
+    public async loadProtocolFileById(id: number): Promise<ProtocolFileData | undefined> {
         const protocolFile = stores.protocolFiles.getByIndex(id)
-        return protocolFile
+        if (protocolFile) {
+            const path = stores.protocolFiles.getKeyByIndex(id)!
+            return {
+                content: protocolFile,
+                path: path,
+                id: id,
+            }
+        }
+        return undefined
     }
 
-    public async loadProtocolFileByPath(path: string): Promise<ProtocolFile | undefined> {
+    public async loadProtocolFileByPath(path: string): Promise<ProtocolFileData | undefined> {
         if (stores.protocolFiles.has(path)) {
-            return stores.protocolFiles.get(path)!
+            return {
+                content: stores.protocolFiles.get(path)!,
+                path: path,
+                id: stores.protocolFiles.getIndexByKey(path)!,
+            }
         }
 
         try {
             const protocolFile = await this.loadProtocolFile(path)
             stores.protocolFiles.set(path, protocolFile)
-            return protocolFile
+            return {
+                content: protocolFile,
+                path: path,
+                id: stores.protocolFiles.getIndexByKey(path)!,
+            }
         } catch (error) {
             if ((error as any)?.code === 'ENOENT') {
                 return undefined

@@ -5,7 +5,7 @@ import { PacketHexViewer } from './packet-hex-viewer'
 import { PacketValuesViewer } from './packet-values-viewer'
 import { useScanControlContext } from '../context/scan-control-context'
 import { fetcher } from '../../../config/client-trpc'
-import { useQueryFetcher } from '@repo/utils'
+import { useQueries, useQueryFetcher } from '@repo/utils'
 
 export type TabScanProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabScan = (props: TabScanProps) => {
@@ -21,6 +21,19 @@ export const TabScan = (props: TabScanProps) => {
         enabled: selectedIndex !== null,
         retry: 0,
         popupOnError: true,
+    })
+    const protoFileQueries = useQueries({
+        queries: packetData
+            ? packetData.parsed.map((elt) => {
+                  return {
+                      queryKey: ['protocol_file', elt.file],
+                      queryFn: fetcher.protocolFiles.getByPath.query({ path: elt.file }),
+                      staleTime: Infinity,
+                      enabled: !!elt.file,
+                      retry: 0,
+                  }
+              })
+            : [],
     })
 
     const handleRowSelect = async (index: number) => {
@@ -41,6 +54,7 @@ export const TabScan = (props: TabScanProps) => {
                             packets={packets}
                             onHandleRowSelect={handleRowSelect}
                             selectedRow={selectedIndex}
+                            protoFileQueries={protoFileQueries}
                         />
                     </div>
                 </ResizablePanel>

@@ -1,3 +1,5 @@
+export type { UseQueryResult } from '@tanstack/react-query'
+
 export type {
     NetworkInterfaceInfo,
     NetworkInterfaceBase,
@@ -9,3 +11,5 @@ export type { PacketData } from '@repo/core-cpp'
 export type { PacketDataForClient } from './controllers/scan-controller'
 
 export type { AppSettings } from './controllers/settings-controller'
+
+export type { ProtocolFile, ProtocolFileData } from './services/protocol-file-loader-service'

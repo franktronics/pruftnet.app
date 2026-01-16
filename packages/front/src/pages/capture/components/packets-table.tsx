@@ -2,7 +2,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow, Badge } from '@repo
 import { useRef, type ComponentPropsWithoutRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@repo/utils'
-import type { PacketDataForClient } from '@repo/core-node/types'
+import type { PacketDataForClient, ProtocolFileData, UseQueryResult } from '@repo/core-node/types'
 import { PacketFormater } from '../utils/packets-formatter'
 
 export type RowDataType = {
@@ -19,6 +19,7 @@ export type PacketsTableProps = {
     packets: PacketDataForClient[]
     onHandleRowSelect: (n: number) => void
     selectedRow: number | null
+    protoFileQueries: UseQueryResult<ProtocolFileData | undefined, Error>[]
 } & ComponentPropsWithoutRef<'div'>
 export const PacketsTable = (props: PacketsTableProps) => {
     const { packets, className, onHandleRowSelect, selectedRow, ...rest } = props
@@ -39,11 +40,11 @@ export const PacketsTable = (props: PacketsTableProps) => {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-16 text-center">No</TableHead>
-                            <TableHead className="w-32">Time</TableHead>
+                            <TableHead className="w-32">Time (ms)</TableHead>
                             <TableHead className="w-40">Source</TableHead>
                             <TableHead className="w-40">Destination</TableHead>
                             <TableHead className="w-24">Protocol</TableHead>
-                            <TableHead className="w-24">Length</TableHead>
+                            <TableHead className="w-35">Length (bytes)</TableHead>
                             <TableHead className="min-w-0">Info</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -94,7 +95,7 @@ export const PacketsTable = (props: PacketsTableProps) => {
                                                 {'TCP'}
                                             </Badge>
                                         </div>
-                                        <div className="w-24">
+                                        <div className="w-35">
                                             {PacketFormater.getLength(packets[virtualItem.index])}
                                         </div>
                                         <div className="flex-1">{'Lorem ipsum'}</div>

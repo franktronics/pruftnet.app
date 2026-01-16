@@ -176,3 +176,5 @@ export function ClientErrorParser(props: ClientErrorParserProps) {
         </div>
     )
 }
+
+export { useQueries } from '@tanstack/react-query'
