@@ -1,5 +1,6 @@
 {
-    "name": "TCP Protocol",
+    "name": "TCP",
+    "description": "Transmission Control Protocol",
     "header": {
         "0_16": {
             "description": "Source Port"

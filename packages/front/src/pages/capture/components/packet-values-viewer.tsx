@@ -1,10 +1,13 @@
 import { type ComponentPropsWithoutRef } from 'react'
 import { cn } from '@repo/utils'
+import type { ProtocolFileData, UseQueryResult } from '@repo/core-node/types'
 
-export type PacketValuesViewerProps = {} & ComponentPropsWithoutRef<'div'>
+export type PacketValuesViewerProps = {
+    protoFileQueries: UseQueryResult<ProtocolFileData | undefined, Error>[]
+} & ComponentPropsWithoutRef<'div'>
 
 export const PacketValuesViewer = (props: PacketValuesViewerProps) => {
-    const { className, ...rest } = props
+    const { className, protoFileQueries, ...rest } = props
 
     const mockPacketStructure = [
         { name: 'Frame', size: 114, expanded: true },

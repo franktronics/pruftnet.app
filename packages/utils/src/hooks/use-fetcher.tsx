@@ -177,4 +177,4 @@ export function ClientErrorParser(props: ClientErrorParserProps) {
     )
 }
 
-export { useQueries } from '@tanstack/react-query'
+export { useQueries, useQuery, useMutation } from '@tanstack/react-query'

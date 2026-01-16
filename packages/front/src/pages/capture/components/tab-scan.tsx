@@ -27,10 +27,10 @@ export const TabScan = (props: TabScanProps) => {
             ? packetData.parsed.map((elt) => {
                   return {
                       queryKey: ['protocol_file', elt.file],
-                      queryFn: fetcher.protocolFiles.getByPath.query({ path: elt.file }),
                       staleTime: Infinity,
-                      enabled: !!elt.file,
+                      enabled: !!elt.file && selectedIndex !== null,
                       retry: 0,
+                      queryFn: fetcher.protocolFiles.getByPath.query({ path: elt.file }),
                   }
               })
             : [],
@@ -54,7 +54,6 @@ export const TabScan = (props: TabScanProps) => {
                             packets={packets}
                             onHandleRowSelect={handleRowSelect}
                             selectedRow={selectedIndex}
-                            protoFileQueries={protoFileQueries}
                         />
                     </div>
                 </ResizablePanel>
@@ -65,7 +64,7 @@ export const TabScan = (props: TabScanProps) => {
                     <ResizablePanelGroup direction="horizontal">
                         <ResizablePanel defaultSize={40} minSize={30}>
                             <div className="h-full">
-                                <PacketValuesViewer />
+                                <PacketValuesViewer protoFileQueries={protoFileQueries} />
                             </div>
                         </ResizablePanel>
 

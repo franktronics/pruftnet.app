@@ -1,5 +1,6 @@
 {
-    "name": "IPv4 Header",
+    "name": "IPv4",
+    "description": "Internet Protocol Version 4",
     "header": {
         "0_4": {
             "description": "IPv4-Version"

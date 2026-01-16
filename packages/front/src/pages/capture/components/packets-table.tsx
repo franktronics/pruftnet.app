@@ -1,9 +1,10 @@
-import { Table, TableBody, TableHead, TableHeader, TableRow, Badge } from '@repo/ui/atoms'
-import { useRef, type ComponentPropsWithoutRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { cn } from '@repo/utils'
-import type { PacketDataForClient, ProtocolFileData, UseQueryResult } from '@repo/core-node/types'
-import { PacketFormater } from '../utils/packets-formatter'
+import { Table, TableBody, TableHead, TableHeader, Badge, TableRow } from '@repo/ui/atoms'
+import { useMemo, useRef, type ComponentProps, type ComponentPropsWithoutRef } from 'react'
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
+import { cn, useQuery } from '@repo/utils'
+import type { PacketDataForClient } from '@repo/core-node/types'
+import { PacketFormaterFactory } from '../utils/packets-formatter'
+import { fetcher } from '../../../config/client-trpc'
 
 export type RowDataType = {
     index: number
@@ -19,13 +20,11 @@ export type PacketsTableProps = {
     packets: PacketDataForClient[]
     onHandleRowSelect: (n: number) => void
     selectedRow: number | null
-    protoFileQueries: UseQueryResult<ProtocolFileData | undefined, Error>[]
 } & ComponentPropsWithoutRef<'div'>
 export const PacketsTable = (props: PacketsTableProps) => {
     const { packets, className, onHandleRowSelect, selectedRow, ...rest } = props
 
     const parentRef = useRef<HTMLDivElement>(null)
-
     const virtualizer = useVirtualizer({
         count: packets.length,
         getScrollElement: () => parentRef.current,
@@ -57,55 +56,71 @@ export const PacketsTable = (props: PacketsTableProps) => {
                         <tr style={{ height: `${virtualizer.getTotalSize()}px` }}>
                             <td colSpan={7} className="relative p-0">
                                 {virtualizer.getVirtualItems().map((virtualItem) => (
-                                    <div
+                                    <TableRowElt
                                         key={virtualItem.key}
-                                        style={{
-                                            height: `${virtualItem.size}px`,
-                                            transform: `translateY(${virtualItem.start}px)`,
-                                        }}
-                                        className={cn(
-                                            'hover:bg-muted/50 flex w-full items-center border-b transition-colors',
-                                            'absolute top-0 left-0',
-                                            'cursor-pointer *:px-2',
-                                            { 'bg-muted!': selectedRow === virtualItem.index },
-                                        )}
                                         onClick={() => {
                                             onHandleRowSelect(virtualItem.index)
                                         }}
-                                    >
-                                        <div className="w-16 text-center font-medium">
-                                            {packets[virtualItem.index].id}
-                                        </div>
-                                        <div className="w-32">
-                                            {PacketFormater.getTime(packets[virtualItem.index])}
-                                        </div>
-                                        <div className="w-40">
-                                            {PacketFormater.getSource(packets[virtualItem.index])}
-                                        </div>
-                                        <div className="w-40">
-                                            {PacketFormater.getDestination(
-                                                packets[virtualItem.index],
-                                            )}
-                                        </div>
-                                        <div className="w-24">
-                                            <Badge
-                                                variant="outline"
-                                                className="text-muted-foreground px-1.5"
-                                            >
-                                                {'TCP'}
-                                            </Badge>
-                                        </div>
-                                        <div className="w-35">
-                                            {PacketFormater.getLength(packets[virtualItem.index])}
-                                        </div>
-                                        <div className="flex-1">{'Lorem ipsum'}</div>
-                                    </div>
+                                        selected={selectedRow === virtualItem.index}
+                                        virtualItem={virtualItem}
+                                        packet={packets[virtualItem.index]}
+                                    />
                                 ))}
                             </td>
                         </tr>
                     </TableBody>
                 </Table>
             </div>
+        </div>
+    )
+}
+
+type TableRowEltProps = {
+    selected: boolean
+    virtualItem: VirtualItem
+    packet: PacketDataForClient
+} & ComponentProps<'div'>
+const TableRowElt = (props: TableRowEltProps) => {
+    const { selected, virtualItem, packet, ...rest } = props
+
+    const lastProtocolFile: string | undefined = packet.parsed[packet.parsed.length - 1]?.file
+    const { data, isPending, error } = useQuery({
+        queryKey: ['protocol_file', lastProtocolFile],
+        staleTime: Infinity,
+        enabled: !!lastProtocolFile,
+        retry: 0,
+        queryFn: fetcher.protocolFiles.getByPath.query({ path: lastProtocolFile ?? '' }),
+    })
+
+    const formater = useMemo(() => {
+        return PacketFormaterFactory.create(packet, data)
+    }, [packet, data])
+
+    return (
+        <div
+            style={{
+                height: `${virtualItem.size}px`,
+                transform: `translateY(${virtualItem.start}px)`,
+            }}
+            className={cn(
+                'hover:bg-muted/50 flex w-full items-center border-b transition-colors',
+                'absolute top-0 left-0',
+                'cursor-pointer *:px-2',
+                { 'bg-muted!': selected },
+            )}
+            {...rest}
+        >
+            <div className="w-16 text-center font-medium">{packet.id}</div>
+            <div className="w-32">{formater.getTime()}</div>
+            <div className="w-40">{formater.getSource()}</div>
+            <div className="w-40">{formater.getDestination()}</div>
+            <div className="w-24">
+                <Badge variant="outline" className="text-muted-foreground px-1.5">
+                    {isPending ? '...' : formater.getProtocol()}
+                </Badge>
+            </div>
+            <div className="w-35">{formater.getLength()}</div>
+            <div className="flex-1">{isPending ? 'loading...' : formater.getInfo()}</div>
         </div>
     )
 }

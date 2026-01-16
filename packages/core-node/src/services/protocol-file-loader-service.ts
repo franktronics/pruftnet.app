@@ -8,6 +8,7 @@ const headerFieldSchema = z.object({
 
 export const protocolFileSchema = z.object({
     name: z.string(),
+    description: z.string(),
     header: z.record(z.string(), headerFieldSchema),
     next_protocol: z
         .object({

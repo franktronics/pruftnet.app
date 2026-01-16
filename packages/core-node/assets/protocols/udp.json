@@ -1,5 +1,6 @@
 {
-    "name": "UDP Protocol",
+    "name": "UDP",
+    "description": "User Datagram Protocol",
     "header": {
         "0_16": {
             "description": "Source Port"

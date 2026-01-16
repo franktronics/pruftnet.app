@@ -1,5 +1,6 @@
 {
-    "name": "Ethernet Header",
+    "name": "Ethernet",
+    "description": "Ethernet II Frame",
     "header": {
         "0_48": {
             "description": "Destination MAC Address"

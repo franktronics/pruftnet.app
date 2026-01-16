@@ -1,5 +1,6 @@
 {
-    "name": "ARP Protocol",
+    "name": "ARP",
+    "description": "Address Resolution Protocol",
     "header": {
         "0_16": {
             "description": "Hardware Type (HTYPE)"

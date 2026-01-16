@@ -1,5 +1,6 @@
 {
-    "name": "ICMP Protocol",
+    "name": "ICMP",
+    "description": "Internet Control Message Protocol",
     "header": {
         "0_8": {
             "description": "ICMP Type"
