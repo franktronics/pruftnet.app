@@ -1,8 +1,73 @@
-import { useMemo, useState, type ComponentPropsWithoutRef } from 'react'
+import { useMemo, useState, useCallback, type ComponentPropsWithoutRef } from 'react'
 import { cn, BaseConverter } from '@repo/utils'
 import { useIsMobile } from '@repo/ui/hooks'
 import { Separator } from '@repo/ui/atoms'
-import type { PacketData } from '@repo/core-node/types'
+import type { PacketData, ParsedPacket } from '@repo/core-node/types'
+
+interface FieldGroup {
+    id: string
+    startByte: number
+    endByte: number
+}
+
+const parseFieldGroups = (parsed: ParsedPacket): FieldGroup[] => {
+    const groups: FieldGroup[] = []
+
+    parsed.forEach((layer, layerIndex) => {
+        Object.entries(layer).forEach(([key, _value]) => {
+            if (key === 'file') return
+
+            const parts = key.split('_')
+            if (parts.length !== 3) return
+
+            const sizeBits = parseInt(parts[1], 10)
+            const absolutePosBits = parseInt(parts[2], 10)
+
+            if (isNaN(sizeBits) || isNaN(absolutePosBits)) return
+
+            const startByte = Math.floor(absolutePosBits / 8)
+            const endByte = Math.floor((absolutePosBits + sizeBits - 1) / 8)
+
+            groups.push({
+                id: `${layerIndex}-${key}`,
+                startByte,
+                endByte,
+            })
+        })
+    })
+
+    return groups
+}
+
+const buildByteToFieldMap = (groups: FieldGroup[]): Map<number, string> => {
+    const byteToField = new Map<number, string>()
+
+    const sortedGroups = [...groups].sort((a, b) => a.startByte - b.startByte)
+
+    for (const group of sortedGroups) {
+        for (let byte = group.startByte; byte <= group.endByte; byte++) {
+            if (!byteToField.has(byte)) {
+                byteToField.set(byte, group.id)
+            }
+        }
+    }
+
+    return byteToField
+}
+
+const buildFieldToByteMap = (groups: FieldGroup[]): Map<string, number[]> => {
+    const fieldToBytes = new Map<string, number[]>()
+
+    for (const group of groups) {
+        const bytes: number[] = []
+        for (let byte = group.startByte; byte <= group.endByte; byte++) {
+            bytes.push(byte)
+        }
+        fieldToBytes.set(group.id, bytes)
+    }
+
+    return fieldToBytes
+}
 
 export type PacketHexViewerProps = {
     packet: PacketData | null | undefined
@@ -10,7 +75,8 @@ export type PacketHexViewerProps = {
 
 export const PacketHexViewer = (props: PacketHexViewerProps) => {
     const { packet, className, ...rest } = props
-    const [highlightedByte, setHighlightedByte] = useState<number | null>(null)
+    const [hoveredField, setHoveredField] = useState<string | null>(null)
+    const [selectedField, setSelectedField] = useState<string | null>(null)
 
     const isMobile = useIsMobile()
     const bytesPerLine = isMobile ? 8 : 16
@@ -18,18 +84,66 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     const getLineOffset = (lineIndex: number): string => {
         return (lineIndex * bytesPerLine).toString(16).padStart(5, '0').toUpperCase()
     }
-    const decodedData: Uint8Array<ArrayBuffer> = useMemo(() => {
+
+    const decodedData = useMemo(() => {
         if (!packet) return new Uint8Array()
         return Uint8Array.from(atob(packet.raw.data), (c) => c.charCodeAt(0))
     }, [packet])
 
-    const lines = []
-    if (decodedData) {
+    const { byteToField, fieldToBytes } = useMemo(() => {
+        if (!packet?.parsed) {
+            return {
+                byteToField: new Map<number, string>(),
+                fieldToBytes: new Map<string, number[]>(),
+            }
+        }
+        const groups = parseFieldGroups(packet.parsed)
+        return {
+            byteToField: buildByteToFieldMap(groups),
+            fieldToBytes: buildFieldToByteMap(groups),
+        }
+    }, [packet?.parsed])
+
+    const lines = useMemo(() => {
+        const result = []
         for (let i = 0; i < decodedData.length; i += bytesPerLine) {
             const lineData = decodedData.slice(i, i + bytesPerLine)
-            lines.push({ offset: i, data: lineData })
+            result.push({ offset: i, data: lineData })
         }
-    }
+        return result
+    }, [decodedData, bytesPerLine])
+
+    const highlightedBytes = useMemo(() => {
+        const activeField = selectedField ?? hoveredField
+        if (!activeField) return new Set<number>()
+        return new Set(fieldToBytes.get(activeField) ?? [])
+    }, [hoveredField, selectedField, fieldToBytes])
+
+    const handleByteHover = useCallback(
+        (byteIndex: number) => {
+            const fieldId = byteToField.get(byteIndex)
+            setHoveredField(fieldId ?? null)
+        },
+        [byteToField],
+    )
+
+    const handleByteLeave = useCallback(() => {
+        setHoveredField(null)
+    }, [])
+
+    const handleByteClick = useCallback(
+        (byteIndex: number) => {
+            const fieldId = byteToField.get(byteIndex)
+            if (!fieldId) return
+            setSelectedField((prev) => (prev === fieldId ? null : fieldId))
+        },
+        [byteToField],
+    )
+
+    const isHighlighted = useCallback(
+        (byteIndex: number) => highlightedBytes.has(byteIndex),
+        [highlightedBytes],
+    )
 
     return (
         <div
@@ -57,26 +171,27 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                             <div className="flex flex-wrap gap-1">
                                 {Array.from(line.data).map((byte, byteIndex) => {
                                     const globalIndex = line.offset + byteIndex
-                                    const isHighlighted = highlightedByte === globalIndex
                                     return (
                                         <span
                                             key={byteIndex}
                                             className={cn(
-                                                'cursor-pointer rounded px-1 py-0.5 text-xs transition-colors',
-                                                'hover:bg-accent hover:text-accent-foreground',
-                                                isHighlighted &&
-                                                    'bg-primary text-primary-foreground',
+                                                'cursor-pointer px-1 py-0.5 text-xs transition-colors',
+                                                {
+                                                    'bg-primary text-primary-foreground':
+                                                        isHighlighted(globalIndex),
+                                                },
                                             )}
-                                            onMouseEnter={() => setHighlightedByte(globalIndex)}
-                                            onMouseLeave={() => setHighlightedByte(null)}
+                                            onMouseEnter={() => handleByteHover(globalIndex)}
+                                            onMouseLeave={handleByteLeave}
+                                            onClick={() => handleByteClick(globalIndex)}
                                         >
                                             {BaseConverter.formatHex(byte)}
                                         </span>
                                     )
                                 })}
-                                {line.data.length < effectiveBytesPerLine && (
+                                {line.data.length < bytesPerLine && (
                                     <div className="hidden lg:block">
-                                        {Array(effectiveBytesPerLine - line.data.length)
+                                        {Array(bytesPerLine - line.data.length)
                                             .fill('')
                                             .map((_, i) => (
                                                 <span
@@ -104,17 +219,19 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                         <div key={lineIndex} className="mb-1 flex">
                             {Array.from(line.data).map((byte, byteIndex) => {
                                 const globalIndex = line.offset + byteIndex
-                                const isHighlighted = highlightedByte === globalIndex
                                 return (
                                     <span
                                         key={byteIndex}
                                         className={cn(
-                                            'cursor-pointer rounded px-0.5 py-0.5 text-xs transition-colors',
-                                            'hover:bg-accent hover:text-accent-foreground',
-                                            isHighlighted && 'bg-primary text-primary-foreground',
+                                            'cursor-pointer px-0.5 py-0.5 text-xs transition-colors',
+                                            {
+                                                'bg-primary text-primary-foreground':
+                                                    isHighlighted(globalIndex),
+                                            },
                                         )}
-                                        onMouseEnter={() => setHighlightedByte(globalIndex)}
-                                        onMouseLeave={() => setHighlightedByte(null)}
+                                        onMouseEnter={() => handleByteHover(globalIndex)}
+                                        onMouseLeave={handleByteLeave}
+                                        onClick={() => handleByteClick(globalIndex)}
                                     >
                                         {BaseConverter.formatAscii(byte)}
                                     </span>

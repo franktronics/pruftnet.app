@@ -125,9 +125,10 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
 
       uint64_t value = extractBits(raw_packet.data.data(), raw_packet.length, field_offset, field_length);
 
-      std::string key = std::to_string(offset_length[0]) + "_" + std::to_string(offset_length[1]);
-      layer.fields[key] = value;
-      field_values[key] = value;
+      std::string relative_key = std::to_string(offset_length[0]) + "_" + std::to_string(offset_length[1]);
+      std::string absolute_key = relative_key + "_" + std::to_string(field_offset);
+      layer.fields[absolute_key] = value;
+      field_values[relative_key] = value;
     }
 
     result.layers.push_back(layer);

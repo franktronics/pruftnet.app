@@ -30,12 +30,12 @@ class DefaultPacketFormater extends PacketFormater {
     }
 
     public getSource(): string {
-        const source = this.packet.parsed[0]['48_48']
+        const source = this.packet.parsed[0]['48_48_48']
         return source !== undefined ? this.formatMacAddress(source) : 'not found'
     }
 
     public getDestination(): string {
-        const destination = this.packet.parsed[0]['0_48']
+        const destination = this.packet.parsed[0]['0_48_0']
         return destination !== undefined ? this.formatMacAddress(destination) : 'not found'
     }
 

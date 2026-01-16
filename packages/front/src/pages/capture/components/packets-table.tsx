@@ -120,7 +120,9 @@ const TableRowElt = (props: TableRowEltProps) => {
                 </Badge>
             </div>
             <div className="w-35">{formater.getLength()}</div>
-            <div className="flex-1">{isPending ? 'loading...' : formater.getInfo()}</div>
+            <div className="flex-1">
+                {isPending ? 'loading...' : error !== null ? 'loading failed' : formater.getInfo()}
+            </div>
         </div>
     )
 }
