@@ -6,45 +6,29 @@ import { PacketValuesViewer } from './packet-values-viewer'
 import { useScanControlContext } from '../context/scan-control-context'
 import { fetcher } from '../../../config/client-trpc'
 import { useQueryFetcher } from '@repo/utils'
-import type { PacketData } from '@repo/core-node/types'
 
 export type TabScanProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabScan = (props: TabScanProps) => {
     const { children, className, ...rest } = props
 
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-    const [selectedPacket, setSelectedPacket] = useState<PacketData | null>(null)
     const { packets } = useScanControlContext()
 
-    const { fetchData: getPacketData } = useQueryFetcher({
+    const { data: packetData } = useQueryFetcher({
         procedure: fetcher.scan.packetData.query({ id: selectedIndex }),
         queryKey: ['packet', selectedIndex],
         staleTime: Infinity,
+        enabled: selectedIndex !== null,
         retry: 0,
         popupOnError: true,
     })
 
-    const handleRowSelect = async (index: number | null) => {
-        if (index === null) {
-            setSelectedPacket(null)
+    const handleRowSelect = async (index: number) => {
+        if (index === selectedIndex) {
             setSelectedIndex(null)
             return
         }
         setSelectedIndex(index)
-
-        const packetData = await fetcher.scan.packetData.query({ id: index })()
-        if (packetData) {
-            const decodedData = Uint8Array.from(atob(packetData.raw.data), (c) => c.charCodeAt(0))
-            setSelectedPacket({
-                ...packetData,
-                raw: {
-                    ...packetData.raw,
-                    data: decodedData,
-                },
-            })
-        } else {
-            setSelectedPacket(null)
-        }
     }
 
     return (
@@ -76,7 +60,7 @@ export const TabScan = (props: TabScanProps) => {
                         <ResizablePanel defaultSize={60} minSize={30}>
                             <div className="h-full">
                                 <PacketHexViewer
-                                    data={selectedPacket ? selectedPacket.raw.data : null}
+                                    data={packetData ? packetData.raw.data : null}
                                     className="h-full"
                                 />
                             </div>

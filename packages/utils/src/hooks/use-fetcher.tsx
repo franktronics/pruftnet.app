@@ -19,18 +19,11 @@ export type QueryFetcherProps<T> = {
         fetching: string
         success: string
     }
-} & Omit<UseQueryOptions<T, ClientError>, 'queryFn' | 'enabled'>
+} & Omit<UseQueryOptions<T, ClientError>, 'queryFn'>
 export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
-    const { procedure, popupOnError = true, popupOnFetching, ...queryOptions } = props
+    const { procedure, popupOnError = true, popupOnFetching, enabled, ...queryOptions } = props
 
-    const query = useQuery({
-        queryFn: procedure,
-        enabled: false,
-        retry: false,
-        ...queryOptions,
-    })
-
-    const fetchData = useCallback(async () => {
+    const fetchData = async () => {
         let toastId: string | number | undefined
 
         if (popupOnFetching) {
@@ -38,26 +31,10 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
         }
 
         try {
-            const result = await query.refetch()
-
-            if (result.error) {
-                if (toastId) toast.dismiss(toastId)
-                if (popupOnError && result.error instanceof ClientError) {
-                    toast.error(<ClientErrorParser error={result.error} />, {
-                        duration: 5000,
-                    })
-                } else if (popupOnError) {
-                    toast.error(result.error.message, {
-                        duration: 5000,
-                    })
-                }
-                return result
-            }
-
+            const result = await procedure()
             if (toastId) {
                 toast.success(popupOnFetching?.success, { id: toastId })
             }
-
             return result
         } catch (error) {
             if (toastId) toast.dismiss(toastId)
@@ -66,13 +43,24 @@ export function useQueryFetcher<T>(props: QueryFetcherProps<T>) {
                 toast.error(<ClientErrorParser error={error} />, {
                     duration: 5000,
                 })
+            } else if (popupOnError) {
+                toast.error((error as Error).message, {
+                    duration: 5000,
+                })
             }
 
             throw error
         }
-    }, [procedure, popupOnError, popupOnFetching, query])
+    }
 
-    return { ...query, fetchData }
+    const query = useQuery({
+        queryFn: fetchData,
+        enabled: enabled ?? false,
+        retry: false,
+        ...queryOptions,
+    })
+
+    return { ...query }
 }
 
 export type MutateFetcherProps<K, T> = {

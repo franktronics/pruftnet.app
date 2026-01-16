@@ -22,9 +22,10 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
     >({})
     const { setInterface, interf: selectedInterface } = useScanControlContext()
 
-    const { fetchData: getInterfaces } = useQueryFetcher({
+    const { refetch: getInterfaces } = useQueryFetcher({
         procedure: fetcher.interfaces.query({}),
         queryKey: ['interfaces'],
+        popupOnError: true,
     })
 
     const handleOpenChange = async (isOpen: boolean) => {

@@ -1,10 +1,10 @@
-import { useState, type ComponentPropsWithoutRef } from 'react'
+import { useMemo, useState, type ComponentPropsWithoutRef } from 'react'
 import { cn, BaseConverter } from '@repo/utils'
 import { useIsMobile } from '@repo/ui/hooks'
 import { Separator } from '@repo/ui/atoms'
 
 export type PacketHexViewerProps = {
-    data: Uint8Array | null
+    data: string | null
     bytesPerLine?: number
 } & ComponentPropsWithoutRef<'div'>
 
@@ -18,11 +18,15 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
     const getLineOffset = (lineIndex: number): string => {
         return (lineIndex * effectiveBytesPerLine).toString(16).padStart(5, '0').toUpperCase()
     }
+    const decodedData: Uint8Array<ArrayBuffer> = useMemo(() => {
+        if (!data) return new Uint8Array()
+        return Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+    }, [data])
 
     const lines = []
-    if (data) {
-        for (let i = 0; i < data.length; i += effectiveBytesPerLine) {
-            const lineData = data.slice(i, i + effectiveBytesPerLine)
+    if (decodedData) {
+        for (let i = 0; i < decodedData.length; i += effectiveBytesPerLine) {
+            const lineData = decodedData.slice(i, i + effectiveBytesPerLine)
             lines.push({ offset: i, data: lineData })
         }
     }

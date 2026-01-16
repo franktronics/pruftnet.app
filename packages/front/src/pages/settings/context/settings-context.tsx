@@ -55,7 +55,7 @@ export const SettingsProvider = (props: SettingsProviderProps) => {
         popupOnError: true,
     })
 
-    const { fetchData: getSettingsQuery, data } = useQueryFetcher({
+    const { refetch: getSettingsQuery, data } = useQueryFetcher({
         procedure: fetcher.settings.get.query({}),
         popupOnError: true,
         queryKey: ['settings'],

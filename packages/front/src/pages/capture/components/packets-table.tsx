@@ -17,7 +17,7 @@ export type RowDataType = {
 
 export type PacketsTableProps = {
     packets: PacketDataForClient[]
-    onHandleRowSelect: (n: number | null) => void
+    onHandleRowSelect: (n: number) => void
     selectedRow: number | null
 } & ComponentPropsWithoutRef<'div'>
 export const PacketsTable = (props: PacketsTableProps) => {
@@ -69,10 +69,6 @@ export const PacketsTable = (props: PacketsTableProps) => {
                                             { 'bg-muted!': selectedRow === virtualItem.index },
                                         )}
                                         onClick={() => {
-                                            if (selectedRow === virtualItem.index) {
-                                                onHandleRowSelect(null)
-                                                return
-                                            }
                                             onHandleRowSelect(virtualItem.index)
                                         }}
                                     >
