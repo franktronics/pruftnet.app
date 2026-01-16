@@ -2,31 +2,31 @@ import { useMemo, useState, type ComponentPropsWithoutRef } from 'react'
 import { cn, BaseConverter } from '@repo/utils'
 import { useIsMobile } from '@repo/ui/hooks'
 import { Separator } from '@repo/ui/atoms'
+import type { PacketData } from '@repo/core-node/types'
 
 export type PacketHexViewerProps = {
-    data: string | null
-    bytesPerLine?: number
+    packet: PacketData | null | undefined
 } & ComponentPropsWithoutRef<'div'>
 
 export const PacketHexViewer = (props: PacketHexViewerProps) => {
-    const { data, bytesPerLine, className, ...rest } = props
+    const { packet, className, ...rest } = props
     const [highlightedByte, setHighlightedByte] = useState<number | null>(null)
-    const isMobile = useIsMobile()
 
-    const effectiveBytesPerLine = bytesPerLine ?? (isMobile ? 8 : 16)
+    const isMobile = useIsMobile()
+    const bytesPerLine = isMobile ? 8 : 16
 
     const getLineOffset = (lineIndex: number): string => {
-        return (lineIndex * effectiveBytesPerLine).toString(16).padStart(5, '0').toUpperCase()
+        return (lineIndex * bytesPerLine).toString(16).padStart(5, '0').toUpperCase()
     }
     const decodedData: Uint8Array<ArrayBuffer> = useMemo(() => {
-        if (!data) return new Uint8Array()
-        return Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
-    }, [data])
+        if (!packet) return new Uint8Array()
+        return Uint8Array.from(atob(packet.raw.data), (c) => c.charCodeAt(0))
+    }, [packet])
 
     const lines = []
     if (decodedData) {
-        for (let i = 0; i < decodedData.length; i += effectiveBytesPerLine) {
-            const lineData = decodedData.slice(i, i + effectiveBytesPerLine)
+        for (let i = 0; i < decodedData.length; i += bytesPerLine) {
+            const lineData = decodedData.slice(i, i + bytesPerLine)
             lines.push({ offset: i, data: lineData })
         }
     }

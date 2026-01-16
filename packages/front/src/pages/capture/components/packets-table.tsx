@@ -2,7 +2,7 @@ import { Table, TableBody, TableHead, TableHeader, Badge, TableRow } from '@repo
 import { useMemo, useRef, type ComponentProps, type ComponentPropsWithoutRef } from 'react'
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
 import { cn, useQuery } from '@repo/utils'
-import type { PacketDataForClient } from '@repo/core-node/types'
+import type { PacketDataWithoutRaw } from '@repo/core-node/types'
 import { PacketFormaterFactory } from '../utils/packets-formatter'
 import { fetcher } from '../../../config/client-trpc'
 
@@ -17,7 +17,7 @@ export type RowDataType = {
 }
 
 export type PacketsTableProps = {
-    packets: PacketDataForClient[]
+    packets: PacketDataWithoutRaw[]
     onHandleRowSelect: (n: number) => void
     selectedRow: number | null
 } & ComponentPropsWithoutRef<'div'>
@@ -78,7 +78,7 @@ export const PacketsTable = (props: PacketsTableProps) => {
 type TableRowEltProps = {
     selected: boolean
     virtualItem: VirtualItem
-    packet: PacketDataForClient
+    packet: PacketDataWithoutRaw
 } & ComponentProps<'div'>
 const TableRowElt = (props: TableRowEltProps) => {
     const { selected, virtualItem, packet, ...rest } = props

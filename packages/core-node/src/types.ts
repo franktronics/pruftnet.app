@@ -7,8 +7,7 @@ export type {
     NetworkInterfaceInfoIPv6,
 } from 'os'
 
-export type { PacketData } from '@repo/core-cpp'
-export type { PacketDataForClient } from './controllers/scan-controller'
+export type { PacketDataWithoutRaw, PacketData } from './controllers/scan-controller'
 
 export type { AppSettings } from './controllers/settings-controller'
 

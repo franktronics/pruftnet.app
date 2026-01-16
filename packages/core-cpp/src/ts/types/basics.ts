@@ -5,8 +5,8 @@ export interface ParsedProtocolLayer {
 
 export type ParsedPacket = ParsedProtocolLayer[]
 
-export interface RawPacketData {
-    data: Uint8Array
+export interface RawPacketData<BaseType = Uint8Array> {
+    data: BaseType
     length: number
     timestamp: number
     valid: boolean

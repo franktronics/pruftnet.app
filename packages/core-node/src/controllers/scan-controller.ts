@@ -1,6 +1,6 @@
 import {
     NetworkSniffer,
-    type PacketData,
+    type PacketData as CPP_PacketData,
     type RawPacketData,
     type ParsedPacket,
 } from '@repo/core-cpp'
@@ -8,10 +8,16 @@ import { z } from 'zod'
 import { procedure, wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
 
-export type PacketDataForClient = {
+export type PacketDataWithoutRaw = {
     id: number
     parsed: ParsedPacket
     raw: Omit<RawPacketData, 'data'>
+}
+
+export interface PacketData {
+    id: number
+    parsed: ParsedPacket
+    raw: RawPacketData<string>
 }
 
 export class ScanController {
@@ -24,7 +30,7 @@ export class ScanController {
                     interface: z.string(),
                 }),
             )
-            .handle(async ({ input, store }, returnCb: (data: PacketDataForClient) => void) => {
+            .handle(async ({ input, store }, returnCb: (data: PacketDataWithoutRaw) => void) => {
                 const sniffer = new NetworkSniffer(
                     store.settings.get('settings')?.protocolEntryFile || '',
                 )
@@ -33,7 +39,7 @@ export class ScanController {
 
                 let counter = 0
                 try {
-                    sniffer.startSniffing(input.interface, (packet: PacketData) => {
+                    sniffer.startSniffing(input.interface, (packet: CPP_PacketData) => {
                         store.packets.set(counter, packet)
                         returnCb({
                             id: counter,
@@ -71,27 +77,24 @@ export class ScanController {
     private getPacketData() {
         return procedure
             .input(z.object({ id: z.number().nullable() }))
-            .query(async ({ input, store }) => {
-                try {
-                    if (input.id === null) {
-                        new ServerError({
-                            message: 'Cannot get data for the packet',
-                            whatToDo: 'Ensure you provided a valid packet Id',
-                            code: 404,
-                        }).throw()
-                        return null
-                    }
-                    const packet = store.packets.get(input.id)
-                    if (!packet) return null
-                    return {
-                        ...packet,
-                        raw: {
-                            ...packet.raw,
-                            data: Buffer.from(packet.raw.data).toString('base64'),
-                        },
-                    }
-                } catch (err) {
-                    console.log({ err })
+            .query(async ({ input, store }): Promise<PacketData | null> => {
+                if (input.id === null) {
+                    new ServerError({
+                        message: 'Cannot get data for the packet',
+                        whatToDo: 'Ensure you provided a valid packet Id',
+                        code: 404,
+                    }).throw()
+                    return null
+                }
+                const packet = store.packets.get(input.id)
+                if (!packet) return null
+                return {
+                    id: input.id,
+                    ...packet,
+                    raw: {
+                        ...packet.raw,
+                        data: Buffer.from(packet.raw.data).toString('base64'),
+                    },
                 }
             })
     }

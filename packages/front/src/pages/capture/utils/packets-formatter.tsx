@@ -1,4 +1,4 @@
-import type { PacketDataForClient, ProtocolFileData } from '@repo/core-node/types'
+import type { PacketDataWithoutRaw, ProtocolFileData } from '@repo/core-node/types'
 
 export abstract class PacketFormater {
     public abstract getTime(): string
@@ -10,10 +10,10 @@ export abstract class PacketFormater {
 }
 
 class DefaultPacketFormater extends PacketFormater {
-    private packet: PacketDataForClient
+    private packet: PacketDataWithoutRaw
     private lastProtocolFile: ProtocolFileData | undefined = undefined
 
-    constructor(packet: PacketDataForClient, file: ProtocolFileData | undefined) {
+    constructor(packet: PacketDataWithoutRaw, file: ProtocolFileData | undefined) {
         super()
         this.lastProtocolFile = file
         this.packet = packet
@@ -61,7 +61,7 @@ class DefaultPacketFormater extends PacketFormater {
 
 export class PacketFormaterFactory {
     static create(
-        packet: PacketDataForClient,
+        packet: PacketDataWithoutRaw,
         lastProtocolFile: ProtocolFileData | undefined,
     ): PacketFormater {
         if (!lastProtocolFile) {

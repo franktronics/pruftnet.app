@@ -72,10 +72,7 @@ export const TabScan = (props: TabScanProps) => {
 
                         <ResizablePanel defaultSize={60} minSize={30}>
                             <div className="h-full">
-                                <PacketHexViewer
-                                    data={packetData ? packetData.raw.data : null}
-                                    className="h-full"
-                                />
+                                <PacketHexViewer packet={packetData} className="h-full" />
                             </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>

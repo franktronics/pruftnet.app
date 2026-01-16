@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
-import type { NetworkInterfaceInfo, PacketDataForClient } from '@repo/core-node/types'
+import type { NetworkInterfaceInfo, PacketDataWithoutRaw } from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -41,7 +41,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
-    const [packets, setPackets] = useState<PacketDataForClient[]>([])
+    const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -67,7 +67,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                 wsFetcher.scan.start.handle(
                     { interface: interf.name },
                     {
-                        onmessage: (data: PacketDataForClient) => {
+                        onmessage: (data: PacketDataWithoutRaw) => {
                             setPackets((old) => [...old, data])
                         },
                         onerror: (error) => {
