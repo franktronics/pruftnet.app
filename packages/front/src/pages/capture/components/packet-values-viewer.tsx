@@ -1,6 +1,7 @@
 import { type ComponentPropsWithoutRef } from 'react'
 import { cn } from '@repo/utils'
 import type { ProtocolFileData, UseQueryResult } from '@repo/core-node/types'
+import { ChevronRightIcon } from 'lucide-react'
 
 export type PacketValuesViewerProps = {
     protoFileQueries: UseQueryResult<ProtocolFileData | undefined, Error>[]
@@ -35,7 +36,9 @@ export const PacketValuesViewer = (props: PacketValuesViewerProps) => {
                     <div key={index} className="group">
                         <div className="hover:bg-accent hover:text-accent-foreground flex cursor-pointer items-center rounded p-1 transition-colors">
                             <span className="text-muted-foreground mr-2">
-                                {layer.expanded ? '▼' : '▶'}
+                                <ChevronRightIcon
+                                    className={cn('size-4', { 'rotate-90': layer.expanded })}
+                                />
                             </span>
                             <span className="flex-1">{layer.name}</span>
                             <span className="text-muted-foreground text-xs">

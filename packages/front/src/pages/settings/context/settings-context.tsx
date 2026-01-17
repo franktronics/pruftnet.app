@@ -11,7 +11,7 @@ import {
 import type { AppSettings } from '@repo/core-node/types'
 import { useForm } from '@tanstack/react-form'
 import type { SimpleForm } from '../../../utils/generics'
-import { settingsSchema } from '../models/settings-schema'
+import { settingsSchema } from '@repo/core-node/schema'
 
 const { ClientError } = trpcClient
 

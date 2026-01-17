@@ -1,5 +1,7 @@
 {
     "maxPacketBufferSize": 99999,
     "promiscuousMode": false,
-    "protocolEntryFile": "/home/wb207/Documents/pruftnet/packages/core-node/assets/protocols/ethernet.json"
+    "protocolEntryFile": "/home/wb207/Documents/pruftnet/packages/core-node/assets/protocols/ethernet.json",
+    "defaultCaptureTab": "scan",
+    "connectionLineType": "straight"
 }

@@ -10,6 +10,6 @@ export type {
 export type { PacketDataWithoutRaw, PacketData } from './controllers/scan-controller'
 export type { ParsedPacket, RawPacketData } from '@repo/core-cpp'
 
-export type { AppSettings } from './controllers/settings-controller'
+export type { AppSettings } from './models/settings-models'
 
 export type { ProtocolFile, ProtocolFileData } from './services/protocol-file-loader-service'

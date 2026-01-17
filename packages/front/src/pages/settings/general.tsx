@@ -13,9 +13,14 @@ import { useTheme } from '@repo/ui/molecules'
 import { cn } from '@repo/utils'
 import { Moon, PanelsTopLeft, Sun, type LucideIcon } from 'lucide-react'
 import { useId, type ComponentProps } from 'react'
+import { useSettingsContext } from './context/settings-context'
 
 export function GeneralSettings() {
+    const captureTabId = useId()
+    const connectionLineId = useId()
     const { setTheme, theme } = useTheme()
+    const { form } = useSettingsContext()
+    const { Field } = form
 
     return (
         <div className="space-y-6">
@@ -41,6 +46,49 @@ export function GeneralSettings() {
                         <RadioThemeCard value="dark" text="Dark" icon={Moon} />
                         <RadioThemeCard value="system" text="System" icon={PanelsTopLeft} />
                     </RadioGroup>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Capture view</CardTitle>
+                    <CardDescription>Configure packet view UI</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Capture view default tab.</Label>
+                        <Field
+                            name="defaultCaptureTab"
+                            children={(field) => (
+                                <>
+                                    <RadioGroup
+                                        value={field.state.value}
+                                        onValueChange={(v: 'scan' | 'graph') =>
+                                            field.handleChange(v)
+                                        }
+                                        className="flex gap-6"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem value="scan" id={captureTabId + 'r1'} />
+                                            <Label htmlFor={captureTabId + 'r1'}>Scan</Label>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem
+                                                value="graph"
+                                                id={captureTabId + 'r2'}
+                                            />
+                                            <Label htmlFor={captureTabId + 'r2'}>Graph</Label>
+                                        </div>
+                                    </RadioGroup>
+                                    <p className="text-destructive text-xs">
+                                        {field.state.meta.errors.map((e) => e.message).join(', ')}
+                                    </p>
+                                </>
+                            )}
+                        />
+                        <p className="text-muted-foreground text-xs">
+                            Select the default tab to display when opening the capture view.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
         </div>

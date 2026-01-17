@@ -11,11 +11,17 @@ import { ActionsControl } from './components/actions-control'
 import { ScanControlProvider } from './context/scan-control-context'
 import { CaptureFilter } from './components/capture-filter'
 import { InterfaceSelector } from './components/interface-selector'
+import { useSettingsContext } from '../settings/context/settings-context'
 
 function HomeContent() {
+    const { appSettings } = useSettingsContext()
+
     return (
         <Layout>
-            <TabsDisplay defaultValue="graph" className="flex flex-1 flex-col">
+            <TabsDisplay
+                defaultValue={appSettings.defaultCaptureTab}
+                className="flex flex-1 flex-col"
+            >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                         <InterfaceSelector />

@@ -4,20 +4,10 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { trpcServer } from '@repo/utils'
+import { settingsSchema, type AppSettings } from '../models/settings-models'
 
 const { ServerError } = trpcServer
 
-export type AppSettings = {
-    maxPacketBufferSize: number
-    promiscuousMode: boolean
-    protocolEntryFile: string
-}
-
-const settingsSchema = z.object({
-    maxPacketBufferSize: z.number().min(1000).max(1000000),
-    promiscuousMode: z.boolean(),
-    protocolEntryFile: z.string(),
-})
 const partialSettingsSchema = settingsSchema.partial()
 
 export class SettingsController {
@@ -81,7 +71,7 @@ export class SettingsController {
     }
 
     private getSettings() {
-        return procedure.input(z.object({})).query(async ({ store }) => {
+        return procedure.input(z.object({})).query(async ({ store }): Promise<AppSettings> => {
             const settings = await this.loadSettingsFromFile(this.settingsPath)
             store.settings.set('settings', settings)
             return settings
@@ -89,29 +79,31 @@ export class SettingsController {
     }
 
     private updateSettings() {
-        return procedure.input(partialSettingsSchema).mutation(async ({ input, store }) => {
-            let currentSettings = store.settings.get('settings')
+        return procedure
+            .input(partialSettingsSchema)
+            .mutation(async ({ input, store }): Promise<AppSettings> => {
+                let currentSettings = store.settings.get('settings')
 
-            if (!currentSettings) {
-                currentSettings = await this.loadSettingsFromFile(this.settingsPath)
-            }
+                if (!currentSettings) {
+                    currentSettings = await this.loadSettingsFromFile(this.settingsPath)
+                }
 
-            const updatedSettings: AppSettings = {
-                ...currentSettings,
-                ...input,
-            }
+                const updatedSettings: AppSettings = {
+                    ...currentSettings,
+                    ...input,
+                }
 
-            const validatedSettings = settingsSchema.parse(updatedSettings)
+                const validatedSettings = settingsSchema.parse(updatedSettings)
 
-            store.settings.set('settings', validatedSettings)
-            await this.saveSettingsToFile(validatedSettings)
+                store.settings.set('settings', validatedSettings)
+                await this.saveSettingsToFile(validatedSettings)
 
-            return validatedSettings
-        })
+                return validatedSettings
+            })
     }
 
     private resetSettings() {
-        return procedure.input(z.object({})).mutation(async ({ store }) => {
+        return procedure.input(z.object({})).mutation(async ({ store }): Promise<AppSettings> => {
             const defaultSettings = await this.loadSettingsFromFile(this.defaultSettingsPath)
             store.settings.set('settings', defaultSettings)
             await this.saveSettingsToFile(defaultSettings)
