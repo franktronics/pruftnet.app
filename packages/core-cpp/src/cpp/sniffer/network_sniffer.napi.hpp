@@ -5,6 +5,7 @@
 #include <cstring>
 #include <memory>
 #include <napi.h>
+#include <iostream>
 
 class NetworkSnifferWrapper;
 
@@ -137,7 +138,15 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info)
   tsfn_active_ = true;
 
   auto packet_callback = std::make_unique<NapiPacketCallback>(tsfn_, getParser());
-  bool success = sniffer_->startSniffing(interface_name, std::move(packet_callback));
+
+  bool success = false;
+  try{
+    success = sniffer_->startSniffing(interface_name, std::move(packet_callback));
+  }catch(const std::exception& e){
+    std::cerr << "Exception in startSniffing: " << e.what() << std::endl;
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    success = false;
+  }
 
   if (!success) {
     tsfn_.Release();
