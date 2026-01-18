@@ -15,6 +15,68 @@ export class DissectorValueFormatter {
         this.packet = packet
     }
 
+    private formatMac(value: string | number | bigint): string {
+        const num = BigInt(value)
+        const hex = num.toString(16).padStart(12, '0')
+        return hex.match(/.{2}/g)?.join(':').toUpperCase() ?? '00:00:00:00:00:00'
+    }
+
+    private formatIpv4(value: string | number | bigint): string {
+        const num = Number(value)
+        const octet1 = (num >>> 24) & 0xff
+        const octet2 = (num >>> 16) & 0xff
+        const octet3 = (num >>> 8) & 0xff
+        const octet4 = num & 0xff
+        return `${octet1}.${octet2}.${octet3}.${octet4}`
+    }
+
+    private formatIpv6(value: string | number | bigint): string {
+        const num = BigInt(value)
+        const hex = num.toString(16).padStart(32, '0')
+        const groups = hex.match(/.{4}/g) ?? []
+        return groups.join(':')
+    }
+
+    private formatInt(value: string | number | bigint): string {
+        return value.toString()
+    }
+
+    private formatHex(value: string | number | bigint): string {
+        const num = BigInt(value)
+        return '0x' + num.toString(16).toUpperCase()
+    }
+
+    private formatTimestamp(value: string | number | bigint): string {
+        const timestamp = Number(value)
+        return new Date(timestamp * 1000).toISOString()
+    }
+
+    private formatBytes(value: string | number | bigint): string {
+        const num = BigInt(value)
+        return num.toString(16).toUpperCase()
+    }
+
+    private formatValue(value: string | number | bigint, type: string): string {
+        switch (type) {
+            case 'mac':
+                return this.formatMac(value)
+            case 'ipv4':
+                return this.formatIpv4(value)
+            case 'ipv6':
+                return this.formatIpv6(value)
+            case 'int':
+                return this.formatInt(value)
+            case 'hex':
+                return this.formatHex(value)
+            case 'timestamp':
+                return this.formatTimestamp(value)
+            case 'bytes':
+                return this.formatBytes(value)
+            default:
+                return String(value)
+        }
+    }
+
     public getBlockData(): BlockDataType[] {
         const blockData: BlockDataType[] = []
         if (!this.packet) return blockData
@@ -38,10 +100,10 @@ export class DissectorValueFormatter {
                 }
                 const [start, length, _] = key.split('_')
                 size += parseInt(length, 10)
-                const fileKey = start + '_' + length
+                const fileBlock = protoFile.content.header[start + '_' + length]
                 blockValues.push({
-                    name: protoFile.content.header[fileKey]?.description ?? 'Unknown Field',
-                    value: String(value),
+                    name: fileBlock?.description ?? 'Unknown Field',
+                    value: this.formatValue(value, fileBlock?.type ?? 'bytes'),
                 })
             })
             blockData.push({

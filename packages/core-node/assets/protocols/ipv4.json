@@ -3,40 +3,52 @@
     "description": "Internet Protocol Version 4",
     "header": {
         "0_4": {
-            "description": "IPv4-Version"
+            "description": "IPv4-Version",
+            "type": "int"
         },
         "4_4": {
-            "description": "Header Length * 4 is Byte Length"
+            "description": "Header Length * 4 is Byte Length",
+            "type": "int"
         },
         "8_8": {
-            "description": "Type of Service"
+            "description": "Type of Service",
+            "type": "hex"
         },
         "16_16": {
-            "description": "Total Length"
+            "description": "Total Length",
+            "type": "int"
         },
         "32_16": {
-            "description": "Identification"
+            "description": "Identification",
+            "type": "hex"
         },
         "48_3": {
-            "description": "Flags"
+            "description": "Flags",
+            "type": "hex"
         },
         "51_13": {
-            "description": "Fragment Offset"
+            "description": "Fragment Offset",
+            "type": "int"
         },
         "64_8": {
-            "description": "Time to Live"
+            "description": "Time to Live",
+            "type": "int"
         },
         "72_8": {
-            "description": "Protocol"
+            "description": "Protocol",
+            "type": "hex"
         },
         "80_16": {
-            "description": "Header Checksum"
+            "description": "Header Checksum",
+            "type": "hex"
         },
         "96_32": {
-            "description": "Source IP"
+            "description": "Source IP",
+            "type": "ipv4"
         },
         "128_32": {
-            "description": "Destination IP"
+            "description": "Destination IP",
+            "type": "ipv4"
         }
     },
     "next_protocol": {

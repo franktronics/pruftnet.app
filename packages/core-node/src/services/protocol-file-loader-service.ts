@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const headerFieldSchema = z.object({
     description: z.string(),
+    type: z.enum(['mac', 'ipv4', 'ipv6', 'int', 'hex', 'timestamp', 'bytes']),
 })
 
 export const protocolFileSchema = z.object({

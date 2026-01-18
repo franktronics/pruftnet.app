@@ -3,16 +3,20 @@
     "description": "User Datagram Protocol",
     "header": {
         "0_16": {
-            "description": "Source Port"
+            "description": "Source Port",
+            "type": "int"
         },
         "16_16": {
-            "description": "Destination Port"
+            "description": "Destination Port",
+            "type": "int"
         },
         "32_16": {
-            "description": "Length"
+            "description": "Length",
+            "type": "int"
         },
         "48_16": {
-            "description": "Checksum"
+            "description": "Checksum",
+            "type": "hex"
         }
     }
 }

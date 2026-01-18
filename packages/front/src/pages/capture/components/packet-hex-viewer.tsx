@@ -10,8 +10,9 @@ interface FieldGroup {
     endByte: number
 }
 
-const parseFieldGroups = (parsed: ParsedPacket): FieldGroup[] => {
+const parseFieldGroups = (parsed: ParsedPacket, totalBytes: number): FieldGroup[] => {
     const groups: FieldGroup[] = []
+    let maxCoveredByte = -1
 
     parsed.forEach((layer, layerIndex) => {
         Object.entries(layer).forEach(([key, _value]) => {
@@ -28,6 +29,8 @@ const parseFieldGroups = (parsed: ParsedPacket): FieldGroup[] => {
             const startByte = Math.floor(absolutePosBits / 8)
             const endByte = Math.floor((absolutePosBits + sizeBits - 1) / 8)
 
+            maxCoveredByte = Math.max(maxCoveredByte, endByte)
+
             groups.push({
                 id: `${layerIndex}-${key}`,
                 startByte,
@@ -35,6 +38,14 @@ const parseFieldGroups = (parsed: ParsedPacket): FieldGroup[] => {
             })
         })
     })
+
+    if (maxCoveredByte < totalBytes - 1) {
+        groups.push({
+            id: 'payload',
+            startByte: maxCoveredByte + 1,
+            endByte: totalBytes - 1,
+        })
+    }
 
     return groups
 }
@@ -97,12 +108,12 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                 fieldToBytes: new Map<string, number[]>(),
             }
         }
-        const groups = parseFieldGroups(packet.parsed)
+        const groups = parseFieldGroups(packet.parsed, decodedData.length)
         return {
             byteToField: buildByteToFieldMap(groups),
             fieldToBytes: buildFieldToByteMap(groups),
         }
-    }, [packet?.parsed])
+    }, [packet?.parsed, decodedData.length])
 
     const lines = useMemo(() => {
         const result = []
@@ -164,28 +175,32 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                         Offset
                     </div>
                     {lines.map((line, lineIndex) => (
-                        <div key={lineIndex} className="mb-1 flex items-start">
+                        <div key={lineIndex} className="flex items-start">
                             <div className="text-muted-foreground mr-1 w-12 shrink-0 py-0.5 text-xs">
                                 {getLineOffset(lineIndex)}
                             </div>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap">
                                 {Array.from(line.data).map((byte, byteIndex) => {
                                     const globalIndex = line.offset + byteIndex
                                     return (
                                         <span
                                             key={byteIndex}
-                                            className={cn(
-                                                'cursor-pointer px-1 py-0.5 text-xs transition-colors',
-                                                {
-                                                    'bg-primary text-primary-foreground':
-                                                        isHighlighted(globalIndex),
-                                                },
-                                            )}
+                                            className="cursor-pointer px-0.5 py-0.5"
                                             onMouseEnter={() => handleByteHover(globalIndex)}
                                             onMouseLeave={handleByteLeave}
                                             onClick={() => handleByteClick(globalIndex)}
                                         >
-                                            {BaseConverter.formatHex(byte)}
+                                            <span
+                                                className={cn(
+                                                    'inline-block px-0.5 text-xs transition-colors duration-150',
+                                                    {
+                                                        'bg-primary text-primary-foreground':
+                                                            isHighlighted(globalIndex),
+                                                    },
+                                                )}
+                                            >
+                                                {BaseConverter.formatHex(byte)}
+                                            </span>
                                         </span>
                                     )
                                 })}
@@ -216,24 +231,28 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                         ASCII
                     </div>
                     {lines.map((line, lineIndex) => (
-                        <div key={lineIndex} className="mb-1 flex">
+                        <div key={lineIndex} className="flex">
                             {Array.from(line.data).map((byte, byteIndex) => {
                                 const globalIndex = line.offset + byteIndex
                                 return (
                                     <span
                                         key={byteIndex}
-                                        className={cn(
-                                            'cursor-pointer px-0.5 py-0.5 text-xs transition-colors',
-                                            {
-                                                'bg-primary text-primary-foreground':
-                                                    isHighlighted(globalIndex),
-                                            },
-                                        )}
+                                        className="cursor-pointer px-0.5 py-0.5"
                                         onMouseEnter={() => handleByteHover(globalIndex)}
                                         onMouseLeave={handleByteLeave}
                                         onClick={() => handleByteClick(globalIndex)}
                                     >
-                                        {BaseConverter.formatAscii(byte)}
+                                        <span
+                                            className={cn(
+                                                'inline-block text-xs transition-colors duration-150',
+                                                {
+                                                    'bg-primary text-primary-foreground':
+                                                        isHighlighted(globalIndex),
+                                                },
+                                            )}
+                                        >
+                                            {BaseConverter.formatAscii(byte)}
+                                        </span>
                                     </span>
                                 )
                             })}

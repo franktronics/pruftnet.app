@@ -74,7 +74,7 @@ const Block = (props: BlockDataType & ComponentPropsWithoutRef<'div'>) => {
                             key={idx}
                             className="text-muted-foreground border-border border-l pl-4 text-xs"
                         >
-                            {val.name}: {val.value}
+                            <span className="text-accent-foreground">{val.name}</span>: {val.value}
                         </div>
                     ))}
                 </div>

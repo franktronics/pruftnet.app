@@ -3,34 +3,44 @@
     "description": "Transmission Control Protocol",
     "header": {
         "0_16": {
-            "description": "Source Port"
+            "description": "Source Port",
+            "type": "int"
         },
         "16_16": {
-            "description": "Destination Port"
+            "description": "Destination Port",
+            "type": "int"
         },
         "32_32": {
-            "description": "Sequence Number"
+            "description": "Sequence Number",
+            "type": "int"
         },
         "64_32": {
-            "description": "Acknowledgment Number"
+            "description": "Acknowledgment Number",
+            "type": "int"
         },
         "96_4": {
-            "description": "Data Offset"
+            "description": "Data Offset",
+            "type": "int"
         },
         "100_3": {
-            "description": "Reserved"
+            "description": "Reserved",
+            "type": "hex"
         },
         "103_9": {
-            "description": "Flags (NS,CWR,ECE,URG,ACK,PSH,RST,SYN,FIN)"
+            "description": "Flags (NS,CWR,ECE,URG,ACK,PSH,RST,SYN,FIN)",
+            "type": "hex"
         },
         "112_16": {
-            "description": "Window Size"
+            "description": "Window Size",
+            "type": "int"
         },
         "128_16": {
-            "description": "Checksum"
+            "description": "Checksum",
+            "type": "hex"
         },
         "144_16": {
-            "description": "Urgent Pointer"
+            "description": "Urgent Pointer",
+            "type": "int"
         }
     }
 }

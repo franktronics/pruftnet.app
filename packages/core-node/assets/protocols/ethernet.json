@@ -3,13 +3,16 @@
     "description": "Ethernet II Frame",
     "header": {
         "0_48": {
-            "description": "Destination MAC Address"
+            "description": "Destination MAC Address",
+            "type": "mac"
         },
         "48_48": {
-            "description": "Source MAC Address"
+            "description": "Source MAC Address",
+            "type": "mac"
         },
         "96_16": {
-            "description": "EtherType - Protocol Identifier"
+            "description": "EtherType - Protocol Identifier",
+            "type": "hex"
         }
     },
     "next_protocol": {
