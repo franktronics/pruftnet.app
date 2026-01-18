@@ -6,6 +6,7 @@ import { PacketValuesViewer } from './packet-values-viewer'
 import { useScanControlContext } from '../context/scan-control-context'
 import { fetcher } from '../../../config/client-trpc'
 import { useQueries, useQueryFetcher } from '@repo/utils'
+import type { ProtocolFileData } from '@repo/core-node/types'
 
 export type TabScanProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabScan = (props: TabScanProps) => {
@@ -22,18 +23,31 @@ export const TabScan = (props: TabScanProps) => {
         retry: 0,
         popupOnError: true,
     })
-    const protoFileQueries = useQueries({
-        queries: packetData
-            ? packetData.parsed.map((elt) => {
-                  return {
-                      queryKey: ['protocol_file', elt.file],
-                      staleTime: Infinity,
-                      enabled: !!elt.file && selectedIndex !== null,
-                      retry: 0,
-                      queryFn: fetcher.protocolFiles.getByPath.query({ path: elt.file }),
-                  }
-              })
-            : [],
+    const protoFiles = useQueries({
+        queries: (packetData?.parsed ?? []).map((elt) => {
+            return {
+                queryKey: ['protocol_file', elt.file],
+                staleTime: Infinity,
+                enabled: !!elt.file && selectedIndex !== null,
+                retry: 0,
+                queryFn: fetcher.protocolFiles.getByPath.query({ path: elt.file }),
+            }
+        }),
+        combine: (
+            results,
+        ): Record<string, ProtocolFileData & { pending: boolean; error: Error | null }> => {
+            return Object.fromEntries(
+                results
+                    .filter((res) => !!res.data && !!res.data.path)
+                    .map(
+                        (res) =>
+                            [
+                                res.data?.path,
+                                { ...res.data, pending: res.isPending, error: res.error },
+                            ] as const,
+                    ),
+            )
+        },
     })
 
     const handleRowSelect = async (index: number) => {
@@ -64,7 +78,7 @@ export const TabScan = (props: TabScanProps) => {
                     <ResizablePanelGroup direction="horizontal">
                         <ResizablePanel defaultSize={40} minSize={30}>
                             <div className="h-full">
-                                <PacketValuesViewer protoFileQueries={protoFileQueries} />
+                                <PacketValuesViewer packet={packetData} protoFiles={protoFiles} />
                             </div>
                         </ResizablePanel>
 
