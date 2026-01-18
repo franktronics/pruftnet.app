@@ -99,6 +99,14 @@ export class ScanController {
             })
     }
 
+    private cleanup() {
+        return procedure.input(z.object({})).mutation(async ({ store }) => {
+            store.packets.clear()
+            store.scan.clear()
+            return true
+        })
+    }
+
     static make() {
         const inst = new ScanController()
 
@@ -107,6 +115,7 @@ export class ScanController {
             stop: inst.stopSniffing(),
             active: inst.isSniffing(),
             packetData: inst.getPacketData(),
+            cleanup: inst.cleanup(),
         }
     }
 }

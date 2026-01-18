@@ -10,14 +10,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '../../atoms'
+import { cn } from '@repo/utils'
 
 export type PopupProps = {
     trigger: ReactNode
     title: string
     description: string
+    blockOpening?: boolean
     onClose?: () => void
     onOpen?: () => void
-    onConfirm?: () => void | boolean // Return true to close the popup
+    onConfirm?: () => void | boolean | Promise<void | boolean> // Return true to close the popup
     btnCloseText?: string
     btnSaveText?: string
 } & ComponentPropsWithoutRef<'div'>
@@ -27,6 +29,7 @@ export const Popup = (props: PopupProps) => {
         className,
         title,
         description,
+        blockOpening = false,
         trigger,
         children,
         onClose,
@@ -39,6 +42,9 @@ export const Popup = (props: PopupProps) => {
     const [open, setOpen] = useState(false)
 
     const handleOpenChange = (open: boolean) => {
+        if (blockOpening) {
+            return
+        }
         setOpen(open)
         if (open && onOpen) {
             onOpen()
@@ -47,22 +53,26 @@ export const Popup = (props: PopupProps) => {
         }
     }
 
-    const handleConfirm = () => {
-        const result = onConfirm?.()
+    const handleConfirm = async () => {
+        const result = await onConfirm?.()
         if (result === true) {
             setOpen(false)
         }
     }
 
+    if (blockOpening) {
+        return <>{trigger}</>
+    }
+
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange} {...rest}>
+        <Dialog open={!blockOpening && open} onOpenChange={handleOpenChange} {...rest}>
             <DialogTrigger asChild={true}>{trigger}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                <div className={className}>{children}</div>
+                <div className={cn('text-accent-foreground', className)}>{children}</div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">

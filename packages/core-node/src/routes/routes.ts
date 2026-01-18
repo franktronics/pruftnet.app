@@ -11,6 +11,7 @@ export const appRouter = createRouter({
         stop: ScanController.make().stop,
         active: ScanController.make().active,
         packetData: ScanController.make().packetData,
+        cleanup: ScanController.make().cleanup,
     },
     interfaces: InterfaceController.make().list,
     settings: {

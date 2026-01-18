@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
-import { ClientErrorParser, useMutateFetcher } from '@repo/utils'
+import { ClientErrorParser, queryClient, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
 import type { NetworkInterfaceInfo, PacketDataWithoutRaw } from '@repo/core-node/types'
 
@@ -17,6 +17,8 @@ export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
     changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
     packets: { parsed: any; raw: any; id: number }[]
+    cleanupPackets: () => Promise<boolean>
+    packetsEmpty: boolean
     interf: ContextNetinterface
     setInterface: Dispatch<SetStateAction<ContextNetinterface>>
 }
@@ -52,6 +54,23 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         },
         popupOnError: true,
     })
+    const { mutateData: cleanupScan } = useMutateFetcher({
+        procedure: fetcher.scan.cleanup,
+        method: 'DELETE',
+        popupOnFetching: {
+            fetching: 'Cleaning up scan...',
+            success: 'Scan cleaned up successfully',
+        },
+        popupOnError: true,
+    })
+
+    const cleanup = async () => {
+        await cleanupScan({})
+        await queryClient.invalidateQueries({ queryKey: ['packet'] })
+        setPackets([])
+        setCaptureStatus(CAPTURE_STATUS.IDLE)
+        return true
+    }
 
     const handleChangeCaptureStatus = useCallback(
         async (status: CAPTURE_STATUS) => {
@@ -87,7 +106,9 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const value: ScanControlContextType = {
         captureStatus,
         changeCaptureStatus: handleChangeCaptureStatus,
+        cleanupPackets: cleanup,
         packets,
+        packetsEmpty: packets.length === 0,
         interf,
         setInterface,
     }
