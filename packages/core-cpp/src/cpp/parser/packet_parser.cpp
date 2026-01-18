@@ -52,6 +52,9 @@ uint32_t PacketParser::evaluateStartAfter(const std::string& expression,
   }
 
   if (expression.find("calculate:") == 0) {
+    if (expression.length() <= 10) {
+      return 0;
+    }
     std::string expr_str = expression.substr(10);
 
     while (!expr_str.empty() && expr_str[0] == ' ') {
@@ -140,12 +143,19 @@ ParsedPacket PacketParser::parsePacket(const RawPacket& raw_packet) {
     const NextProtocol& next = config.next_protocol.value();
 
     size_t underscore_pos = next.selector.find('_');
-    if (underscore_pos == std::string::npos) {
+    if (underscore_pos == std::string::npos || underscore_pos == 0 || underscore_pos >= next.selector.length() - 1) {
       break;
     }
 
-    uint32_t selector_offset = std::stoul(next.selector.substr(0, underscore_pos));
-    uint32_t selector_length = std::stoul(next.selector.substr(underscore_pos + 1));
+    uint32_t selector_offset = 0;
+    uint32_t selector_length = 0;
+    try {
+      selector_offset = std::stoul(next.selector.substr(0, underscore_pos));
+      selector_length = std::stoul(next.selector.substr(underscore_pos + 1));
+    } catch (const std::exception& e) {
+      std::cerr << "Invalid selector format: " << next.selector << " - " << e.what() << std::endl;
+      break;
+    }
 
     uint64_t selector_value =
         extractBits(raw_packet.data.data(), raw_packet.length, current_bit_offset + selector_offset, selector_length);

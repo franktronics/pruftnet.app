@@ -24,11 +24,15 @@ struct ParsedPacket {
         if (value <= 0xFFFFFFFF) {
           layer_obj.Set(key, Napi::Number::New(env, static_cast<double>(value)));
         } else {
-          layer_obj.Set(key, Napi::BigInt::New(env, value));
+          layer_obj.Set(key, Napi::String::New(env, std::to_string(value)));
         }
       }
 
-      layer_obj.Set("file", Napi::String::New(env, layer.file));
+      if (!layer.file.empty()) {
+        layer_obj.Set("file", Napi::String::New(env, layer.file));
+      } else {
+        layer_obj.Set("file", env.Null());
+      }
       result.Set(i, layer_obj);
     }
 

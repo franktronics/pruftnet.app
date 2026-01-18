@@ -26,14 +26,20 @@ public:
     CallbackData* data = new CallbackData{raw, parsed};
 
     tsfn_.BlockingCall(data, [this](Napi::Env env, Napi::Function jsCallback, CallbackData* cb_data) {
-      Napi::Object raw_obj = cb_data->raw.toNapiObject(env);
-      Napi::Array parsed_arr = cb_data->parsed.toNapiArray(env);
+      try {
+        Napi::Object raw_obj = cb_data->raw.toNapiObject(env);
+        Napi::Array parsed_arr = cb_data->parsed.toNapiArray(env);
 
-      Napi::Object result = Napi::Object::New(env);
-      result.Set("raw", raw_obj);
-      result.Set("parsed", parsed_arr);
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("raw", raw_obj);
+        result.Set("parsed", parsed_arr);
 
-      jsCallback.Call({result});
+        jsCallback.Call({result});
+      } catch (const std::exception& e) {
+        std::cerr << "Exception in N-API callback: " << e.what() << std::endl;
+      } catch (...) {
+        std::cerr << "Unknown exception in N-API callback" << std::endl;
+      }
       delete cb_data;
     });
   };
@@ -139,14 +145,7 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info)
 
   auto packet_callback = std::make_unique<NapiPacketCallback>(tsfn_, getParser());
 
-  bool success = false;
-  try{
-    success = sniffer_->startSniffing(interface_name, std::move(packet_callback));
-  }catch(const std::exception& e){
-    std::cerr << "Exception in startSniffing: " << e.what() << std::endl;
-    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-    success = false;
-  }
+  bool success = sniffer_->startSniffing(interface_name, std::move(packet_callback));
 
   if (!success) {
     tsfn_.Release();

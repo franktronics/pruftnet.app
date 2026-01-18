@@ -31,11 +31,16 @@ std::string RawPacket::toString() const {
 Napi::Object RawPacket::toNapiObject(Napi::Env& env) const {
   Napi::Object obj = Napi::Object::New(env);
 
-  Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, length);
-  std::memcpy(buffer.Data(), data.data(), length);
-  Napi::Uint8Array data_array = Napi::Uint8Array::New(env, length, buffer, 0);
+  if (length > 0 && length <= MAX_PACKET_SIZE) {
+    Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, length);
+    std::memcpy(buffer.Data(), data.data(), length);
+    Napi::Uint8Array data_array = Napi::Uint8Array::New(env, length, buffer, 0);
+    obj.Set("data", data_array);
+  } else {
+    Napi::Uint8Array data_array = Napi::Uint8Array::New(env, 0);
+    obj.Set("data", data_array);
+  }
 
-  obj.Set("data", data_array);
   obj.Set("length", Napi::Number::New(env, static_cast<double>(length)));
 
   auto epoch = timestamp.time_since_epoch();
