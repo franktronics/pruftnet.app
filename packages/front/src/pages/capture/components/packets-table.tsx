@@ -40,8 +40,8 @@ export const PacketsTable = (props: PacketsTableProps) => {
                         <TableRow>
                             <TableHead className="w-16 text-center">No</TableHead>
                             <TableHead className="w-32">Time (ms)</TableHead>
-                            <TableHead className="w-40">Source</TableHead>
-                            <TableHead className="w-40">Destination</TableHead>
+                            <TableHead className="w-45">Source</TableHead>
+                            <TableHead className="w-45">Destination</TableHead>
                             <TableHead className="w-24">Protocol</TableHead>
                             <TableHead className="w-35">Length (bytes)</TableHead>
                             <TableHead className="min-w-0">Info</TableHead>
@@ -112,8 +112,8 @@ const TableRowElt = (props: TableRowEltProps) => {
         >
             <div className="w-16 text-center font-medium">{packet.id}</div>
             <div className="w-32">{formater.getTime()}</div>
-            <div className="w-40">{formater.getSource()}</div>
-            <div className="w-40">{formater.getDestination()}</div>
+            <div className="w-45 font-mono">{formater.getSource()}</div>
+            <div className="w-45 font-mono">{formater.getDestination()}</div>
             <div className="w-24">
                 <Badge variant="outline" className="text-muted-foreground px-1.5">
                     {isPending ? '...' : formater.getProtocol()}

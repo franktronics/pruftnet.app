@@ -20,8 +20,9 @@ class DefaultPacketFormater extends PacketFormater {
     }
 
     private formatMacAddress(value: string | number | bigint): string {
-        const hex = value.toString(16).padStart(12, '0')
-        return hex.match(/.{2}/g)?.join(':').toUpperCase() ?? 'Invalid MAC'
+        const num = BigInt(value)
+        const hex = num.toString(16).padStart(12, '0')
+        return hex.match(/.{2}/g)?.join(':').toUpperCase() ?? '00:00:00:00:00:00'
     }
 
     public getTime(): string {
