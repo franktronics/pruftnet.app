@@ -24,6 +24,12 @@
             },
             "0x0806": {
                 "file": "arp.json"
+            },
+            "0x86DD": {
+                "file": "ipv6.json"
+            },
+            "0x8100": {
+                "file": "vlan.json"
             }
         }
     }

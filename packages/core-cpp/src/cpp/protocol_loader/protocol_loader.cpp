@@ -35,8 +35,13 @@ ProtocolConfig ProtocolLoader::parseProtocolJson(const json& j) {
         next_proto.start_after = j["next_protocol"].at("start_after").get<std::string>();
 
         for (const auto& [key, value] : j["next_protocol"].at("mappings").items()) {
-            uint16_t hex_value = std::stoul(key, nullptr, 16);
-            next_proto.mappings[hex_value] = value.at("file").get<std::string>();
+            uint16_t parsed_value;
+            if (key.substr(0, 2) == "0x" || key.substr(0, 2) == "0X") {
+                parsed_value = std::stoul(key, nullptr, 16);
+            } else {
+                parsed_value = std::stoul(key, nullptr, 10);
+            }
+            next_proto.mappings[parsed_value] = value.at("file").get<std::string>();
         }
 
         config.next_protocol = next_proto;
