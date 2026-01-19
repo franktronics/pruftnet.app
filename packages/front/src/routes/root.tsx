@@ -11,6 +11,7 @@ import { createSettingsRoutes } from '../pages/settings/routes'
 import { DashboardLayout, type BreadcrumbItem } from '@repo/ui/templates'
 import { SidebarConfig } from './sidebar-config'
 import { useMemo } from 'react'
+import { createAnalysisRoutes } from '../pages/analysis/routes'
 
 function RootComponent() {
     const routerState = useRouterState()
@@ -64,8 +65,9 @@ const indexRoute = createRoute({
 })
 
 const settingsRouteTree = createSettingsRoutes(rootRoute)
+const analysisRouteTree = createAnalysisRoutes(rootRoute)
 
-const routeTree = rootRoute.addChildren([indexRoute, settingsRouteTree])
+const routeTree = rootRoute.addChildren([indexRoute, settingsRouteTree, analysisRouteTree])
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {

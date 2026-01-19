@@ -10,8 +10,8 @@ export const SidebarConfig = {
             items: [],
         },
         {
-            title: 'Analyze',
-            url: '/analyze',
+            title: 'Analysis',
+            url: '/analysis',
             icon: Database,
             isActive: true,
             items: [],
