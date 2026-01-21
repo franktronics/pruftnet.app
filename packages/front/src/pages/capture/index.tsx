@@ -8,12 +8,11 @@ import { Layout } from './layout'
 import { TabScan } from './components/tab-scan'
 import { TabGraph } from './components/tab-graph'
 import { ActionsControl } from './components/actions-control'
-import { ScanControlProvider } from './context/scan-control-context'
 import { CaptureFilter } from './components/capture-filter'
 import { InterfaceSelector } from './components/interface-selector'
 import { useSettingsContext } from '../settings/context/settings-context'
 
-function HomeContent() {
+function Capture() {
     const { appSettings } = useSettingsContext()
 
     return (
@@ -42,14 +41,6 @@ function HomeContent() {
                 </TabsDisplayContent>
             </TabsDisplay>
         </Layout>
-    )
-}
-
-function Capture() {
-    return (
-        <ScanControlProvider>
-            <HomeContent />
-        </ScanControlProvider>
     )
 }
 
