@@ -27,12 +27,11 @@ export const StepCard = (props: StepCardProps) => {
             )}
             {...rest}
         >
-            {/* Indicator Column */}
-            <div className="flex flex-col items-center">
-                {/* Step Indicator */}
+            <aside className="flex flex-col items-center">
                 <div
                     className={cn(
-                        'flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300',
+                        'rounded-full border-2 transition-all duration-300',
+                        'flex size-10 shrink-0 items-center justify-center',
                         selected
                             ? 'bg-primary text-primary-foreground border-primary ring-primary/20 ring-4'
                             : 'bg-muted text-foreground border-border',
@@ -40,19 +39,17 @@ export const StepCard = (props: StepCardProps) => {
                 >
                     <span className="text-sm font-medium">{step.id}</span>
                 </div>
-                {/* Connector Line */}
-                {!isLast && (
+                {!isLast ? (
                     <div
                         className={cn(
-                            'mt-2 h-full min-h-8 w-0.5 rounded-full transition-colors duration-300',
+                            'h-full min-h-8 w-0.5 rounded-full transition-colors duration-300',
                             selected ? 'bg-primary' : 'bg-border',
                         )}
                     />
-                )}
-            </div>
+                ) : null}
+            </aside>
 
-            {/* Card Content */}
-            <div
+            <article
                 className={cn(
                     'mb-4 flex flex-1 flex-col gap-3 rounded-lg border p-4 transition-all duration-300',
                     selected
@@ -79,7 +76,33 @@ export const StepCard = (props: StepCardProps) => {
                     </h3>
                 </div>
                 <p className="text-muted-foreground text-sm">{step.description}</p>
-            </div>
+            </article>
+        </div>
+    )
+}
+
+type StepDelayProps = {
+    value: number
+    onChange: (value: number) => void
+} & Omit<ComponentProps<'div'>, 'children' | 'onChange'>
+
+const StepDelay = (props: StepDelayProps) => {
+    const { value, onChange, className, ...rest } = props
+
+    return (
+        <div className={cn('flex items-center gap-2', className)} {...rest}>
+            <input
+                type="number"
+                min={0}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className={cn(
+                    'border-border bg-background h-7 w-16 rounded-md border px-2 text-center text-xs',
+                    'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-none',
+                    '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+                )}
+            />
+            <span className="text-muted-foreground text-xs">ms</span>
         </div>
     )
 }
