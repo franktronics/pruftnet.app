@@ -12,11 +12,15 @@ import { StepsProperty } from './components/steps-property'
 function Analysis() {
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={50} minSize={30} className="p-2">
+            <ResizablePanel defaultSize={20} minSize={15} className="p-4">
+                <div>OK</div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={40} minSize={30} className="p-4">
                 <StepsBuilder />
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={50} minSize={30} className="p-2">
+            <ResizablePanel defaultSize={40} minSize={30} className="p-4">
                 <TabsDisplay defaultValue="comp">
                     <TabsDisplayList className="ml-auto">
                         <TabsDisplayTrigger value="prop">Property</TabsDisplayTrigger>

@@ -1,8 +1,7 @@
 import {
-    Card,
+    Button,
     InputGroup,
     InputGroupAddon,
-    InputGroupButton,
     InputGroupInput,
     InputGroupText,
     Popover,
@@ -10,7 +9,7 @@ import {
     PopoverTrigger,
 } from '@repo/ui/atoms'
 import { cn } from '@repo/utils'
-import { Info } from 'lucide-react'
+import { GripVertical, Info } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 
 export type Step = {
@@ -32,7 +31,7 @@ export const StepCard = (props: StepCardProps) => {
     return (
         <div
             className={cn(
-                'relative hover:cursor-pointer',
+                'relative',
                 'flex gap-4 focus-visible:outline-none',
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
                 className,
@@ -63,13 +62,18 @@ export const StepCard = (props: StepCardProps) => {
 
             <article
                 className={cn(
-                    'mb-25 flex flex-1 flex-col gap-3 rounded-lg border p-4 transition-all duration-300',
-                    selected
-                        ? 'bg-card border-primary shadow-primary/10 shadow-md'
-                        : 'bg-muted/50 border-border hover:bg-muted/80 hover:border-muted-foreground/20',
+                    'w-full hover:cursor-pointer',
+                    'grid grid-cols-[1fr_auto] grid-rows-[auto_auto]',
+                    'rounded-lg border p-4 transition-all duration-300',
+                    { 'mb-25': !isLast },
+                    { 'bg-card border-primary shadow-primary/10 shadow-md': selected },
+                    {
+                        'bg-muted/50 border-border hover:bg-muted/90 hover:border-muted-foreground/30':
+                            !selected,
+                    },
                 )}
             >
-                <div className="flex items-center gap-3">
+                <div className="col-start-1 flex items-center gap-3">
                     <div
                         className={cn(
                             'flex size-9 items-center justify-center rounded-md transition-colors duration-300',
@@ -87,18 +91,28 @@ export const StepCard = (props: StepCardProps) => {
                         {step.name}
                     </h3>
                 </div>
-                <p className="text-muted-foreground text-sm">{step.description}</p>
+                <p className="text-muted-foreground col-start-1 pt-3 text-sm">{step.description}</p>
+                <button
+                    type="button"
+                    className={cn(
+                        'col-start-2 row-span-2 row-start-1 h-full self-center',
+                        'cursor-grab',
+                    )}
+                >
+                    <GripVertical className="text-muted-foreground size-5" />
+                </button>
             </article>
 
             {!isLast ? (
-                <Card
+                <div
                     className={cn(
-                        'absolute max-w-40 p-2',
-                        'top-[calc(100%-1.5rem)] -translate-y-full',
+                        'bg-card rounded-lg',
+                        'absolute max-w-40 p-1',
+                        'top-[calc(100%-2rem)] -translate-y-full',
                     )}
                 >
                     <StepDelay value={0} onChange={console.log} />
-                </Card>
+                </div>
             ) : null}
         </div>
     )
@@ -113,14 +127,26 @@ const StepDelay = (props: StepDelayProps) => {
     const { value, onChange, className, ...rest } = props
 
     return (
-        <InputGroup className={cn('', className)} {...rest}>
+        <div className={cn('group flex items-center gap-2', className)} {...rest}>
+            <InputGroup>
+                <InputGroupInput
+                    value={value}
+                    placeholder="0.00"
+                    type="number"
+                    onChange={(e) => onChange(parseInt(e.target.value, 10))}
+                />
+                <InputGroupAddon align="inline-end">
+                    <InputGroupText>ms</InputGroupText>
+                </InputGroupAddon>
+            </InputGroup>
             <Popover>
-                <PopoverTrigger asChild>
-                    <InputGroupAddon>
-                        <InputGroupButton variant="secondary" size="icon-xs">
-                            <Info />
-                        </InputGroupButton>
-                    </InputGroupAddon>
+                <PopoverTrigger
+                    className={cn('opacity-0', 'group-hover:opacity-100 group-focus:opacity-100')}
+                    asChild
+                >
+                    <Button variant="secondary" size="icon">
+                        <Info />
+                    </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="flex flex-col gap-1 rounded-xl text-sm">
                     <p className="font-medium">Delay between steps in milliseconds.</p>
@@ -131,15 +157,6 @@ const StepDelay = (props: StepDelayProps) => {
                     </p>
                 </PopoverContent>
             </Popover>
-            <InputGroupInput
-                value={value}
-                placeholder="0.00"
-                type="number"
-                onChange={(e) => onChange(parseInt(e.target.value, 10))}
-            />
-            <InputGroupAddon align="inline-end">
-                <InputGroupText>ms</InputGroupText>
-            </InputGroupAddon>
-        </InputGroup>
+        </div>
     )
 }

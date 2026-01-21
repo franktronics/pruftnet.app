@@ -1,5 +1,5 @@
 import { cn } from '@repo/utils'
-import { ScanLine, ScanText, Settings, Zap } from 'lucide-react'
+import { Plus, ScanLine, ScanText, Settings, Zap } from 'lucide-react'
 import type { ComponentProps } from 'react'
 import { StepCard, type Step } from './steps-card'
 
@@ -42,6 +42,25 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                     selected={step.id === 2}
                 />
             ))}
+            <div className="mt-10 flex gap-4">
+                <div className="size-10 shrink-0"></div>
+                <div
+                    className={cn(
+                        'w-full rounded-lg border-2 border-dashed p-6',
+                        'bg-muted/30 border-muted-foreground/30',
+                        'hover:bg-primary/10 hover:border-primary',
+                        'transition-colors duration-200',
+                        'flex flex-col items-center justify-center gap-3',
+                    )}
+                >
+                    <Plus className="text-muted-foreground/60 size-8" />
+                    <div className="text-center">
+                        <p className="text-muted-foreground text-sm font-medium">
+                            Drop a component here to add a new step
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
