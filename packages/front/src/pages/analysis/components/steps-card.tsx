@@ -12,7 +12,7 @@ import {
 } from '@repo/ui/atoms'
 import { cn } from '@repo/utils'
 import { GripVertical, Info } from 'lucide-react'
-import type { ComponentProps, JSX, ReactNode } from 'react'
+import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react'
 
 export type Step = {
     id: number
@@ -24,12 +24,12 @@ export type Step = {
 export type StepCardProps = {
     cardId: number | string
     step: Step
-    isLast?: boolean
     selected?: boolean
+    dragHandleProps?: ComponentProps<'button'>
 } & Omit<ComponentProps<'article'>, 'children'>
 
 export const StepCard = (props: StepCardProps) => {
-    const { cardId, step, className, isLast = true, selected = false, ...rest } = props
+    const { cardId, step, className, selected = false, dragHandleProps, ...rest } = props
 
     return (
         <article
@@ -68,8 +68,9 @@ export const StepCard = (props: StepCardProps) => {
                 type="button"
                 className={cn(
                     'col-start-2 row-span-2 row-start-1 h-full self-center',
-                    'cursor-grab',
+                    'cursor-grab active:cursor-grabbing',
                 )}
+                {...dragHandleProps}
             >
                 <GripVertical className="text-muted-foreground size-5" />
             </button>
@@ -80,14 +81,22 @@ export const StepCard = (props: StepCardProps) => {
 type DraggableStepCardProps = {
     cardId: number
     displayDropArea?: boolean
-} & ComponentProps<'div'>
+    children: ReactElement<StepCardProps>
+} & Omit<ComponentProps<'div'>, 'children'>
 export const DraggableStepCard = (props: DraggableStepCardProps) => {
-    const { cardId, className, displayDropArea = false, ...rest } = props
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: cardId })
+    const { cardId, className, displayDropArea = false, children, ...rest } = props
+    const { attributes, listeners, setNodeRef, transform, transition, setActivatorNodeRef } =
+        useSortable({ id: cardId })
 
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
+    }
+
+    const handleProps = {
+        ...listeners,
+        ...attributes,
+        ref: setActivatorNodeRef,
     }
 
     return (
@@ -95,8 +104,6 @@ export const DraggableStepCard = (props: DraggableStepCardProps) => {
             ref={setNodeRef}
             style={style}
             className={cn('relative mb-25 w-full', className)}
-            {...listeners}
-            {...attributes}
             {...rest}
         >
             {displayDropArea ? (
@@ -104,7 +111,7 @@ export const DraggableStepCard = (props: DraggableStepCardProps) => {
                     <p className="text-muted-foreground font-medium">DROP HERE</p>
                 </div>
             ) : null}
-            {props.children}
+            {cloneElement(children, { dragHandleProps: handleProps })}
         </div>
     )
 }

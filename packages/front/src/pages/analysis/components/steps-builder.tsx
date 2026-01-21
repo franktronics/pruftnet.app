@@ -20,18 +20,17 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                     const selected = step.id === 2
 
                     return (
-                        <StepCardLayout isLast={isLast} selected={selected} index={index}>
+                        <StepCardLayout
+                            key={step.id}
+                            isLast={isLast}
+                            selected={selected}
+                            index={index}
+                        >
                             <DraggableStepCard
                                 cardId={step.id}
                                 displayDropArea={step.id === activeId}
                             >
-                                <StepCard
-                                    key={step.id}
-                                    cardId={step.id}
-                                    step={step}
-                                    isLast={isLast}
-                                    selected={selected}
-                                />
+                                <StepCard cardId={step.id} step={step} selected={selected} />
                             </DraggableStepCard>
                         </StepCardLayout>
                     )
