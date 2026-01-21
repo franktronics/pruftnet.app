@@ -1,3 +1,5 @@
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
     Button,
     InputGroup,
@@ -10,7 +12,7 @@ import {
 } from '@repo/ui/atoms'
 import { cn } from '@repo/utils'
 import { GripVertical, Info } from 'lucide-react'
-import type { ComponentProps, ReactNode } from 'react'
+import type { ComponentProps, JSX, ReactNode } from 'react'
 
 export type Step = {
     id: number
@@ -20,13 +22,100 @@ export type Step = {
 }
 
 export type StepCardProps = {
+    cardId: number | string
     step: Step
-    isLast: boolean
+    isLast?: boolean
     selected?: boolean
-} & Omit<ComponentProps<'div'>, 'children'>
+} & Omit<ComponentProps<'article'>, 'children'>
 
 export const StepCard = (props: StepCardProps) => {
-    const { step, isLast, selected = false, className, ...rest } = props
+    const { cardId, step, className, isLast = true, selected = false, ...rest } = props
+
+    return (
+        <article
+            className={cn(
+                'w-full hover:cursor-pointer',
+                'grid grid-cols-[1fr_auto] grid-rows-[auto_auto]',
+                'rounded-lg border p-4 transition-all duration-300',
+                { 'bg-card border-primary shadow-primary/10 shadow-md': selected },
+                {
+                    'bg-muted/50 border-border hover:bg-muted/90 hover:border-muted-foreground/30':
+                        !selected,
+                },
+            )}
+            {...rest}
+        >
+            <div className="col-start-1 flex items-center gap-3">
+                <div
+                    className={cn(
+                        'flex size-9 items-center justify-center rounded-md transition-colors duration-300',
+                        selected ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground',
+                    )}
+                >
+                    {step.icon}
+                </div>
+                <h3
+                    className={cn(
+                        'text-sm leading-none transition-colors duration-300',
+                        selected ? 'text-primary font-semibold' : 'text-foreground',
+                    )}
+                >
+                    {step.name}
+                </h3>
+            </div>
+            <p className="text-muted-foreground col-start-1 pt-3 text-sm">{step.description}</p>
+            <button
+                type="button"
+                className={cn(
+                    'col-start-2 row-span-2 row-start-1 h-full self-center',
+                    'cursor-grab',
+                )}
+            >
+                <GripVertical className="text-muted-foreground size-5" />
+            </button>
+        </article>
+    )
+}
+
+type DraggableStepCardProps = {
+    cardId: number
+    displayDropArea?: boolean
+} & ComponentProps<'div'>
+export const DraggableStepCard = (props: DraggableStepCardProps) => {
+    const { cardId, className, displayDropArea = false, ...rest } = props
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: cardId })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    }
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={cn('relative mb-25 w-full', className)}
+            {...listeners}
+            {...attributes}
+            {...rest}
+        >
+            {displayDropArea ? (
+                <div className={cn('bg-card absolute inset-1', 'flex items-center justify-center')}>
+                    <p className="text-muted-foreground font-medium">DROP HERE</p>
+                </div>
+            ) : null}
+            {props.children}
+        </div>
+    )
+}
+
+type StepCardLayoutProps = {
+    isLast: boolean
+    selected: boolean
+    index: number
+} & ComponentProps<'div'>
+export const StepCardLayout = (props: StepCardLayoutProps) => {
+    const { children, className, isLast, selected, index, ...rest } = props
 
     return (
         <div
@@ -48,7 +137,7 @@ export const StepCard = (props: StepCardProps) => {
                             : 'bg-muted text-foreground border-border',
                     )}
                 >
-                    <span className="text-sm font-medium">{step.id}</span>
+                    <span className="text-sm font-medium">{index}</span>
                 </div>
                 {!isLast ? (
                     <div
@@ -60,48 +149,7 @@ export const StepCard = (props: StepCardProps) => {
                 ) : null}
             </aside>
 
-            <article
-                className={cn(
-                    'w-full hover:cursor-pointer',
-                    'grid grid-cols-[1fr_auto] grid-rows-[auto_auto]',
-                    'rounded-lg border p-4 transition-all duration-300',
-                    { 'mb-25': !isLast },
-                    { 'bg-card border-primary shadow-primary/10 shadow-md': selected },
-                    {
-                        'bg-muted/50 border-border hover:bg-muted/90 hover:border-muted-foreground/30':
-                            !selected,
-                    },
-                )}
-            >
-                <div className="col-start-1 flex items-center gap-3">
-                    <div
-                        className={cn(
-                            'flex size-9 items-center justify-center rounded-md transition-colors duration-300',
-                            selected ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground',
-                        )}
-                    >
-                        {step.icon}
-                    </div>
-                    <h3
-                        className={cn(
-                            'text-sm leading-none transition-colors duration-300',
-                            selected ? 'text-primary font-semibold' : 'text-foreground',
-                        )}
-                    >
-                        {step.name}
-                    </h3>
-                </div>
-                <p className="text-muted-foreground col-start-1 pt-3 text-sm">{step.description}</p>
-                <button
-                    type="button"
-                    className={cn(
-                        'col-start-2 row-span-2 row-start-1 h-full self-center',
-                        'cursor-grab',
-                    )}
-                >
-                    <GripVertical className="text-muted-foreground size-5" />
-                </button>
-            </article>
+            {children}
 
             {!isLast ? (
                 <div
@@ -122,7 +170,6 @@ type StepDelayProps = {
     value: number
     onChange: (value: number) => void
 } & Omit<ComponentProps<'div'>, 'children' | 'onChange'>
-
 const StepDelay = (props: StepDelayProps) => {
     const { value, onChange, className, ...rest } = props
 
