@@ -1,4 +1,16 @@
+import {
+    Card,
+    InputGroup,
+    InputGroupAddon,
+    InputGroupButton,
+    InputGroupInput,
+    InputGroupText,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@repo/ui/atoms'
 import { cn } from '@repo/utils'
+import { Info } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 
 export type Step = {
@@ -20,8 +32,8 @@ export const StepCard = (props: StepCardProps) => {
     return (
         <div
             className={cn(
-                'hover:cursor-pointer',
-                'flex gap-4 rounded-lg text-left focus-visible:outline-none',
+                'relative hover:cursor-pointer',
+                'flex gap-4 focus-visible:outline-none',
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
                 className,
             )}
@@ -42,7 +54,7 @@ export const StepCard = (props: StepCardProps) => {
                 {!isLast ? (
                     <div
                         className={cn(
-                            'h-full min-h-8 w-0.5 rounded-full transition-colors duration-300',
+                            'mt-1 h-full min-h-8 w-0.5 rounded-full transition-colors duration-300',
                             selected ? 'bg-primary' : 'bg-border',
                         )}
                     />
@@ -51,7 +63,7 @@ export const StepCard = (props: StepCardProps) => {
 
             <article
                 className={cn(
-                    'mb-4 flex flex-1 flex-col gap-3 rounded-lg border p-4 transition-all duration-300',
+                    'mb-25 flex flex-1 flex-col gap-3 rounded-lg border p-4 transition-all duration-300',
                     selected
                         ? 'bg-card border-primary shadow-primary/10 shadow-md'
                         : 'bg-muted/50 border-border hover:bg-muted/80 hover:border-muted-foreground/20',
@@ -77,6 +89,17 @@ export const StepCard = (props: StepCardProps) => {
                 </div>
                 <p className="text-muted-foreground text-sm">{step.description}</p>
             </article>
+
+            {!isLast ? (
+                <Card
+                    className={cn(
+                        'absolute max-w-40 p-2',
+                        'top-[calc(100%-1.5rem)] -translate-y-full',
+                    )}
+                >
+                    <StepDelay value={0} onChange={console.log} />
+                </Card>
+            ) : null}
         </div>
     )
 }
@@ -90,19 +113,33 @@ const StepDelay = (props: StepDelayProps) => {
     const { value, onChange, className, ...rest } = props
 
     return (
-        <div className={cn('flex items-center gap-2', className)} {...rest}>
-            <input
-                type="number"
-                min={0}
+        <InputGroup className={cn('', className)} {...rest}>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <InputGroupAddon>
+                        <InputGroupButton variant="secondary" size="icon-xs">
+                            <Info />
+                        </InputGroupButton>
+                    </InputGroupAddon>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="flex flex-col gap-1 rounded-xl text-sm">
+                    <p className="font-medium">Delay between steps in milliseconds.</p>
+                    <p>
+                        This setting allows you to specify a delay between the execution of each
+                        step in the process. Adjusting this value can help manage resource usage and
+                        timing of operations.
+                    </p>
+                </PopoverContent>
+            </Popover>
+            <InputGroupInput
                 value={value}
-                onChange={(e) => onChange(Number(e.target.value))}
-                className={cn(
-                    'border-border bg-background h-7 w-16 rounded-md border px-2 text-center text-xs',
-                    'focus:border-primary focus:ring-primary focus:ring-1 focus:outline-none',
-                    '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-                )}
+                placeholder="0.00"
+                type="number"
+                onChange={(e) => onChange(parseInt(e.target.value, 10))}
             />
-            <span className="text-muted-foreground text-xs">ms</span>
-        </div>
+            <InputGroupAddon align="inline-end">
+                <InputGroupText>ms</InputGroupText>
+            </InputGroupAddon>
+        </InputGroup>
     )
 }
