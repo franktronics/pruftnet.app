@@ -13,7 +13,7 @@
         "setup:caps": "sudo setcap cap_net_raw,cap_net_admin=eip $(which node)",
         "check:caps": "getcap $(which node)"
     },
-    "packageManager": "pnpm@10.28.0",
+    "packageManager": "pnpm@10.28.1",
     "engines": {
         "node": ">=18"
     },
