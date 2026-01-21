@@ -80,11 +80,12 @@ export const StepCard = (props: StepCardProps) => {
 
 type DraggableStepCardProps = {
     cardId: number
+    isLast?: boolean
     displayDropArea?: boolean
     children: ReactElement<StepCardProps>
 } & Omit<ComponentProps<'div'>, 'children'>
 export const DraggableStepCard = (props: DraggableStepCardProps) => {
-    const { cardId, className, displayDropArea = false, children, ...rest } = props
+    const { cardId, isLast = false, className, displayDropArea = false, children, ...rest } = props
     const { attributes, listeners, setNodeRef, transform, transition, setActivatorNodeRef } =
         useSortable({ id: cardId })
 
@@ -103,7 +104,7 @@ export const DraggableStepCard = (props: DraggableStepCardProps) => {
         <div
             ref={setNodeRef}
             style={style}
-            className={cn('relative mb-25 w-full', className)}
+            className={cn('relative w-full', { 'mb-25': !isLast }, className)}
             {...rest}
         >
             {displayDropArea ? (
@@ -159,13 +160,7 @@ export const StepCardLayout = (props: StepCardLayoutProps) => {
             {children}
 
             {!isLast ? (
-                <div
-                    className={cn(
-                        'bg-card rounded-lg',
-                        'absolute max-w-40 p-1',
-                        'top-[calc(100%-2rem)] -translate-y-full',
-                    )}
-                >
+                <div className={cn('absolute max-w-40', 'top-[calc(100%-2rem)] -translate-y-full')}>
                     <StepDelay value={0} onChange={console.log} />
                 </div>
             ) : null}
@@ -182,17 +177,19 @@ const StepDelay = (props: StepDelayProps) => {
 
     return (
         <div className={cn('group flex items-center gap-2', className)} {...rest}>
-            <InputGroup>
-                <InputGroupInput
-                    value={value}
-                    placeholder="0.00"
-                    type="number"
-                    onChange={(e) => onChange(parseInt(e.target.value, 10))}
-                />
-                <InputGroupAddon align="inline-end">
-                    <InputGroupText>ms</InputGroupText>
-                </InputGroupAddon>
-            </InputGroup>
+            <div className="bg-card rounded-lg p-1">
+                <InputGroup>
+                    <InputGroupInput
+                        value={value}
+                        placeholder="0.00"
+                        type="number"
+                        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+                    />
+                    <InputGroupAddon align="inline-end">
+                        <InputGroupText>ms</InputGroupText>
+                    </InputGroupAddon>
+                </InputGroup>
+            </div>
             <Popover>
                 <PopoverTrigger
                     className={cn('opacity-0', 'group-hover:opacity-100 group-focus:opacity-100')}

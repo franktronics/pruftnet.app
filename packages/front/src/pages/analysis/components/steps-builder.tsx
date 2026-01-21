@@ -29,6 +29,7 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                             <DraggableStepCard
                                 cardId={step.id}
                                 displayDropArea={step.id === activeId}
+                                isLast={isLast}
                             >
                                 <StepCard cardId={step.id} step={step} selected={selected} />
                             </DraggableStepCard>
@@ -45,8 +46,7 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                     ) : null}
                 </DragOverlay>
             </SortableContext>
-            <div className="flex gap-4">
-                <div className="size-10 shrink-0"></div>
+            <div className="mt-8 flex gap-4">
                 <div
                     className={cn(
                         'w-full rounded-lg border-2 border-dashed p-6',
