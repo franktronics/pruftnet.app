@@ -56,3 +56,5 @@
 - TypeScript: [typescriptlang.org](https://www.typescriptlang.org/docs/)
 - C++: [cppreference.com](https://en.cppreference.com/w/)
 - Shadcn: [ui.shadcn.com](https://ui.shadcn.com/docs/components)
+- Only use Shadcn styles and [components](https://ui.shadcn.com/llms.txt) for UI consistency
+- Tailwind CSS: [tailwindcss.com](https://tailwindcss.com/docs)
