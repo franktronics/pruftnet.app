@@ -39,7 +39,7 @@ export const StepCard = (props: StepCardProps) => {
                 'rounded-lg border p-4 transition-all duration-300',
                 { 'bg-card border-primary shadow-primary/10 shadow-md': selected },
                 {
-                    'bg-muted/50 border-border hover:bg-muted/90 hover:border-muted-foreground/30':
+                    'bg-muted border-border hover:bg-muted/70 hover:border-muted-foreground/30':
                         !selected,
                 },
             )}
@@ -124,7 +124,7 @@ type LibraryStepCardProps = {
 } & Omit<ComponentProps<'div'>, 'children'>
 export const LibraryStepCard = (props: LibraryStepCardProps) => {
     const { step, templateId, activeId, className, ...rest } = props
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: `library-${templateId}`,
         data: {
             source: 'library',
@@ -141,12 +141,7 @@ export const LibraryStepCard = (props: LibraryStepCardProps) => {
         <div
             ref={setNodeRef}
             style={style}
-            className={cn(
-                'w-full',
-                { 'opacity-70': isDragging },
-                { 'opacity-40': activeId === `library-${templateId}` },
-                className,
-            )}
+            className={cn('w-full', className)}
             {...attributes}
             {...listeners}
             {...rest}

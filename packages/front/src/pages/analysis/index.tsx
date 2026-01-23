@@ -81,7 +81,7 @@ function Analysis() {
                 onDragStart={handleDragStart}
             >
                 <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={40} minSize={30} className="p-4">
+                <ResizablePanel defaultSize={40} minSize={30}>
                     <StepsBuilder steps={buildedSteps} activeId={activeId} />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
