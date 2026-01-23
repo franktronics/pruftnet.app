@@ -1,8 +1,8 @@
 import { getEdgeParams } from '@repo/utils'
 import type { EdgeProps, Node, Edge } from '@xyflow/react'
-import { getBezierPath, EdgeLabelRenderer, useInternalNode } from '@xyflow/react'
+import { getBezierPath, useInternalNode } from '@xyflow/react'
 
-export type DeviceEdgeData<T extends Node = Node> = Edge<{
+export type AnalysisGraphEdgeData<T extends Node = Node> = Edge<{
     /**
      * The key to lookup in the source node's `data` object. For additional safety,
      * you can parameterize the `DataEdge` over the type of one of your nodes to
@@ -14,7 +14,7 @@ export type DeviceEdgeData<T extends Node = Node> = Edge<{
     key?: keyof T['data']
 }>
 
-export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
+export const AnalysisGraphEdge = (props: EdgeProps<AnalysisGraphEdgeData>) => {
     const { id, style, markerEnd, markerStart, source, target } = props
     const sourceNode = useInternalNode(source)
     const targetNode = useInternalNode(target)
@@ -25,7 +25,7 @@ export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
 
     const { sx, sy, tx, ty, sourcePos, targetPos } = getEdgeParams(sourceNode, targetNode)
 
-    const [edgePath, labelX, labelY] = getBezierPath({
+    const [edgePath] = getBezierPath({
         sourceX: sx,
         sourceY: sy,
         targetX: tx,
@@ -44,16 +44,6 @@ export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
                 markerStart={markerStart}
                 style={style}
             />
-            <EdgeLabelRenderer>
-                <div
-                    className="bg-background text-foreground absolute rounded border px-1"
-                    style={{
-                        transform: `translate(${labelX}px,${labelY}px) translate(-50%, -50%)`,
-                    }}
-                >
-                    <pre className="text-xs">2</pre>
-                </div>
-            </EdgeLabelRenderer>
         </>
     )
 }
