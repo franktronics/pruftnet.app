@@ -26,23 +26,15 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                             selected={selected}
                             index={index}
                         >
-                            <DraggableStepCard
-                                cardId={step.id}
-                                displayDropArea={step.id === activeId}
-                                isLast={isLast}
-                            >
-                                <StepCard cardId={step.id} step={step} selected={selected} />
+                            <DraggableStepCard cardId={step.id} activeId={activeId} isLast={isLast}>
+                                <StepCard step={step} selected={selected} />
                             </DraggableStepCard>
                         </StepCardLayout>
                     )
                 })}
                 <DragOverlay>
                     {activeId ? (
-                        <StepCard
-                            cardId={activeId}
-                            selected={true}
-                            step={steps.find((s) => s.id === activeId)!}
-                        />
+                        <StepCard selected={true} step={steps.find((s) => s.id === activeId)!} />
                     ) : null}
                 </DragOverlay>
             </SortableContext>

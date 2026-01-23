@@ -22,14 +22,13 @@ export type Step = {
 }
 
 export type StepCardProps = {
-    cardId: number | string
     step: Step
     selected?: boolean
     dragHandleProps?: ComponentProps<'button'>
 } & Omit<ComponentProps<'article'>, 'children'>
 
 export const StepCard = (props: StepCardProps) => {
-    const { cardId, step, className, selected = false, dragHandleProps, ...rest } = props
+    const { step, className, selected = false, dragHandleProps, ...rest } = props
 
     return (
         <article
@@ -79,13 +78,13 @@ export const StepCard = (props: StepCardProps) => {
 }
 
 type DraggableStepCardProps = {
-    cardId: number
+    cardId: number | string
     isLast?: boolean
-    displayDropArea?: boolean
+    activeId: number | string | null
     children: ReactElement<StepCardProps>
 } & Omit<ComponentProps<'div'>, 'children'>
 export const DraggableStepCard = (props: DraggableStepCardProps) => {
-    const { cardId, isLast = false, className, displayDropArea = false, children, ...rest } = props
+    const { cardId, isLast = true, className, activeId, children, ...rest } = props
     const { attributes, listeners, setNodeRef, transform, transition, setActivatorNodeRef } =
         useSortable({ id: cardId })
 
@@ -104,26 +103,26 @@ export const DraggableStepCard = (props: DraggableStepCardProps) => {
         <div
             ref={setNodeRef}
             style={style}
-            className={cn('relative w-full', { 'mb-25': !isLast }, className)}
+            className={cn(
+                'relative w-full',
+                { 'mb-25': !isLast },
+                { 'opacity-40': activeId === cardId },
+                className,
+            )}
             {...rest}
         >
-            {displayDropArea ? (
-                <div className={cn('bg-card absolute inset-1', 'flex items-center justify-center')}>
-                    <p className="text-muted-foreground font-medium">DROP HERE</p>
-                </div>
-            ) : null}
             {cloneElement(children, { dragHandleProps: handleProps })}
         </div>
     )
 }
 
 type StepCardLayoutProps = {
-    isLast: boolean
-    selected: boolean
+    isLast?: boolean
+    selected?: boolean
     index: number
 } & ComponentProps<'div'>
 export const StepCardLayout = (props: StepCardLayoutProps) => {
-    const { children, className, isLast, selected, index, ...rest } = props
+    const { children, className, isLast = true, selected = false, index, ...rest } = props
 
     return (
         <div
