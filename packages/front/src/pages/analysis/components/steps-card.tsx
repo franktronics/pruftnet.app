@@ -1,4 +1,5 @@
 import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import {
     Button,
@@ -112,6 +113,45 @@ export const DraggableStepCard = (props: DraggableStepCardProps) => {
             {...rest}
         >
             {cloneElement(children, { dragHandleProps: handleProps })}
+        </div>
+    )
+}
+
+type LibraryStepCardProps = {
+    step: Step
+    templateId: string
+    activeId: number | string | null
+} & Omit<ComponentProps<'div'>, 'children'>
+export const LibraryStepCard = (props: LibraryStepCardProps) => {
+    const { step, templateId, activeId, className, ...rest } = props
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: `library-${templateId}`,
+        data: {
+            source: 'library',
+            templateId,
+            step,
+        },
+    })
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+    }
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={cn(
+                'w-full',
+                { 'opacity-70': isDragging },
+                { 'opacity-40': activeId === `library-${templateId}` },
+                className,
+            )}
+            {...attributes}
+            {...listeners}
+            {...rest}
+        >
+            <StepCard step={step} />
         </div>
     )
 }

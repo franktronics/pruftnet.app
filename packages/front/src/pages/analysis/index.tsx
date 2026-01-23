@@ -31,39 +31,32 @@ function Analysis() {
         }),
     )
     const [activeId, setActiveId] = useState<number | string | null>(null)
-    const [buildedSteps, setBuildedSteps] = useState<Step[]>([
-        {
-            id: 1,
-            name: 'Network Discovery',
-            description: 'Scan the network to identify active devices and their IP addresses',
-            icon: <ScanLine className="size-5" />,
-        },
-        {
-            id: 2,
-            name: 'Port Analysis',
-            description: 'Analyze open ports and running services on discovered devices',
-            icon: <ScanText className="size-5" />,
-        },
-        {
-            id: 3,
-            name: 'Configuration',
-            description: 'Configure analysis parameters and set up monitoring rules ',
-            icon: <Settings className="size-5" />,
-        },
-        {
-            id: 4,
-            name: 'Execute Analysis',
-            description: 'Run the complete network analysis and generate reports',
-            icon: <Zap className="size-5" />,
-        },
-    ])
+    const [buildedSteps, setBuildedSteps] = useState<Step[]>([])
+
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event
 
-        if (active.id !== over?.id) {
+        if (!over) {
+            setActiveId(null)
+            return
+        }
+
+        const isFromLibrary = active.data.current?.source === 'library'
+        const isToDropzone = over.id === 'builder-dropzone'
+
+        if (isFromLibrary && isToDropzone) {
+            const templateStep = active.data.current?.step
+            if (templateStep) {
+                const newStep = {
+                    ...templateStep,
+                    id: Date.now() + Math.random(),
+                }
+                setBuildedSteps((prev) => [...prev, newStep])
+            }
+        } else if (!isFromLibrary && active.id !== over.id) {
             setBuildedSteps((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id)
-                const newIndex = items.findIndex((item) => item.id === over?.id)
+                const newIndex = items.findIndex((item) => item.id === over.id)
 
                 return arrayMove(items, oldIndex, newIndex)
             })
@@ -72,7 +65,6 @@ function Analysis() {
     }
     function handleDragStart(event: DragStartEvent) {
         const { active } = event
-
         setActiveId(active.id)
     }
 
@@ -103,7 +95,7 @@ function Analysis() {
                             <StepsProperty />
                         </TabsDisplayContent>
                         <TabsDisplayContent value="comp">
-                            <StepsComponents />
+                            <StepsComponents activeId={activeId} />
                         </TabsDisplayContent>
                     </TabsDisplay>
                 </ResizablePanel>
