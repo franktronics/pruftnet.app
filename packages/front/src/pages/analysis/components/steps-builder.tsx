@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { type ComponentProps } from 'react'
 import { DraggableStepCard, StepCard, StepCardLayout, type Step } from './steps-card'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { DragOverlay, useDroppable } from '@dnd-kit/core'
+import { useDroppable } from '@dnd-kit/core'
 
 type StepsBuilderProps = {
     steps: Array<Step>
@@ -17,9 +17,6 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
             accepts: ['library', 'builder'],
         },
     })
-
-    const activeStep = steps.find((s) => s.id === activeId)
-    const isFromLibrary = typeof activeId === 'string' && activeId.startsWith('library-')
 
     return (
         <div className={cn('flex h-full flex-col', className)} {...rest}>
@@ -53,20 +50,6 @@ export const StepsBuilder = (props: StepsBuilderProps) => {
                             </StepCardLayout>
                         )
                     })}
-                    <DragOverlay>
-                        {activeId && activeStep ? (
-                            <div
-                                className={cn(
-                                    'shadow-lg',
-                                    isFromLibrary
-                                        ? 'ring-primary/50 ring-2 ring-offset-2'
-                                        : 'opacity-90',
-                                )}
-                            >
-                                <StepCard selected={!isFromLibrary} step={activeStep} />
-                            </div>
-                        ) : null}
-                    </DragOverlay>
                 </SortableContext>
             </div>
 

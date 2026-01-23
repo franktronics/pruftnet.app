@@ -5,7 +5,6 @@ import {
     TabsDisplayContent,
 } from '@repo/ui/atoms'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@repo/ui/atoms'
-import { ScanLine, ScanText, Settings, Zap } from 'lucide-react'
 import { StepsBuilder } from './components/steps-builder'
 import { StepsComponents } from './components/steps-components'
 import { StepsProperty } from './components/steps-property'
@@ -16,12 +15,15 @@ import {
     useSensor,
     useSensors,
     closestCenter,
+    DragOverlay,
     type DragEndEvent,
     type DragStartEvent,
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useState } from 'react'
 import type { Step } from './components/steps-card'
+import { StepCard } from './components/steps-card'
+import { cn } from '@repo/utils'
 
 function Analysis() {
     const sensors = useSensors(
@@ -32,6 +34,10 @@ function Analysis() {
     )
     const [activeId, setActiveId] = useState<number | string | null>(null)
     const [buildedSteps, setBuildedSteps] = useState<Step[]>([])
+    const [activeDragData, setActiveDragData] = useState<any>(null)
+
+    const activeStep = activeDragData?.step || buildedSteps.find((s) => s.id === activeId)
+    const isFromLibrary = typeof activeId === 'string' && activeId.startsWith('library-')
 
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event
@@ -62,10 +68,12 @@ function Analysis() {
             })
         }
         setActiveId(null)
+        setActiveDragData(null)
     }
     function handleDragStart(event: DragStartEvent) {
         const { active } = event
         setActiveId(active.id)
+        setActiveDragData(active.data.current)
     }
 
     return (
@@ -99,6 +107,19 @@ function Analysis() {
                         </TabsDisplayContent>
                     </TabsDisplay>
                 </ResizablePanel>
+                <DragOverlay dropAnimation={null}>
+                    {activeId && activeStep ? (
+                        <div
+                            className={cn(
+                                'shadow-2xl',
+                                'ring-primary/50 rounded-lg ring-2 ring-offset-2',
+                            )}
+                            style={{ zIndex: 9999 }}
+                        >
+                            <StepCard selected={false} step={activeStep} />
+                        </div>
+                    ) : null}
+                </DragOverlay>
             </DndContext>
         </ResizablePanelGroup>
     )
