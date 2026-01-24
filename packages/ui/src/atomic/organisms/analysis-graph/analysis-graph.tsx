@@ -13,8 +13,7 @@ import { AnalysisGraphEdge } from './graph-edge'
 import { NetworkSource } from './nodes/network-source'
 import { EthernetPort, Network } from 'lucide-react'
 import { NetworkOutput } from './nodes/network-output'
-import { IpRange } from './nodes/ip-range'
-import { ArpScan } from './nodes/arp-scan'
+import { IpRange, ArpScan } from './nodes'
 
 const edgeTypes = {
     connect: AnalysisGraphEdge,
