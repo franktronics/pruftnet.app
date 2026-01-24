@@ -16,7 +16,7 @@ export const IpRange = (props: IpRangeProps) => {
             name={name}
             selected={selected}
             className={className}
-            contentClass="rounded-l-4xl rounded-r-lg pl-6"
+            contentClass="rounded-l-2xl p-2 pl-4"
             {...rest}
         >
             <div className="flex items-center gap-2">
