@@ -1,23 +1,22 @@
-import { type ComponentProps } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { ArrowDown } from 'lucide-react'
 import { NodeLayout } from './node-layout'
 
-export type IpRangeNodeData = Node<{ name: string }>
-export type IpRangeProps = {} & NodeProps<IpRangeNodeData> & ComponentProps<'div'>
+export type IpRangeNodeData = Node<{ name: string }, 'ip-range'>
+export type IpRangeProps = {
+    className?: string
+} & NodeProps<IpRangeNodeData>
 
 export const IpRange = (props: IpRangeProps) => {
-    const { selected = false, data, draggable, className, ...rest } = props
-    const { name } = data
+    const { selected = false, className } = props
 
     return (
         <NodeLayout
-            name={name}
+            data={props}
             selected={selected}
             className={className}
             contentClass="rounded-l-2xl p-2 pl-4"
-            {...rest}
         >
             <div className="flex items-center gap-2">
                 <div className="bg-chart-2/20 rounde flex size-4 shrink-0 items-center justify-center rounded-sm">

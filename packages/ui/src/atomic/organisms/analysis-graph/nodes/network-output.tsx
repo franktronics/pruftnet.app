@@ -1,25 +1,29 @@
-import { ReactNode, type ComponentProps } from 'react'
+import { ReactNode } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from './node-layout'
 
-export type NetworkOutputNodeData = Node<{
-    name: string
-    icon: ReactNode
-}>
-export type NetworkOutputProps = {} & NodeProps<NetworkOutputNodeData> & ComponentProps<'div'>
+export type NetworkOutputNodeData = Node<
+    {
+        name: string
+        icon: ReactNode
+    },
+    'net-output'
+>
+export type NetworkOutputProps = {
+    className?: string
+} & NodeProps<NetworkOutputNodeData>
 
 export const NetworkOutput = (props: NetworkOutputProps) => {
-    const { selected = false, className, data, draggable, ...rest } = props
-    const { name, icon } = data
+    const { selected = false, className } = props
+    const { icon } = props.data
 
     return (
         <NodeLayout
-            name={name}
+            data={props}
             selected={selected}
             className={className}
             contentClass="rounded-l-lg rounded-r-4xl"
-            {...rest}
         >
             <Handle
                 position={Position.Left}

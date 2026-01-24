@@ -13,16 +13,15 @@ export type NetworkSourceProps = {
     ComponentProps<'div'>
 
 export const NetworkSource = (props: NetworkSourceProps) => {
-    const { selected = false, className, data, draggable, ...rest } = props
-    const { name, icon } = data
+    const { selected = false, className } = props
+    const { icon } = props.data
 
     return (
         <NodeLayout
-            name={name}
+            data={props}
             selected={selected}
             className={className}
             contentClass="rounded-l-4xl rounded-r-lg"
-            {...rest}
         >
             <div
                 className={cn(

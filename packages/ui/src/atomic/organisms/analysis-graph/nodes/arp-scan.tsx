@@ -1,18 +1,18 @@
-import { type ComponentProps } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from './node-layout'
 import { Radar } from 'lucide-react'
 
-export type ArpScanNodeData = Node<{ name: string }>
-export type ArpScanProps = {} & NodeProps<ArpScanNodeData> & ComponentProps<'div'>
+export type ArpScanNodeData = Node<{ name: string }, 'arp-scan'>
+export type ArpScanProps = {
+    className?: string
+} & NodeProps<ArpScanNodeData>
 
 export const ArpScan = (props: ArpScanProps) => {
-    const { selected = false, data, className, ...rest } = props
-    const { name } = data
+    const { selected = false, className } = props
 
     return (
-        <NodeLayout name={name} selected={selected} className={className} {...rest}>
+        <NodeLayout data={props} selected={selected} className={className}>
             <Handle
                 position={Position.Left}
                 type="target"
