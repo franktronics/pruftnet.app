@@ -5,28 +5,51 @@ import {
     Background,
     useNodesState,
     useEdgesState,
-    ConnectionMode,
     type Node,
     type Edge,
 } from '@xyflow/react'
 import { GraphControls } from './graph-controls'
 import { AnalysisGraphEdge } from './graph-edge'
 import { NetworkSource } from './nodes/network-source'
-import { Network } from 'lucide-react'
+import { EthernetPort, Network } from 'lucide-react'
+import { NetworkOutput } from './nodes/network-output'
+import { IpRange } from './nodes/ip-range'
+import { ArpScan } from './nodes/arp-scan'
 
 const edgeTypes = {
     connect: AnalysisGraphEdge,
 }
 const nodeTypes = {
-    source: NetworkSource,
+    'net-source': NetworkSource,
+    'net-output': NetworkOutput,
+    'ip-range': IpRange,
+    'arp-scan': ArpScan,
 }
 
 const initialNodes: Node[] = [
     {
         id: 'network-source',
-        position: { x: 0, y: 0 },
-        type: 'source',
+        position: { x: -400, y: 0 },
+        type: 'net-source',
         data: { name: 'Network Source', icon: <Network /> },
+    },
+    {
+        id: 'network-output',
+        position: { x: 400, y: 0 },
+        type: 'net-output',
+        data: { name: 'Network Output', icon: <EthernetPort /> },
+    },
+    {
+        id: 'ip-range',
+        position: { x: 0, y: -200 },
+        type: 'ip-range',
+        data: { name: 'ARP Ip range' },
+    },
+    {
+        id: 'arp-scan',
+        position: { x: 0, y: 200 },
+        type: 'arp-scan',
+        data: { name: 'ARP Scan' },
     },
 ]
 
@@ -49,10 +72,11 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                 onConnect={onConnect}
                 fitView={true}
                 proOptions={{ hideAttribution: true }}
-                connectionMode={ConnectionMode.Loose}
+                snapToGrid={true}
+                snapGrid={[16, 16]}
             >
                 <GraphControls />
-                <Background />
+                <Background gap={16} />
             </ReactFlow>
         </div>
     )
