@@ -1,7 +1,7 @@
 import { type ComponentProps } from 'react'
 import { NodeProps, Node } from '@xyflow/react'
-import { NodeProvider, useNodeContext } from './node-layout-context'
-import { DropdownMenu } from '../../../atoms'
+import { NodeProvider } from './node-layout-context'
+import { ContextMenu } from '../../../atoms'
 
 type NodeLayoutRootProps = {
     data: NodeProps<Node<{ name: string }>>
@@ -12,21 +12,10 @@ const Root = (props: NodeLayoutRootProps) => {
 
     return (
         <NodeProvider name={data.data.name} selected={selected}>
-            <RootWrapper>
+            <ContextMenu>
                 <div {...rest}>{children}</div>
-            </RootWrapper>
+            </ContextMenu>
         </NodeProvider>
-    )
-}
-
-const RootWrapper = (props: ComponentProps<typeof DropdownMenu>) => {
-    const { children, ...rest } = props
-    const { menuOpen, setMenuOpen } = useNodeContext()
-
-    return (
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} {...rest}>
-            {children}
-        </DropdownMenu>
     )
 }
 

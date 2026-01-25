@@ -5,16 +5,16 @@ export type NodeContextType = {
     selected: boolean
     popupOpen: boolean
     setPopupOpen: (open: boolean) => void
-    menuOpen: boolean
-    setMenuOpen: (open: boolean) => void
+    renamePopupOpen: boolean
+    setRenamePopupOpen: (open: boolean) => void
 }
 const NodeContext = createContext<NodeContextType>({
     name: '',
     selected: false,
     popupOpen: false,
     setPopupOpen: () => {},
-    menuOpen: false,
-    setMenuOpen: () => {},
+    renamePopupOpen: false,
+    setRenamePopupOpen: () => {},
 })
 
 export const useNodeContext = () => {
@@ -32,15 +32,15 @@ export type NodeProviderProps = {
 export const NodeProvider = (props: NodeProviderProps) => {
     const { children, name, selected, ...rest } = props
     const [popupOpen, setPopupOpen] = useState(false)
-    const [menuOpen, setMenuOpen] = useState(false)
+    const [renamePopupOpen, setRenamePopupOpen] = useState(false)
 
     const value: NodeContextType = {
         name: name,
         selected: selected,
         popupOpen: popupOpen,
         setPopupOpen: setPopupOpen,
-        menuOpen: menuOpen,
-        setMenuOpen: setMenuOpen,
+        renamePopupOpen: renamePopupOpen,
+        setRenamePopupOpen: setRenamePopupOpen,
     }
 
     return (

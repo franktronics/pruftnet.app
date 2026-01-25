@@ -1,72 +1,29 @@
 import { ComponentProps } from 'react'
 import {
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuPortal,
-    DropdownMenuSeparator,
-    DropdownMenuShortcut,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
-} from '../../../atoms/dropdown-menu'
+    ContextMenuContent,
+    ContextMenuGroup,
+    ContextMenuItem,
+    ContextMenuSeparator,
+} from '../../../atoms/context-menu'
+import { useNodeContext } from './node-layout-context'
 
-type NodeLayoutMenuProps = {} & ComponentProps<typeof DropdownMenuContent>
+type NodeLayoutMenuProps = {} & ComponentProps<typeof ContextMenuContent>
 const Menu = (props: NodeLayoutMenuProps) => {
     const { children, className, ...rest } = props
+    const { setRenamePopupOpen, setPopupOpen } = useNodeContext()
 
     return (
-        <DropdownMenuContent className="w-40" align="start" {...rest}>
-            <DropdownMenuGroup>
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuItem>
-                    Profile
-                    <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    Billing
-                    <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    Settings
-                    <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-                </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-                <DropdownMenuItem>Team</DropdownMenuItem>
-                <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>Invite users</DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                            <DropdownMenuItem>Email</DropdownMenuItem>
-                            <DropdownMenuItem>Message</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>More...</DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                </DropdownMenuSub>
-                <DropdownMenuItem>
-                    New Team
-                    <DropdownMenuShortcut>⌘+T</DropdownMenuShortcut>
-                </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-                <DropdownMenuItem>GitHub</DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
-                <DropdownMenuItem disabled>API</DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-                <DropdownMenuItem>
-                    Log out
-                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-                </DropdownMenuItem>
-            </DropdownMenuGroup>
+        <ContextMenuContent className="w-48" {...rest}>
+            <ContextMenuGroup>
+                <ContextMenuItem onClick={() => setPopupOpen(true)}>Open</ContextMenuItem>
+                <ContextMenuItem onClick={() => setRenamePopupOpen(true)}>Rename</ContextMenuItem>
+            </ContextMenuGroup>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+                <ContextMenuItem>Delete</ContextMenuItem>
+            </ContextMenuGroup>
             {children}
-        </DropdownMenuContent>
+        </ContextMenuContent>
     )
 }
 
