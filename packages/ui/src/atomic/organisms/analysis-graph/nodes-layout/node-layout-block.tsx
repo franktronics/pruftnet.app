@@ -68,8 +68,9 @@ const Block = (props: NodeLayoutBlockProps) => {
             <ContextMenuTrigger asChild>
                 <div
                     className={cn(
-                        'relative flex flex-col gap-0 border-2 p-3 transition-all',
-                        'bg-background rounded-lg',
+                        'relative gap-0 border-2 transition-all',
+                        'bg-background h-16 rounded-lg px-3',
+                        'flex items-center justify-center',
                         selected
                             ? 'border-primary ring-primary/20 ring-2'
                             : 'border-border hover:border-primary/50',
