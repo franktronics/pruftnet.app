@@ -14,13 +14,14 @@ import {
     TabsDisplayTrigger,
 } from '../../../atoms'
 import { useNodeContext } from './node-layout-context'
+import { cn } from '@repo/utils'
 
 type NodeLayoutPopupProps = {
     title: string
     description?: string
 } & ComponentProps<typeof DialogContent>
 const Popup = (props: NodeLayoutPopupProps) => {
-    const { children, title, description = '', ...rest } = props
+    const { children, title, description = '', className, ...rest } = props
     const { popupOpen, setPopupOpen } = useNodeContext()
 
     let ParamsElt = null
@@ -45,37 +46,37 @@ const Popup = (props: NodeLayoutPopupProps) => {
 
     return (
         <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
-            <DialogContent {...rest}>
+            <DialogContent className={cn(className)} {...rest}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
-                    <div>
-                        <TabsDisplay defaultValue="params">
-                            <TabsDisplayList>
-                                <TabsDisplayTrigger
-                                    value="params"
-                                    disabled={childProps.params?.disabled}
-                                >
-                                    Parameters
-                                </TabsDisplayTrigger>
-                                <TabsDisplayTrigger
-                                    value="settings"
-                                    disabled={childProps.settings?.disabled}
-                                >
-                                    Settings
-                                </TabsDisplayTrigger>
-                            </TabsDisplayList>
-                            <TabsDisplayContent value="params">{ParamsElt}</TabsDisplayContent>
-                            <TabsDisplayContent value="settings">{SettingsElt}</TabsDisplayContent>
-                        </TabsDisplay>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Save changes</Button>
-                    </DialogFooter>
                 </DialogHeader>
+                <div>
+                    <TabsDisplay defaultValue="params">
+                        <TabsDisplayList>
+                            <TabsDisplayTrigger
+                                value="params"
+                                disabled={childProps.params?.disabled}
+                            >
+                                Parameters
+                            </TabsDisplayTrigger>
+                            <TabsDisplayTrigger
+                                value="settings"
+                                disabled={childProps.settings?.disabled}
+                            >
+                                Settings
+                            </TabsDisplayTrigger>
+                        </TabsDisplayList>
+                        <TabsDisplayContent value="params">{ParamsElt}</TabsDisplayContent>
+                        <TabsDisplayContent value="settings">{SettingsElt}</TabsDisplayContent>
+                    </TabsDisplay>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit">Save changes</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )
