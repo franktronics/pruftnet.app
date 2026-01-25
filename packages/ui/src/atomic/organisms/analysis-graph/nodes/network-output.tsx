@@ -52,6 +52,7 @@ export const NetworkOutput = (props: NetworkOutputProps) => {
                 <NodeLayout.Params>OK Param</NodeLayout.Params>
                 <NodeLayout.Settings>OK Settings</NodeLayout.Settings>
             </NodeLayout.Popup>
+            <NodeLayout.Menu></NodeLayout.Menu>
         </NodeLayout.Root>
     )
 }

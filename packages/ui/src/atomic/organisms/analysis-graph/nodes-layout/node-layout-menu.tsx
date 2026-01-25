@@ -6,11 +6,17 @@ import {
     ContextMenuSeparator,
 } from '../../../atoms/context-menu'
 import { useNodeContext } from './node-layout-context'
+import { useReactFlow } from '@xyflow/react'
 
 type NodeLayoutMenuProps = {} & ComponentProps<typeof ContextMenuContent>
 const Menu = (props: NodeLayoutMenuProps) => {
     const { children, className, ...rest } = props
-    const { setRenamePopupOpen, setPopupOpen } = useNodeContext()
+    const { setRenamePopupOpen, setPopupOpen, nodeId } = useNodeContext()
+    const { setNodes } = useReactFlow()
+
+    const handleDeleteBtnClick = () => {
+        setNodes((nds) => nds.filter((n) => n.id !== nodeId))
+    }
 
     return (
         <ContextMenuContent className="w-48" {...rest}>
@@ -20,7 +26,7 @@ const Menu = (props: NodeLayoutMenuProps) => {
             </ContextMenuGroup>
             <ContextMenuSeparator />
             <ContextMenuGroup>
-                <ContextMenuItem>Delete</ContextMenuItem>
+                <ContextMenuItem onClick={handleDeleteBtnClick}>Delete</ContextMenuItem>
             </ContextMenuGroup>
             {children}
         </ContextMenuContent>

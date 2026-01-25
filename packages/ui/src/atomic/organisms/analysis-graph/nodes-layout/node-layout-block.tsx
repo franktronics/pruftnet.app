@@ -28,8 +28,9 @@ type NodeLayoutBlockProps = {
 const Block = (props: NodeLayoutBlockProps) => {
     const { draggable, children, className, contentClass = '', ...rest } = props
 
-    const { name, setPopupOpen, selected } = useNodeContext()
+    const { name, setPopupOpen, selected, nodeId } = useNodeContext()
     const contentRef = useRef<HTMLDivElement>(null)
+    const { setNodes } = useReactFlow()
 
     const handleMnuBtnClick = (e: React.MouseEvent) => {
         if (!contentRef.current) return
@@ -46,6 +47,10 @@ const Block = (props: NodeLayoutBlockProps) => {
         contentRef.current.dispatchEvent(fakeEvent)
     }
 
+    const handleDeleteBtnClick = () => {
+        setNodes((nds) => nds.filter((n) => n.id !== nodeId))
+    }
+
     return (
         <div
             draggable="false"
@@ -53,7 +58,7 @@ const Block = (props: NodeLayoutBlockProps) => {
             {...rest}
         >
             <NodeToolbar className={cn('flex items-center gap-2')} position={Position.Top}>
-                <Button variant="outline" size="icon" type="button">
+                <Button variant="outline" size="icon" type="button" onClick={handleDeleteBtnClick}>
                     <Trash className="size-4" />
                 </Button>
                 <Button variant="outline" size="icon" type="button" onClick={handleMnuBtnClick}>
