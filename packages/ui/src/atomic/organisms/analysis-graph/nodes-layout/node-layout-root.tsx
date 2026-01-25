@@ -11,7 +11,7 @@ const Root = (props: NodeLayoutRootProps) => {
     const { children, data, selected, ...rest } = props
 
     return (
-        <NodeProvider name={data.data.name} selected={selected}>
+        <NodeProvider name={data.data.name} nodeId={data.id} selected={selected}>
             <ContextMenu>
                 <div {...rest}>{children}</div>
             </ContextMenu>

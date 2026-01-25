@@ -3,6 +3,7 @@ import { ComponentProps, createContext, useContext, useState } from 'react'
 export type NodeContextType = {
     name: string
     selected: boolean
+    nodeId: string
     popupOpen: boolean
     setPopupOpen: (open: boolean) => void
     renamePopupOpen: boolean
@@ -11,6 +12,7 @@ export type NodeContextType = {
 const NodeContext = createContext<NodeContextType>({
     name: '',
     selected: false,
+    nodeId: '',
     popupOpen: false,
     setPopupOpen: () => {},
     renamePopupOpen: false,
@@ -28,15 +30,17 @@ export const useNodeContext = () => {
 export type NodeProviderProps = {
     name: string
     selected: boolean
+    nodeId: string
 } & ComponentProps<'div'>
 export const NodeProvider = (props: NodeProviderProps) => {
-    const { children, name, selected, ...rest } = props
+    const { children, name, selected, nodeId, ...rest } = props
     const [popupOpen, setPopupOpen] = useState(false)
     const [renamePopupOpen, setRenamePopupOpen] = useState(false)
 
     const value: NodeContextType = {
         name: name,
         selected: selected,
+        nodeId: nodeId,
         popupOpen: popupOpen,
         setPopupOpen: setPopupOpen,
         renamePopupOpen: renamePopupOpen,

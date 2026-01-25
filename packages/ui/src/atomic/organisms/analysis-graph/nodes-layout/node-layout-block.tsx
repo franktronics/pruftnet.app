@@ -1,5 +1,6 @@
+import { z } from 'zod'
 import { cn } from '@repo/utils'
-import { NodeToolbar, Position } from '@xyflow/react'
+import { NodeToolbar, Position, useReactFlow } from '@xyflow/react'
 import { useId, useRef, type ComponentProps } from 'react'
 import {
     Button,
@@ -13,11 +14,13 @@ import {
     DialogTitle,
     Field,
     FieldDescription,
+    FieldError,
     FieldLabel,
     Input,
 } from '../../../atoms'
 import { Ellipsis, Trash } from 'lucide-react'
 import { useNodeContext } from './node-layout-context'
+import { useForm } from '@tanstack/react-form'
 
 type NodeLayoutBlockProps = {
     contentClass?: string
@@ -47,7 +50,6 @@ const Block = (props: NodeLayoutBlockProps) => {
         <div
             draggable="false"
             className={cn('relative flex flex-col items-center gap-1', className)}
-            onDoubleClick={() => setPopupOpen(true)}
             {...rest}
         >
             <NodeToolbar className={cn('flex items-center gap-2')} position={Position.Top}>
@@ -68,6 +70,7 @@ const Block = (props: NodeLayoutBlockProps) => {
                             : 'border-border hover:border-primary/50',
                         contentClass,
                     )}
+                    onDoubleClick={() => setPopupOpen(true)}
                     ref={contentRef}
                 >
                     {children}
@@ -82,8 +85,22 @@ const Block = (props: NodeLayoutBlockProps) => {
 type ChangeNameDialogProps = {} & ComponentProps<typeof DialogContent>
 const ChangeNameDialog = (props: ChangeNameDialogProps) => {
     const { ...rest } = props
-    const { name, renamePopupOpen, setRenamePopupOpen } = useNodeContext()
+    const { name, nodeId, renamePopupOpen, setRenamePopupOpen } = useNodeContext()
     const inputId = useId()
+    const { updateNodeData } = useReactFlow()
+
+    const form = useForm({
+        defaultValues: { name: name },
+        validators: {
+            onChange: z.object({ name: z.string().min(5) }),
+        },
+        onSubmit: async (values) => {
+            if (values.value.name !== name) {
+                updateNodeData(nodeId, { name: values.value.name })
+            }
+            setRenamePopupOpen(false)
+        },
+    })
 
     return (
         <Dialog open={renamePopupOpen} onOpenChange={setRenamePopupOpen}>
@@ -91,20 +108,39 @@ const ChangeNameDialog = (props: ChangeNameDialogProps) => {
                 <DialogHeader>
                     <DialogTitle>Rename Node: {name}</DialogTitle>
                     <DialogDescription></DialogDescription>
-                    <div className="pb-2">
-                        <Field>
-                            <FieldLabel htmlFor={inputId}>New Name</FieldLabel>
-                            <Input id={inputId} placeholder="Node..." />
-                            <FieldDescription>Enter a new name for this node.</FieldDescription>
-                        </Field>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Rename</Button>
-                    </DialogFooter>
                 </DialogHeader>
+                <div className="pb-2">
+                    <form.Field
+                        name="name"
+                        children={(field) => (
+                            <Field data-invalid={!field.state.meta.isValid}>
+                                <FieldLabel htmlFor={inputId}>New Name</FieldLabel>
+                                <Input
+                                    value={field.state.value}
+                                    onChange={(e) => field.handleChange(e.target.value)}
+                                    onBlur={field.handleBlur}
+                                    id={inputId}
+                                    placeholder="Node..."
+                                />
+                                {field.state.meta.isValid ? (
+                                    <FieldDescription>
+                                        Enter a new name for this node.
+                                    </FieldDescription>
+                                ) : (
+                                    <FieldError errors={field.state.meta.errors} />
+                                )}
+                            </Field>
+                        )}
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="button" onClick={() => form.handleSubmit()}>
+                        Rename
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )
