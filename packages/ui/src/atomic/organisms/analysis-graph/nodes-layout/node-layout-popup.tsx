@@ -19,9 +19,10 @@ import { cn } from '@repo/utils'
 type NodeLayoutPopupProps = {
     title: string
     description?: string
+    onConfirm?: () => boolean | void // Return false to prevent closing the popup and true to close it
 } & ComponentProps<typeof DialogContent>
 const Popup = (props: NodeLayoutPopupProps) => {
-    const { children, title, description = '', className, ...rest } = props
+    const { children, title, description = '', className, onConfirm, ...rest } = props
     const { popupOpen, setPopupOpen } = useNodeContext()
 
     let ParamsElt = null
@@ -43,6 +44,16 @@ const Popup = (props: NodeLayoutPopupProps) => {
             childProps.settings = child.props
         }
     })
+
+    const handleConfirm = () => {
+        if (onConfirm) {
+            const result = onConfirm()
+            if (result === false) {
+                return
+            }
+        }
+        setPopupOpen(false)
+    }
 
     return (
         <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
@@ -75,7 +86,9 @@ const Popup = (props: NodeLayoutPopupProps) => {
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Save changes</Button>
+                    <Button type="button" onClick={handleConfirm}>
+                        Save changes
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

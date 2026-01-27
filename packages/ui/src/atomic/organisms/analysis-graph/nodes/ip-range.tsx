@@ -15,6 +15,16 @@ export type IpRangeProps = {
 export const IpRange = (props: IpRangeProps) => {
     const { selected = false, className } = props
 
+    const paramForm = useForm({
+        defaultValues: { startIp: '192.168.208.121', endIp: '192.168.208.128' },
+        validators: {
+            onChange: paramFormSchema,
+        },
+        onSubmit: async (values) => {
+            console.log('Submitted values:', values.value)
+        },
+    })
+
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
             <NodeLayout.Block className={className} contentClass="rounded-l-2xl p-2">
@@ -59,7 +69,7 @@ export const IpRange = (props: IpRangeProps) => {
             </NodeLayout.Block>
             <NodeLayout.Popup title="IP Range Settings">
                 <NodeLayout.Params>
-                    <ParamTab />
+                    <ParamTab form={paramForm} />
                 </NodeLayout.Params>
                 <NodeLayout.Settings disabled={true}></NodeLayout.Settings>
             </NodeLayout.Popup>
@@ -74,27 +84,17 @@ const ipAddressSchema = z
         /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
         'Invalid IP address format',
     )
-
 const paramFormSchema = z.object({
     startIp: ipAddressSchema,
     endIp: ipAddressSchema,
 })
 
-type ParamTabProps = {} & ComponentProps<'div'>
+type ParamTabProps = {
+    form: any
+} & ComponentProps<'div'>
 const ParamTab = (props: ParamTabProps) => {
-    const { className, ...rest } = props
-    const startIpId = useId()
-    const endIpId = useId()
-
-    const form = useForm({
-        defaultValues: { startIp: '192.168.208.121', endIp: '192.168.208.128' },
-        validators: {
-            onChange: paramFormSchema,
-        },
-        onSubmit: async (values) => {
-            console.log('Submitted values:', values.value)
-        },
-    })
+    const { className, form, ...rest } = props
+    const fieldId = useId()
 
     return (
         <div className={cn('flex flex-col gap-4', className)} {...rest}>
@@ -102,11 +102,11 @@ const ParamTab = (props: ParamTabProps) => {
                 name="startIp"
                 children={(field) => (
                     <Field data-invalid={!field.state.meta.isValid}>
-                        <FieldLabel htmlFor={startIpId}>Start IP Address</FieldLabel>
+                        <FieldLabel htmlFor={fieldId + 'start'}>Start IP Address</FieldLabel>
                         <Input
-                            id={startIpId}
+                            id={fieldId + 'start'}
                             type="text"
-                            placeholder="192.168.1.1"
+                            placeholder="xxx.xxx.xxx.xxx"
                             className="font-mono"
                             value={field.state.value}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -129,11 +129,11 @@ const ParamTab = (props: ParamTabProps) => {
                 name="endIp"
                 children={(field) => (
                     <Field data-invalid={!field.state.meta.isValid}>
-                        <FieldLabel htmlFor={endIpId}>End IP Address</FieldLabel>
+                        <FieldLabel htmlFor={fieldId + 'end'}>End IP Address</FieldLabel>
                         <Input
-                            id={endIpId}
+                            id={fieldId + 'end'}
                             type="text"
-                            placeholder="192.168.1.255"
+                            placeholder="xxx.xxx.xxx.xxx"
                             className="font-mono"
                             value={field.state.value}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
