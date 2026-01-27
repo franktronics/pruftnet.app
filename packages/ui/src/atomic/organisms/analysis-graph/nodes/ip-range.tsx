@@ -100,56 +100,64 @@ const ParamTab = (props: ParamTabProps) => {
         <div className={cn('flex flex-col gap-4', className)} {...rest}>
             <form.Field
                 name="startIp"
-                children={(field) => (
-                    <Field data-invalid={!field.state.meta.isValid}>
-                        <FieldLabel htmlFor={fieldId + 'start'}>Start IP Address</FieldLabel>
-                        <Input
-                            id={fieldId + 'start'}
-                            type="text"
-                            placeholder="xxx.xxx.xxx.xxx"
-                            className="font-mono"
-                            value={field.state.value}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                field.handleChange(e.target.value)
-                            }
-                            onBlur={field.handleBlur}
-                        />
-                        {field.state.meta.isValid ? (
-                            <FieldDescription>
-                                Enter the starting IP address of the range.
-                            </FieldDescription>
-                        ) : (
-                            <FieldError errors={field.state.meta.errors} />
-                        )}
-                    </Field>
-                )}
+                children={(field) => {
+                    const isInvalid = !field.state.meta.isValid && field.state.meta.isTouched
+                    return (
+                        <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={fieldId + 'start'}>Start IP Address</FieldLabel>
+                            <Input
+                                id={fieldId + 'start'}
+                                type="text"
+                                placeholder="xxx.xxx.xxx.xxx"
+                                className="font-mono"
+                                value={field.state.value}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    field.handleChange(e.target.value)
+                                }
+                                onBlur={field.handleBlur}
+                                aria-invalid={isInvalid}
+                            />
+                            {!isInvalid ? (
+                                <FieldDescription>
+                                    Enter the starting IP address of the range.
+                                </FieldDescription>
+                            ) : (
+                                <FieldError errors={field.state.meta.errors} />
+                            )}
+                        </Field>
+                    )
+                }}
             />
 
             <form.Field
                 name="endIp"
-                children={(field) => (
-                    <Field data-invalid={!field.state.meta.isValid}>
-                        <FieldLabel htmlFor={fieldId + 'end'}>End IP Address</FieldLabel>
-                        <Input
-                            id={fieldId + 'end'}
-                            type="text"
-                            placeholder="xxx.xxx.xxx.xxx"
-                            className="font-mono"
-                            value={field.state.value}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                field.handleChange(e.target.value)
-                            }
-                            onBlur={field.handleBlur}
-                        />
-                        {field.state.meta.isValid ? (
-                            <FieldDescription>
-                                Enter the ending IP address of the range.
-                            </FieldDescription>
-                        ) : (
-                            <FieldError errors={field.state.meta.errors} />
-                        )}
-                    </Field>
-                )}
+                children={(field) => {
+                    const isInvalid = !field.state.meta.isValid && field.state.meta.isTouched
+                    return (
+                        <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={fieldId + 'end'}>End IP Address</FieldLabel>
+                            <Input
+                                id={fieldId + 'end'}
+                                type="text"
+                                placeholder="xxx.xxx.xxx.xxx"
+                                className="font-mono"
+                                value={field.state.value}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    field.handleChange(e.target.value)
+                                }
+                                onBlur={field.handleBlur}
+                                aria-invalid={isInvalid}
+                            />
+                            {!isInvalid ? (
+                                <FieldDescription>
+                                    Enter the ending IP address of the range.
+                                </FieldDescription>
+                            ) : (
+                                <FieldError errors={field.state.meta.errors} />
+                            )}
+                        </Field>
+                    )
+                }}
             />
         </div>
     )
