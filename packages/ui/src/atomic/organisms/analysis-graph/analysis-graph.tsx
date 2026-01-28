@@ -48,7 +48,7 @@ const initialNodes: Node[] = [
         id: 'arp-scan',
         position: { x: 0, y: 200 },
         type: 'arp-scan',
-        data: { name: 'ARP Scan' },
+        data: { name: 'ARP Scan', delay: 0 },
     },
 ]
 

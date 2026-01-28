@@ -28,7 +28,7 @@ export function FormInput(props: FormInputProps) {
                 {...rest}
             />
             {!isInvalid && !!description ? (
-                <FieldDescription>Enter the starting IP address of the range.</FieldDescription>
+                <FieldDescription>{description}</FieldDescription>
             ) : null}
             {isInvalid ? <FieldError errors={field.state.meta.errors} /> : null}
         </Field>
