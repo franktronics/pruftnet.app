@@ -5,12 +5,12 @@ import { AnalysisMap } from './components/analysis-map'
 function Analysis() {
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={15} minSize={10}>
+            <ResizablePanel defaultSize={20} minSize={10}>
                 <AnalysisList />
             </ResizablePanel>
 
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={85} minSize={75}>
+            <ResizablePanel defaultSize={80} minSize={75}>
                 <AnalysisMap />
             </ResizablePanel>
         </ResizablePanelGroup>
