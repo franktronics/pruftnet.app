@@ -1,27 +1,30 @@
 import { z } from 'zod'
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useReactFlow, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { ArrowDown } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
 import { ComponentProps } from 'react'
 import { useAppForm, withForm } from '../../../molecules'
 
-export type IpRangeNodeData = Node<{ name: string }, 'ip-range'>
+export type IpRangeNodeData = Node<{ name: string; startIp: string; endIp: string }, 'ip-range'>
 export type IpRangeProps = {
     className?: string
 } & NodeProps<IpRangeNodeData>
 
 export const IpRange = (props: IpRangeProps) => {
     const { selected = false, className } = props
+    const { updateNodeData } = useReactFlow()
 
     const form = useAppForm({
         defaultValues: { startIp: '', endIp: '' },
         validators: {
-            onChange: paramFormSchema,
             onSubmit: paramFormSchema,
         },
         onSubmit: async (values) => {
-            console.log('Submitted values:', values.value)
+            updateNodeData(props.id, {
+                startIp: values.value.startIp,
+                endIp: values.value.endIp,
+            })
             return true
         },
     })
@@ -39,7 +42,9 @@ export const IpRange = (props: IpRangeProps) => {
                         <div className="bg-chart-2/20 rounde flex size-4 shrink-0 items-center justify-center rounded-sm">
                             <div className="bg-chart-2 size-1.5 rounded-full"></div>
                         </div>
-                        <p className="text-foreground font-mono text-xs">192.168.208.121</p>
+                        <p className="text-foreground font-mono text-xs">
+                            {props.data.startIp === '' ? 'xxx.xxx.xxx.xxx' : props.data.startIp}
+                        </p>
                     </div>
 
                     <div className="flex items-center justify-center">
@@ -50,7 +55,9 @@ export const IpRange = (props: IpRangeProps) => {
                         <div className="bg-chart-5/20 flex size-4 shrink-0 items-center justify-center rounded-sm">
                             <div className="bg-chart-5 size-1.5 rounded-full"></div>
                         </div>
-                        <p className="text-foreground font-mono text-xs">192.168.208.128</p>
+                        <p className="text-foreground font-mono text-xs">
+                            {props.data.endIp === '' ? 'xxx.xxx.xxx.xxx' : props.data.endIp}
+                        </p>
                     </div>
                 </div>
 

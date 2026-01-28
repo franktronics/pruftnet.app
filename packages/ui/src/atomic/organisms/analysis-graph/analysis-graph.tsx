@@ -42,7 +42,7 @@ const initialNodes: Node[] = [
         id: 'ip-range',
         position: { x: 0, y: -200 },
         type: 'ip-range',
-        data: { name: 'ARP Ip range' },
+        data: { name: 'ARP Ip range', startIp: '', endIp: '' },
     },
     {
         id: 'arp-scan',
