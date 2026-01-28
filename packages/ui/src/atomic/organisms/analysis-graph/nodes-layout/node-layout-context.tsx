@@ -4,6 +4,7 @@ export type NodeContextType = {
     name: string
     selected: boolean
     nodeId: string
+    nodeType: string
     popupOpen: boolean
     setPopupOpen: (open: boolean) => void
     renamePopupOpen: boolean
@@ -13,6 +14,7 @@ const NodeContext = createContext<NodeContextType>({
     name: '',
     selected: false,
     nodeId: '',
+    nodeType: '',
     popupOpen: false,
     setPopupOpen: () => {},
     renamePopupOpen: false,
@@ -31,9 +33,10 @@ export type NodeProviderProps = {
     name: string
     selected: boolean
     nodeId: string
+    nodeType: string
 } & ComponentProps<'div'>
 export const NodeProvider = (props: NodeProviderProps) => {
-    const { children, name, selected, nodeId, ...rest } = props
+    const { children, name, selected, nodeId, nodeType, ...rest } = props
     const [popupOpen, setPopupOpen] = useState(false)
     const [renamePopupOpen, setRenamePopupOpen] = useState(false)
 
@@ -41,6 +44,7 @@ export const NodeProvider = (props: NodeProviderProps) => {
         name: name,
         selected: selected,
         nodeId: nodeId,
+        nodeType: nodeType,
         popupOpen: popupOpen,
         setPopupOpen: setPopupOpen,
         renamePopupOpen: renamePopupOpen,

@@ -12,6 +12,7 @@
         "./organisms": "./src/atomic/organisms/index.ts",
         "./templates": "./src/atomic/templates/index.ts",
         "./hooks": "./src/hooks/index.ts",
+        ".": "./src/index.ts",
         "./styles.css": "./src/styles/main.css"
     },
     "scripts": {

@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
+import { NodeHandle } from '../nodes-layout/node-handle'
 
 export type NetworkOutputNodeData = Node<
     {
@@ -21,24 +22,7 @@ export const NetworkOutput = (props: NetworkOutputProps) => {
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
             <NodeLayout.Block contentClass="rounded-l-lg rounded-r-4xl">
-                <Handle
-                    position={Position.Left}
-                    type="target"
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        width: '0.75em',
-                        height: '0.75em',
-                    }}
-                >
-                    <div
-                        className={cn(
-                            'border-background bg-primary border-2',
-                            'pointer-events-none size-3 rounded-full',
-                            'absolute -left-0.5',
-                        )}
-                    ></div>
-                </Handle>
+                <NodeHandle type="target" />
                 <div
                     className={cn(
                         'bg-primary/10 text-primary transition-colors',

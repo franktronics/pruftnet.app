@@ -1,10 +1,11 @@
 import { z } from 'zod'
-import { Handle, Position, useReactFlow, type Node, type NodeProps } from '@xyflow/react'
+import { useReactFlow, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { ArrowDown } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
 import { ComponentProps } from 'react'
 import { useAppForm, withForm } from '../../../molecules'
+import { NodeHandle } from '../nodes-layout/node-handle'
 
 export type IpRangeNodeData = Node<{ name: string; startIp: string; endIp: string }, 'ip-range'>
 export type IpRangeProps = {
@@ -60,25 +61,7 @@ export const IpRange = (props: IpRangeProps) => {
                         </p>
                     </div>
                 </div>
-
-                <Handle
-                    position={Position.Right}
-                    type="source"
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        width: '0.75em',
-                        height: '0.75em',
-                    }}
-                >
-                    <div
-                        className={cn(
-                            'border-background bg-primary border-2',
-                            'pointer-events-none size-3 rounded-full',
-                            'absolute -right-0.5',
-                        )}
-                    ></div>
-                </Handle>
+                <NodeHandle type="source" />
             </NodeLayout.Block>
             <NodeLayout.Popup title="IP Range Settings" onConfirm={handleFormSubmit}>
                 <NodeLayout.Params>

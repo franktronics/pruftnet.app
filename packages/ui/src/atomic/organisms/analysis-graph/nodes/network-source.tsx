@@ -1,7 +1,8 @@
 import type { ReactNode, ComponentProps } from 'react'
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
+import { NodeHandle } from '../nodes-layout/node-handle'
 
 export type NetworkSourceNodeData = Node<{
     name: string
@@ -27,24 +28,7 @@ export const NetworkSource = (props: NetworkSourceProps) => {
                 >
                     <div className="[&>svg]:size-5">{icon}</div>
                 </div>
-                <Handle
-                    position={Position.Right}
-                    type="source"
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        width: '0.75em',
-                        height: '0.75em',
-                    }}
-                >
-                    <div
-                        className={cn(
-                            'border-background bg-primary border-2',
-                            'pointer-events-none size-3 rounded-full',
-                            'absolute -right-0.5',
-                        )}
-                    ></div>
-                </Handle>
+                <NodeHandle type="source" />
             </NodeLayout.Block>
             <NodeLayout.Popup title="Network Source Settings">
                 <NodeLayout.Params>OK Param</NodeLayout.Params>

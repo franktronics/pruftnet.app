@@ -1,10 +1,11 @@
-import { Handle, Position, useReactFlow, type Node, type NodeProps } from '@xyflow/react'
+import { useReactFlow, type Node, type NodeProps } from '@xyflow/react'
 import { z } from 'zod'
 import { cn } from '@repo/utils'
 import { Radar } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
 import { useAppForm, withForm } from '../../../molecules'
 import { ComponentProps } from 'react'
+import { NodeHandle } from '../nodes-layout/node-handle'
 
 export type ArpScanNodeData = Node<{ name: string }, 'arp-scan'>
 export type ArpScanProps = {
@@ -36,25 +37,7 @@ export const ArpScan = (props: ArpScanProps) => {
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
             <NodeLayout.Block>
-                <Handle
-                    position={Position.Left}
-                    type="target"
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        width: '0.75em',
-                        height: '0.75em',
-                    }}
-                >
-                    <div
-                        className={cn(
-                            'border-background bg-primary border-2',
-                            'pointer-events-none size-3 rounded-full',
-                            'absolute -left-0.5',
-                        )}
-                    ></div>
-                </Handle>
-
+                <NodeHandle type="target" />
                 <div className="flex items-center gap-2">
                     <div
                         className={cn(
@@ -66,25 +49,7 @@ export const ArpScan = (props: ArpScanProps) => {
                     </div>
                     <div>ARP</div>
                 </div>
-
-                <Handle
-                    position={Position.Right}
-                    type="source"
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        width: '0.75em',
-                        height: '0.75em',
-                    }}
-                >
-                    <div
-                        className={cn(
-                            'border-background bg-primary border-2',
-                            'pointer-events-none size-3 rounded-full',
-                            'absolute -right-0.5',
-                        )}
-                    ></div>
-                </Handle>
+                <NodeHandle type="source" />
             </NodeLayout.Block>
             <NodeLayout.Popup title="ARP Scan Node">
                 <NodeLayout.Params>
