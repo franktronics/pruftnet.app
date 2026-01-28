@@ -19,7 +19,7 @@ import { cn } from '@repo/utils'
 type NodeLayoutPopupProps = {
     title: string
     description?: string
-    onConfirm?: () => boolean | void // Return false to prevent closing the popup and true to close it
+    onConfirm?: () => boolean | void | Promise<void | boolean> // Return false to prevent closing the popup and true to close it
 } & ComponentProps<typeof DialogContent>
 const Popup = (props: NodeLayoutPopupProps) => {
     const { children, title, description = '', className, onConfirm, ...rest } = props
@@ -38,16 +38,15 @@ const Popup = (props: NodeLayoutPopupProps) => {
         if (child.type === Params) {
             ParamsElt = child
             childProps.params = child.props
-        }
-        if (child.type === Settings) {
+        } else if (child.type === Settings) {
             SettingsElt = child
             childProps.settings = child.props
         }
     })
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (onConfirm) {
-            const result = onConfirm()
+            const result = await onConfirm()
             if (result === false) {
                 return
             }
@@ -94,18 +93,15 @@ const Popup = (props: NodeLayoutPopupProps) => {
         </Dialog>
     )
 }
-Popup.type = 'Popup'
 
 const Params = (props: { disabled?: boolean } & ComponentProps<'div'>) => {
     const { children, ...rest } = props
     return <div {...rest}>{children}</div>
 }
-Params.type = 'Params'
 
 const Settings = (props: { disabled?: boolean } & ComponentProps<'div'>) => {
     const { children, ...rest } = props
     return <div {...rest}>{children}</div>
 }
-Settings.type = 'Settings'
 
 export { Popup, Params, Settings, type NodeLayoutPopupProps }

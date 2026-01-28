@@ -3,9 +3,8 @@ import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { ArrowDown } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
-import { ComponentProps, useId } from 'react'
-import { useForm } from '@tanstack/react-form'
-import { Field, FieldLabel, FieldDescription, FieldError, Input } from '../../../atoms'
+import { ComponentProps } from 'react'
+import { useAppForm, withForm } from '../../../molecules'
 
 export type IpRangeNodeData = Node<{ name: string }, 'ip-range'>
 export type IpRangeProps = {
@@ -15,15 +14,22 @@ export type IpRangeProps = {
 export const IpRange = (props: IpRangeProps) => {
     const { selected = false, className } = props
 
-    const paramForm = useForm({
-        defaultValues: { startIp: '192.168.208.121', endIp: '192.168.208.128' },
+    const form = useAppForm({
+        defaultValues: { startIp: '', endIp: '' },
         validators: {
             onChange: paramFormSchema,
+            onSubmit: paramFormSchema,
         },
         onSubmit: async (values) => {
             console.log('Submitted values:', values.value)
+            return true
         },
     })
+
+    const handleFormSubmit = async (): Promise<boolean> => {
+        await form.handleSubmit()
+        return form.state.isSubmitted
+    }
 
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
@@ -67,9 +73,9 @@ export const IpRange = (props: IpRangeProps) => {
                     ></div>
                 </Handle>
             </NodeLayout.Block>
-            <NodeLayout.Popup title="IP Range Settings">
+            <NodeLayout.Popup title="IP Range Settings" onConfirm={handleFormSubmit}>
                 <NodeLayout.Params>
-                    <ParamTab form={paramForm} />
+                    <ParamTab form={form} />
                 </NodeLayout.Params>
                 <NodeLayout.Settings disabled={true}></NodeLayout.Settings>
             </NodeLayout.Popup>
@@ -89,76 +95,34 @@ const paramFormSchema = z.object({
     endIp: ipAddressSchema,
 })
 
-type ParamTabProps = {
-    form: any
-} & ComponentProps<'div'>
-const ParamTab = (props: ParamTabProps) => {
-    const { className, form, ...rest } = props
-    const fieldId = useId()
-
-    return (
-        <div className={cn('flex flex-col gap-4', className)} {...rest}>
-            <form.Field
-                name="startIp"
-                children={(field) => {
-                    const isInvalid = !field.state.meta.isValid && field.state.meta.isTouched
-                    return (
-                        <Field data-invalid={isInvalid}>
-                            <FieldLabel htmlFor={fieldId + 'start'}>Start IP Address</FieldLabel>
-                            <Input
-                                id={fieldId + 'start'}
-                                type="text"
-                                placeholder="xxx.xxx.xxx.xxx"
-                                className="font-mono"
-                                value={field.state.value}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    field.handleChange(e.target.value)
-                                }
-                                onBlur={field.handleBlur}
-                                aria-invalid={isInvalid}
-                            />
-                            {!isInvalid ? (
-                                <FieldDescription>
-                                    Enter the starting IP address of the range.
-                                </FieldDescription>
-                            ) : (
-                                <FieldError errors={field.state.meta.errors} />
-                            )}
-                        </Field>
-                    )
-                }}
-            />
-
-            <form.Field
-                name="endIp"
-                children={(field) => {
-                    const isInvalid = !field.state.meta.isValid && field.state.meta.isTouched
-                    return (
-                        <Field data-invalid={isInvalid}>
-                            <FieldLabel htmlFor={fieldId + 'end'}>End IP Address</FieldLabel>
-                            <Input
-                                id={fieldId + 'end'}
-                                type="text"
-                                placeholder="xxx.xxx.xxx.xxx"
-                                className="font-mono"
-                                value={field.state.value}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    field.handleChange(e.target.value)
-                                }
-                                onBlur={field.handleBlur}
-                                aria-invalid={isInvalid}
-                            />
-                            {!isInvalid ? (
-                                <FieldDescription>
-                                    Enter the ending IP address of the range.
-                                </FieldDescription>
-                            ) : (
-                                <FieldError errors={field.state.meta.errors} />
-                            )}
-                        </Field>
-                    )
-                }}
-            />
-        </div>
-    )
-}
+const ParamTab = withForm({
+    defaultValues: { startIp: '', endIp: '' },
+    props: {} as ComponentProps<'div'>,
+    render: function Render(props) {
+        const { form, className } = props
+        return (
+            <div className={cn('flex flex-col gap-4', className)}>
+                <form.AppField
+                    name="startIp"
+                    children={(field) => (
+                        <field.FormInput
+                            label="Start IP Address"
+                            description="Enter the starting IP address of the range."
+                            placeholder="xxx.xxx.xxx.xxx"
+                        />
+                    )}
+                />
+                <form.AppField
+                    name="endIp"
+                    children={(field) => (
+                        <field.FormInput
+                            label="End IP Address"
+                            description="Enter the ending IP address of the range."
+                            placeholder="xxx.xxx.xxx.xxx"
+                        />
+                    )}
+                />
+            </div>
+        )
+    },
+})
