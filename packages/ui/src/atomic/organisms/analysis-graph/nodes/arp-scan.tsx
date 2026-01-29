@@ -5,7 +5,7 @@ import { Radar } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
 import { useAppForm, withForm } from '../../../molecules'
 import { ComponentProps } from 'react'
-import { NodeHandle } from '../nodes-layout/node-handle'
+import { NodeHandle } from '../components'
 
 export type ArpScanNodeData = Node<{ name: string }, 'arp-scan'>
 export type ArpScanProps = {
@@ -16,6 +16,7 @@ export const ArpScan = (props: ArpScanProps) => {
     const { selected = false, className } = props
 
     const { updateNodeData } = useReactFlow()
+
     const form = useAppForm({
         defaultValues: { delay: 0 },
         validators: {
@@ -51,7 +52,7 @@ export const ArpScan = (props: ArpScanProps) => {
                 </div>
                 <NodeHandle type="source" />
             </NodeLayout.Block>
-            <NodeLayout.Popup title="ARP Scan Node">
+            <NodeLayout.Popup title="ARP Scan Node" onConfirm={handleFormSubmit}>
                 <NodeLayout.Params>
                     <ParamTab form={form} />
                 </NodeLayout.Params>

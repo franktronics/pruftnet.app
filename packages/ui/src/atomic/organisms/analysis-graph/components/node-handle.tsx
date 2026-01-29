@@ -1,7 +1,7 @@
 import { cn } from '@repo/utils'
 import { Handle, Position } from '@xyflow/react'
 import { ComponentProps } from 'react'
-import { useNodeContext } from './node-layout-context'
+import { useNodeContext } from '../nodes-layout/node-layout-context'
 
 export type NodeHandle = {
     position?: Position

@@ -8,12 +8,11 @@ import {
     type Node,
     type Edge,
 } from '@xyflow/react'
-import { GraphControls } from './graph-controls'
-import { AnalysisGraphEdge } from './graph-edge'
+import { AnalysisGraphEdge } from './components/graph-edge'
 import { NetworkSource } from './nodes/network-source'
 import { NetworkOutput } from './nodes/network-output'
 import { IpRange, ArpScan } from './nodes'
-import { checkConnection } from './connection-checker'
+import { NodeGallery, GraphControls, checkConnection } from './components'
 
 const edgeTypes = {
     connect: AnalysisGraphEdge,
@@ -54,6 +53,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                 isValidConnection={checkConnection}
             >
                 <GraphControls />
+                <NodeGallery />
                 <Background gap={16} />
             </ReactFlow>
         </div>

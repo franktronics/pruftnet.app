@@ -5,7 +5,7 @@ import { ArrowDown } from 'lucide-react'
 import { NodeLayout } from '../nodes-layout'
 import { ComponentProps } from 'react'
 import { useAppForm, withForm } from '../../../molecules'
-import { NodeHandle } from '../nodes-layout/node-handle'
+import { NodeHandle } from '../components'
 
 export type IpRangeNodeData = Node<{ name: string; startIp: string; endIp: string }, 'ip-range'>
 export type IpRangeProps = {

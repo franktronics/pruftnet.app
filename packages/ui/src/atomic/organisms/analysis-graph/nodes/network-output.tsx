@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
-import { NodeHandle } from '../nodes-layout/node-handle'
+import { NodeHandle } from '../components'
 
 export type NetworkOutputNodeData = Node<
     {
