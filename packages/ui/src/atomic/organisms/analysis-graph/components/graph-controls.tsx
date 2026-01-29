@@ -1,7 +1,7 @@
 import { useReactFlow, useStore, useStoreApi, type ReactFlowState } from '@xyflow/react'
 import { Plus, Minus, Maximize2, Lock, Unlock } from 'lucide-react'
-import { Button } from '../../atoms'
 import { cn } from '@repo/utils'
+import { Button } from '../../../atoms'
 
 const isInteractiveSelector = (s: ReactFlowState) =>
     s.nodesDraggable && s.nodesConnectable && s.elementsSelectable

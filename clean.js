@@ -11,7 +11,7 @@ const dirs = [
     './packages/core/build',
     './packages/core/tests/build',
     './pnpm-lock.yaml',
-    './build'
+    './build',
 ]
 
 const node_modules = [

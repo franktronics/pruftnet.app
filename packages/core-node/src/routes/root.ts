@@ -11,6 +11,11 @@ const scanStore: MapStoreType<number, NetworkSniffer> = new MapStore()
 const settingsStore: MapStoreType<'settings', AppSettings> = new MapStore()
 const protocolFileStore: MapStoreType<string, ProtocolFile> = new MapStore()
 
-export const stores = { packets: packetStore, scan: scanStore, settings: settingsStore, protocolFiles: protocolFileStore }
+export const stores = {
+    packets: packetStore,
+    scan: scanStore,
+    settings: settingsStore,
+    protocolFiles: protocolFileStore,
+}
 export const procedure = createProcedure(stores)
 export const wsProcedure = createWsProcedure(stores)

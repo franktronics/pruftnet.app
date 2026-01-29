@@ -40,24 +40,30 @@ The project is a monorepo managed with pnpm and Turborepo.
 # project core operation (packages/core)
 
 ## Overview
+
 In the core there are several modules and a utilities folder containing utilities, types or even classes useful to each of the modules.
+
 - `modules/`: Contains different modules for various OSI layers.
     - `analyser/`: Responsible for performing various active analyses on the network. For example, performing Neighbor Discovery for IPv6 operations or ARP scans.
     - `parser/`: Responsible for parsing network packets captured from the network interface.
     - `sniffer/`: Responsible for capturing network packets from the network interface.
 
 ## The analyser module
+
 It must implement several analysis scenarios in order to obtain as much information as possible about the equipment present in the network.
 We start from the assumption that we do not know the IP address or MAC address of the equipment and seek to determine them.
 The analyses to be implemented are as follows:
+
 - IPv6 Neighbor Discovery analysis
 - ARP analysis
 
 ## The parser module
+
 It is responsible for parsing the raw packets obtained by the sniffer.
 At the end, it should be able to provide a representation of each packet in the form of an object that is understandable and that will be sent to the Node.JS side by Napi.
 
 ## The sniffer module
+
 It is responsible for capturing raw packets from the network interface.
 It captures packets on an isolated thread. After capture, each packet is placed in a ring buffer, and a second thread retrieves these packets from the ring buffer to parse them.
 This ensures that the capture is not slowed down by parsing.

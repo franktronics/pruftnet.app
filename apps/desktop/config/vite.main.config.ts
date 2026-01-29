@@ -14,13 +14,7 @@ export default defineConfig({
             output: {
                 entryFileNames: 'main.js',
             },
-            external: [
-                'electron',
-                'path',
-                'fs',
-                'net',
-                /\.node$/,
-            ],
+            external: ['electron', 'path', 'fs', 'net', /\.node$/],
         },
         minify: false,
     },
