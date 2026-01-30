@@ -1,12 +1,12 @@
-import type { ReactNode, ComponentProps } from 'react'
+import type { ComponentProps } from 'react'
 import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
 import { NodeHandle } from '../components'
+import { Network } from 'lucide-react'
 
 export type NetworkSourceNodeData = Node<{
     name: string
-    icon: ReactNode
 }>
 export type NetworkSourceProps = {
     selected?: boolean
@@ -15,7 +15,7 @@ export type NetworkSourceProps = {
 
 export const NetworkSource = (props: NetworkSourceProps) => {
     const { selected = false, className } = props
-    const { icon } = props.data
+    const {} = props.data
 
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
@@ -26,7 +26,9 @@ export const NetworkSource = (props: NetworkSourceProps) => {
                         'flex size-9 shrink-0 items-center justify-center rounded-full',
                     )}
                 >
-                    <div className="[&>svg]:size-5">{icon}</div>
+                    <div className="[&>svg]:size-5">
+                        <Network />
+                    </div>
                 </div>
                 <NodeHandle type="source" />
             </NodeLayout.Block>

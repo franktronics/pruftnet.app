@@ -3,6 +3,7 @@ import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
 import { NodeHandle } from '../components'
+import { EthernetPort } from 'lucide-react'
 
 export type NetworkOutputNodeData = Node<
     {
@@ -17,7 +18,7 @@ export type NetworkOutputProps = {
 
 export const NetworkOutput = (props: NetworkOutputProps) => {
     const { selected = false, className } = props
-    const { icon } = props.data
+    const {} = props.data
 
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
@@ -29,7 +30,9 @@ export const NetworkOutput = (props: NetworkOutputProps) => {
                         'flex size-9 shrink-0 items-center justify-center rounded-full',
                     )}
                 >
-                    <div className="[&>svg]:size-5">{icon}</div>
+                    <div className="[&>svg]:size-5">
+                        <EthernetPort />
+                    </div>
                 </div>
             </NodeLayout.Block>
             <NodeLayout.Popup title="Network Output Settings">

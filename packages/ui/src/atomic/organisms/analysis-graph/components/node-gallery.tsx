@@ -1,8 +1,8 @@
 import { useReactFlow } from '@xyflow/react'
 import { Plus, Radar, Network, Database } from 'lucide-react'
-import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../../atoms/sheet/sheet'
-import { Button } from '../../../atoms/button/button'
+import { SheetContent, SheetDescription, SheetHeader, SheetTitle, Button } from '../../../atoms'
 import { cn } from '@repo/utils'
+import { ReactNode } from 'react'
 
 export type NodeGalleryProps = {
     onOpenChange?: (open: boolean) => void
@@ -12,7 +12,8 @@ type NodeType = {
     type: string
     label: string
     description: string
-    icon: React.ReactNode
+    icon: ReactNode
+    defaultData?: any
 }
 
 const nodeTypes: NodeType[] = [
@@ -23,22 +24,24 @@ const nodeTypes: NodeType[] = [
         icon: <Network className="size-5" />,
     },
     {
+        type: 'net-output',
+        label: 'Network Output',
+        description: 'Output endpoint for analysis results',
+        icon: <Database className="size-5" />,
+    },
+    {
         type: 'ip-range',
         label: 'IP Range',
         description: 'Define a range of IP addresses',
         icon: <Database className="size-5" />,
+        defaultData: { startIp: '', endIp: '' },
     },
     {
         type: 'arp-scan',
         label: 'ARP Scan',
         description: 'Scan network using ARP protocol',
         icon: <Radar className="size-5" />,
-    },
-    {
-        type: 'net-output',
-        label: 'Network Output',
-        description: 'Output endpoint for analysis results',
-        icon: <Database className="size-5" />,
+        defaultData: { delay: 0 },
     },
 ]
 
@@ -46,15 +49,15 @@ export const NodeGallery = (props: NodeGalleryProps) => {
     const { onOpenChange } = props
     const { addNodes } = useReactFlow()
 
-    const handleAddNode = (type: string) => {
-        const nodeId = `${type}-${Date.now()}`
+    const handleAddNode = (node: NodeType) => {
+        const nodeId = `${node.type}-${Date.now()}`
         const newNode = {
             id: nodeId,
-            type: type,
-            position: { x: Math.random() * 400, y: Math.random() * 400 },
+            type: node.type,
+            position: { x: -200 + Math.random() * 400, y: -200 + Math.random() * 400 },
             data: {
-                name: `${type}-node`,
-                icon: nodeTypes.find((n) => n.type === type)?.icon,
+                name: `${node.type}-node`,
+                ...node.defaultData,
             },
         }
 
@@ -87,11 +90,7 @@ export const NodeGallery = (props: NodeGalleryProps) => {
                                 <p className="text-muted-foreground text-sm">{node.description}</p>
                             </div>
                         </div>
-                        <Button
-                            size="sm"
-                            onClick={() => handleAddNode(node.type)}
-                            className="shrink-0"
-                        >
+                        <Button size="sm" onClick={() => handleAddNode(node)} className="shrink-0">
                             <Plus className="mr-1 size-4" />
                             Add
                         </Button>
