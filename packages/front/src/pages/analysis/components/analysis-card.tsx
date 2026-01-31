@@ -59,6 +59,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                 description: values.value.description,
             })
             await queryClient.invalidateQueries({ queryKey: ['analysis', { id }] })
+            await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
         },
     })
 
