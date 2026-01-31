@@ -44,7 +44,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
     })
 
     return (
-        <div className={cn('p-2', className)} {...rest}>
+        <div className={cn('grid h-full grid-rows-[auto_auto_1fr] p-2', className)} {...rest}>
             <div>
                 <h2 className="text-2xl font-bold">Network Analyses</h2>
                 <p>Browse and manage your network analyses below.</p>
@@ -98,15 +98,17 @@ export const AnalysisList = (props: AnalysisListProps) => {
                     </div>
                 </Popup>
             </div>
-            <div className="flex flex-col gap-3">
-                {analysisList.length === 0 ? (
-                    <p className="text-muted-foreground">
-                        No analyses found. Create one to get started!
-                    </p>
-                ) : null}
-                {analysisList.map((analysis) => (
-                    <AnalysisCard key={analysis.id} data={analysis} />
-                ))}
+            <div className="scrollbar-thin overflow-auto">
+                <article className="flex flex-col gap-3">
+                    {analysisList.length === 0 ? (
+                        <p className="text-muted-foreground">
+                            No analyses found. Create one to get started!
+                        </p>
+                    ) : null}
+                    {analysisList.map((analysis) => (
+                        <AnalysisCard key={analysis.id} data={analysis} />
+                    ))}
+                </article>
             </div>
         </div>
     )
