@@ -9,6 +9,10 @@ const inputSchema = z.object({
     end: ipTuple,
 })
 
+const nodeDataSchema = z.object({
+    delay: z.number().int().min(0),
+})
+
 const packetEntrySchema = z.object({
     packet: z.custom<Buffer>((value) => Buffer.isBuffer(value), {
         message: 'Expected Buffer',
@@ -105,9 +109,10 @@ export const arpScanNode: GraphNode<ArpInput, ArpOutput> = {
         }
         return inputSchema.parse(inputs[0])
     },
-    run(input: ArpInput): ArpOutput {
+    run(input: ArpInput, nodeData: unknown): ArpOutput {
+        const parsedNodeData = nodeDataSchema.parse(nodeData)
         const targets = generateRange(input.start, input.end)
-        const delay = fakeDelay()
+        const delay = parsedNodeData.delay ?? fakeDelay()
         return targets.map((ip) => ({
             packet: buildArpPacket(toIpString(ip)),
             delay,
