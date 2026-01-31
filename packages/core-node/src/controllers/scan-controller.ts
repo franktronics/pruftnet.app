@@ -7,6 +7,8 @@ import {
 import { z } from 'zod'
 import { procedure, wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
+import { AnalysisRepository } from '../repository/analysis-repository'
+import { runReactFlowGraph } from '../graph/runner'
 
 export type PacketDataWithoutRaw = {
     id: number
@@ -21,16 +23,44 @@ export interface PacketData {
 }
 
 export class ScanController {
-    constructor() {}
+    private readonly analysisRepo: AnalysisRepository
+    constructor() {
+        this.analysisRepo = new AnalysisRepository()
+    }
 
     private makeSniffing() {
         return wsProcedure
             .input(
                 z.object({
                     interface: z.string(),
+                    analysisId: z.number().int().positive().optional(),
                 }),
             )
             .handle(async ({ input, store }, returnCb: (data: PacketDataWithoutRaw) => void) => {
+                let analysis = null
+                if (input.analysisId) {
+                    analysis = await this.analysisRepo.getAnalysisById(input.analysisId)
+                    if (!analysis) {
+                        new ServerError({
+                            message: 'Analysis not found',
+                            whatToDo: 'Ensure you provided a valid analysis Id',
+                            code: 404,
+                        }).throw()
+                    }
+                }
+
+                if (analysis?.data) {
+                    try {
+                        const result = await runReactFlowGraph(analysis.data)
+                        const netOutput = [...result.entries()]
+                            .reverse()
+                            .find(([_, value]) => Array.isArray(value))?.[1]
+                        console.log('Analysis packets', netOutput)
+                    } catch (error) {
+                        console.error('Failed to execute analysis graph', error)
+                    }
+                }
+
                 const sniffer = new NetworkSniffer(
                     store.settings.get('settings')?.protocolEntryFile || '',
                 )

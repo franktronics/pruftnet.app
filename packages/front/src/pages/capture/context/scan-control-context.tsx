@@ -91,7 +91,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             } else if (status === CAPTURE_STATUS.INNITIALIZING) {
                 setPackets([])
                 wsFetcher.scan.start.handle(
-                    { interface: interf.name },
+                    { interface: interf.name, analysisId: selectedAnalysis?.id },
                     {
                         onmessage: (data: PacketDataWithoutRaw) => {
                             setPackets((old) => [...old, data])
