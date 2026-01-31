@@ -1,24 +1,34 @@
 import { useMemo, type ComponentProps } from 'react'
 import { Trash2 } from 'lucide-react'
-import { cn } from '@repo/utils'
+import { cn, queryClient, useMutateFetcher } from '@repo/utils'
 import { Button, Card, CardDescription, CardHeader, CardTitle } from '@repo/ui/atoms'
 import { Popup } from '@repo/ui/organisms'
+import type { Analysis } from '@repo/core-node/types'
+import { fetcher } from '../../../config/client-trpc'
 
 export type AnalysisCardProps = {
-    title: string
-    description: string
-    creationDate: Date
+    data: Analysis
 } & ComponentProps<typeof Card>
 
 export const AnalysisCard = (props: AnalysisCardProps) => {
-    const { title, description, creationDate, className, ...rest } = props
+    const { data, className, ...rest } = props
+    const { id, title, description, createdAt } = data
 
     const creationDateLabel = useMemo(() => {
         return new Intl.DateTimeFormat(undefined, {
             dateStyle: 'medium',
             timeStyle: 'short',
-        }).format(creationDate)
-    }, [creationDate])
+        }).format(new Date(createdAt))
+    }, [createdAt])
+
+    const { mutateData: deleteAnalysis, isPending: deletingAnalysis } = useMutateFetcher({
+        procedure: fetcher.analysis.delete,
+        popupOnFetching: {
+            fetching: 'Deleting analysis...',
+            success: 'Analysis deleted successfully.',
+        },
+        popupOnError: true,
+    })
 
     return (
         <Card
@@ -50,11 +60,13 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                             </Button>
                         }
                         onConfirm={async () => {
-                            console.log('Delete analysis confirmed')
+                            await deleteAnalysis({ analysisId: id })
+                            await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
                             return true
                         }}
                         btnCloseText="Cancel"
                         btnSaveText="Delete"
+                        btnSaveprops={{ variant: 'destructive', disabled: deletingAnalysis }}
                     >
                         <p className="text-sm">
                             Deleting this analysis is permanent and cannot be undone. Are you sure

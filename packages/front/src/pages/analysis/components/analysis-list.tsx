@@ -4,14 +4,17 @@ import type { ComponentProps } from 'react'
 import { AnalysisCard } from './analysis-card'
 import { fetcher } from '../../../config/client-trpc'
 import { Popup } from '@repo/ui/organisms'
-import { Button } from '@repo/ui/atoms'
-import { Plus } from 'lucide-react'
+import { Button, InputGroup, InputGroupAddon, InputGroupInput } from '@repo/ui/atoms'
+import { Plus, Search } from 'lucide-react'
 import { useAppForm } from '@repo/ui/molecules'
+import type { Analysis } from '@repo/core-node/types'
 
-export type AnalysisListProps = {} & ComponentProps<'div'>
+export type AnalysisListProps = {
+    analysisList: Analysis[]
+} & ComponentProps<'div'>
 
 export const AnalysisList = (props: AnalysisListProps) => {
-    const { className, ...rest } = props
+    const { className, analysisList, ...rest } = props
 
     const { mutateData: createAnalysis, isPending: creatingAnalysis } = useMutateFetcher({
         procedure: fetcher.analysis.create,
@@ -37,17 +40,23 @@ export const AnalysisList = (props: AnalysisListProps) => {
                 data: {},
             })
             await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
-            return true
         },
     })
 
     return (
         <div className={cn('p-2', className)} {...rest}>
-            <div className="mb-4">
+            <div>
                 <h2 className="text-2xl font-bold">Network Analyses</h2>
                 <p>Browse and manage your network analyses below.</p>
             </div>
-            <div>
+            <div className="flex items-center justify-between gap-2 py-4">
+                <InputGroup className="h-8">
+                    <InputGroupInput placeholder="Search..." />
+                    <InputGroupAddon>
+                        <Search />
+                    </InputGroupAddon>
+                    <InputGroupAddon align="inline-end">0 result</InputGroupAddon>
+                </InputGroup>
                 <Popup
                     title="Create New Analysis"
                     description="Fill in the details to create a new network analysis."
@@ -58,7 +67,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
                         </Button>
                     }
                     onConfirm={async () => {
-                        console.log('Delete analysis confirmed')
+                        await form.handleSubmit()
                         return true
                     }}
                     btnCloseText="Cancel"
@@ -89,11 +98,16 @@ export const AnalysisList = (props: AnalysisListProps) => {
                     </div>
                 </Popup>
             </div>
-            <AnalysisCard
-                title="Network Analysis 1"
-                description="This is a description of Network Analysis 1."
-                creationDate={new Date('2024-01-01')}
-            />
+            <div className="flex flex-col gap-3">
+                {analysisList.length === 0 ? (
+                    <p className="text-muted-foreground">
+                        No analyses found. Create one to get started!
+                    </p>
+                ) : null}
+                {analysisList.map((analysis) => (
+                    <AnalysisCard key={analysis.id} data={analysis} />
+                ))}
+            </div>
         </div>
     )
 }

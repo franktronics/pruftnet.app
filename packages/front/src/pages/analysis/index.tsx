@@ -5,7 +5,7 @@ import { fetcher } from '../../config/client-trpc'
 import { useQueryFetcher } from '@repo/utils'
 
 function Analysis() {
-    const { refetch: getAnalysisQuery, data } = useQueryFetcher({
+    const { data } = useQueryFetcher({
         procedure: fetcher.analysis.list.query({}),
         enabled: true,
         retry: 0,
@@ -14,12 +14,10 @@ function Analysis() {
         staleTime: Infinity,
     })
 
-    console.log('Fetched analyses:', data)
-
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={20} minSize={10}>
-                <AnalysisList />
+                <AnalysisList analysisList={data ?? []} />
             </ResizablePanel>
 
             <ResizableHandle withHandle />
