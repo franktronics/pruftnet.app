@@ -13,3 +13,5 @@ export type { ParsedPacket, RawPacketData, ParsedProtocolLayer } from '@repo/cor
 export type { AppSettings } from './models/settings-models'
 
 export type { ProtocolFile, ProtocolFileData } from './services/protocol-file-loader-service'
+
+export type { Analysis } from '../generated/prisma/client'

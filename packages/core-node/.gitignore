@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/generated/prisma
+
+#environment variables
+.env
+.env.test
+.env.production
+.env.local

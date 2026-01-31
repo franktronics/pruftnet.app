@@ -1,4 +1,4 @@
-import { ComponentPropsWithoutRef, ReactNode, useState } from 'react'
+import { ComponentProps, ComponentPropsWithoutRef, ReactNode, useState } from 'react'
 import {
     Button,
     Dialog,
@@ -22,6 +22,7 @@ export type PopupProps = {
     onConfirm?: () => void | boolean | Promise<void | boolean> // Return true to close the popup
     btnCloseText?: string
     btnSaveText?: string
+    btnSaveprops?: ComponentProps<typeof Button>
 } & ComponentPropsWithoutRef<'div'>
 
 export const Popup = (props: PopupProps) => {
@@ -37,6 +38,7 @@ export const Popup = (props: PopupProps) => {
         onConfirm,
         btnCloseText = 'Cancel',
         btnSaveText = 'Confirm',
+        btnSaveprops = {},
         ...rest
     } = props
     const [open, setOpen] = useState(false)
@@ -79,7 +81,7 @@ export const Popup = (props: PopupProps) => {
                             {btnCloseText}
                         </Button>
                     </DialogClose>
-                    <Button type="submit" onClick={handleConfirm}>
+                    <Button type="submit" onClick={handleConfirm} {...btnSaveprops}>
                         {btnSaveText}
                     </Button>
                 </DialogFooter>

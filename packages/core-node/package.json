@@ -9,15 +9,21 @@
         "./schema": "./src/schema.ts"
     },
     "scripts": {
-        "type-check": "tsc --noEmit"
+        "type-check": "tsc --noEmit",
+        "prisma": "prisma"
     },
     "dependencies": {
+        "@prisma/adapter-better-sqlite3": "^7.3.0",
+        "@prisma/client": "^7.3.0",
         "@repo/core-cpp": "workspace:*",
         "@repo/utils": "workspace:*",
+        "dotenv": "^17.2.3",
         "zod": "^4.1.13"
     },
     "devDependencies": {
-        "typescript": "~5.9.3",
-        "@types/node": "^24.10.1"
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/node": "^24.10.1",
+        "prisma": "^7.3.0",
+        "typescript": "~5.9.3"
     }
 }

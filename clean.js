@@ -20,7 +20,8 @@ const node_modules = [
     './packages/front/node_modules',
     './packages/ui/node_modules',
     './packages/utils/node_modules',
-    './packages/core/node_modules',
+    './packages/core-cpp/node_modules',
+    './packages/core-node/node_modules',
     './node_modules',
     '.turbo',
 ]

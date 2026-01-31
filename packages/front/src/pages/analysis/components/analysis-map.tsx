@@ -35,7 +35,7 @@ const initialNodes: Node[] = [
 export const AnalysisMap = (props: AnalysisMapProps) => {
     const { className, ...rest } = props
 
-    const { mutateData: updateSettings, isPending: savingGraph } = useMutateFetcher({
+    const { mutateData: updateGraph, isPending: savingGraph } = useMutateFetcher({
         procedure: fetcher.analysis.store,
         popupOnFetching: {
             fetching: 'Saving graph...',
@@ -45,7 +45,7 @@ export const AnalysisMap = (props: AnalysisMapProps) => {
     })
 
     const handleSave = async (instance: ReactFlowJsonObject<Node, Edge>) => {
-        await updateSettings({
+        await updateGraph({
             analysisId: 'example-analysis-id',
             data: instance,
         })
