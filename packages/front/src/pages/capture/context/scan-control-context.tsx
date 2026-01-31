@@ -107,7 +107,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                 setCaptureStatus(CAPTURE_STATUS.CAPTURING)
             }
         },
-        [interf.name],
+        [interf.name, selectedAnalysis, stopScan],
     )
 
     const value: ScanControlContextType = {

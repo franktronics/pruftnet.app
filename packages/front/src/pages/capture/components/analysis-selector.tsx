@@ -56,7 +56,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                                 key={elt.id}
                                 data={elt}
                                 onClick={() => {
-                                    setSelectedAnalysis(elt)
+                                    setSelectedAnalysis({ ...elt })
                                     setOpen(false)
                                 }}
                             />

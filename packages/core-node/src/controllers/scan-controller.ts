@@ -58,7 +58,10 @@ export class ScanController {
                         console.log('Analysis packets', netOutput)
                     } catch (error) {
                         console.error('Failed to execute analysis graph', error)
+                        throw error
                     }
+                } else {
+                    console.log('No analysis provided, starting sniffer without analysis')
                 }
 
                 const sniffer = new NetworkSniffer(
