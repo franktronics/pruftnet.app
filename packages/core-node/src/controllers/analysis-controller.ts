@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { procedure } from '../routes/root'
 import { trpcServer } from '@repo/utils'
-import { AnalysisRepository } from '../repository/analysis-repository'
+import { AnalysisRepository, type AnalysisSummary } from '../repository/analysis-repository'
 import { Prisma, type Analysis } from '../../generated/prisma/client'
 
 const { ServerError } = trpcServer
@@ -146,7 +146,7 @@ export class AnalysisController {
     }
 
     private listAnalyses() {
-        return procedure.input(z.object({})).query(async (): Promise<Analysis[]> => {
+        return procedure.input(z.object({})).query(async (): Promise<AnalysisSummary[]> => {
             try {
                 return await this.analysisRepo.listAnalyses()
             } catch (error) {

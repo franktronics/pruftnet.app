@@ -15,3 +15,4 @@ export type { AppSettings } from './models/settings-models'
 export type { ProtocolFile, ProtocolFileData } from './services/protocol-file-loader-service'
 
 export type { Analysis } from '../generated/prisma/client'
+export type { AnalysisSummary } from './repository/analysis-repository'

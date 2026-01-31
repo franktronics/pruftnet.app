@@ -4,12 +4,12 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { cn, queryClient, useMutateFetcher } from '@repo/utils'
 import { Button, Card, CardDescription, CardHeader, CardTitle } from '@repo/ui/atoms'
 import { Popup } from '@repo/ui/organisms'
-import type { Analysis } from '@repo/core-node/types'
+import type { AnalysisSummary } from '@repo/core-node/types'
 import { fetcher } from '../../../config/client-trpc'
 import { useAppForm } from '@repo/ui/molecules'
 
 export type AnalysisCardProps = {
-    data: Analysis
+    data: AnalysisSummary
 } & ComponentProps<typeof Card>
 
 export const AnalysisCard = (props: AnalysisCardProps) => {
@@ -58,7 +58,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                 title: values.value.title,
                 description: values.value.description,
             })
-            await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
+            await queryClient.invalidateQueries({ queryKey: ['analysis', { id }] })
         },
     })
 
@@ -100,6 +100,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                         }
                         onConfirm={async () => {
                             await deleteAnalysis({ analysisId: id })
+                            await queryClient.invalidateQueries({ queryKey: ['analysis', { id }] })
                             await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
                             return true
                         }}

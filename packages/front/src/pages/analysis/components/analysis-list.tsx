@@ -7,14 +7,15 @@ import { Popup } from '@repo/ui/organisms'
 import { Button, InputGroup, InputGroupAddon, InputGroupInput } from '@repo/ui/atoms'
 import { Plus, Search } from 'lucide-react'
 import { useAppForm } from '@repo/ui/molecules'
-import type { Analysis } from '@repo/core-node/types'
+import type { AnalysisSummary } from '@repo/core-node/types'
 
 export type AnalysisListProps = {
-    analysisList: Analysis[]
+    analysisList: AnalysisSummary[]
+    onSelectAnalysis: (analysisId: number) => void
 } & ComponentProps<'div'>
 
 export const AnalysisList = (props: AnalysisListProps) => {
-    const { className, analysisList, ...rest } = props
+    const { className, analysisList, onSelectAnalysis, ...rest } = props
 
     const { mutateData: createAnalysis, isPending: creatingAnalysis } = useMutateFetcher({
         procedure: fetcher.analysis.create,
@@ -106,7 +107,13 @@ export const AnalysisList = (props: AnalysisListProps) => {
                         </p>
                     ) : null}
                     {analysisList.map((analysis) => (
-                        <AnalysisCard key={analysis.id} data={analysis} />
+                        <AnalysisCard
+                            key={analysis.id}
+                            data={analysis}
+                            onClick={() => {
+                                onSelectAnalysis(analysis.id)
+                            }}
+                        />
                     ))}
                 </article>
             </div>

@@ -1,4 +1,4 @@
-import { ComponentProps, useCallback, useState } from 'react'
+import { ComponentProps, useCallback, useEffect, useState } from 'react'
 import {
     ReactFlow,
     addEdge,
@@ -10,8 +10,9 @@ import {
     type ReactFlowInstance,
     type ReactFlowJsonObject,
     Panel,
+    useReactFlow,
 } from '@xyflow/react'
-import { LayoutGrid, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { AnalysisGraphEdge } from './components/graph-edge'
 import { NetworkSource } from './nodes/network-source'
 import { NetworkOutput } from './nodes/network-output'
@@ -31,17 +32,29 @@ const nodeTypes = {
 }
 
 export type AnalysisGraphProps = {
-    initialNodes?: Node[]
-    initialEdges?: Edge[]
-    onSave?: (instance: ReactFlowJsonObject<Node, Edge>) => void | Promise<void>
+    initialNodes: Node[]
+    initialEdges: Edge[]
+    initialViewport: { x: number; y: number; zoom: number }
+    analysisId: number
+    onSave: (instance: ReactFlowJsonObject<Node, Edge>) => void | Promise<void>
+    isSaving: boolean
 } & ComponentProps<'div'>
 export const AnalysisGraph = (props: AnalysisGraphProps) => {
-    const { initialNodes = [], initialEdges = [], onSave, ...rest } = props
+    const { initialNodes, initialEdges, initialViewport, analysisId, onSave, isSaving, ...rest } =
+        props
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+    const { setViewport } = useReactFlow()
+
     const [isGalleryOpen, setIsGalleryOpen] = useState(false)
     const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node, Edge> | null>(null)
+
+    useEffect(() => {
+        setNodes(initialNodes)
+        setEdges(initialEdges)
+        setViewport(initialViewport)
+    }, [analysisId])
 
     const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [])
 
@@ -74,7 +87,12 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                     <Background gap={16} />
                     <Panel position="top-right" className="flex items-center gap-2">
                         <SheetTrigger asChild>
-                            <Button size="sm" variant="outline" className="shadow-md">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="shadow-md"
+                                disabled={isSaving}
+                            >
                                 <Plus className="size-4" />
                                 Add Node
                             </Button>
@@ -84,6 +102,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                             variant="default"
                             onClick={handleSave}
                             className="shadow-md"
+                            disabled={isSaving}
                         >
                             Save
                         </Button>

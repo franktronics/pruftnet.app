@@ -1,6 +1,8 @@
 import { prisma } from '../db-config'
 import { Prisma, type Analysis } from '../../generated/prisma/client'
 
+export type AnalysisSummary = Omit<Analysis, 'data'>
+
 export class AnalysisRepository {
     public async createAnalysis(
         title: string,
@@ -42,9 +44,16 @@ export class AnalysisRepository {
         })
     }
 
-    public async listAnalyses(): Promise<Analysis[]> {
+    public async listAnalyses(): Promise<AnalysisSummary[]> {
         return prisma.analysis.findMany({
             orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         })
     }
 }
