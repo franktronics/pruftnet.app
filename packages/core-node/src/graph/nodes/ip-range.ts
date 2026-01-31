@@ -14,9 +14,9 @@ const outputSchema = z.object({
 
 type IpRangeOutput = z.infer<typeof outputSchema>
 
-export const ipRangeNode: GraphNode<never, IpRangeOutput> = {
+export const ipRangeNode: GraphNode<undefined, IpRangeOutput> = {
     type: 'ip-range',
-    inputSchema: z.never(),
+    inputSchema: z.undefined(),
     outputSchema,
     mergeInputs() {
         return undefined as never
