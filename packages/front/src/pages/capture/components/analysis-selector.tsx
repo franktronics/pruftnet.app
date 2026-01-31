@@ -49,7 +49,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                         />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 space-y-2 px-2 py-4">
+                <PopoverContent className="scrollbar-thin max-h-100 w-80 space-y-2 overflow-auto px-2 py-4">
                     {!!data ? (
                         data.map((elt) => (
                             <SelectAnalysisCard
