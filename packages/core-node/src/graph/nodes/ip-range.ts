@@ -5,6 +5,7 @@ const ipTupleSchema = z.tuple([
     z.number().int().min(0).max(255),
     z.number().int().min(0).max(255),
     z.number().int().min(0).max(255),
+    z.number().int().min(0).max(255),
 ])
 
 const outputSchema = z.object({
@@ -22,6 +23,9 @@ export const ipRangeNode: GraphNode<undefined, IpRangeOutput> = {
         return undefined as never
     },
     run(_, nodeData: unknown) {
+        if (nodeData === undefined || nodeData === null) {
+            throw new Error('ip-range node requires start and end in data')
+        }
         return outputSchema.parse(nodeData)
     },
 }
