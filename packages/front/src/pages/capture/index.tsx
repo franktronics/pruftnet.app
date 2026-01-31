@@ -11,6 +11,7 @@ import { ActionsControl } from './components/actions-control'
 import { CaptureFilter } from './components/capture-filter'
 import { InterfaceSelector } from './components/interface-selector'
 import { useSettingsContext } from '../settings/context/settings-context'
+import { AnalysisSelector } from './components/analysis-selector'
 
 function Capture() {
     const { appSettings } = useSettingsContext()
@@ -25,6 +26,7 @@ function Capture() {
                     <div className="flex flex-wrap items-center gap-2">
                         <InterfaceSelector />
                         <ActionsControl />
+                        <AnalysisSelector />
                     </div>
                     <TabsDisplayList>
                         <TabsDisplayTrigger value="graph">Graph</TabsDisplayTrigger>

@@ -3,7 +3,11 @@ import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, queryClient, useMutateFetcher } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
-import type { NetworkInterfaceInfo, PacketDataWithoutRaw } from '@repo/core-node/types'
+import type {
+    AnalysisSummary,
+    NetworkInterfaceInfo,
+    PacketDataWithoutRaw,
+} from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -21,6 +25,8 @@ export type ScanControlContextType = {
     packetsEmpty: boolean
     interf: ContextNetinterface
     setInterface: Dispatch<SetStateAction<ContextNetinterface>>
+    selectedAnalysis: AnalysisSummary | null
+    setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
 }
 
 export type ContextNetinterface = {
@@ -44,6 +50,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
     const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
+    const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -111,6 +118,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         packetsEmpty: packets.length === 0,
         interf,
         setInterface,
+        selectedAnalysis,
+        setSelectedAnalysis,
     }
 
     return (

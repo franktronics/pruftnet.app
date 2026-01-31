@@ -14,14 +14,14 @@ export type AnalysisCardProps = {
 
 export const AnalysisCard = (props: AnalysisCardProps) => {
     const { data, className, ...rest } = props
-    const { id, title, description, createdAt } = data
+    const { id, title, description, updatedAt } = data
 
-    const creationDateLabel = useMemo(() => {
+    const updateDateLabel = useMemo(() => {
         return new Intl.DateTimeFormat(undefined, {
             dateStyle: 'medium',
             timeStyle: 'short',
-        }).format(new Date(createdAt))
-    }, [createdAt])
+        }).format(new Date(updatedAt))
+    }, [updatedAt])
 
     const { mutateData: deleteAnalysis, isPending: deletingAnalysis } = useMutateFetcher({
         procedure: fetcher.analysis.delete,
@@ -77,7 +77,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                     <CardTitle className="text-base">{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
                     <p className="text-muted-foreground text-xs">
-                        Last modified: {creationDateLabel}
+                        Last modified: {updateDateLabel}
                     </p>
                 </div>
                 <div

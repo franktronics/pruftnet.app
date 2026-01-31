@@ -69,7 +69,6 @@ const ActionBtn = (props: ActionBtnProps) => {
                 [captureStatus === CAPTURE_STATUS.ERROR, 'destructive'],
             )}
             disabled={btnDisabled}
-            size="sm"
             onClick={onHandleBtnClick}
             {...rest}
         >
