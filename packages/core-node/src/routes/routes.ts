@@ -3,6 +3,7 @@ import { ScanController } from '../controllers/scan-controller'
 import { InterfaceController } from '../controllers/interface-controller'
 import { SettingsController } from '../controllers/settings-controller'
 import { ProtocolFileController } from '../controllers/protocol-file-controller'
+import { AnalysisController } from '../controllers/analysis-controller'
 
 const { createRouter } = trpcServer
 
@@ -22,6 +23,13 @@ export const appRouter = createRouter({
     protocolFiles: {
         getById: ProtocolFileController.make().getById,
         getByPath: ProtocolFileController.make().getByPath,
+    },
+    analysis: {
+        create: AnalysisController.make().create,
+        store: AnalysisController.make().store,
+        get: AnalysisController.make().get,
+        delete: AnalysisController.make().delete,
+        list: AnalysisController.make().list,
     },
 })
 

@@ -54,7 +54,7 @@ export const NodeGallery = (props: NodeGalleryProps) => {
         const newNode = {
             id: nodeId,
             type: node.type,
-            position: { x: -200 + Math.random() * 400, y: -200 + Math.random() * 400 },
+            position: { x: (Math.random() - 0.5) * 400, y: (Math.random() - 0.5) * 400 },
             data: {
                 name: `${node.type}-node`,
                 ...node.defaultData,
@@ -66,7 +66,7 @@ export const NodeGallery = (props: NodeGalleryProps) => {
     }
 
     return (
-        <SheetContent side="right" className="w-100 sm:w-110">
+        <SheetContent side="right">
             <SheetHeader>
                 <SheetTitle>Node Gallery</SheetTitle>
                 <SheetDescription>

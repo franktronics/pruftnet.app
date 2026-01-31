@@ -7,9 +7,11 @@ import {
     useEdgesState,
     type Node,
     type Edge,
+    type ReactFlowInstance,
+    type ReactFlowJsonObject,
     Panel,
 } from '@xyflow/react'
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import { AnalysisGraphEdge } from './components/graph-edge'
 import { NetworkSource } from './nodes/network-source'
 import { NetworkOutput } from './nodes/network-output'
@@ -31,15 +33,24 @@ const nodeTypes = {
 export type AnalysisGraphProps = {
     initialNodes?: Node[]
     initialEdges?: Edge[]
+    onSave?: (instance: ReactFlowJsonObject<Node, Edge>) => void | Promise<void>
 } & ComponentProps<'div'>
 export const AnalysisGraph = (props: AnalysisGraphProps) => {
-    const { initialNodes = [], initialEdges = [], ...rest } = props
+    const { initialNodes = [], initialEdges = [], onSave, ...rest } = props
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
     const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+    const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node, Edge> | null>(null)
 
     const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [])
+
+    const handleSave = useCallback(() => {
+        if (rfInstance && onSave) {
+            const flow = rfInstance.toObject()
+            onSave(flow)
+        }
+    }, [rfInstance])
 
     return (
         <div {...rest}>
@@ -57,15 +68,25 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                     snapToGrid={true}
                     snapGrid={[16, 16]}
                     isValidConnection={checkConnection}
+                    onInit={setRfInstance}
                 >
                     <GraphControls />
                     <Background gap={16} />
-                    <Panel position="top-right">
+                    <Panel position="top-right" className="flex items-center gap-2">
                         <SheetTrigger asChild>
-                            <Button size="icon" variant="outline" className="shadow-md">
-                                <LayoutGrid className="size-4" />
+                            <Button size="sm" variant="outline" className="shadow-md">
+                                <Plus className="size-4" />
+                                Add Node
                             </Button>
                         </SheetTrigger>
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={handleSave}
+                            className="shadow-md"
+                        >
+                            Save
+                        </Button>
                     </Panel>
                 </ReactFlow>
                 <NodeGallery onOpenChange={setIsGalleryOpen} />
