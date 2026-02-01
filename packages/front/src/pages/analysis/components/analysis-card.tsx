@@ -68,6 +68,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
             className={cn(
                 'group border-border/70 hover:border-primary/40 p-0',
                 'w-full cursor-pointer rounded transition-colors',
+                'data-[selected=true]:border-primary/40',
                 className,
             )}
             {...rest}

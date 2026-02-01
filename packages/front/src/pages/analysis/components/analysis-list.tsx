@@ -11,11 +11,12 @@ import type { AnalysisSummary } from '@repo/core-node/types'
 
 export type AnalysisListProps = {
     analysisList: AnalysisSummary[]
+    selectedAnalysisId: number | null
     onSelectAnalysis: (analysisId: number) => void
 } & ComponentProps<'div'>
 
 export const AnalysisList = (props: AnalysisListProps) => {
-    const { className, analysisList, onSelectAnalysis, ...rest } = props
+    const { className, analysisList, onSelectAnalysis, selectedAnalysisId, ...rest } = props
 
     const { mutateData: createAnalysis, isPending: creatingAnalysis } = useMutateFetcher({
         procedure: fetcher.analysis.create,
@@ -110,6 +111,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
                         <AnalysisCard
                             key={analysis.id}
                             data={analysis}
+                            data-selected={analysis.id === selectedAnalysisId}
                             onClick={() => {
                                 onSelectAnalysis(analysis.id)
                             }}

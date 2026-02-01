@@ -28,7 +28,11 @@ function Analysis() {
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={20} minSize={10}>
-                <AnalysisList analysisList={data ?? []} onSelectAnalysis={setSelectedId} />
+                <AnalysisList
+                    analysisList={data ?? []}
+                    onSelectAnalysis={setSelectedId}
+                    selectedAnalysisId={selectedId}
+                />
             </ResizablePanel>
 
             <ResizableHandle withHandle />

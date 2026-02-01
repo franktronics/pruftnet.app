@@ -7,9 +7,8 @@ const dirs = [
     './apps/desktop/.vite',
     './apps/desktop/.turbo',
     './packages/ui/dist',
-    './packages/core/dist',
-    './packages/core/build',
-    './packages/core/tests/build',
+    './packages/core-cpp/dist',
+    './packages/core-cpp/build',
     './pnpm-lock.yaml',
     './build',
 ]
