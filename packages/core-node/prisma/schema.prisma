@@ -18,3 +18,25 @@ model Analysis {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Settings {
+  id                  Int                  @id @default(autoincrement())
+  maxPacketBufferSize Int
+  promiscuousMode     Boolean
+  protocolEntryFile   String
+  defaultCaptureTab   DefaultCaptureTab
+  connectionLineType  ConnectionLineType
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+enum DefaultCaptureTab {
+  scan
+  graph
+}
+
+enum ConnectionLineType {
+  bezier
+  straight
+  step
+}
