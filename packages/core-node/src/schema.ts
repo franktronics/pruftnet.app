@@ -1,1 +1,1 @@
-export { settingsSchema } from './models/settings-models'
+export { settingsSchema } from './models/settings-model'

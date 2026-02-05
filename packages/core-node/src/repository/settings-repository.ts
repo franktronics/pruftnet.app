@@ -1,5 +1,5 @@
 import { prisma } from '../db-config'
-import { settingsSchema, type AppSettings } from '../models/settings-models'
+import { settingsSchema, type AppSettings } from '../models/settings-model'
 
 const DEFAULT_SETTINGS: AppSettings = {
     maxPacketBufferSize: 10000,
