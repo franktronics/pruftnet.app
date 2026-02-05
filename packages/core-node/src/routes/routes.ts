@@ -4,6 +4,7 @@ import { InterfaceController } from '../controllers/interface-controller'
 import { SettingsController } from '../controllers/settings-controller'
 import { ProtocolFileController } from '../controllers/protocol-file-controller'
 import { AnalysisController } from '../controllers/analysis-controller'
+import { LoggerController } from '../controllers/logger-controller'
 
 const { createRouter } = trpcServer
 
@@ -30,6 +31,11 @@ export const appRouter = createRouter({
         get: AnalysisController.make().get,
         delete: AnalysisController.make().delete,
         list: AnalysisController.make().list,
+    },
+    logger: {
+        create: LoggerController.make().create,
+        list: LoggerController.make().list,
+        clear: LoggerController.make().clear,
     },
 })
 

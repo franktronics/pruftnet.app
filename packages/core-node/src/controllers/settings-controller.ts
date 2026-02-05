@@ -1,7 +1,7 @@
 import { procedure } from '../routes/root'
 import { z } from 'zod'
 import { trpcServer } from '@repo/utils'
-import { settingsSchema, type AppSettings } from '../models/settings-models'
+import { settingsSchema, type AppSettings } from '../models/settings-model'
 import { SettingsRepository } from '../repository/settings-repository'
 
 const { ServerError } = trpcServer
