@@ -7,11 +7,12 @@ import {
 } from '@tanstack/react-router'
 import Error404 from '../pages/error/404'
 import Capture from '../pages/capture'
-import { createSettingsRoutes } from '../pages/settings/routes'
 import { DashboardLayout, type BreadcrumbItem } from '@repo/ui/templates'
 import { SidebarConfig } from './sidebar-config'
 import { useMemo } from 'react'
+import { createSettingsRoutes } from '../pages/settings/routes'
 import { createAnalysisRoutes } from '../pages/analysis/routes'
+import { createMonitoringRoutes } from '../pages/monitoring/routes'
 
 function RootComponent() {
     const routerState = useRouterState()
@@ -66,8 +67,14 @@ const indexRoute = createRoute({
 
 const settingsRouteTree = createSettingsRoutes(rootRoute)
 const analysisRouteTree = createAnalysisRoutes(rootRoute)
+const monitoringRouteTree = createMonitoringRoutes(rootRoute)
 
-const routeTree = rootRoute.addChildren([indexRoute, settingsRouteTree, analysisRouteTree])
+const routeTree = rootRoute.addChildren([
+    indexRoute,
+    settingsRouteTree,
+    analysisRouteTree,
+    monitoringRouteTree,
+])
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
