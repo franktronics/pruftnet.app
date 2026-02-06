@@ -3,11 +3,6 @@ import { fetcher } from '../../config/client-trpc'
 import { cn, useQueryFetcher } from '@repo/utils'
 import {
     Badge,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
     Dialog,
     DialogContent,
     DialogDescription,
@@ -128,7 +123,7 @@ function Monitoring() {
                 <Separator className="my-4" />
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex h-full flex-col gap-3">
                 <LogFilters
                     level={level}
                     source={source}
@@ -136,50 +131,42 @@ function Monitoring() {
                     onSourceChange={setSource}
                 />
 
-                <Card className="flex min-h-0 flex-1 flex-col">
-                    <CardHeader className="pb-2">
-                        <CardTitle>Application logs</CardTitle>
-                        <CardDescription>Inspect recent events across the app.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
-                        <div className="scrollbar-thin flex-1 overflow-auto rounded-lg border">
-                            <LogsTable
-                                items={items}
-                                isLoading={isLoading}
-                                onOpenContext={openContextDialog}
-                            />
-                        </div>
+                <div className="flex min-h-0 flex-1 flex-col gap-3">
+                    <LogsTable
+                        items={items}
+                        isLoading={isLoading}
+                        onOpenContext={openContextDialog}
+                    />
 
-                        <div className="flex items-center justify-between">
-                            <div className="text-muted-foreground text-sm">
-                                Page {page}
-                                {isFetching && !isLoading ? ' · updating…' : ''}
-                            </div>
-                            <Pagination>
-                                <PaginationContent>
-                                    <PaginationItem>
-                                        <PaginationPrevious
-                                            onClick={() =>
-                                                page > 1 && setPage((p) => Math.max(1, p - 1))
-                                            }
-                                            className={cn({
-                                                'pointer-events-none opacity-50': page === 1,
-                                            })}
-                                        />
-                                    </PaginationItem>
-                                    <PaginationItem>
-                                        <PaginationNext
-                                            onClick={() => hasNext && setPage((p) => p + 1)}
-                                            className={cn({
-                                                'pointer-events-none opacity-50': !hasNext,
-                                            })}
-                                        />
-                                    </PaginationItem>
-                                </PaginationContent>
-                            </Pagination>
+                    <div className="flex items-center justify-between">
+                        <div className="text-muted-foreground text-sm">
+                            Page {page}
+                            {isFetching && !isLoading ? ' · updating…' : ''}
                         </div>
-                    </CardContent>
-                </Card>
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious
+                                        onClick={() =>
+                                            page > 1 && setPage((p) => Math.max(1, p - 1))
+                                        }
+                                        className={cn({
+                                            'pointer-events-none opacity-50': page === 1,
+                                        })}
+                                    />
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationNext
+                                        onClick={() => hasNext && setPage((p) => p + 1)}
+                                        className={cn({
+                                            'pointer-events-none opacity-50': !hasNext,
+                                        })}
+                                    />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
+                    </div>
+                </div>
             </div>
 
             <ContextDialog open={isDialogOpen} log={selectedLog} onClose={closeContextDialog} />
@@ -249,41 +236,47 @@ type LogsTableProps = {
 }
 
 const LogsTable = ({ items, isLoading, onOpenContext }: LogsTableProps) => (
-    <Table className="min-w-full text-sm">
-        <TableHeader>
-            <TableRow>
-                <TableHead className="w-44">Date</TableHead>
-                <TableHead className="w-20">Level</TableHead>
-                <TableHead className="w-24">Source</TableHead>
-                <TableHead className="w-56">Title</TableHead>
-                <TableHead>Message</TableHead>
-                <TableHead className="w-[22rem]">Context</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {isLoading ? (
-                <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                        <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Loading logs...
-                        </div>
-                    </TableCell>
-                </TableRow>
-            ) : items.length === 0 ? (
-                <TableRow>
-                    <TableCell
-                        colSpan={6}
-                        className="text-muted-foreground h-24 text-center text-sm"
-                    >
-                        No logs found for these filters.
-                    </TableCell>
-                </TableRow>
-            ) : (
-                items.map((log) => <LogRow key={log.id} log={log} onOpenContext={onOpenContext} />)
-            )}
-        </TableBody>
-    </Table>
+    <div className="flex flex-col overflow-hidden rounded-lg border">
+        <div className="scrollbar-thin flex-1 overflow-auto">
+            <Table className="min-w-full text-sm">
+                <TableHeader className="bg-muted sticky top-0 z-10">
+                    <TableRow>
+                        <TableHead className="w-44">Date</TableHead>
+                        <TableHead className="w-20">Level</TableHead>
+                        <TableHead className="w-24">Source</TableHead>
+                        <TableHead className="w-56">Title</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="w-[24rem]">Context</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading ? (
+                        <TableRow>
+                            <TableCell colSpan={6} className="h-24 text-center">
+                                <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading logs...
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ) : items.length === 0 ? (
+                        <TableRow>
+                            <TableCell
+                                colSpan={6}
+                                className="text-muted-foreground h-24 text-center text-sm"
+                            >
+                                No logs found for these filters.
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        items.map((log) => (
+                            <LogRow key={log.id} log={log} onOpenContext={onOpenContext} />
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+        </div>
+    </div>
 )
 
 type LogRowProps = {
@@ -336,7 +329,7 @@ type ContextDialogProps = {
 
 const ContextDialog = ({ open, log, onClose }: ContextDialogProps) => (
     <Dialog open={open} onOpenChange={(next) => (!next ? onClose() : null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[960px] max-w-[95vw]">
             <DialogHeader>
                 <DialogTitle>{log?.title ?? 'Log context'}</DialogTitle>
                 <DialogDescription className="text-muted-foreground flex flex-col gap-1 text-xs">

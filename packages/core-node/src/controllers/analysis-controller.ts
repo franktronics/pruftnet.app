@@ -68,8 +68,8 @@ export class AnalysisController {
                 } = {}
                 if (input.title !== undefined) updateData.title = input.title
                 if (input.description !== undefined) updateData.description = input.description
-                if (input.data !== undefined) updateData.data = input.data as Prisma.InputJsonValue
 
+                if (input.data !== undefined) updateData.data = input.data as Prisma.InputJsonValue
                 this.service.log({
                     level: 'info',
                     source: 'backend',
