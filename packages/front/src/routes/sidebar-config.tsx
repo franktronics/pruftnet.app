@@ -1,4 +1,4 @@
-import { Database, Radar, Settings, Info, LifeBuoy } from 'lucide-react'
+import { Database, Radar, Settings, Info, LifeBuoy, Binoculars } from 'lucide-react'
 
 export const SidebarConfig = {
     navMain: [
@@ -13,6 +13,13 @@ export const SidebarConfig = {
             title: 'Analysis',
             url: '/analysis',
             icon: Database,
+            isActive: true,
+            items: [],
+        },
+        {
+            title: 'Monitoring',
+            url: '/monitoring',
+            icon: Binoculars,
             isActive: true,
             items: [],
         },

@@ -3,14 +3,17 @@ import { procedure } from '../routes/root'
 import { trpcServer } from '@repo/utils'
 import { AnalysisRepository, type AnalysisSummary } from '../repository/analysis-repository'
 import { Prisma, type Analysis } from '../../generated/prisma/client'
+import { LoggerService } from '../services/logger-service'
 
 const { ServerError } = trpcServer
 
 export class AnalysisController {
     private readonly analysisRepo: AnalysisRepository
+    private readonly service: LoggerService
 
     constructor() {
         this.analysisRepo = new AnalysisRepository()
+        this.service = new LoggerService()
     }
 
     private createAnalysis() {
@@ -24,6 +27,13 @@ export class AnalysisController {
             )
             .mutation(async ({ input }): Promise<Analysis> => {
                 try {
+                    this.service.log({
+                        level: 'info',
+                        source: 'backend',
+                        title: 'Created new analysis',
+                        message: `Analysis titled "${input.title}" was created successfully.`,
+                        context: input,
+                    })
                     return await this.analysisRepo.createAnalysis(
                         input.title,
                         input.description,
@@ -59,6 +69,14 @@ export class AnalysisController {
                 if (input.title !== undefined) updateData.title = input.title
                 if (input.description !== undefined) updateData.description = input.description
                 if (input.data !== undefined) updateData.data = input.data as Prisma.InputJsonValue
+
+                this.service.log({
+                    level: 'info',
+                    source: 'backend',
+                    title: 'Updated analysis',
+                    message: `Analysis with ID ${input.analysisId} was updated.`,
+                    context: { analysisId: input.analysisId, updateData },
+                })
 
                 if (Object.keys(updateData).length === 0) {
                     new ServerError({
