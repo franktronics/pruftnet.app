@@ -8,7 +8,6 @@ import { z } from 'zod'
 import { procedure, wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
 import { AnalysisRepository } from '../repository/analysis-repository'
-import { runReactFlowGraph } from '../graph/runner'
 
 export type PacketDataWithoutRaw = {
     id: number
