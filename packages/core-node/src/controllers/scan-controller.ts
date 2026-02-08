@@ -48,20 +48,20 @@ export class ScanController {
                     }
                 }
 
-                if (analysis?.data) {
-                    try {
-                        const result = await runReactFlowGraph(analysis.data)
-                        const netOutput = [...result.entries()]
-                            .reverse()
-                            .find(([_, value]) => Array.isArray(value))?.[1]
-                        console.log('Analysis packets', netOutput)
-                    } catch (error) {
-                        console.error('Failed to execute analysis graph', error)
-                        throw error
-                    }
-                } else {
-                    console.log('No analysis provided, starting sniffer without analysis')
-                }
+                // if (analysis?.data) {
+                //     try {
+                //         const result = await runReactFlowGraph(analysis.data)
+                //         const netOutput = [...result.entries()]
+                //             .reverse()
+                //             .find(([_, value]) => Array.isArray(value))?.[1]
+                //         console.log('Analysis packets', netOutput)
+                //     } catch (error) {
+                //         console.error('Failed to execute analysis graph', error)
+                //         throw error
+                //     }
+                // } else {
+                //     console.log('No analysis provided, starting sniffer without analysis')
+                // }
 
                 const sniffer = new NetworkSniffer(
                     store.settings.get('settings')?.protocolEntryFile || '',
