@@ -13,13 +13,19 @@ type HandlerEvents<T = any> = {
     onmessage?: (data: T) => void
     onerror?: (error: ClientError) => void
 }
+type HandlerReturnType = {
+    closeConnection: () => void
+}
 
 type InferProcedureWsClient<T> =
     T extends WSProcedureDefinition<infer TInput, infer TOutput>
         ? {
               handle: TInput extends z.ZodSchema
-                  ? (input: z.infer<TInput>, events?: HandlerEvents<TOutput>) => Promise<void>
-                  : (events?: HandlerEvents<TOutput>) => Promise<void>
+                  ? (
+                        input: z.infer<TInput>,
+                        events?: HandlerEvents<TOutput>,
+                    ) => Promise<HandlerReturnType>
+                  : (events?: HandlerEvents<TOutput>) => Promise<HandlerReturnType>
           }
         : never
 
@@ -43,7 +49,10 @@ export function createWsClient<T extends WSRouterDef>(config: WSClientConfig) {
                         return createProcedureProxy(newPath)
                     }
 
-                    return async (input?: any, events?: HandlerEvents) => {
+                    return async (
+                        input?: any,
+                        events?: HandlerEvents,
+                    ): Promise<HandlerReturnType> => {
                         const procedureName = procedurePath.join('.')
 
                         if (config.isDesktop) {
@@ -76,7 +85,7 @@ type WSConnectionMaker = {
     input?: any
     events?: HandlerEvents
 }
-async function makeWsConnection(props: WSConnectionMaker) {
+async function makeWsConnection(props: WSConnectionMaker): Promise<HandlerReturnType> {
     const { procedureName, baseWsUrl, input, events } = props
     const wsUrl = baseWsUrl + `?procedure=${procedureName}`
     const ws = new WebSocket(wsUrl)
@@ -137,6 +146,12 @@ async function makeWsConnection(props: WSConnectionMaker) {
             //If the reason is not JSON, ignore
         }
     }
+
+    return {
+        closeConnection: () => {
+            ws.close()
+        },
+    }
 }
 
 type IPCConnectionMaker = {
@@ -145,7 +160,7 @@ type IPCConnectionMaker = {
     input?: any
     events?: HandlerEvents
 }
-async function makeIPCConnection(props: IPCConnectionMaker) {
+async function makeIPCConnection(props: IPCConnectionMaker): Promise<HandlerReturnType> {
     const { procedureName, streamPath, input, events } = props
     const response = await (window as any).electron.trpcConnectIPCStream({
         streamPath,
@@ -156,7 +171,7 @@ async function makeIPCConnection(props: IPCConnectionMaker) {
         if (events && events.onerror) {
             events.onerror(new ClientError(response.error))
         }
-        return
+        return { closeConnection: () => {} }
     }
     void (window as any).electron.trpcHandleIPCStream((data: any) => {
         if (data && data.error) {
@@ -169,4 +184,8 @@ async function makeIPCConnection(props: IPCConnectionMaker) {
             events.onmessage(data)
         }
     })
+
+    return {
+        closeConnection: () => {},
+    }
 }
