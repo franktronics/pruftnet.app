@@ -22,7 +22,7 @@ export function createExpressMiddleware<T extends RouterDef>(router: T): Request
                 }).http()
             }
 
-            const procedurePath = procedure.split('.')
+            const procedurePath = (procedure as string).split('.')
             let current: any = router
             for (const segment of procedurePath) {
                 if (!current[segment]) {

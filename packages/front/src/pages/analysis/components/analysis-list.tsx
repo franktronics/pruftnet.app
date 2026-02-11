@@ -12,7 +12,7 @@ import type { AnalysisSummary } from '@repo/core-node/types'
 export type AnalysisListProps = {
     analysisList: AnalysisSummary[]
     selectedAnalysisId: number | null
-    onSelectAnalysis: (analysisId: number) => void
+    onSelectAnalysis: (analysisId: number | null) => void
 } & ComponentProps<'div'>
 
 export const AnalysisList = (props: AnalysisListProps) => {
@@ -42,6 +42,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
                 data: {},
             })
             await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
+            form.reset()
         },
     })
 
@@ -70,7 +71,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
                     }
                     onConfirm={async () => {
                         await form.handleSubmit()
-                        return true
+                        return form.state.canSubmit
                     }}
                     btnCloseText="Cancel"
                     btnSaveText="Create"
@@ -112,9 +113,7 @@ export const AnalysisList = (props: AnalysisListProps) => {
                             key={analysis.id}
                             data={analysis}
                             data-selected={analysis.id === selectedAnalysisId}
-                            onClick={() => {
-                                onSelectAnalysis(analysis.id)
-                            }}
+                            onSetSelected={onSelectAnalysis}
                         />
                     ))}
                 </article>

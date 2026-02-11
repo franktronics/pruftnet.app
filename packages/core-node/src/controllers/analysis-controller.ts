@@ -119,14 +119,16 @@ export class AnalysisController {
                         new ServerError({
                             message: 'Analysis not found',
                             whatToDo: 'Please verify the analysis ID.',
+                            origin: 'getAnalysisById',
                             code: 404,
                         }).throw()
                     }
                     return analysis as Analysis
                 } catch (error) {
                     new ServerError({
-                        message: 'Failed to retrieve analysis',
+                        message: 'Failed to retrieve analysis id = ' + input.analysisId,
                         whatToDo: 'Please retry later or contact support.',
+                        origin: 'getAnalysisById',
                         code: 500,
                     }).throw()
                     throw error

@@ -10,10 +10,11 @@ import { useAppForm } from '@repo/ui/molecules'
 
 export type AnalysisCardProps = {
     data: AnalysisSummary
+    onSetSelected: (analysisId: number | null) => void
 } & ComponentProps<typeof Card>
 
 export const AnalysisCard = (props: AnalysisCardProps) => {
-    const { data, className, ...rest } = props
+    const { data, className, onSetSelected, ...rest } = props
     const { id, title, description, updatedAt } = data
 
     const updateDateLabel = useMemo(() => {
@@ -74,7 +75,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
             {...rest}
         >
             <CardHeader className="flex justify-between gap-4 p-4">
-                <div>
+                <div onClick={() => onSetSelected(id)}>
                     <CardTitle className="text-base">{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
                     <p className="text-muted-foreground text-xs">
@@ -101,6 +102,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
                             </Button>
                         }
                         onConfirm={async () => {
+                            onSetSelected(null)
                             await deleteAnalysis({ analysisId: id })
                             await queryClient.invalidateQueries({ queryKey: ['analysis', { id }] })
                             await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })

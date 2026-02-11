@@ -37,6 +37,8 @@ export class AnalysisWorkflowController {
                 const analysisData = analysis.data as any as ReactFlowGraph
                 const dag = prepareGraph(analysisData)
                 const orchestrator = new WorkflowOrchestrator(createWorkflowSteps())
+
+                returnCb({ message: 'Workflow started' })
                 const result = await orchestrator.run(
                     dag,
                     analysisData.nodes,
