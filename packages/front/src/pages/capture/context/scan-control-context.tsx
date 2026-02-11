@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
 import { ClientErrorParser, queryClient, useMutateFetcher } from '@repo/utils'
@@ -27,6 +27,7 @@ export type ScanControlContextType = {
     setInterface: Dispatch<SetStateAction<ContextNetinterface>>
     selectedAnalysis: AnalysisSummary | null
     setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
+    startWorkflow: () => void
 }
 
 export type ContextNetinterface = {
@@ -47,10 +48,12 @@ export const useScanControlContext = () => {
 type ScanControlProviderProps = {} & ComponentPropsWithoutRef<'div'>
 export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const { children, ...rest } = props
+
     const [captureStatus, setCaptureStatus] = useState<CAPTURE_STATUS>(CAPTURE_STATUS.IDLE)
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
     const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
     const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
+    const closeConnectionFct = useRef<() => void>(null)
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -87,11 +90,12 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             }
             if (status === CAPTURE_STATUS.IDLE) {
                 await stopScan({})
+                if (closeConnectionFct.current) closeConnectionFct.current()
                 setCaptureStatus(CAPTURE_STATUS.IDLE)
             } else if (status === CAPTURE_STATUS.INNITIALIZING) {
                 setPackets([])
-                wsFetcher.scan.start.handle(
-                    { interface: interf.name, analysisId: selectedAnalysis?.id },
+                const { closeConnection } = await wsFetcher.scan.start.handle(
+                    { interface: interf.name },
                     {
                         onmessage: (data: PacketDataWithoutRaw) => {
                             setPackets((old) => [...old, data])
@@ -104,11 +108,30 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                         },
                     },
                 )
+                closeConnectionFct.current = closeConnection
                 setCaptureStatus(CAPTURE_STATUS.CAPTURING)
             }
         },
         [interf.name, selectedAnalysis, stopScan],
     )
+
+    const handleStartWorkflow = useCallback(async () => {
+        if (!selectedAnalysis) return
+
+        const { closeConnection } = await wsFetcher.analysis.startWorkflow.handle(
+            { interface: interf.name, analysisId: selectedAnalysis.id },
+            {
+                onmessage: (data) => {
+                    console.log('Workflow message', data)
+                },
+                onerror: (error) => {
+                    toast.error(<ClientErrorParser error={error} />, {
+                        duration: 5000,
+                    })
+                },
+            },
+        )
+    }, [interf.name, selectedAnalysis])
 
     const value: ScanControlContextType = {
         captureStatus,
@@ -120,6 +143,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         setInterface,
         selectedAnalysis,
         setSelectedAnalysis,
+        startWorkflow: handleStartWorkflow,
     }
 
     return (

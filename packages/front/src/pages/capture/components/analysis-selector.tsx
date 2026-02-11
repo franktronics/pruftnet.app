@@ -1,16 +1,19 @@
 import {
     Button,
-    Card,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+    Field,
+    FieldContent,
+    FieldDescription,
+    FieldLabel,
+    FieldTitle,
     Popover,
     PopoverContent,
     PopoverTrigger,
+    RadioGroup,
+    RadioGroupItem,
 } from '@repo/ui/atoms'
 import { cn, useQueryFetcher } from '@repo/utils'
 import { ChevronRight, X } from 'lucide-react'
-import { useMemo, useState, type ComponentProps } from 'react'
+import { useId, useMemo, useState, type ComponentProps } from 'react'
 import { fetcher } from '../../../config/client-trpc'
 import type { AnalysisSummary } from '@repo/core-node/types'
 import { useScanControlContext } from '../context/scan-control-context'
@@ -21,7 +24,8 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
     const { className, ...rest } = props
     const [open, setOpen] = useState(false)
 
-    const { selectedAnalysis, setSelectedAnalysis } = useScanControlContext()
+    const { selectedAnalysis, setSelectedAnalysis, captureStatus, startWorkflow } =
+        useScanControlContext()
 
     const { data } = useQueryFetcher({
         procedure: fetcher.analysis.list.query({}),
@@ -36,7 +40,10 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
         <div className={cn('flex items-center gap-1', className)} {...rest}>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
-                    <Button variant="secondary" className="group">
+                    <Button
+                        variant="secondary"
+                        className="group flex min-w-30 items-center justify-between"
+                    >
                         {selectedAnalysis === null
                             ? 'Add an analysis'
                             : selectedAnalysis.title.slice(0, 20)}
@@ -51,16 +58,20 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                 </PopoverTrigger>
                 <PopoverContent className="scrollbar-thin max-h-100 w-80 space-y-2 overflow-auto px-2 py-4">
                     {!!data ? (
-                        data.map((elt) => (
-                            <SelectAnalysisCard
-                                key={elt.id}
-                                data={elt}
-                                onClick={() => {
-                                    setSelectedAnalysis({ ...elt })
-                                    setOpen(false)
-                                }}
-                            />
-                        ))
+                        <RadioGroup
+                            className="max-w-sm"
+                            value={selectedAnalysis?.id?.toString() ?? ''}
+                            onValueChange={(value) => {
+                                const analysis = data.find((elt) => elt.id.toString() === value)
+                                if (analysis) {
+                                    setSelectedAnalysis(analysis)
+                                }
+                            }}
+                        >
+                            {data.map((elt) => (
+                                <SelectAnalysisCard key={elt.id} data={elt} />
+                            ))}
+                        </RadioGroup>
                     ) : (
                         <p>Loading...</p>
                     )}
@@ -71,16 +82,22 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                     <X />
                 </Button>
             ) : null}
+            {captureStatus !== 'CAPTURING' ? (
+                <Button onClick={() => startWorkflow()} variant="secondary">
+                    Run workflow
+                </Button>
+            ) : null}
         </div>
     )
 }
 
 type SelectAnalysisCardProps = {
     data: AnalysisSummary
-} & ComponentProps<typeof Card>
+} & ComponentProps<typeof FieldLabel>
 const SelectAnalysisCard = (props: SelectAnalysisCardProps) => {
     const { data, className, ...rest } = props
-    const { title, description, updatedAt } = data
+    const { id, title, description, updatedAt } = data
+    const fieldId = useId()
 
     const updateDateLabel = useMemo(() => {
         return new Intl.DateTimeFormat(undefined, {
@@ -90,23 +107,19 @@ const SelectAnalysisCard = (props: SelectAnalysisCardProps) => {
     }, [updatedAt])
 
     return (
-        <Card
-            className={cn(
-                'group border-border/70 hover:border-primary/40 p-0 shadow-none',
-                'w-full cursor-pointer rounded transition-colors',
-                className,
-            )}
-            {...rest}
-        >
-            <CardHeader className="flex justify-between gap-4 p-4">
-                <div>
-                    <CardTitle className="text-base">{title}</CardTitle>
-                    <CardDescription>{description}</CardDescription>
-                    <p className="text-muted-foreground text-xs">
-                        Last modified: {updateDateLabel}
-                    </p>
-                </div>
-            </CardHeader>
-        </Card>
+        <FieldLabel htmlFor={fieldId} {...rest}>
+            <Field orientation="horizontal">
+                <FieldContent>
+                    <FieldTitle>{title}</FieldTitle>
+                    <FieldDescription>{description}</FieldDescription>
+                    <div>
+                        <p className="text-muted-foreground text-xs">
+                            Last modified: {updateDateLabel}
+                        </p>
+                    </div>
+                </FieldContent>
+                <RadioGroupItem value={id.toString()} id={fieldId} />
+            </Field>
+        </FieldLabel>
     )
 }
