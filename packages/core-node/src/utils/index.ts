@@ -11,4 +11,7 @@ export {
     WorkflowOrchestrator,
     type WorkflowExecutionResult,
     type WorkflowNodeStatus,
+    type WorkflowEvent,
+    type WorkflowEventCallback,
 } from './analysis-workflow/workflow-orchestrator'
+export { createWorkflowSteps } from './analysis-workflow/workflow-step-factory'

@@ -10,6 +10,24 @@ export interface WorkflowExecutionResult {
     readonly errorByNodeId: Map<string, Error>
 }
 
+export type WorkflowEvent =
+    | {
+          readonly type: 'node-status'
+          readonly nodeId: string
+          readonly status: WorkflowNodeStatus
+      }
+    | {
+          readonly type: 'node-error'
+          readonly nodeId: string
+          readonly error: Error
+      }
+    | {
+          readonly type: 'workflow-complete'
+          readonly result: WorkflowExecutionResult
+      }
+
+export type WorkflowEventCallback = (event: WorkflowEvent) => void
+
 export class WorkflowOrchestrator {
     private readonly stepsByType: Map<string, WorkflowStep>
 
@@ -22,6 +40,7 @@ export class WorkflowOrchestrator {
         nodes: GraphNode[],
         edges: GraphEdge[],
         context: WorkflowContext,
+        onEvent?: WorkflowEventCallback,
     ): Promise<WorkflowExecutionResult> {
         const statusByNodeId = new Map<string, WorkflowNodeStatus>()
         const outputByNodeId = new Map<string, WorkflowStepOutput>()
@@ -32,6 +51,7 @@ export class WorkflowOrchestrator {
 
         for (const node of nodes) {
             statusByNodeId.set(node.id, 'pending')
+            onEvent?.({ type: 'node-status', nodeId: node.id, status: 'pending' })
         }
 
         const ready: string[] = []
@@ -53,6 +73,7 @@ export class WorkflowOrchestrator {
 
                     if (this.hasFailedDependency(nodeId, parentsByNodeId, statusByNodeId)) {
                         statusByNodeId.set(nodeId, 'skipped')
+                        onEvent?.({ type: 'node-status', nodeId, status: 'skipped' })
                         this.unlockDependents(nodeId, dag, remainingDeps, ready)
                         return
                     }
@@ -60,24 +81,29 @@ export class WorkflowOrchestrator {
                     const step = this.stepsByType.get(node.type)
                     if (!step) {
                         statusByNodeId.set(nodeId, 'failed')
-                        errorByNodeId.set(
-                            nodeId,
-                            new Error(`No step found for node type ${node.type}`),
-                        )
+                        const error = new Error(`No step found for node type ${node.type}`)
+                        errorByNodeId.set(nodeId, error)
+                        onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
+                        onEvent?.({ type: 'node-error', nodeId, error })
                         this.unlockDependents(nodeId, dag, remainingDeps, ready)
                         return
                     }
 
                     statusByNodeId.set(nodeId, 'running')
+                    onEvent?.({ type: 'node-status', nodeId, status: 'running' })
 
                     try {
                         const inputs = this.buildInputs(nodeId, parentsByNodeId, outputByNodeId)
                         const output = await step.execute(context, { node, inputs })
                         outputByNodeId.set(nodeId, output)
                         statusByNodeId.set(nodeId, 'completed')
+                        onEvent?.({ type: 'node-status', nodeId, status: 'completed' })
                     } catch (error) {
                         statusByNodeId.set(nodeId, 'failed')
-                        errorByNodeId.set(nodeId, this.normalizeError(error))
+                        const normalized = this.normalizeError(error)
+                        errorByNodeId.set(nodeId, normalized)
+                        onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
+                        onEvent?.({ type: 'node-error', nodeId, error: normalized })
                     }
 
                     this.unlockDependents(nodeId, dag, remainingDeps, ready)
@@ -85,7 +111,9 @@ export class WorkflowOrchestrator {
             )
         }
 
-        return { statusByNodeId, outputByNodeId, errorByNodeId }
+        const result = { statusByNodeId, outputByNodeId, errorByNodeId }
+        onEvent?.({ type: 'workflow-complete', result })
+        return result
     }
 
     private buildParents(edges: GraphEdge[]): Map<string, string[]> {

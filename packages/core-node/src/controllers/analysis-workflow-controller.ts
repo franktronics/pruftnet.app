@@ -2,7 +2,13 @@ import { AnalysisRepository } from '../repository/analysis-repository'
 import { z } from 'zod'
 import { wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
-import { prepareGraph, ReactFlowGraph } from '../utils'
+import {
+    createWorkflowSteps,
+    prepareGraph,
+    ReactFlowGraph,
+    type WorkflowEvent,
+    WorkflowOrchestrator,
+} from '../utils'
 
 export class AnalysisWorkflowController {
     private readonly analysisRepo: AnalysisRepository
@@ -30,9 +36,17 @@ export class AnalysisWorkflowController {
                 }
                 const analysisData = analysis.data as any as ReactFlowGraph
                 const dag = prepareGraph(analysisData)
-
-                console.log('DAG built', dag)
-                returnCb({ analysisData, dag })
+                const orchestrator = new WorkflowOrchestrator(createWorkflowSteps())
+                const result = await orchestrator.run(
+                    dag,
+                    analysisData.nodes,
+                    analysisData.edges,
+                    { interface: input.interface },
+                    (event: WorkflowEvent) => {
+                        returnCb(event)
+                    },
+                )
+                returnCb({ type: 'workflow-result', result })
             })
     }
 
