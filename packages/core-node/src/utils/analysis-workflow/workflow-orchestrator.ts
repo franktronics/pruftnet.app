@@ -1,32 +1,11 @@
-import type { Dag } from './graph.dag'
-import type { GraphEdge, GraphNode } from './graph.types'
+import type { Dag } from './graph-dag'
+import type { GraphEdge, GraphNode } from './graph-types'
 import type { WorkflowContext, WorkflowStep, WorkflowStepOutput } from './workflow-step'
-
-export type WorkflowNodeStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
-
-export interface WorkflowExecutionResult {
-    readonly statusByNodeId: Map<string, WorkflowNodeStatus>
-    readonly outputByNodeId: Map<string, WorkflowStepOutput>
-    readonly errorByNodeId: Map<string, Error>
-}
-
-export type WorkflowEvent =
-    | {
-          readonly type: 'node-status'
-          readonly nodeId: string
-          readonly status: WorkflowNodeStatus
-      }
-    | {
-          readonly type: 'node-error'
-          readonly nodeId: string
-          readonly error: Error
-      }
-    | {
-          readonly type: 'workflow-complete'
-          readonly result: WorkflowExecutionResult
-      }
-
-export type WorkflowEventCallback = (event: WorkflowEvent) => void
+import {
+    WorkflowEventCallback,
+    WorkflowExecutionResult,
+    WorkflowNodeStatus,
+} from './workflow-types'
 
 export class WorkflowOrchestrator {
     private readonly stepsByType: Map<string, WorkflowStep>
@@ -41,7 +20,7 @@ export class WorkflowOrchestrator {
         edges: GraphEdge[],
         context: WorkflowContext,
         onEvent?: WorkflowEventCallback,
-    ): Promise<WorkflowExecutionResult> {
+    ) {
         const statusByNodeId = new Map<string, WorkflowNodeStatus>()
         const outputByNodeId = new Map<string, WorkflowStepOutput>()
         const errorByNodeId = new Map<string, Error>()
@@ -84,7 +63,7 @@ export class WorkflowOrchestrator {
                         const error = new Error(`No step found for node type ${node.type}`)
                         errorByNodeId.set(nodeId, error)
                         onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
-                        onEvent?.({ type: 'node-error', nodeId, error })
+                        onEvent?.({ type: 'node-error', nodeId, errorMessage: error.message })
                         this.unlockDependents(nodeId, dag, remainingDeps, ready)
                         return
                     }
@@ -103,7 +82,7 @@ export class WorkflowOrchestrator {
                         const normalized = this.normalizeError(error)
                         errorByNodeId.set(nodeId, normalized)
                         onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
-                        onEvent?.({ type: 'node-error', nodeId, error: normalized })
+                        onEvent?.({ type: 'node-error', nodeId, errorMessage: normalized.message })
                     }
 
                     this.unlockDependents(nodeId, dag, remainingDeps, ready)
@@ -113,7 +92,6 @@ export class WorkflowOrchestrator {
 
         const result = { statusByNodeId, outputByNodeId, errorByNodeId }
         onEvent?.({ type: 'workflow-complete', result })
-        return result
     }
 
     private buildParents(edges: GraphEdge[]): Map<string, string[]> {

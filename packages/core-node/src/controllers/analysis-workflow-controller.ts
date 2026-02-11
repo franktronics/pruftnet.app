@@ -6,8 +6,8 @@ import {
     createWorkflowSteps,
     prepareGraph,
     ReactFlowGraph,
-    type WorkflowEvent,
     WorkflowOrchestrator,
+    type WorkflowEventCallback,
 } from '../utils'
 
 export class AnalysisWorkflowController {
@@ -24,7 +24,7 @@ export class AnalysisWorkflowController {
                     analysisId: z.number().int().positive(),
                 }),
             )
-            .handle(async ({ input, store }, returnCb: (data: any) => void) => {
+            .handle(async ({ input, store }, returnCb: WorkflowEventCallback) => {
                 const analysis = await this.analysisRepo.getAnalysisById(input.analysisId)
                 if (!analysis || !analysis.data) {
                     new ServerError({
@@ -38,17 +38,14 @@ export class AnalysisWorkflowController {
                 const dag = prepareGraph(analysisData)
                 const orchestrator = new WorkflowOrchestrator(createWorkflowSteps())
 
-                returnCb({ message: 'Workflow started' })
-                const result = await orchestrator.run(
+                returnCb({ type: 'workflow-start' })
+                await orchestrator.run(
                     dag,
                     analysisData.nodes,
                     analysisData.edges,
                     { interface: input.interface },
-                    (event: WorkflowEvent) => {
-                        returnCb(event)
-                    },
+                    returnCb,
                 )
-                returnCb({ type: 'workflow-result', result })
             })
     }
 

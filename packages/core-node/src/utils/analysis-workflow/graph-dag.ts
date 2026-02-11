@@ -1,5 +1,5 @@
-import { ReactFlowGraph } from './graph.types'
-import { validateGraph } from './graph.validation'
+import { ReactFlowGraph } from './graph-types'
+import { validateGraph } from './graph-validation'
 
 export interface Dag {
     adj: Map<string, string[]>

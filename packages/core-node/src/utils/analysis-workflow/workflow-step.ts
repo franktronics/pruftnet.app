@@ -1,4 +1,4 @@
-import type { GraphNode } from './graph.types'
+import type { GraphNode } from './graph-types'
 
 export interface WorkflowContext {
     readonly [key: string]: unknown
