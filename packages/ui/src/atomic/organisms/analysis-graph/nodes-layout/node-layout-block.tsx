@@ -24,7 +24,6 @@ import {
     CircleSlash,
     CircleX,
     Ellipsis,
-    Loader,
     RefreshCcw,
     Trash,
 } from 'lucide-react'
@@ -120,7 +119,7 @@ const Block = (props: NodeLayoutBlockProps) => {
                                 ],
                                 [
                                     status === 'skipped',
-                                    <CircleSlash className="text-muted-foreground size-3" />,
+                                    <CircleSlash className="text-warning size-3" />,
                                 ],
                                 [
                                     status === 'completed',

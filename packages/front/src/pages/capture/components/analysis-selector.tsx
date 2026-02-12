@@ -38,7 +38,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
 
     return (
         <div className={cn('flex items-center gap-1', className)} {...rest}>
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover open={open && captureStatus !== 'CAPTURING'} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="secondary"
@@ -85,7 +85,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                     <X />
                 </Button>
             ) : null}
-            {captureStatus === 'CAPTURING' ? (
+            {captureStatus !== 'CAPTURING' ? (
                 <Button
                     onClick={() => startWorkflow()}
                     variant="secondary"

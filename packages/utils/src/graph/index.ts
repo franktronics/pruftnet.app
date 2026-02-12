@@ -4,4 +4,5 @@ export {
     type Edge,
     type ReactFlowInstance,
     type ReactFlowJsonObject,
+    useReactFlow,
 } from '@xyflow/react'

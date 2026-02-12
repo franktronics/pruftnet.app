@@ -14,6 +14,7 @@ import { InterfaceSelector } from './components/interface-selector'
 import { useSettingsContext } from '../settings/context/settings-context'
 import { AnalysisSelector } from './components/analysis-selector'
 import { Network, Table, Workflow } from 'lucide-react'
+import { ReactFlowProvider } from '@repo/ui/organisms'
 
 function Capture() {
     const { appSettings } = useSettingsContext()
@@ -50,10 +51,14 @@ function Capture() {
                     <TabScan className="h-full w-full flex-1" />
                 </TabsDisplayContent>
                 <TabsDisplayContent value="graph" className="flex flex-1 flex-col">
-                    <TabGraph className="h-full w-full flex-1" />
+                    <ReactFlowProvider>
+                        <TabGraph className="h-full w-full flex-1" />
+                    </ReactFlowProvider>
                 </TabsDisplayContent>
                 <TabsDisplayContent value="analysis" className="flex flex-1 flex-col">
-                    <TabAnalysis className="h-full w-full flex-1" />
+                    <ReactFlowProvider>
+                        <TabAnalysis className="h-full w-full flex-1" />
+                    </ReactFlowProvider>
                 </TabsDisplayContent>
             </TabsDisplay>
         </Layout>

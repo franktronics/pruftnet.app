@@ -7,6 +7,7 @@ import type {
     AnalysisSummary,
     NetworkInterfaceInfo,
     PacketDataWithoutRaw,
+    WorkflowEvent,
 } from '@repo/core-node/types'
 
 export const CAPTURE_STATUS = {
@@ -28,6 +29,7 @@ export type ScanControlContextType = {
     selectedAnalysis: AnalysisSummary | null
     setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
     startWorkflow: () => void
+    workflowEvents: WorkflowEvent[]
 }
 
 export type ContextNetinterface = {
@@ -54,6 +56,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
     const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
     const closeConnectionFct = useRef<() => void>(null)
+    const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -78,6 +81,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         await cleanupScan({})
         await queryClient.invalidateQueries({ queryKey: ['packet'] })
         setPackets([])
+        setWorkflowEvents([])
         setCaptureStatus(CAPTURE_STATUS.IDLE)
         return true
     }
@@ -122,7 +126,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             { interface: interf.name, analysisId: selectedAnalysis.id },
             {
                 onmessage: (data) => {
-                    console.log('Workflow message', data)
+                    setWorkflowEvents((old) => [...old, data])
                 },
                 onerror: (error) => {
                     toast.error(<ClientErrorParser error={error} />, {
@@ -144,6 +148,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         selectedAnalysis,
         setSelectedAnalysis,
         startWorkflow: handleStartWorkflow,
+        workflowEvents: wokflowEvents,
     }
 
     return (

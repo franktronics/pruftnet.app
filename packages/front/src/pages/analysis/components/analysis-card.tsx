@@ -75,7 +75,7 @@ export const AnalysisCard = (props: AnalysisCardProps) => {
             {...rest}
         >
             <CardHeader className="flex justify-between gap-4 p-4">
-                <div onClick={() => onSetSelected(id)}>
+                <div onClick={() => onSetSelected(id)} className="grow">
                     <CardTitle className="text-base">{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
                     <p className="text-muted-foreground text-xs">

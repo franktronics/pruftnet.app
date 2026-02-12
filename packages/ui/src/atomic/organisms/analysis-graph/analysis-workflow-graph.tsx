@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react'
 import { GraphControls, GraphProvider } from './components'
 import { edgeTypes, nodeTypes } from './graph-config'
+import { cn } from '@repo/utils'
 
 export type AnalysisWorkflowGraphProps = {
     initialNodes: Node[]
@@ -20,8 +21,15 @@ export type AnalysisWorkflowGraphProps = {
 } & ComponentProps<'div'>
 
 export const AnalysisWorkflowGraph = (props: AnalysisWorkflowGraphProps) => {
-    const { initialNodes, initialEdges, initialViewport, analysisId, dataAvailable, ...rest } =
-        props
+    const {
+        initialNodes,
+        initialEdges,
+        initialViewport,
+        analysisId,
+        dataAvailable,
+        className,
+        ...rest
+    } = props
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
     const [edges, setEdges] = useEdgesState(initialEdges)
@@ -34,7 +42,7 @@ export const AnalysisWorkflowGraph = (props: AnalysisWorkflowGraphProps) => {
     }, [analysisId])
 
     return (
-        <div {...rest}>
+        <div className={cn('h-full', className)} {...rest}>
             {dataAvailable ? (
                 <GraphProvider viewOnly={true}>
                     <ReactFlow
