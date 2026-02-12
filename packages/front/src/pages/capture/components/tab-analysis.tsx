@@ -50,7 +50,11 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
     }, [workflowEvents])
 
     return (
-        <ResizablePanelGroup orientation="horizontal" className={cn('h-full', className)} {...rest}>
+        <ResizablePanelGroup
+            orientation="horizontal"
+            className={cn('h-full min-h-0', className)}
+            {...rest}
+        >
             <ResizablePanel defaultSize={75} minSize={60}>
                 <AnalysisWorkflowGraph
                     analysisId={id!}
@@ -64,12 +68,11 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
             <ResizablePanel
                 defaultSize={25}
                 minSize={15}
-                className="grid h-full grid-rows-[auto_1fr]"
+                className="grid h-full min-h-0 grid-rows-[auto_1fr]"
             >
                 <p className="border-b px-2 py-3 text-lg font-medium">Workflow events</p>
-
                 {workflowEvents.length === 0 ? (
-                    <div className="flex h-full items-center justify-center">
+                    <div className="flex h-full min-h-0 items-center justify-center">
                         <p className="text-muted-foreground text-center text-lg">
                             Events related to the selected analysis workflow are displayed here.
                         </p>

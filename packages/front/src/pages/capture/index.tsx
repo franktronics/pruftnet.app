@@ -18,7 +18,7 @@ function Capture() {
         <Layout>
             <Tabs
                 defaultValue={appSettings.defaultCaptureTab}
-                className="flex h-full flex-1 flex-col"
+                className="flex h-full min-h-0 flex-1 flex-col"
             >
                 <article className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -41,16 +41,16 @@ function Capture() {
                     </TabsList>
                 </article>
 
-                <TabsContent value="scan" className="flex flex-col pt-2">
+                <TabsContent value="scan" className="flex min-h-0 flex-1 flex-col pt-2">
                     <CaptureFilter className="shrink-0 pb-2" />
                     <TabScan className="h-full w-full flex-1" />
                 </TabsContent>
-                <TabsContent value="graph" className="flex flex-1 flex-col">
+                <TabsContent value="graph" className="flex min-h-0 flex-1 flex-col">
                     <ReactFlowProvider>
                         <TabGraph className="h-full w-full flex-1" />
                     </ReactFlowProvider>
                 </TabsContent>
-                <TabsContent value="analysis" className="flex flex-1 flex-col">
+                <TabsContent value="analysis" className="flex min-h-0 flex-1 flex-col">
                     <ReactFlowProvider>
                         <TabAnalysis className="h-full w-full flex-1" />
                     </ReactFlowProvider>
