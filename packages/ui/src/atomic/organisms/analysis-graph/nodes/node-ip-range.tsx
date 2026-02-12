@@ -18,7 +18,10 @@ export const NodeIpRange = (props: IpRangeProps) => {
     const { updateNodeData } = useReactFlow()
 
     const form = useAppForm({
-        defaultValues: { startIp: '', endIp: '' },
+        defaultValues: {
+            startIp: props.data.startIp || '',
+            endIp: props.data.endIp || '',
+        },
         validators: {
             onSubmit: paramFormSchema,
         },

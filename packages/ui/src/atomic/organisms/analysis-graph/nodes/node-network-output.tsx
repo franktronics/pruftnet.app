@@ -4,8 +4,9 @@ import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
 import { NodeHandle } from '../components'
 import { EthernetPort } from 'lucide-react'
+import { BasicNodeData } from './utils'
 
-export type NetworkOutputNodeData = Node<{ name: string }, 'net-output'>
+export type NetworkOutputNodeData = Node<{ name: string } & BasicNodeData, 'net-output'>
 export type NetworkOutputProps = {
     className?: string
 } & NodeProps<NetworkOutputNodeData>
@@ -30,8 +31,8 @@ export const NodeNetworkOutput = (props: NetworkOutputProps) => {
                 </div>
             </NodeLayout.Block>
             <NodeLayout.Popup title="Network Output Settings">
-                <NodeLayout.Params>OK Param</NodeLayout.Params>
-                <NodeLayout.Settings>OK Settings</NodeLayout.Settings>
+                <NodeLayout.Params disabled={true}>OK Param</NodeLayout.Params>
+                <NodeLayout.Settings disabled={true}>OK Settings</NodeLayout.Settings>
             </NodeLayout.Popup>
             <NodeLayout.Menu></NodeLayout.Menu>
         </NodeLayout.Root>

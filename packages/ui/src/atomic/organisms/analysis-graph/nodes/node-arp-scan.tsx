@@ -6,8 +6,9 @@ import { NodeLayout } from '../nodes-layout'
 import { useAppForm, withForm } from '../../../molecules'
 import { ComponentProps } from 'react'
 import { NodeHandle } from '../components'
+import { BasicNodeData } from './utils'
 
-export type ArpScanNodeData = Node<{ name: string }, 'arp-scan'>
+export type ArpScanNodeData = Node<{ name: string; delay: number } & BasicNodeData, 'arp-scan'>
 export type ArpScanProps = {
     className?: string
 } & NodeProps<ArpScanNodeData>
@@ -18,7 +19,7 @@ export const NodeArpScan = (props: ArpScanProps) => {
     const { updateNodeData } = useReactFlow()
 
     const form = useAppForm({
-        defaultValues: { delay: 0 },
+        defaultValues: { delay: props.data.delay || 0 },
         validators: {
             onSubmit: paramFormSchema,
         },
