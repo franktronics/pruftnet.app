@@ -64,9 +64,10 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
             <ResizablePanel
                 defaultSize={25}
                 minSize={15}
-                className="flex h-full min-h-0 flex-col overflow-hidden"
+                className="grid h-full grid-rows-[auto_1fr]"
             >
                 <p className="border-b px-2 py-3 text-lg font-medium">Workflow events</p>
+
                 {workflowEvents.length === 0 ? (
                     <div className="flex h-full items-center justify-center">
                         <p className="text-muted-foreground text-center text-lg">
@@ -74,8 +75,8 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
                         </p>
                     </div>
                 ) : (
-                    <div className="min-h-0 flex-1">
-                        <div className="flex flex-col gap-2 p-2">
+                    <div className="scrollbar-thin h-full min-h-0 overflow-auto">
+                        <div className="space-y-2 p-2">
                             {workflowEvents.map((event, index) => (
                                 <EventCard key={index} data={event} />
                             ))}

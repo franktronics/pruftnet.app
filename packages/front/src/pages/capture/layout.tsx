@@ -8,7 +8,7 @@ export const Layout = (props: LayoutProps) => {
 
     return (
         <ScanControlProvider>
-            <div className={cn('flex h-full flex-col p-2', className)} {...rest}>
+            <div className={cn('h-full p-2', className)} {...rest}>
                 {children}
             </div>
         </ScanControlProvider>
