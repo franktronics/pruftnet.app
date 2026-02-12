@@ -36,24 +36,37 @@ class NetworkInterfaceValidator {
 
 class ArpIpRangeValidator {
     validate(inputs: Record<string, unknown>): number[][] {
-        const [startIp, endIp] = this.extractIpRange(inputs)
-        this.validateIpFormat(startIp)
-        this.validateIpFormat(endIp)
-        this.validateRangeOrder(startIp, endIp)
-        const validIps = this.filterValidArpTargets(startIp, endIp)
-        this.ensureNonEmptyRange(validIps)
-        return validIps
+        const ranges = this.extractIpRanges(inputs)
+        const allValidIps: number[][] = []
+
+        for (const [startIp, endIp] of ranges) {
+            this.validateIpFormat(startIp)
+            this.validateIpFormat(endIp)
+            this.validateRangeOrder(startIp, endIp)
+            const validIps = this.filterValidArpTargets(startIp, endIp)
+            allValidIps.push(...validIps)
+        }
+
+        this.ensureNonEmptyRange(allValidIps)
+        return allValidIps
     }
 
-    private extractIpRange(inputs: Record<string, unknown>): [number[], number[]] {
+    private extractIpRanges(inputs: Record<string, unknown>): Array<[number[], number[]]> {
+        const ranges: Array<[number[], number[]]> = []
+
         for (const value of Object.values(inputs)) {
             if (!Array.isArray(value) || value.length !== 2) continue
             const [start, end] = value
             if (!Array.isArray(start) || start.length !== 4) continue
             if (!Array.isArray(end) || end.length !== 4) continue
-            return [start as number[], end as number[]]
+            ranges.push([start as number[], end as number[]])
         }
-        throw new Error('Missing IP range input for arp-scan node')
+
+        if (ranges.length === 0) {
+            throw new Error('Missing IP range input for arp-scan node')
+        }
+
+        return ranges
     }
 
     private validateIpFormat(ip: number[]): void {
