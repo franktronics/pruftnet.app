@@ -15,6 +15,7 @@ import {
 } from '../../../atoms'
 import { useNodeContext } from './node-layout-context'
 import { cn } from '@repo/utils'
+import { useGraphContext } from '../components'
 
 type NodeLayoutPopupProps = {
     title: string
@@ -24,6 +25,7 @@ type NodeLayoutPopupProps = {
 const Popup = (props: NodeLayoutPopupProps) => {
     const { children, title, description = '', className, onConfirm, ...rest } = props
     const { popupOpen, setPopupOpen } = useNodeContext()
+    const { viewOnly } = useGraphContext()
 
     let ParamsElt = null
     let SettingsElt = null
@@ -55,7 +57,7 @@ const Popup = (props: NodeLayoutPopupProps) => {
     }
 
     return (
-        <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
+        <Dialog open={popupOpen && viewOnly !== true} onOpenChange={setPopupOpen}>
             <DialogContent className={cn(className)} {...rest}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>

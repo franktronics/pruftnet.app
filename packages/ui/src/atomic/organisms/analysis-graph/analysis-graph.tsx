@@ -13,7 +13,7 @@ import {
     useReactFlow,
 } from '@xyflow/react'
 import { Plus } from 'lucide-react'
-import { NodeGallery, GraphControls, checkConnection } from './components'
+import { NodeGallery, GraphControls, checkConnection, GraphProvider } from './components'
 import { Sheet, SheetTrigger } from '../../atoms/sheet/sheet'
 import { Button } from '../../atoms/button/button'
 import { edgeTypes, nodeTypes } from './graph-config'
@@ -55,46 +55,48 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
     return (
         <div {...rest}>
             <Sheet open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    fitView={true}
-                    proOptions={{ hideAttribution: true }}
-                    snapToGrid={true}
-                    snapGrid={[16, 16]}
-                    isValidConnection={checkConnection}
-                    onInit={setRfInstance}
-                >
-                    <GraphControls />
-                    <Background gap={16} />
-                    <Panel position="top-right" className="flex items-center gap-2">
-                        <SheetTrigger asChild>
+                <GraphProvider>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        fitView={true}
+                        proOptions={{ hideAttribution: true }}
+                        snapToGrid={true}
+                        snapGrid={[16, 16]}
+                        isValidConnection={checkConnection}
+                        onInit={setRfInstance}
+                    >
+                        <GraphControls />
+                        <Background gap={16} />
+                        <Panel position="top-right" className="flex items-center gap-2">
+                            <SheetTrigger asChild>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="shadow-md"
+                                    disabled={isSaving}
+                                >
+                                    <Plus className="size-4" />
+                                    Add Node
+                                </Button>
+                            </SheetTrigger>
                             <Button
                                 size="sm"
-                                variant="outline"
+                                variant="default"
+                                onClick={handleSave}
                                 className="shadow-md"
                                 disabled={isSaving}
                             >
-                                <Plus className="size-4" />
-                                Add Node
+                                Save
                             </Button>
-                        </SheetTrigger>
-                        <Button
-                            size="sm"
-                            variant="default"
-                            onClick={handleSave}
-                            className="shadow-md"
-                            disabled={isSaving}
-                        >
-                            Save
-                        </Button>
-                    </Panel>
-                </ReactFlow>
+                        </Panel>
+                    </ReactFlow>
+                </GraphProvider>
                 <NodeGallery onOpenChange={setIsGalleryOpen} />
             </Sheet>
         </div>

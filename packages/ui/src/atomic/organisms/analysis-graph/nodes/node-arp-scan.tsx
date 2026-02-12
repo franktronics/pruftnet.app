@@ -12,7 +12,7 @@ export type ArpScanProps = {
     className?: string
 } & NodeProps<ArpScanNodeData>
 
-export const ArpScan = (props: ArpScanProps) => {
+export const NodeArpScan = (props: ArpScanProps) => {
     const { selected = false, className } = props
 
     const { updateNodeData } = useReactFlow()

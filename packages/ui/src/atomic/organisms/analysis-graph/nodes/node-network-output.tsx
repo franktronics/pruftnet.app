@@ -1,25 +1,23 @@
-import type { ComponentProps } from 'react'
+import { ReactNode } from 'react'
 import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
 import { NodeHandle } from '../components'
-import { Network } from 'lucide-react'
+import { EthernetPort } from 'lucide-react'
 
-export type NetworkSourceNodeData = Node<{
-    name: string
-}>
-export type NetworkSourceProps = {
-    selected?: boolean
-} & NodeProps<NetworkSourceNodeData> &
-    ComponentProps<'div'>
+export type NetworkOutputNodeData = Node<{ name: string }, 'net-output'>
+export type NetworkOutputProps = {
+    className?: string
+} & NodeProps<NetworkOutputNodeData>
 
-export const NetworkSource = (props: NetworkSourceProps) => {
+export const NodeNetworkOutput = (props: NetworkOutputProps) => {
     const { selected = false, className } = props
     const {} = props.data
 
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
-            <NodeLayout.Block contentClass="rounded-l-4xl rounded-r-lg">
+            <NodeLayout.Block contentClass="rounded-l-lg rounded-r-4xl">
+                <NodeHandle type="target" />
                 <div
                     className={cn(
                         'bg-primary/10 text-primary transition-colors',
@@ -27,12 +25,11 @@ export const NetworkSource = (props: NetworkSourceProps) => {
                     )}
                 >
                     <div className="[&>svg]:size-5">
-                        <Network />
+                        <EthernetPort />
                     </div>
                 </div>
-                <NodeHandle type="source" />
             </NodeLayout.Block>
-            <NodeLayout.Popup title="Network Source Settings">
+            <NodeLayout.Popup title="Network Output Settings">
                 <NodeLayout.Params>OK Param</NodeLayout.Params>
                 <NodeLayout.Settings>OK Settings</NodeLayout.Settings>
             </NodeLayout.Popup>

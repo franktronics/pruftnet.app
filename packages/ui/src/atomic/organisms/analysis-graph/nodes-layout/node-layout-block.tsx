@@ -21,6 +21,7 @@ import {
 import { Ellipsis, Trash } from 'lucide-react'
 import { useNodeContext } from './node-layout-context'
 import { useForm } from '@tanstack/react-form'
+import { useGraphContext } from '../components'
 
 type NodeLayoutBlockProps = {
     contentClass?: string
@@ -31,6 +32,7 @@ const Block = (props: NodeLayoutBlockProps) => {
     const { name, setPopupOpen, selected, nodeId } = useNodeContext()
     const contentRef = useRef<HTMLDivElement>(null)
     const { setNodes } = useReactFlow()
+    const { viewOnly } = useGraphContext()
 
     const handleMnuBtnClick = (e: React.MouseEvent) => {
         if (!contentRef.current) return
@@ -57,15 +59,22 @@ const Block = (props: NodeLayoutBlockProps) => {
             className={cn('relative flex flex-col items-center gap-1', className)}
             {...rest}
         >
-            <NodeToolbar className={cn('flex items-center gap-2')} position={Position.Top}>
-                <Button variant="outline" size="icon" type="button" onClick={handleDeleteBtnClick}>
-                    <Trash className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" type="button" onClick={handleMnuBtnClick}>
-                    <Ellipsis className="size-4" />
-                </Button>
-            </NodeToolbar>
-            <ContextMenuTrigger asChild>
+            {!viewOnly ? (
+                <NodeToolbar className={cn('flex items-center gap-2')} position={Position.Top}>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        type="button"
+                        onClick={handleDeleteBtnClick}
+                    >
+                        <Trash className="size-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" type="button" onClick={handleMnuBtnClick}>
+                        <Ellipsis className="size-4" />
+                    </Button>
+                </NodeToolbar>
+            ) : null}
+            <ContextMenuTrigger disabled={viewOnly} asChild>
                 <div
                     className={cn(
                         'relative gap-0 border-2 transition-all',

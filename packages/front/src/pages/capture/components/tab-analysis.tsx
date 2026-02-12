@@ -1,5 +1,5 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@repo/ui/atoms'
-import { AnalysisWorkflowGraph } from '@repo/ui/organisms'
+import { AnalysisWorkflowGraph, ReactFlowProvider } from '@repo/ui/organisms'
 import { cn, useQueryFetcher } from '@repo/utils'
 import { type ComponentProps } from 'react'
 import { useScanControlContext } from '../context/scan-control-context'
@@ -23,18 +23,25 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
 
     return (
         <ResizablePanelGroup direction="horizontal" className={cn('h-full', className)} {...rest}>
-            <ResizablePanel defaultSize={80} minSize={75}>
-                <AnalysisWorkflowGraph
-                    className="h-full w-full"
-                    analysisId={id!}
-                    initialNodes={data?.nodes ?? []}
-                    initialEdges={data?.edges ?? []}
-                />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={20} minSize={10}>
-                event
-            </ResizablePanel>
+            <ReactFlowProvider>
+                <ResizablePanel defaultSize={80} minSize={75}>
+                    <AnalysisWorkflowGraph
+                        className="h-full w-full"
+                        analysisId={id!}
+                        initialNodes={data?.nodes ?? []}
+                        initialEdges={data?.edges ?? []}
+                        dataAvailable={!!data}
+                    />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={20} minSize={10}>
+                    <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground text-center text-lg">
+                            Events related to the selected analysis workflow are displayed here.
+                        </p>
+                    </div>
+                </ResizablePanel>
+            </ReactFlowProvider>
         </ResizablePanelGroup>
     )
 }

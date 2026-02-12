@@ -1,29 +1,23 @@
-import { ReactNode } from 'react'
+import type { ComponentProps } from 'react'
 import { type Node, type NodeProps } from '@xyflow/react'
 import { cn } from '@repo/utils'
 import { NodeLayout } from '../nodes-layout'
 import { NodeHandle } from '../components'
-import { EthernetPort } from 'lucide-react'
+import { Network } from 'lucide-react'
 
-export type NetworkOutputNodeData = Node<
-    {
-        name: string
-        icon: ReactNode
-    },
-    'net-output'
->
-export type NetworkOutputProps = {
-    className?: string
-} & NodeProps<NetworkOutputNodeData>
+export type NetworkSourceNodeData = Node<{ name: string }, 'net-source'>
+export type NetworkSourceProps = {
+    selected?: boolean
+} & NodeProps<NetworkSourceNodeData> &
+    ComponentProps<'div'>
 
-export const NetworkOutput = (props: NetworkOutputProps) => {
+export const NodeNetworkSource = (props: NetworkSourceProps) => {
     const { selected = false, className } = props
     const {} = props.data
 
     return (
         <NodeLayout.Root data={props} selected={selected} className={className}>
-            <NodeLayout.Block contentClass="rounded-l-lg rounded-r-4xl">
-                <NodeHandle type="target" />
+            <NodeLayout.Block contentClass="rounded-l-4xl rounded-r-lg">
                 <div
                     className={cn(
                         'bg-primary/10 text-primary transition-colors',
@@ -31,11 +25,12 @@ export const NetworkOutput = (props: NetworkOutputProps) => {
                     )}
                 >
                     <div className="[&>svg]:size-5">
-                        <EthernetPort />
+                        <Network />
                     </div>
                 </div>
+                <NodeHandle type="source" />
             </NodeLayout.Block>
-            <NodeLayout.Popup title="Network Output Settings">
+            <NodeLayout.Popup title="Network Source Settings">
                 <NodeLayout.Params>OK Param</NodeLayout.Params>
                 <NodeLayout.Settings>OK Settings</NodeLayout.Settings>
             </NodeLayout.Popup>

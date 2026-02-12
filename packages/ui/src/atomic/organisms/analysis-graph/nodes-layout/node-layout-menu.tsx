@@ -8,12 +8,14 @@ import {
 import { useNodeContext } from './node-layout-context'
 import { useReactFlow } from '@xyflow/react'
 import { Layers2, Package, Pencil, Trash } from 'lucide-react'
+import { useGraphContext } from '../components'
 
 type NodeLayoutMenuProps = {} & ComponentProps<typeof ContextMenuContent>
 const Menu = (props: NodeLayoutMenuProps) => {
     const { children, className, ...rest } = props
     const { setRenamePopupOpen, setPopupOpen, nodeId } = useNodeContext()
     const { setNodes, setEdges, getNode, addNodes } = useReactFlow()
+    const { viewOnly } = useGraphContext()
 
     const handleDeleteBtnClick = useCallback(() => {
         setNodes((nds) => nds.filter((n) => n.id !== nodeId))
@@ -34,6 +36,10 @@ const Menu = (props: NodeLayoutMenuProps) => {
             position,
         })
     }, [getNode, addNodes, nodeId])
+
+    if (viewOnly) {
+        return null
+    }
 
     return (
         <ContextMenuContent className="w-52" {...rest}>

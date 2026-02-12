@@ -6,13 +6,14 @@ import { NodeLayout } from '../nodes-layout'
 import { ComponentProps } from 'react'
 import { useAppForm, withForm } from '../../../molecules'
 import { NodeHandle } from '../components'
+import { BasicNodeData } from './utils'
 
-export type IpRangeNodeData = Node<{ name: string; startIp: string; endIp: string }, 'ip-range'>
+export type IpRangeNodeData = Node<{ startIp: string; endIp: string } & BasicNodeData, 'ip-range'>
 export type IpRangeProps = {
     className?: string
 } & NodeProps<IpRangeNodeData>
 
-export const IpRange = (props: IpRangeProps) => {
+export const NodeIpRange = (props: IpRangeProps) => {
     const { selected = false, className } = props
     const { updateNodeData } = useReactFlow()
 
