@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Activity } from 'react'
 import { cn } from '@repo/utils'
 
 interface TabsDisplayContextType {
@@ -115,22 +116,18 @@ function TabsDisplayContent({
     const isActive = activeTab === value
 
     return (
-        <div
-            data-slot="tabs-content"
-            className={cn('flex-1 outline-none', className)}
-            style={
-                !isActive
-                    ? {
-                          display: 'none',
-                      }
-                    : {}
-            }
-            role="tabpanel"
-            data-state={isActive ? 'active' : 'inactive'}
-            {...props}
-        >
-            {children}
-        </div>
+        <Activity mode={isActive ? 'visible' : 'hidden'}>
+            <div
+                data-slot="tabs-content"
+                className={cn('flex-1 outline-none', className)}
+                role="tabpanel"
+                data-state={isActive ? 'active' : 'inactive'}
+                aria-hidden={!isActive}
+                {...props}
+            >
+                {children}
+            </div>
+        </Activity>
     )
 }
 

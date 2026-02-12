@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { cn } from '@repo/utils'
+import { cn, cond } from '@repo/utils'
 import { NodeToolbar, Position, useReactFlow } from '@xyflow/react'
 import { useId, useRef, type ComponentProps } from 'react'
 import {
@@ -18,7 +18,16 @@ import {
     FieldLabel,
     Input,
 } from '../../../atoms'
-import { Ellipsis, Trash } from 'lucide-react'
+import {
+    CircleCheck,
+    CircleDashed,
+    CircleSlash,
+    CircleX,
+    Ellipsis,
+    Loader,
+    RefreshCcw,
+    Trash,
+} from 'lucide-react'
 import { useNodeContext } from './node-layout-context'
 import { useForm } from '@tanstack/react-form'
 import { useGraphContext } from '../components'
@@ -29,7 +38,7 @@ type NodeLayoutBlockProps = {
 const Block = (props: NodeLayoutBlockProps) => {
     const { draggable, children, className, contentClass = '', ...rest } = props
 
-    const { name, setPopupOpen, selected, nodeId } = useNodeContext()
+    const { name, setPopupOpen, selected, nodeId, status } = useNodeContext()
     const contentRef = useRef<HTMLDivElement>(null)
     const { setNodes } = useReactFlow()
     const { viewOnly } = useGraphContext()
@@ -89,6 +98,37 @@ const Block = (props: NodeLayoutBlockProps) => {
                     ref={contentRef}
                 >
                     {children}
+                    {!!status ? (
+                        <div
+                            className={cn(
+                                'absolute -top-2 -right-2 p-0.5',
+                                'bg-background border-border rounded-full border',
+                            )}
+                        >
+                            {cond(
+                                [
+                                    status === 'pending',
+                                    <CircleDashed className="text-foreground size-3 animate-[spin_2s_linear_infinite]" />,
+                                ],
+                                [
+                                    status === 'running',
+                                    <RefreshCcw className="text-info size-3 animate-[spin_1.2s_linear_infinite]" />,
+                                ],
+                                [
+                                    status === 'failed',
+                                    <CircleX className="text-destructive size-3" />,
+                                ],
+                                [
+                                    status === 'skipped',
+                                    <CircleSlash className="text-muted-foreground size-3" />,
+                                ],
+                                [
+                                    status === 'completed',
+                                    <CircleCheck className="text-success size-3" />,
+                                ],
+                            )}
+                        </div>
+                    ) : null}
                 </div>
             </ContextMenuTrigger>
             <span className="text-foreground text-xs font-medium">{name}</span>

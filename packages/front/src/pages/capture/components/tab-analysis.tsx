@@ -8,7 +8,7 @@ import { fetcher } from '../../../config/client-trpc'
 export type TabAnalysisProps = {} & Partial<ComponentProps<typeof ResizablePanelGroup>>
 
 export const TabAnalysis = (props: TabAnalysisProps) => {
-    const { direction, className, ...rest } = props
+    const { className, ...rest } = props
 
     const { selectedAnalysis } = useScanControlContext()
     const { data: analysisData } = useQueryFetcher({
@@ -30,6 +30,7 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
                         analysisId={id!}
                         initialNodes={data?.nodes ?? []}
                         initialEdges={data?.edges ?? []}
+                        initialViewport={data?.viewport ?? { x: 0, y: 0, zoom: 1 }}
                         dataAvailable={!!data}
                     />
                 </ResizablePanel>

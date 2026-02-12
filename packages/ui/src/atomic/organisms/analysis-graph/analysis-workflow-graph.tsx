@@ -6,6 +6,7 @@ import {
     useEdgesState,
     type Node,
     type Edge,
+    useReactFlow,
 } from '@xyflow/react'
 import { GraphControls, GraphProvider } from './components'
 import { edgeTypes, nodeTypes } from './graph-config'
@@ -13,19 +14,23 @@ import { edgeTypes, nodeTypes } from './graph-config'
 export type AnalysisWorkflowGraphProps = {
     initialNodes: Node[]
     initialEdges: Edge[]
+    initialViewport: { x: number; y: number; zoom: number }
     analysisId: number
     dataAvailable: boolean
 } & ComponentProps<'div'>
 
 export const AnalysisWorkflowGraph = (props: AnalysisWorkflowGraphProps) => {
-    const { initialNodes, initialEdges, analysisId, dataAvailable, ...rest } = props
+    const { initialNodes, initialEdges, initialViewport, analysisId, dataAvailable, ...rest } =
+        props
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
     const [edges, setEdges] = useEdgesState(initialEdges)
+    const { setViewport } = useReactFlow()
 
     useEffect(() => {
         setNodes(initialNodes)
         setEdges(initialEdges)
+        setViewport({ x: 0, y: 0, zoom: 1 })
     }, [analysisId])
 
     return (
