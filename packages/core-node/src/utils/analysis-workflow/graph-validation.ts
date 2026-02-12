@@ -1,4 +1,4 @@
-import { ReactFlowGraph } from './graph.types'
+import { ReactFlowGraph } from './graph-types'
 
 export function validateGraph(graph: ReactFlowGraph) {
     if (!graph || !graph.nodes || graph.nodes.length === 0) {

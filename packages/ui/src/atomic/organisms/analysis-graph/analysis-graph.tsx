@@ -13,23 +13,10 @@ import {
     useReactFlow,
 } from '@xyflow/react'
 import { Plus } from 'lucide-react'
-import { AnalysisGraphEdge } from './components/graph-edge'
-import { NetworkSource } from './nodes/network-source'
-import { NetworkOutput } from './nodes/network-output'
-import { IpRange, ArpScan } from './nodes'
 import { NodeGallery, GraphControls, checkConnection } from './components'
 import { Sheet, SheetTrigger } from '../../atoms/sheet/sheet'
 import { Button } from '../../atoms/button/button'
-
-const edgeTypes = {
-    connect: AnalysisGraphEdge,
-}
-const nodeTypes = {
-    'net-source': NetworkSource,
-    'net-output': NetworkOutput,
-    'ip-range': IpRange,
-    'arp-scan': ArpScan,
-}
+import { edgeTypes, nodeTypes } from './graph-config'
 
 export type AnalysisGraphProps = {
     initialNodes: Node[]

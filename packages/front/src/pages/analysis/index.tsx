@@ -34,7 +34,6 @@ function Analysis() {
                     selectedAnalysisId={selectedId}
                 />
             </ResizablePanel>
-
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={80} minSize={75}>
                 <AnalysisMap analysis={selectedAnalysis} isLoading={loadingAnalysis} />

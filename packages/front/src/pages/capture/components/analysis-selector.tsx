@@ -24,7 +24,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
     const { className, ...rest } = props
     const [open, setOpen] = useState(false)
 
-    const { selectedAnalysis, setSelectedAnalysis, captureStatus, startWorkflow } =
+    const { selectedAnalysis, setSelectedAnalysis, captureStatus, startWorkflow, interf } =
         useScanControlContext()
 
     const { data } = useQueryFetcher({
@@ -56,7 +56,10 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                         />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="scrollbar-thin max-h-100 w-80 space-y-2 overflow-auto px-2 py-4">
+                <PopoverContent
+                    align="start"
+                    className="scrollbar-thin max-h-100 w-80 space-y-2 overflow-auto px-2 py-4"
+                >
                     {!!data ? (
                         <RadioGroup
                             className="max-w-sm"
@@ -77,13 +80,18 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                     )}
                 </PopoverContent>
             </Popover>
-            {selectedAnalysis !== null ? (
+            {selectedAnalysis !== null && captureStatus !== 'CAPTURING' ? (
                 <Button onClick={() => setSelectedAnalysis(null)} size="icon" variant="secondary">
                     <X />
                 </Button>
             ) : null}
-            {captureStatus !== 'CAPTURING' ? (
-                <Button onClick={() => startWorkflow()} variant="secondary">
+            {captureStatus === 'CAPTURING' ? (
+                <Button
+                    onClick={() => startWorkflow()}
+                    variant="secondary"
+                    aria-label="Select an analysis and start workflow"
+                    disabled={!selectedAnalysis || interf.name === ''}
+                >
                     Run workflow
                 </Button>
             ) : null}
