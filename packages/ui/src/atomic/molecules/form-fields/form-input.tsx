@@ -1,14 +1,14 @@
 import { ComponentProps, useId } from 'react'
 import { Field, FieldDescription, FieldError, FieldLabel, Input } from '../../atoms'
-import { useFieldContext } from '.'
+import { useFieldContext } from './index'
 
 export type FormInputProps = {
     label: string
     description?: string
 } & ComponentProps<typeof Input>
 export function FormInput(props: FormInputProps) {
-    const { label, description, ...rest } = props
-    const field = useFieldContext<string>()
+    const { label, description, type, ...rest } = props
+    const field = useFieldContext<string | number>()
     const fieldId = useId()
 
     const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
@@ -20,9 +20,15 @@ export function FormInput(props: FormInputProps) {
                 id={fieldId}
                 value={field.state.value}
                 name={field.name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    field.handleChange(e.target.value)
-                }
+                type={type}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    if (type === 'number') {
+                        const parsedValue = parseFloat(e.target.value)
+                        field.handleChange(isNaN(parsedValue) ? '' : parsedValue)
+                    } else {
+                        field.handleChange(e.target.value)
+                    }
+                }}
                 onBlur={field.handleBlur}
                 aria-invalid={isInvalid}
                 {...rest}
