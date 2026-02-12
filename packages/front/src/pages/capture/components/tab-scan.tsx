@@ -60,7 +60,7 @@ export const TabScan = (props: TabScanProps) => {
 
     return (
         <section className={className} {...rest}>
-            <ResizablePanelGroup direction="vertical" className="h-full">
+            <ResizablePanelGroup orientation="vertical" className="h-full">
                 <ResizablePanel defaultSize={60} minSize={30}>
                     <div className="h-full pb-2">
                         <PacketsTable
@@ -75,7 +75,7 @@ export const TabScan = (props: TabScanProps) => {
                 <ResizableHandle withHandle />
 
                 <ResizablePanel defaultSize={40} minSize={20}>
-                    <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanelGroup orientation="horizontal">
                         <ResizablePanel defaultSize={40} minSize={30}>
                             <div className="h-full">
                                 <PacketValuesViewer packet={packetData} protoFiles={protoFiles} />

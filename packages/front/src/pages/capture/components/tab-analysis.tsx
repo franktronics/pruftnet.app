@@ -50,7 +50,7 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
     }, [workflowEvents])
 
     return (
-        <ResizablePanelGroup direction="horizontal" className={cn('h-full', className)} {...rest}>
+        <ResizablePanelGroup orientation="horizontal" className={cn('h-full', className)} {...rest}>
             <ResizablePanel defaultSize={75} minSize={60}>
                 <AnalysisWorkflowGraph
                     analysisId={id!}
