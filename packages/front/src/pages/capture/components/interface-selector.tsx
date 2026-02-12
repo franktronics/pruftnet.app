@@ -17,26 +17,15 @@ type InterfaceSelectorProps = {} & ComponentPropsWithoutRef<'div'>
 export const InterfaceSelector = (props: InterfaceSelectorProps) => {
     const { ...rest } = props
     const [open, setOpen] = useState(false)
-    const [interfaces, setInterfaces] = useState<
-        Record<string, NetworkInterfaceInfo[] | undefined>
-    >({})
     const { setInterface, interf: selectedInterface } = useScanControlContext()
 
-    const { refetch: getInterfaces } = useQueryFetcher({
+    const { data } = useQueryFetcher({
+        enabled: open,
+        staleTime: 60 * 1000, // 1 minute
         procedure: fetcher.interfaces.query({}),
         queryKey: ['interfaces'],
         popupOnError: true,
     })
-
-    const handleOpenChange = async (isOpen: boolean) => {
-        setOpen(isOpen)
-        if (isOpen) {
-            const result = await getInterfaces()
-            const nis = result.data
-            if (!nis) return
-            setInterfaces(nis)
-        }
-    }
 
     const handleSelectInterface = (name: string, infos: NetworkInterfaceInfo[]) => {
         setInterface((old) => {
@@ -47,7 +36,7 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
 
     return (
         <div {...rest}>
-            <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+            <DropdownMenu open={open} onOpenChange={setOpen}>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="outline"
@@ -69,12 +58,12 @@ export const InterfaceSelector = (props: InterfaceSelectorProps) => {
                     align="start"
                     className="scrollbar-thin max-h-100 min-w-70 overflow-y-auto p-2"
                 >
-                    {Object.keys(interfaces).length === 0 ? (
+                    {Object.keys(data ?? {}).length === 0 ? (
                         <span className="text-muted-foreground px-2 py-1 text-sm">
                             No interfaces found
                         </span>
                     ) : null}
-                    {Object.entries(interfaces).map(([name, infos]) => (
+                    {Object.entries(data ?? {}).map(([name, infos]) => (
                         <DropdownMenuItem
                             key={name}
                             onSelect={() => handleSelectInterface(name, infos || [])}
@@ -101,7 +90,7 @@ type InterfaceCardProps = {
 const InterfaceCard = (props: InterfaceCardProps) => {
     const { data, name, isSelected, ...rest } = props
 
-    const macAddress = data.find((info) => info.mac && info.mac !== '00:00:00:00:00:00')?.mac
+    const macAddress = data.find((info) => !!info.mac)?.mac
     const ipv4Info = data.find((info) => info.family === 'IPv4')
     const ipv6Info = data.find((info) => info.family === 'IPv6')
 
