@@ -31,10 +31,11 @@ export const AnalysisMap = (props: AnalysisMapProps) => {
 
     const handleSave = async (instance: ReactFlowJsonObject<Node, Edge>) => {
         await updateGraph({
-            analysisId: id!,
+            analysisId: analysis?.id || 0,
             data: instance,
         })
         await queryClient.invalidateQueries({ queryKey: ['analysis', { id }] })
+        await queryClient.invalidateQueries({ queryKey: ['analysis_list'] })
     }
 
     if (!analysis && !isLoading) {
@@ -52,7 +53,7 @@ export const AnalysisMap = (props: AnalysisMapProps) => {
             {!isLoading ? (
                 <AnalysisGraph
                     className="h-full w-full"
-                    analysisId={id!}
+                    analysisId={analysis?.id ?? 0}
                     initialNodes={data?.nodes ?? []}
                     initialEdges={data?.edges ?? []}
                     initialViewport={data?.viewport ?? { x: 0, y: 0, zoom: 1 }}

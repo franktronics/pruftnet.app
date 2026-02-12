@@ -26,7 +26,7 @@ function Analysis() {
     })
 
     return (
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
             <ResizablePanel defaultSize={20} minSize={10}>
                 <AnalysisList
                     analysisList={data ?? []}
