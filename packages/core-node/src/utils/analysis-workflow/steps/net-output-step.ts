@@ -1,3 +1,4 @@
+import { BasicInjector, isInjectorAvailable } from '@repo/core-cpp'
 import type {
     WorkflowContext,
     WorkflowStep,
@@ -9,11 +10,31 @@ type PacketItem = Buffer | { delay: number }
 
 export class NetOutputStep implements WorkflowStep {
     readonly type = 'net-output'
+    private injector?: BasicInjector
 
     async execute(context: WorkflowContext, input: WorkflowStepInput): Promise<WorkflowStepOutput> {
-        const streams = this.extractStreams(input.inputs)
-        await Promise.all(streams.map((stream, index) => this.sendStream(stream, index)))
-        return { output: true }
+        if (!isInjectorAvailable()) {
+            throw new Error('Packet injection is only available on Linux')
+        }
+
+        const interfaceName = context.interface
+        if (typeof interfaceName !== 'string' || interfaceName.trim().length === 0) {
+            throw new Error('Interface name not found in workflow context')
+        }
+
+        this.injector = new BasicInjector()
+        const success = this.injector.initialize(interfaceName)
+        if (!success) {
+            throw new Error(`Failed to initialize packet injector on interface "${interfaceName}"`)
+        }
+
+        try {
+            const streams = this.extractStreams(input.inputs)
+            await Promise.all(streams.map((stream) => this.sendStream(stream)))
+            return { output: true }
+        } finally {
+            this.injector.close()
+        }
     }
 
     private extractStreams(inputs: Record<string, unknown>): PacketItem[][] {
@@ -32,16 +53,18 @@ export class NetOutputStep implements WorkflowStep {
         return streams
     }
 
-    private async sendStream(stream: PacketItem[], streamIndex: number): Promise<void> {
+    private async sendStream(stream: PacketItem[]): Promise<void> {
         for (const item of stream) {
             if (Buffer.isBuffer(item)) {
-                console.log(
-                    'net-output packet',
-                    { streamIndex, bytes: item.length },
-                    item.toString('hex'),
-                )
+                try {
+                    this.injector!.send(item)
+                } catch (error) {
+                    console.error(
+                        'Failed to send packet:',
+                        error instanceof Error ? error.message : 'Unknown error',
+                    )
+                }
             } else {
-                console.log('sleeping for delay', item.delay)
                 await this.sleep(item.delay)
             }
         }

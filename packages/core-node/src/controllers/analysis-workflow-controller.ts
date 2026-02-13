@@ -6,6 +6,7 @@ import {
     createWorkflowSteps,
     prepareGraph,
     ReactFlowGraph,
+    WorkflowEventFactory,
     WorkflowOrchestrator,
     type WorkflowEventCallback,
 } from '../utils'
@@ -38,7 +39,11 @@ export class AnalysisWorkflowController {
                 const dag = prepareGraph(analysisData)
                 const orchestrator = new WorkflowOrchestrator(createWorkflowSteps())
 
-                returnCb({ type: 'workflow-start' })
+                returnCb(
+                    WorkflowEventFactory.create({
+                        type: 'workflow-start',
+                    }),
+                )
                 await orchestrator.run(
                     dag,
                     analysisData.nodes,

@@ -53,9 +53,10 @@ include_directories(${nlohmann_json_SOURCE_DIR}/include)
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES "src/cpp/*.cpp" "src/cpp/*.hpp")
 
-# Remove Linux-specific sniffer files on non-Linux platforms
+# Remove Linux-specific sniffer and injector files on non-Linux platforms
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
   list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/sniffer/.*")
+  list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/injector/.*")
   list(FILTER SOURCE_FILES EXCLUDE REGEX ".*/analyser/.*")
 endif()
 # remove analyser files for now
