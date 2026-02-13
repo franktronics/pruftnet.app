@@ -37,6 +37,13 @@ const nodeTypes: NodeType[] = [
         defaultData: { startIp: '', endIp: '' },
     },
     {
+        type: 'ip-single',
+        label: 'Single IP',
+        description: 'Define a single IP address',
+        icon: <Database className="size-5" />,
+        defaultData: { ipAddress: '' },
+    },
+    {
         type: 'arp-scan',
         label: 'ARP Scan',
         description: 'Scan network using ARP protocol',

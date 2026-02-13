@@ -1,5 +1,6 @@
 export { NodeArpScan, type ArpScanProps, type ArpScanNodeData } from './node-arp-scan'
 export { NodeIpRange, type IpRangeProps, type IpRangeNodeData } from './node-ip-range'
+export { NodeIpSingle, type IpSingleProps, type IpSingleNodeData } from './node-ip-single'
 export {
     NodeNetworkOutput,
     type NetworkOutputProps,
