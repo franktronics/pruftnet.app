@@ -5,16 +5,26 @@ import type {
     WorkflowStepInput,
     WorkflowStepOutput,
 } from '../workflow-step'
+import { WorkflowEventCallback, WorkflowEventFactory } from '../workflow-types'
+import { GraphNode } from '../graph-types'
 
 type PacketItem = Buffer | { delay: number }
 
 export class NetOutputStep implements WorkflowStep {
     readonly type = 'net-output'
     private injector?: BasicInjector
+    private eventCallback?: WorkflowEventCallback
 
-    async execute(context: WorkflowContext, input: WorkflowStepInput): Promise<WorkflowStepOutput> {
+    async execute(
+        context: WorkflowContext,
+        input: WorkflowStepInput,
+        onEvent?: WorkflowEventCallback,
+    ): Promise<WorkflowStepOutput> {
         if (!isInjectorAvailable()) {
             throw new Error('Packet injection is only available on Linux')
+        }
+        if (onEvent) {
+            this.eventCallback = onEvent
         }
 
         const interfaceName = context.interface
@@ -30,7 +40,7 @@ export class NetOutputStep implements WorkflowStep {
 
         try {
             const streams = this.extractStreams(input.inputs)
-            await Promise.all(streams.map((stream) => this.sendStream(stream)))
+            await Promise.all(streams.map((stream) => this.sendStream(stream, input.node)))
             return { output: true }
         } finally {
             this.injector.close()
@@ -53,16 +63,28 @@ export class NetOutputStep implements WorkflowStep {
         return streams
     }
 
-    private async sendStream(stream: PacketItem[]): Promise<void> {
+    private async sendStream(stream: PacketItem[], node: GraphNode): Promise<void> {
         for (const item of stream) {
             if (Buffer.isBuffer(item)) {
                 try {
                     this.injector!.send(item)
+                    this.eventCallback?.(
+                        WorkflowEventFactory.create({
+                            type: 'node-info',
+                            nodeId: node.id,
+                            message: 'Packet sent',
+                        }),
+                    )
                 } catch (error) {
                     console.error(
                         'Failed to send packet:',
                         error instanceof Error ? error.message : 'Unknown error',
                     )
+                    WorkflowEventFactory.create({
+                        type: 'node-warning',
+                        nodeId: node.id,
+                        message: error instanceof Error ? error.message : 'Error sending packet',
+                    })
                 }
             } else {
                 await this.sleep(item.delay)

@@ -20,6 +20,16 @@ export type WorkflowEventData =
           readonly errorMessage: string
       }
     | {
+          readonly type: 'node-info'
+          readonly nodeId: string
+          readonly message: string
+      }
+    | {
+          readonly type: 'node-warning'
+          readonly nodeId: string
+          readonly message: string
+      }
+    | {
           readonly type: 'workflow-complete'
           readonly result: WorkflowExecutionResult
       }

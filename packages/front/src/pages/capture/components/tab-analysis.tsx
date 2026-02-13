@@ -132,6 +132,24 @@ const EventCard = (props: EventCardProps) => {
                     tone: 'destructive',
                 }
             }
+            case 'node-info': {
+                const nodeName = getNode(data.nodeId)?.data?.name
+                return {
+                    title: `Notification${nodeName ? ` for node ${nodeName}` : ''}`,
+                    description: <span>{data.message}</span>,
+                    badge: 'info',
+                    tone: 'info',
+                }
+            }
+            case 'node-warning': {
+                const nodeName = getNode(data.nodeId)?.data?.name
+                return {
+                    title: `Warning${nodeName ? ` for node ${nodeName}` : ''}`,
+                    description: <span>{data.message}</span>,
+                    badge: 'warning',
+                    tone: 'warning',
+                }
+            }
             case 'workflow-start':
                 return {
                     title: 'Workflow started',

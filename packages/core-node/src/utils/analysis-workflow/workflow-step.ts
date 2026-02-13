@@ -1,4 +1,5 @@
 import type { GraphNode } from './graph-types'
+import { WorkflowEventCallback } from './workflow-types'
 
 export interface WorkflowContext {
     readonly [key: string]: unknown
@@ -15,5 +16,9 @@ export interface WorkflowStepOutput {
 
 export interface WorkflowStep {
     readonly type: string
-    execute(context: WorkflowContext, input: WorkflowStepInput): Promise<WorkflowStepOutput>
+    execute(
+        context: WorkflowContext,
+        input: WorkflowStepInput,
+        onEvent?: WorkflowEventCallback,
+    ): Promise<WorkflowStepOutput>
 }

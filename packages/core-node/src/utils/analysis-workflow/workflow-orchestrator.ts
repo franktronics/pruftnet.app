@@ -99,7 +99,7 @@ export class WorkflowOrchestrator {
 
                     try {
                         const inputs = this.buildInputs(nodeId, parentsByNodeId, outputByNodeId)
-                        const output = await step.execute(context, { node, inputs })
+                        const output = await step.execute(context, { node, inputs }, onEvent)
                         outputByNodeId.set(nodeId, output)
                         statusByNodeId.set(nodeId, 'completed')
                         onEvent?.(
