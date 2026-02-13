@@ -5,6 +5,7 @@ import {
     NodeArpScan,
     NodeNetworkSource,
     NodeNetworkOutput,
+    NodeIcmpPing,
 } from './nodes'
 
 export const edgeTypes = {
@@ -16,4 +17,5 @@ export const nodeTypes = {
     'ip-range': NodeIpRange,
     'ip-single': NodeIpSingle,
     'arp-scan': NodeArpScan,
+    'icmp-ping': NodeIcmpPing,
 }

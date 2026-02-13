@@ -11,3 +11,4 @@ export {
     type NetworkSourceProps,
     type NetworkSourceNodeData,
 } from './node-network-source'
+export { NodeIcmpPing, type IcmpPingProps, type IcmpNodeNodeData } from './node-icmp-ping'

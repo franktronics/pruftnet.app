@@ -5,11 +5,15 @@ export const NODE_TYPES = {
     NetOutput: 'net-output',
     IpRange: 'ip-range',
     ArpScan: 'arp-scan',
+    IpSingle: 'ip-single',
+    IcmpPing: 'icmp-ping',
 }
 
 const connectionMap = new Map<string, string[]>([
-    [NODE_TYPES.IpRange, [NODE_TYPES.ArpScan]],
+    [NODE_TYPES.IpRange, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing]],
+    [NODE_TYPES.IpSingle, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing]],
     [NODE_TYPES.ArpScan, [NODE_TYPES.NetOutput]],
+    [NODE_TYPES.IcmpPing, [NODE_TYPES.NetOutput]],
 ])
 
 const checkBasedOnTypes = (sourceType: string | null, targetType: string | null): boolean => {

@@ -1,5 +1,5 @@
 import { useReactFlow } from '@xyflow/react'
-import { Plus, Radar, Network, Database } from 'lucide-react'
+import { Plus, Radar, Network, Database, Popsicle } from 'lucide-react'
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle, Button } from '../../../atoms'
 import { cn } from '@repo/utils'
 import { ReactNode } from 'react'
@@ -49,6 +49,13 @@ const nodeTypes: NodeType[] = [
         description: 'Scan network using ARP protocol',
         icon: <Radar className="size-5" />,
         defaultData: { delay: 0 },
+    },
+    {
+        type: 'icmp-ping',
+        label: 'ICMP Ping',
+        description: 'Ping a host using ICMP protocol',
+        icon: <Popsicle className="size-5" />,
+        defaultData: { delay: 0, numberRequest: 1 },
     },
 ]
 
