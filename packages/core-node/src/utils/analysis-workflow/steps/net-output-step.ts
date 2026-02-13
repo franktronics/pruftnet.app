@@ -1,14 +1,16 @@
-import type { WorkflowContext, WorkflowStep, WorkflowStepInput, WorkflowStepOutput } from '../workflow-step'
+import type {
+    WorkflowContext,
+    WorkflowStep,
+    WorkflowStepInput,
+    WorkflowStepOutput,
+} from '../workflow-step'
 
 type PacketItem = Buffer | { delay: number }
 
 export class NetOutputStep implements WorkflowStep {
     readonly type = 'net-output'
 
-    async execute(
-        context: WorkflowContext,
-        input: WorkflowStepInput,
-    ): Promise<WorkflowStepOutput> {
+    async execute(context: WorkflowContext, input: WorkflowStepInput): Promise<WorkflowStepOutput> {
         const streams = this.extractStreams(input.inputs)
         await Promise.all(streams.map((stream, index) => this.sendStream(stream, index)))
         return { output: true }
@@ -33,8 +35,13 @@ export class NetOutputStep implements WorkflowStep {
     private async sendStream(stream: PacketItem[], streamIndex: number): Promise<void> {
         for (const item of stream) {
             if (Buffer.isBuffer(item)) {
-                console.log('net-output packet', { streamIndex, bytes: item.length })
+                console.log(
+                    'net-output packet',
+                    { streamIndex, bytes: item.length },
+                    item.toString('hex'),
+                )
             } else {
+                console.log('sleeping for delay', item.delay)
                 await this.sleep(item.delay)
             }
         }

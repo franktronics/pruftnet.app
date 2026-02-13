@@ -181,18 +181,32 @@ const EventCard = (props: EventCardProps) => {
         >
             <CardHeader className="p-0">
                 <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="flex-1">
                         <CardTitle className="text-sm">{meta.title}</CardTitle>
                         <CardDescription className="text-xs">{meta.description}</CardDescription>
                     </div>
-                    <Badge
-                        variant="outline"
-                        className={cn('text-[10px] uppercase', badgeClasses[meta.tone])}
-                    >
-                        {meta.badge}
-                    </Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge
+                            variant="outline"
+                            className={cn('text-[10px] uppercase', badgeClasses[meta.tone])}
+                        >
+                            {meta.badge}
+                        </Badge>
+                        <span className="text-muted-foreground text-[10px]">
+                            {formatTimestamp(data.timestamp)}
+                        </span>
+                    </div>
                 </div>
             </CardHeader>
         </Card>
     )
+}
+
+const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp)
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    const seconds = date.getSeconds().toString().padStart(2, '0')
+    const milliseconds = date.getMilliseconds().toString().padStart(3, '0')
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`
 }

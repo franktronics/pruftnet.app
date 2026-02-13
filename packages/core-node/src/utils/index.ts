@@ -15,4 +15,5 @@ export {
     type WorkflowNodeStatus,
     type WorkflowEvent,
     type WorkflowEventCallback,
+    WorkflowEventFactory,
 } from './analysis-workflow/workflow-types'

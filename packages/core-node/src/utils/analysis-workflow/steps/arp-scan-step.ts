@@ -6,13 +6,57 @@ import type {
     WorkflowStepInput,
     WorkflowStepOutput,
 } from '../workflow-step'
+import { TypeConverter } from '../../common/type-converter'
 
 const arpScanSchema = z.object({
     delay: z.number().min(0).max(5000).optional(),
 })
 
+class ArpPacketBuilder {
+    build(senderMac: number[], senderIp: number[], targetIp: number[]): Buffer {
+        const ethernetHeader = this.buildEthernetHeader(senderMac)
+        const arpPayload = this.buildArpPayload(senderMac, senderIp, targetIp)
+        return Buffer.concat([ethernetHeader, arpPayload])
+    }
+
+    private buildEthernetHeader(senderMac: number[]): Buffer {
+        const header = Buffer.alloc(14)
+        const destinationMac = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
+        const etherType = TypeConverter.uint16ToBytes(0x0806)
+
+        destinationMac.forEach((byte, i) => header.writeUInt8(byte, i))
+        senderMac.forEach((byte, i) => header.writeUInt8(byte, i + 6))
+        etherType.forEach((byte, i) => header.writeUInt8(byte, i + 12))
+
+        return header
+    }
+
+    private buildArpPayload(senderMac: number[], senderIp: number[], targetIp: number[]): Buffer {
+        const payload = Buffer.alloc(28)
+        const hardwareType = TypeConverter.uint16ToBytes(0x0001)
+        const protocolType = TypeConverter.uint16ToBytes(0x0800)
+        const hardwareAddressLength = 0x06
+        const protocolAddressLength = 0x04
+        const operation = TypeConverter.uint16ToBytes(0x0001)
+        const targetMac = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+        let offset = 0
+        hardwareType.forEach((byte) => payload.writeUInt8(byte, offset++))
+        protocolType.forEach((byte) => payload.writeUInt8(byte, offset++))
+        payload.writeUInt8(hardwareAddressLength, offset++)
+        payload.writeUInt8(protocolAddressLength, offset++)
+        operation.forEach((byte) => payload.writeUInt8(byte, offset++))
+        senderMac.forEach((byte) => payload.writeUInt8(byte, offset++))
+        senderIp.forEach((byte) => payload.writeUInt8(byte, offset++))
+        targetMac.forEach((byte) => payload.writeUInt8(byte, offset++))
+        targetIp.forEach((byte) => payload.writeUInt8(byte, offset++))
+
+        return payload
+    }
+}
+
 class NetworkInterfaceValidator {
-    validate(interfaceName: unknown): void {
+    validate(interfaceName: unknown): { interface: string; mac: string; ip: string } {
         if (typeof interfaceName !== 'string' || interfaceName.trim() === '') {
             throw new Error('Interface name must be a non-empty string')
         }
@@ -25,11 +69,25 @@ class NetworkInterfaceValidator {
         }
 
         const hasInternalOnly = targetInterface.every((info) => info.internal === true)
-
         if (hasInternalOnly) {
             throw new Error(
                 `Network interface "${interfaceName}" is a loopback interface and cannot be used for ARP scanning`,
             )
+        }
+
+        const validInfo = targetInterface.find(
+            (info) => info.family === 'IPv4' && !info.internal && !!info.mac,
+        )
+        if (!validInfo) {
+            throw new Error(
+                `Network interface "${interfaceName}" does not have a valid IPv4 address or MAC address for ARP scanning`,
+            )
+        }
+
+        return {
+            interface: interfaceName,
+            mac: validInfo.mac,
+            ip: validInfo.address,
         }
     }
 }
@@ -137,19 +195,23 @@ export class ArpScanStep implements WorkflowStep {
     readonly type = 'arp-scan'
     private readonly ipValidator = new ArpIpRangeValidator()
     private readonly interfaceValidator = new NetworkInterfaceValidator()
+    private readonly packetBuilder = new ArpPacketBuilder()
 
     async execute(context: WorkflowContext, input: WorkflowStepInput): Promise<WorkflowStepOutput> {
         const data = arpScanSchema.parse(input.node.data ?? {})
         const delay = data.delay ?? 0
 
-        this.interfaceValidator.validate(context.interface)
+        const interfaceData = this.interfaceValidator.validate(context.interface)
+        const senderMac = TypeConverter.macStringToBytes(interfaceData.mac)
+        const senderIp = TypeConverter.ipStringToBytes(interfaceData.ip)
         const validAddresses = this.ipValidator.validate(input.inputs)
 
         const packets: Array<Buffer | { delay: number }> = []
         for (let i = 0; i < validAddresses.length; i += 1) {
-            const address = validAddresses[i]
-            if (!address) continue
-            packets.push(Buffer.from(`arp:${address.join('.')}`))
+            const targetIp = validAddresses[i]
+            if (!targetIp) continue
+            const arpPacket = this.packetBuilder.build(senderMac, senderIp, targetIp)
+            packets.push(arpPacket)
             if (delay > 0 && i < validAddresses.length - 1) {
                 packets.push({ delay })
             }

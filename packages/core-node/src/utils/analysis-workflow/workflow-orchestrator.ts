@@ -1,7 +1,7 @@
 import type { Dag } from './graph-dag'
 import type { GraphEdge, GraphNode } from './graph-types'
 import type { WorkflowContext, WorkflowStep, WorkflowStepOutput } from './workflow-step'
-import { WorkflowEventCallback, WorkflowNodeStatus } from './workflow-types'
+import { WorkflowEventCallback, WorkflowEventFactory, WorkflowNodeStatus } from './workflow-types'
 
 export class WorkflowOrchestrator {
     private readonly stepsByType: Map<string, WorkflowStep>
@@ -26,7 +26,13 @@ export class WorkflowOrchestrator {
 
         for (const node of nodes) {
             statusByNodeId.set(node.id, 'pending')
-            onEvent?.({ type: 'node-status', nodeId: node.id, status: 'pending' })
+            onEvent?.(
+                WorkflowEventFactory.create({
+                    type: 'node-status',
+                    nodeId: node.id,
+                    status: 'pending',
+                }),
+            )
         }
 
         const ready: string[] = []
@@ -48,7 +54,13 @@ export class WorkflowOrchestrator {
 
                     if (this.hasFailedDependency(nodeId, parentsByNodeId, statusByNodeId)) {
                         statusByNodeId.set(nodeId, 'skipped')
-                        onEvent?.({ type: 'node-status', nodeId, status: 'skipped' })
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-status',
+                                nodeId,
+                                status: 'skipped',
+                            }),
+                        )
                         this.unlockDependents(nodeId, dag, remainingDeps, ready)
                         return
                     }
@@ -58,27 +70,63 @@ export class WorkflowOrchestrator {
                         statusByNodeId.set(nodeId, 'failed')
                         const error = new Error(`No step found for node type ${node.type}`)
                         errorByNodeId.set(nodeId, error)
-                        onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
-                        onEvent?.({ type: 'node-error', nodeId, errorMessage: error.message })
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-status',
+                                nodeId,
+                                status: 'failed',
+                            }),
+                        )
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-error',
+                                nodeId,
+                                errorMessage: error.message,
+                            }),
+                        )
                         this.unlockDependents(nodeId, dag, remainingDeps, ready)
                         return
                     }
 
                     statusByNodeId.set(nodeId, 'running')
-                    onEvent?.({ type: 'node-status', nodeId, status: 'running' })
+                    onEvent?.(
+                        WorkflowEventFactory.create({
+                            type: 'node-status',
+                            nodeId,
+                            status: 'running',
+                        }),
+                    )
 
                     try {
                         const inputs = this.buildInputs(nodeId, parentsByNodeId, outputByNodeId)
                         const output = await step.execute(context, { node, inputs })
                         outputByNodeId.set(nodeId, output)
                         statusByNodeId.set(nodeId, 'completed')
-                        onEvent?.({ type: 'node-status', nodeId, status: 'completed' })
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-status',
+                                nodeId,
+                                status: 'completed',
+                            }),
+                        )
                     } catch (error) {
                         statusByNodeId.set(nodeId, 'failed')
                         const normalized = this.normalizeError(error)
                         errorByNodeId.set(nodeId, normalized)
-                        onEvent?.({ type: 'node-status', nodeId, status: 'failed' })
-                        onEvent?.({ type: 'node-error', nodeId, errorMessage: normalized.message })
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-status',
+                                nodeId,
+                                status: 'failed',
+                            }),
+                        )
+                        onEvent?.(
+                            WorkflowEventFactory.create({
+                                type: 'node-error',
+                                nodeId,
+                                errorMessage: normalized.message,
+                            }),
+                        )
                     }
 
                     this.unlockDependents(nodeId, dag, remainingDeps, ready)
@@ -87,7 +135,7 @@ export class WorkflowOrchestrator {
         }
 
         const result = { statusByNodeId, outputByNodeId, errorByNodeId }
-        onEvent?.({ type: 'workflow-complete', result })
+        onEvent?.(WorkflowEventFactory.create({ type: 'workflow-complete', result }))
     }
 
     private buildParents(edges: GraphEdge[]): Map<string, string[]> {

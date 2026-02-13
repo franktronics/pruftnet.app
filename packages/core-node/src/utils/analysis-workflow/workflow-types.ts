@@ -8,7 +8,7 @@ export interface WorkflowExecutionResult {
     readonly errorByNodeId: Map<string, Error>
 }
 
-export type WorkflowEvent =
+export type WorkflowEventData =
     | {
           readonly type: 'node-status'
           readonly nodeId: string
@@ -26,4 +26,16 @@ export type WorkflowEvent =
     | {
           readonly type: 'workflow-start'
       }
+
+export type WorkflowEvent = WorkflowEventData & { readonly timestamp: number }
+
+export class WorkflowEventFactory {
+    static create<T extends WorkflowEventData>(data: T): T & { timestamp: number } {
+        return {
+            ...data,
+            timestamp: Date.now(),
+        }
+    }
+}
+
 export type WorkflowEventCallback = (event: WorkflowEvent) => void

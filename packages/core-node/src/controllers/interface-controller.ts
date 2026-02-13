@@ -20,7 +20,6 @@ export class InterfaceController {
                         code: 404,
                     }).throw()
                 }
-                console.log('Retrieved network interfaces:', nis)
                 return nis
             }),
         }
