@@ -225,6 +225,7 @@ export class IcmpPingStep implements WorkflowStep {
             output: {
                 packets,
                 ipSource: sourceIp,
+                type: this.type,
             },
         }
     }

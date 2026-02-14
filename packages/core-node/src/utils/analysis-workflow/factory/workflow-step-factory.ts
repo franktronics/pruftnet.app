@@ -1,9 +1,9 @@
-import type { WorkflowStep } from './workflow-step'
-import { ArpScanStep } from './steps/arp-scan-step'
-import { IpRangeStep } from './steps/ip-range-step'
-import { NetOutputStep } from './steps/net-output-step'
-import { IpSingleStep } from './steps/ip-single-step'
-import { IcmpPingStep } from './steps/icmp-ping-step'
+import type { WorkflowStep } from '../workflow-step'
+import { ArpScanStep } from '../steps/arp-scan-step'
+import { IpRangeStep } from '../steps/ip-range-step'
+import { NetOutputStep } from '../steps/net-output-step'
+import { IpSingleStep } from '../steps/ip-single-step'
+import { IcmpPingStep } from '../steps/icmp-ping-step'
 
 export abstract class WorkflowStepFactory {
     public abstract create(type: string): WorkflowStep

@@ -1,4 +1,3 @@
-import { BasicInjector, isInjectorAvailable } from '@repo/core-cpp'
 import type {
     WorkflowContext,
     WorkflowStep,
@@ -6,13 +5,11 @@ import type {
     WorkflowStepOutput,
 } from '../workflow-step'
 import { WorkflowEventCallback, WorkflowEventFactory } from '../workflow-types'
-import { GraphNode } from '../graph-types'
-
-type PacketItem = Buffer | { delay: number }
+import { InjectorFactory } from '../factory/injector-factory'
 
 export class NetOutputStep implements WorkflowStep {
     readonly type = 'net-output'
-    private injector?: BasicInjector
+    private factory?: InjectorFactory
     private eventCallback?: WorkflowEventCallback
 
     async execute(
@@ -20,9 +17,6 @@ export class NetOutputStep implements WorkflowStep {
         input: WorkflowStepInput,
         onEvent?: WorkflowEventCallback,
     ): Promise<WorkflowStepOutput> {
-        if (!isInjectorAvailable()) {
-            throw new Error('Packet injection is only available on Linux')
-        }
         if (onEvent) {
             this.eventCallback = onEvent
         }
@@ -32,81 +26,26 @@ export class NetOutputStep implements WorkflowStep {
             throw new Error('Interface name not found in workflow context')
         }
 
-        this.injector = new BasicInjector()
-        const success = this.injector.initialize(interfaceName)
-        if (!success) {
-            throw new Error(`Failed to initialize packet injector on interface "${interfaceName}"`)
-        }
+        this.factory = new InjectorFactory()
 
         try {
-            const streams = this.extractStreams(input.inputs)
-            await Promise.all(streams.map((stream) => this.sendStream(stream, input.node)))
+            await this.factory.send(input, interfaceName, this.eventCallback)
             return { output: true }
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : 'Unknown error during packet injection'
+
+            this.eventCallback?.(
+                WorkflowEventFactory.create({
+                    type: 'node-error',
+                    nodeId: input.node.id,
+                    errorMessage: errorMessage,
+                }),
+            )
+
+            throw error
         } finally {
-            this.injector.close()
+            this.factory.close()
         }
-    }
-
-    private extractStreams(inputs: Record<string, unknown>): PacketItem[][] {
-        const streams: PacketItem[][] = []
-
-        for (const value of Object.values(inputs)) {
-            if (Array.isArray(value) && value.every((item) => this.isPacketItem(item))) {
-                streams.push(value as PacketItem[])
-            }
-        }
-
-        if (streams.length === 0) {
-            throw new Error('No packet streams found for net-output node')
-        }
-
-        return streams
-    }
-
-    private async sendStream(stream: PacketItem[], node: GraphNode): Promise<void> {
-        for (const item of stream) {
-            if (Buffer.isBuffer(item)) {
-                try {
-                    this.injector!.send(item)
-                    this.eventCallback?.(
-                        WorkflowEventFactory.create({
-                            type: 'node-info',
-                            nodeId: node.id,
-                            message: 'Packet sent',
-                        }),
-                    )
-                } catch (error) {
-                    console.error(
-                        'Failed to send packet:',
-                        error instanceof Error ? error.message : 'Unknown error',
-                    )
-                    WorkflowEventFactory.create({
-                        type: 'node-warning',
-                        nodeId: node.id,
-                        message: error instanceof Error ? error.message : 'Error sending packet',
-                    })
-                }
-            } else {
-                await this.sleep(item.delay)
-            }
-        }
-    }
-
-    private isPacketItem(item: unknown): item is PacketItem {
-        if (Buffer.isBuffer(item)) {
-            return true
-        }
-        if (typeof item === 'object' && item !== null && 'delay' in item) {
-            const delay = (item as { delay?: unknown }).delay
-            return typeof delay === 'number' && delay >= 0
-        }
-        return false
-    }
-
-    private async sleep(delay: number): Promise<void> {
-        if (delay <= 0) {
-            return
-        }
-        await new Promise((resolve) => setTimeout(resolve, delay))
     }
 }

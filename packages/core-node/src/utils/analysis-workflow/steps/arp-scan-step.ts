@@ -217,6 +217,6 @@ export class ArpScanStep implements WorkflowStep {
             }
         }
 
-        return { output: packets }
+        return { output: { packets, type: this.type } }
     }
 }

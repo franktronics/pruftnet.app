@@ -8,7 +8,6 @@ export {
     type WorkflowStepOutput,
 } from './analysis-workflow/workflow-step'
 export { WorkflowOrchestrator } from './analysis-workflow/workflow-orchestrator'
-export { createWorkflowSteps } from './analysis-workflow/workflow-step-factory'
 
 export {
     type WorkflowExecutionResult,

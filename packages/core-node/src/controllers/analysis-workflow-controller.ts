@@ -9,7 +9,7 @@ import {
     WorkflowOrchestrator,
     type WorkflowEventCallback,
 } from '../utils'
-import { WorkflowStepFactoryImpl } from '../utils/analysis-workflow/workflow-step-factory'
+import { WorkflowStepFactoryImpl } from '../utils/analysis-workflow/factory/workflow-step-factory'
 
 export class AnalysisWorkflowController {
     private readonly analysisRepo: AnalysisRepository
