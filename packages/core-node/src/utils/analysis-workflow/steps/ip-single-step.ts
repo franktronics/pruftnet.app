@@ -7,7 +7,9 @@ import type {
 } from '../workflow-step'
 
 const ipSingleSchema = z.object({
-    ipAddress: z.string().min(1),
+    ipAddress: z
+        .string()
+        .regex(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/, 'Invalid IP address format'),
 })
 
 export class IpSingleStep implements WorkflowStep {

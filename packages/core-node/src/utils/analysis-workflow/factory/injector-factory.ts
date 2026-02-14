@@ -1,8 +1,10 @@
 import {
     BasicInjector,
     IcmpInjector,
+    Ipv6NsInjector,
     isInjectorAvailable,
     isIcmpInjectorAvailable,
+    isIpv6NsInjectorAvailable,
 } from '@repo/core-cpp'
 import type { WorkflowStepInput } from '../workflow-step'
 import { WorkflowEventCallback, WorkflowEventFactory } from '../workflow-types'
@@ -18,11 +20,17 @@ type IcmpPingOutput = {
     type: 'icmp-ping'
 }
 
-type PacketOutput = ArpScanOutput | IcmpPingOutput
+type Ipv6NsOutput = {
+    packets: Array<{ packet: Buffer; targetIpv6: string } | { delay: number }>
+    type: 'ipv6-ns'
+}
+
+type PacketOutput = ArpScanOutput | IcmpPingOutput | Ipv6NsOutput
 
 export class InjectorFactory {
     private basicInjector?: BasicInjector
     private icmpInjector?: IcmpInjector
+    private ipv6NsInjector?: Ipv6NsInjector
     private interfaceName: string = ''
     private eventCallback?: WorkflowEventCallback
     private nodeId: string = ''
@@ -50,6 +58,10 @@ export class InjectorFactory {
             this.icmpInjector.close()
             this.icmpInjector = undefined
         }
+        if (this.ipv6NsInjector) {
+            this.ipv6NsInjector.close()
+            this.ipv6NsInjector = undefined
+        }
     }
 
     private extractStreams(inputs: Record<string, unknown>): PacketOutput[] {
@@ -73,6 +85,8 @@ export class InjectorFactory {
             await this.sendArpStream(stream)
         } else if (stream.type === 'icmp-ping') {
             await this.sendIcmpStream(stream)
+        } else if (stream.type === 'ipv6-ns') {
+            await this.sendIpv6NsStream(stream)
         } else {
             throw new Error(`Unknown packet stream type: ${(stream as { type: string }).type}`)
         }
@@ -191,7 +205,7 @@ export class InjectorFactory {
             return false
         }
 
-        if (obj.type !== 'arp-scan' && obj.type !== 'icmp-ping') {
+        if (obj.type !== 'arp-scan' && obj.type !== 'icmp-ping' && obj.type !== 'ipv6-ns') {
             return false
         }
 
@@ -200,6 +214,57 @@ export class InjectorFactory {
         }
 
         return true
+    }
+
+    private async sendIpv6NsStream(stream: Ipv6NsOutput): Promise<void> {
+        if (!isIpv6NsInjectorAvailable()) {
+            throw new Error('Ipv6NsInjector is only available on Linux')
+        }
+
+        if (!this.ipv6NsInjector) {
+            this.ipv6NsInjector = new Ipv6NsInjector()
+            const success = this.ipv6NsInjector.initialize(this.interfaceName)
+            if (!success) {
+                throw new Error(
+                    `Failed to initialize Ipv6NsInjector on interface "${this.interfaceName}"`,
+                )
+            }
+        }
+
+        let sentCount = 0
+        let failedCount = 0
+        const totalPackets = stream.packets.filter((item) => 'packet' in item).length
+
+        for (const item of stream.packets) {
+            if ('packet' in item && 'targetIpv6' in item) {
+                try {
+                    this.ipv6NsInjector.send(item.targetIpv6, item.packet)
+                    sentCount++
+                } catch (error) {
+                    failedCount++
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                    console.error(`Failed to send IPv6 NS to ${item.targetIpv6}:`, errorMsg)
+
+                    this.eventCallback?.(
+                        WorkflowEventFactory.create({
+                            type: 'node-warning',
+                            nodeId: this.nodeId,
+                            message: `Failed to send IPv6 NS to ${item.targetIpv6}: ${errorMsg}`,
+                        }),
+                    )
+                }
+            } else if ('delay' in item) {
+                await this.sleep(item.delay)
+            }
+        }
+
+        this.eventCallback?.(
+            WorkflowEventFactory.create({
+                type: 'node-info',
+                nodeId: this.nodeId,
+                message: `IPv6 NS: Sent ${sentCount}/${totalPackets} packets${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+            }),
+        )
     }
 
     private async sleep(delay: number): Promise<void> {

@@ -13,3 +13,4 @@ export {
 } from './node-network-source'
 export { NodeIcmpPing, type IcmpPingProps, type IcmpNodeNodeData } from './node-icmp-ping'
 export { NodeIpv6Single, type Ipv6SingleProps, type Ipv6SingleNodeData } from './node-ipv6-single'
+export { NodeIpv6Ns, type Ipv6NsProps, type Ipv6NsNodeData } from './node-ipv6-ns'

@@ -6,9 +6,12 @@ import type {
     WorkflowStepOutput,
 } from '../workflow-step'
 
+const ipAddressSchema = z
+    .string()
+    .regex(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/, 'Invalid IP address format')
 const ipRangeSchema = z.object({
-    startIp: z.string().min(1),
-    endIp: z.string().min(1),
+    startIp: ipAddressSchema,
+    endIp: ipAddressSchema,
 })
 
 export class IpRangeStep implements WorkflowStep {

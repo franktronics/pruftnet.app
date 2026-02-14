@@ -1,5 +1,5 @@
 import { useReactFlow } from '@xyflow/react'
-import { Plus, Radar, Network, Database, Popsicle } from 'lucide-react'
+import { Plus, Radar, Network, Database, Popsicle, Radio } from 'lucide-react'
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle, Button } from '../../../atoms'
 import { cn } from '@repo/utils'
 import { ReactNode } from 'react'
@@ -57,6 +57,12 @@ const nodeTypes: NodeType[] = [
         label: 'Single IPv6',
         description: 'Define a single IPv6 address',
         icon: <Database className="size-5" />,
+    },
+    {
+        type: 'ipv6-ns',
+        label: 'IPv6 NS',
+        description: 'Perform IPv6 Neighbor Solicitation',
+        icon: <Radio className="size-5" />,
     },
 ]
 

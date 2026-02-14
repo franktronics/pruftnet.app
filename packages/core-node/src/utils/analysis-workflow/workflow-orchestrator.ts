@@ -1,7 +1,7 @@
 import type { Dag } from './graph-dag'
 import type { GraphEdge, GraphNode } from './graph-types'
 import type { WorkflowContext, WorkflowStepOutput } from './workflow-step'
-import { WorkflowStepFactory } from './workflow-step-factory'
+import { WorkflowStepFactory } from './factory/workflow-step-factory'
 import { WorkflowEventCallback, WorkflowEventFactory, WorkflowNodeStatus } from './workflow-types'
 
 export class WorkflowOrchestrator {
