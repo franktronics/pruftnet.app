@@ -64,6 +64,12 @@ const nodeTypes: NodeType[] = [
         description: 'Perform IPv6 Neighbor Solicitation',
         icon: <Radio className="size-5" />,
     },
+    {
+        type: 'icmpv6-ping',
+        label: 'ICMPv6 Ping',
+        description: 'Ping a host using ICMPv6 protocol',
+        icon: <Popsicle className="size-5" />,
+    },
 ]
 
 export const NodeGallery = (props: NodeGalleryProps) => {

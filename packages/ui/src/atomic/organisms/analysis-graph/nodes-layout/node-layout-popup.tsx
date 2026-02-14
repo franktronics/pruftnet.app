@@ -58,7 +58,7 @@ const Popup = (props: NodeLayoutPopupProps) => {
 
     return (
         <Dialog open={popupOpen && viewOnly !== true} onOpenChange={setPopupOpen}>
-            <DialogContent className={cn(className)} {...rest}>
+            <DialogContent className={cn('min-w-150', className)} {...rest}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>

@@ -1,9 +1,11 @@
 import {
     BasicInjector,
     IcmpInjector,
+    Icmpv6Injector,
     Ipv6NsInjector,
     isInjectorAvailable,
     isIcmpInjectorAvailable,
+    isIcmpv6InjectorAvailable,
     isIpv6NsInjectorAvailable,
 } from '@repo/core-cpp'
 import type { WorkflowStepInput } from '../workflow-step'
@@ -25,11 +27,18 @@ type Ipv6NsOutput = {
     type: 'ipv6-ns'
 }
 
-type PacketOutput = ArpScanOutput | IcmpPingOutput | Ipv6NsOutput
+type Icmpv6PingOutput = {
+    packets: Array<{ packet: Buffer; targetIpv6: string } | { delay: number }>
+    ipSource: string
+    type: 'icmpv6-ping'
+}
+
+type PacketOutput = ArpScanOutput | IcmpPingOutput | Ipv6NsOutput | Icmpv6PingOutput
 
 export class InjectorFactory {
     private basicInjector?: BasicInjector
     private icmpInjector?: IcmpInjector
+    private icmpv6Injector?: Icmpv6Injector
     private ipv6NsInjector?: Ipv6NsInjector
     private interfaceName: string = ''
     private eventCallback?: WorkflowEventCallback
@@ -58,6 +67,10 @@ export class InjectorFactory {
             this.icmpInjector.close()
             this.icmpInjector = undefined
         }
+        if (this.icmpv6Injector) {
+            this.icmpv6Injector.close()
+            this.icmpv6Injector = undefined
+        }
         if (this.ipv6NsInjector) {
             this.ipv6NsInjector.close()
             this.ipv6NsInjector = undefined
@@ -85,6 +98,8 @@ export class InjectorFactory {
             await this.sendArpStream(stream)
         } else if (stream.type === 'icmp-ping') {
             await this.sendIcmpStream(stream)
+        } else if (stream.type === 'icmpv6-ping') {
+            await this.sendIcmpv6Stream(stream)
         } else if (stream.type === 'ipv6-ns') {
             await this.sendIpv6NsStream(stream)
         } else {
@@ -194,6 +209,57 @@ export class InjectorFactory {
         )
     }
 
+    private async sendIcmpv6Stream(stream: Icmpv6PingOutput): Promise<void> {
+        if (!isIcmpv6InjectorAvailable()) {
+            throw new Error('Icmpv6Injector is only available on Linux')
+        }
+
+        if (!this.icmpv6Injector) {
+            this.icmpv6Injector = new Icmpv6Injector()
+            const success = this.icmpv6Injector.initialize(this.interfaceName)
+            if (!success) {
+                throw new Error(
+                    `Failed to initialize Icmpv6Injector on interface "${this.interfaceName}"`,
+                )
+            }
+        }
+
+        let sentCount = 0
+        let failedCount = 0
+        const totalPackets = stream.packets.filter((item) => 'packet' in item).length
+
+        for (const item of stream.packets) {
+            if ('packet' in item && 'targetIpv6' in item) {
+                try {
+                    this.icmpv6Injector.send(item.targetIpv6, item.packet)
+                    sentCount++
+                } catch (error) {
+                    failedCount++
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                    console.error(`Failed to send ICMPv6 ping to ${item.targetIpv6}:`, errorMsg)
+
+                    this.eventCallback?.(
+                        WorkflowEventFactory.create({
+                            type: 'node-warning',
+                            nodeId: this.nodeId,
+                            message: `Failed to send ICMPv6 ping to ${item.targetIpv6}: ${errorMsg}`,
+                        }),
+                    )
+                }
+            } else if ('delay' in item) {
+                await this.sleep(item.delay)
+            }
+        }
+
+        this.eventCallback?.(
+            WorkflowEventFactory.create({
+                type: 'node-info',
+                nodeId: this.nodeId,
+                message: `ICMPv6: Sent ${sentCount}/${totalPackets} pings${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+            }),
+        )
+    }
+
     private isPacketOutput(value: unknown): value is PacketOutput {
         if (typeof value !== 'object' || value === null) {
             return false
@@ -205,7 +271,12 @@ export class InjectorFactory {
             return false
         }
 
-        if (obj.type !== 'arp-scan' && obj.type !== 'icmp-ping' && obj.type !== 'ipv6-ns') {
+        if (
+            obj.type !== 'arp-scan' &&
+            obj.type !== 'icmp-ping' &&
+            obj.type !== 'icmpv6-ping' &&
+            obj.type !== 'ipv6-ns'
+        ) {
             return false
         }
 
