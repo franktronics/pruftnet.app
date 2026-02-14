@@ -3,10 +3,12 @@ import {
     IcmpInjector,
     Icmpv6Injector,
     Ipv6NsInjector,
+    Ipv6RsInjector,
     isInjectorAvailable,
     isIcmpInjectorAvailable,
     isIcmpv6InjectorAvailable,
     isIpv6NsInjectorAvailable,
+    isIpv6RsInjectorAvailable,
 } from '@repo/core-cpp'
 import type { WorkflowStepInput } from '../workflow-step'
 import { WorkflowEventCallback, WorkflowEventFactory } from '../workflow-types'
@@ -33,13 +35,19 @@ type Icmpv6PingOutput = {
     type: 'icmpv6-ping'
 }
 
-type PacketOutput = ArpScanOutput | IcmpPingOutput | Ipv6NsOutput | Icmpv6PingOutput
+type Ipv6RsOutput = {
+    packets: Array<{ packet: Buffer } | { delay: number }>
+    type: 'ipv6-rs'
+}
+
+type PacketOutput = ArpScanOutput | IcmpPingOutput | Ipv6NsOutput | Icmpv6PingOutput | Ipv6RsOutput
 
 export class InjectorFactory {
     private basicInjector?: BasicInjector
     private icmpInjector?: IcmpInjector
     private icmpv6Injector?: Icmpv6Injector
     private ipv6NsInjector?: Ipv6NsInjector
+    private ipv6RsInjector?: Ipv6RsInjector
     private interfaceName: string = ''
     private eventCallback?: WorkflowEventCallback
     private nodeId: string = ''
@@ -75,6 +83,10 @@ export class InjectorFactory {
             this.ipv6NsInjector.close()
             this.ipv6NsInjector = undefined
         }
+        if (this.ipv6RsInjector) {
+            this.ipv6RsInjector.close()
+            this.ipv6RsInjector = undefined
+        }
     }
 
     private extractStreams(inputs: Record<string, unknown>): PacketOutput[] {
@@ -102,6 +114,8 @@ export class InjectorFactory {
             await this.sendIcmpv6Stream(stream)
         } else if (stream.type === 'ipv6-ns') {
             await this.sendIpv6NsStream(stream)
+        } else if (stream.type === 'ipv6-rs') {
+            await this.sendIpv6RsStream(stream)
         } else {
             throw new Error(`Unknown packet stream type: ${(stream as { type: string }).type}`)
         }
@@ -275,7 +289,8 @@ export class InjectorFactory {
             obj.type !== 'arp-scan' &&
             obj.type !== 'icmp-ping' &&
             obj.type !== 'icmpv6-ping' &&
-            obj.type !== 'ipv6-ns'
+            obj.type !== 'ipv6-ns' &&
+            obj.type !== 'ipv6-rs'
         ) {
             return false
         }
@@ -334,6 +349,57 @@ export class InjectorFactory {
                 type: 'node-info',
                 nodeId: this.nodeId,
                 message: `IPv6 NS: Sent ${sentCount}/${totalPackets} packets${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+            }),
+        )
+    }
+
+    private async sendIpv6RsStream(stream: Ipv6RsOutput): Promise<void> {
+        if (!isIpv6RsInjectorAvailable()) {
+            throw new Error('Ipv6RsInjector is only available on Linux')
+        }
+
+        if (!this.ipv6RsInjector) {
+            this.ipv6RsInjector = new Ipv6RsInjector()
+            const success = this.ipv6RsInjector.initialize(this.interfaceName)
+            if (!success) {
+                throw new Error(
+                    `Failed to initialize Ipv6RsInjector on interface "${this.interfaceName}"`,
+                )
+            }
+        }
+
+        let sentCount = 0
+        let failedCount = 0
+        const totalPackets = stream.packets.filter((item) => 'packet' in item).length
+
+        for (const item of stream.packets) {
+            if ('packet' in item) {
+                try {
+                    this.ipv6RsInjector.send()
+                    sentCount++
+                } catch (error) {
+                    failedCount++
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                    console.error('Failed to send IPv6 RS:', errorMsg)
+
+                    this.eventCallback?.(
+                        WorkflowEventFactory.create({
+                            type: 'node-warning',
+                            nodeId: this.nodeId,
+                            message: `Failed to send IPv6 RS: ${errorMsg}`,
+                        }),
+                    )
+                }
+            } else if ('delay' in item) {
+                await this.sleep(item.delay)
+            }
+        }
+
+        this.eventCallback?.(
+            WorkflowEventFactory.create({
+                type: 'node-info',
+                nodeId: this.nodeId,
+                message: `IPv6 RS: Sent ${sentCount}/${totalPackets} packets${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
             }),
         )
     }

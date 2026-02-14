@@ -6,6 +6,8 @@ import { IpSingleStep } from '../steps/ip-single-step'
 import { IcmpPingStep } from '../steps/icmp-ping-step'
 import { Ipv6SingleStep } from '../steps/ipv6-single-step'
 import { Ipv6NsStep } from '../steps/ipv6-ns-step'
+import { Ipv6RsStep } from '../steps/ipv6-rs-step'
+import { Icmpv6PingStep } from '../steps/icmpv6-ping-step'
 
 export abstract class WorkflowStepFactory {
     public abstract create(type: string): WorkflowStep
@@ -20,6 +22,8 @@ export class WorkflowStepFactoryImpl extends WorkflowStepFactory {
         'net-output': NetOutputStep,
         'ipv6-single': Ipv6SingleStep,
         'ipv6-ns': Ipv6NsStep,
+        'ipv6-rs': Ipv6RsStep,
+        'icmpv6-ping': Icmpv6PingStep,
     }
 
     public create(type: string): WorkflowStep {

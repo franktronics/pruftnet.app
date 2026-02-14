@@ -5,6 +5,7 @@
 #include "./injector/icmp_injector.napi.hpp"
 #include "./injector/icmpv6_injector.napi.hpp"
 #include "./injector/ipv6ns_injector.napi.hpp"
+#include "./injector/ipv6rs_injector.napi.hpp"
 #include "./sniffer/network_sniffer.napi.hpp"
 #endif
 
@@ -16,6 +17,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   IcmpInjectorWrapper::Init(env, exports);
   Icmpv6InjectorWrapper::Init(env, exports);
   Ipv6NsInjectorWrapper::Init(env, exports);
+  Ipv6RsInjectorWrapper::Init(env, exports);
 #endif
 
   return exports;

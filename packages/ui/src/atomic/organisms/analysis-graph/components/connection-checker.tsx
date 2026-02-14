@@ -7,8 +7,10 @@ export const NODE_TYPES = {
     IpSingle: 'ip-single',
     ArpScan: 'arp-scan',
     IcmpPing: 'icmp-ping',
+    Icmpv6Ping: 'icmpv6-ping',
     Ipv6Single: 'ipv6-single',
     Ipv6Ns: 'ipv6-ns', //ipv6 neighbor solicitation
+    Ipv6Rs: 'ipv6-rs', //ipv6 router solicitation
 }
 
 const connectionMap = new Map<string, string[]>([
@@ -16,8 +18,10 @@ const connectionMap = new Map<string, string[]>([
     [NODE_TYPES.IpSingle, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing]],
     [NODE_TYPES.ArpScan, [NODE_TYPES.NetOutput]],
     [NODE_TYPES.IcmpPing, [NODE_TYPES.NetOutput]],
+    [NODE_TYPES.Icmpv6Ping, [NODE_TYPES.NetOutput]],
     [NODE_TYPES.Ipv6Single, [NODE_TYPES.Ipv6Ns]],
     [NODE_TYPES.Ipv6Ns, [NODE_TYPES.NetOutput]],
+    [NODE_TYPES.Ipv6Rs, [NODE_TYPES.NetOutput]],
 ])
 
 const checkBasedOnTypes = (sourceType: string | null, targetType: string | null): boolean => {

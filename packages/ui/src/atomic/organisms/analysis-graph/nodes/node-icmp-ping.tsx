@@ -72,7 +72,7 @@ export const NodeIcmpPing = (props: IcmpPingProps) => {
                 </div>
                 <NodeHandle type="source" />
             </NodeLayout.Block>
-            <NodeLayout.Popup title="ARP Scan Node" onConfirm={handleFormSubmit}>
+            <NodeLayout.Popup title="ICMP Ping node" onConfirm={handleFormSubmit}>
                 <NodeLayout.Params>
                     <ParamTab form={form} />
                 </NodeLayout.Params>

@@ -8,8 +8,9 @@ import {
     NodeIcmpPing,
     NodeIpv6Single,
     NodeIpv6Ns,
+    NodeIpv6Rs,
+    NodeIcmpv6Ping,
 } from './nodes'
-import { NodeIcmpv6Ping } from './nodes/node-icmpv6-ping'
 
 export const edgeTypes = {
     connect: AnalysisGraphEdge,
@@ -23,5 +24,6 @@ export const nodeTypes = {
     'icmp-ping': NodeIcmpPing,
     'ipv6-single': NodeIpv6Single,
     'ipv6-ns': NodeIpv6Ns,
+    'ipv6-rs': NodeIpv6Rs,
     'icmpv6-ping': NodeIcmpv6Ping,
 }
