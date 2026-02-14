@@ -1,13 +1,16 @@
 import type { Dag } from './graph-dag'
 import type { GraphEdge, GraphNode } from './graph-types'
-import type { WorkflowContext, WorkflowStep, WorkflowStepOutput } from './workflow-step'
+import type { WorkflowContext, WorkflowStepOutput } from './workflow-step'
+import { WorkflowStepFactory } from './workflow-step-factory'
 import { WorkflowEventCallback, WorkflowEventFactory, WorkflowNodeStatus } from './workflow-types'
 
 export class WorkflowOrchestrator {
-    private readonly stepsByType: Map<string, WorkflowStep>
+    private stepFactory: WorkflowStepFactory | null = null
 
-    constructor(steps: WorkflowStep[]) {
-        this.stepsByType = new Map(steps.map((step) => [step.type, step]))
+    constructor() {}
+
+    public setStepFactory(fac: WorkflowStepFactory) {
+        this.stepFactory = fac
     }
 
     public async run(
@@ -65,7 +68,11 @@ export class WorkflowOrchestrator {
                         return
                     }
 
-                    const step = this.stepsByType.get(node.type)
+                    if (!this.stepFactory) {
+                        throw new Error('WorkflowStepFactory not set on WorkflowOrchestrator')
+                    }
+                    const step = this.stepFactory.create(node.type)
+
                     if (!step) {
                         statusByNodeId.set(nodeId, 'failed')
                         const error = new Error(`No step found for node type ${node.type}`)

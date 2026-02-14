@@ -3,13 +3,13 @@ import { z } from 'zod'
 import { wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
 import {
-    createWorkflowSteps,
     prepareGraph,
     ReactFlowGraph,
     WorkflowEventFactory,
     WorkflowOrchestrator,
     type WorkflowEventCallback,
 } from '../utils'
+import { WorkflowStepFactoryImpl } from '../utils/analysis-workflow/workflow-step-factory'
 
 export class AnalysisWorkflowController {
     private readonly analysisRepo: AnalysisRepository
@@ -37,7 +37,8 @@ export class AnalysisWorkflowController {
                 }
                 const analysisData = analysis.data as any as ReactFlowGraph
                 const dag = prepareGraph(analysisData)
-                const orchestrator = new WorkflowOrchestrator(createWorkflowSteps())
+                const orchestrator = new WorkflowOrchestrator()
+                orchestrator.setStepFactory(WorkflowStepFactoryImpl.make())
 
                 returnCb(
                     WorkflowEventFactory.create({

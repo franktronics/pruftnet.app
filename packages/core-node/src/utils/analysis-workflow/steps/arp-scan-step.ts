@@ -92,39 +92,39 @@ class NetworkInterfaceValidator {
     }
 }
 
-class ArpIpRangeValidator {
+class ArpIpInputValidator {
     validate(inputs: Record<string, unknown>): number[][] {
-        const ranges = this.extractIpRanges(inputs)
         const allValidIps: number[][] = []
 
-        for (const [startIp, endIp] of ranges) {
-            this.validateIpFormat(startIp)
-            this.validateIpFormat(endIp)
-            this.validateRangeOrder(startIp, endIp)
-            const validIps = this.filterValidArpTargets(startIp, endIp)
-            allValidIps.push(...validIps)
+        for (const value of Object.values(inputs)) {
+            if (this.isIpRange(value)) {
+                const range = value as [number[], number[]]
+                const [startIp, endIp] = range
+                this.validateIpFormat(startIp)
+                this.validateIpFormat(endIp)
+                this.validateRangeOrder(startIp, endIp)
+                const validIps = this.filterValidArpTargets(startIp, endIp)
+                allValidIps.push(...validIps)
+            } else if (this.isIpSingleton(value)) {
+                const ip = value as number[]
+                this.validateIpFormat(ip)
+                this.ensureValidArpTarget(ip)
+                allValidIps.push(ip)
+            }
         }
 
         this.ensureNonEmptyRange(allValidIps)
         return allValidIps
     }
 
-    private extractIpRanges(inputs: Record<string, unknown>): Array<[number[], number[]]> {
-        const ranges: Array<[number[], number[]]> = []
+    private isIpRange(value: unknown): boolean {
+        if (!Array.isArray(value) || value.length !== 2) return false
+        const [start, end] = value
+        return Array.isArray(start) && start.length === 4 && Array.isArray(end) && end.length === 4
+    }
 
-        for (const value of Object.values(inputs)) {
-            if (!Array.isArray(value) || value.length !== 2) continue
-            const [start, end] = value
-            if (!Array.isArray(start) || start.length !== 4) continue
-            if (!Array.isArray(end) || end.length !== 4) continue
-            ranges.push([start as number[], end as number[]])
-        }
-
-        if (ranges.length === 0) {
-            throw new Error('Missing IP range input for arp-scan node')
-        }
-
-        return ranges
+    private isIpSingleton(value: unknown): boolean {
+        return Array.isArray(value) && value.length === 4
     }
 
     private validateIpFormat(ip: number[]): void {
@@ -193,7 +193,7 @@ class ArpIpRangeValidator {
 
 export class ArpScanStep implements WorkflowStep {
     readonly type = 'arp-scan'
-    private readonly ipValidator = new ArpIpRangeValidator()
+    private readonly ipValidator = new ArpIpInputValidator()
     private readonly interfaceValidator = new NetworkInterfaceValidator()
     private readonly packetBuilder = new ArpPacketBuilder()
 
