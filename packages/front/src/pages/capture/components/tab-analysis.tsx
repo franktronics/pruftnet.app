@@ -55,7 +55,7 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
             className={cn('h-full min-h-0', className)}
             {...rest}
         >
-            <ResizablePanel defaultSize={75} minSize={60}>
+            <ResizablePanel defaultSize="75%" minSize="60%">
                 <AnalysisWorkflowGraph
                     analysisId={id!}
                     initialNodes={data?.nodes ?? []}
@@ -66,8 +66,8 @@ export const TabAnalysis = (props: TabAnalysisProps) => {
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel
-                defaultSize={25}
-                minSize={15}
+                defaultSize="25%"
+                minSize="20%"
                 className="grid h-full min-h-0 grid-rows-[auto_1fr]"
             >
                 <p className="border-b px-2 py-3 text-lg font-medium">Workflow events</p>
