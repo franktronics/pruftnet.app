@@ -8,7 +8,15 @@ import { useAppForm, withForm } from '../../../molecules'
 import { NodeHandle } from '../components'
 import { BasicNodeData } from './utils'
 
-export type IpRangeNodeData = Node<{ startIp: string; endIp: string } & BasicNodeData, 'ip-range'>
+const ipAddressSchema = z
+    .string()
+    .regex(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/, 'Invalid IP address format')
+const paramFormSchema = z.object({
+    startIp: ipAddressSchema,
+    endIp: ipAddressSchema,
+})
+type ParamFormValues = z.infer<typeof paramFormSchema>
+export type IpRangeNodeData = Node<ParamFormValues & BasicNodeData, 'ip-range'>
 export type IpRangeProps = {
     className?: string
 } & NodeProps<IpRangeNodeData>
@@ -48,7 +56,7 @@ export const NodeIpRange = (props: IpRangeProps) => {
                             <div className="bg-chart-2 size-1.5 rounded-full"></div>
                         </div>
                         <p className="text-foreground font-mono text-xs">
-                            {props.data.startIp === '' ? 'xxx.xxx.xxx.xxx' : props.data.startIp}
+                            {!!props.data.startIp ? props.data.startIp : 'xxx.xxx.xxx.xxx'}
                         </p>
                     </div>
 
@@ -61,7 +69,7 @@ export const NodeIpRange = (props: IpRangeProps) => {
                             <div className="bg-chart-5 size-1.5 rounded-full"></div>
                         </div>
                         <p className="text-foreground font-mono text-xs">
-                            {props.data.endIp === '' ? 'xxx.xxx.xxx.xxx' : props.data.endIp}
+                            {!!props.data.endIp ? props.data.endIp : 'xxx.xxx.xxx.xxx'}
                         </p>
                     </div>
                 </div>
@@ -77,17 +85,6 @@ export const NodeIpRange = (props: IpRangeProps) => {
         </NodeLayout.Root>
     )
 }
-
-const ipAddressSchema = z
-    .string()
-    .regex(
-        /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-        'Invalid IP address format',
-    )
-const paramFormSchema = z.object({
-    startIp: ipAddressSchema,
-    endIp: ipAddressSchema,
-})
 
 const ParamTab = withForm({
     defaultValues: { startIp: '', endIp: '' },

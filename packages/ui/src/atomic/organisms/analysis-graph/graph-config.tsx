@@ -6,6 +6,7 @@ import {
     NodeNetworkSource,
     NodeNetworkOutput,
     NodeIcmpPing,
+    NodeIpv6Single,
 } from './nodes'
 
 export const edgeTypes = {
@@ -18,4 +19,5 @@ export const nodeTypes = {
     'ip-single': NodeIpSingle,
     'arp-scan': NodeArpScan,
     'icmp-ping': NodeIcmpPing,
+    'ipv6-single': NodeIpv6Single,
 }

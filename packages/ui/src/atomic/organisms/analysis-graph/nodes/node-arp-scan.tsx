@@ -8,7 +8,11 @@ import { ComponentProps } from 'react'
 import { NodeHandle } from '../components'
 import { BasicNodeData } from './utils'
 
-export type ArpScanNodeData = Node<{ name: string; delay: number } & BasicNodeData, 'arp-scan'>
+const paramFormSchema = z.object({
+    delay: z.number().min(0).max(5000).describe('Delay between ARP requests in milliseconds'),
+})
+type ParamFormValues = z.infer<typeof paramFormSchema>
+export type ArpScanNodeData = Node<ParamFormValues & BasicNodeData, 'arp-scan'>
 export type ArpScanProps = {
     className?: string
 } & NodeProps<ArpScanNodeData>
@@ -63,10 +67,6 @@ export const NodeArpScan = (props: ArpScanProps) => {
         </NodeLayout.Root>
     )
 }
-
-const paramFormSchema = z.object({
-    delay: z.number().min(0).max(5000).describe('Delay between ARP requests in milliseconds'),
-})
 
 const ParamTab = withForm({
     defaultValues: { delay: 0 },

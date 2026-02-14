@@ -8,30 +8,33 @@ import { NodeHandle } from '../components'
 import { BasicNodeData } from './utils'
 
 const paramFormSchema = z.object({
-    ipAddress: z
+    ipv6Address: z
         .string()
-        .regex(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/, 'Invalid IP address format'),
+        .regex(
+            /^((?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(?:[0-9A-Fa-f]{1,4}:){1,7}:|:(?::[0-9A-Fa-f]{1,4}){1,7}|(?:[0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}|(?:[0-9A-Fa-f]{1,4}:){1,5}(?::[0-9A-Fa-f]{1,4}){1,2}|(?:[0-9A-Fa-f]{1,4}:){1,4}(?::[0-9A-Fa-f]{1,4}){1,3}|(?:[0-9A-Fa-f]{1,4}:){1,3}(?::[0-9A-Fa-f]{1,4}){1,4}|(?:[0-9A-Fa-f]{1,4}:){1,2}(?::[0-9A-Fa-f]{1,4}){1,5}|[0-9A-Fa-f]{1,4}:(?:(?::[0-9A-Fa-f]{1,4}){1,6})|:(?:(?::[0-9A-Fa-f]{1,4}){1,6}))$/,
+            'Invalid IPv6 address format',
+        ),
 })
 type ParamFormValues = z.infer<typeof paramFormSchema>
-export type IpSingleNodeData = Node<ParamFormValues & BasicNodeData, 'ip-single'>
-export type IpSingleProps = {
+export type Ipv6SingleNodeData = Node<ParamFormValues & BasicNodeData, 'ipv6-single'>
+export type Ipv6SingleProps = {
     className?: string
-} & NodeProps<IpSingleNodeData>
+} & NodeProps<Ipv6SingleNodeData>
 
-export const NodeIpSingle = (props: IpSingleProps) => {
+export const NodeIpv6Single = (props: Ipv6SingleProps) => {
     const { selected = false, className } = props
     const { updateNodeData } = useReactFlow()
 
     const form = useAppForm({
         defaultValues: {
-            ipAddress: props.data.ipAddress || '',
+            ipv6Address: props.data.ipv6Address || '',
         },
         validators: {
             onSubmit: paramFormSchema,
         },
         onSubmit: async (values) => {
             updateNodeData(props.id, {
-                ipAddress: values.value.ipAddress,
+                ipv6Address: values.value.ipv6Address,
             })
             return true
         },
@@ -50,7 +53,10 @@ export const NodeIpSingle = (props: IpSingleProps) => {
                         <div className="bg-chart-1 size-1.5 rounded-full"></div>
                     </div>
                     <p className="text-foreground font-mono text-xs">
-                        {!!props.data.ipAddress ? props.data.ipAddress : 'xxx.xxx.xxx.xxx'}
+                        {!!props.data.ipv6Address
+                            ? props.data.ipv6Address.slice(-12)
+                            : 'xxxx:xxxx::0'}
+                        {props.data.ipv6Address?.length > 12 ? '...' : ''}
                     </p>
                 </div>
                 <NodeHandle type="source" />
@@ -67,19 +73,19 @@ export const NodeIpSingle = (props: IpSingleProps) => {
 }
 
 const ParamTab = withForm({
-    defaultValues: { ipAddress: '' },
+    defaultValues: { ipv6Address: '' },
     props: {} as ComponentProps<'div'>,
     render: function Render(props) {
         const { form, className } = props
         return (
             <div className={cn('flex flex-col gap-4', className)}>
                 <form.AppField
-                    name="ipAddress"
+                    name="ipv6Address"
                     children={(field) => (
                         <field.FormInput
                             label="IP Address"
-                            description="Enter the IP address."
-                            placeholder="xxx.xxx.xxx.xxx"
+                            description="Enter the IPv6 address."
+                            placeholder="xxxx::xxxx"
                         />
                     )}
                 />

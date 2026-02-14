@@ -13,7 +13,6 @@ type NodeType = {
     label: string
     description: string
     icon: ReactNode
-    defaultData?: any
 }
 
 const nodeTypes: NodeType[] = [
@@ -34,28 +33,30 @@ const nodeTypes: NodeType[] = [
         label: 'IP Range',
         description: 'Define a range of IP addresses',
         icon: <Database className="size-5" />,
-        defaultData: { startIp: '', endIp: '' },
     },
     {
         type: 'ip-single',
         label: 'Single IP',
         description: 'Define a single IP address',
         icon: <Database className="size-5" />,
-        defaultData: { ipAddress: '' },
     },
     {
         type: 'arp-scan',
         label: 'ARP Scan',
         description: 'Scan network using ARP protocol',
         icon: <Radar className="size-5" />,
-        defaultData: { delay: 0 },
     },
     {
         type: 'icmp-ping',
         label: 'ICMP Ping',
         description: 'Ping a host using ICMP protocol',
         icon: <Popsicle className="size-5" />,
-        defaultData: { delay: 0, numberRequest: 1 },
+    },
+    {
+        type: 'ipv6-single',
+        label: 'Single IPv6',
+        description: 'Define a single IPv6 address',
+        icon: <Database className="size-5" />,
     },
 ]
 
@@ -71,7 +72,6 @@ export const NodeGallery = (props: NodeGalleryProps) => {
             position: { x: (Math.random() - 0.5) * 400, y: (Math.random() - 0.5) * 400 },
             data: {
                 name: `${node.type}-node`,
-                ...node.defaultData,
             },
         }
 
