@@ -11,17 +11,29 @@ export const NODE_TYPES = {
     Ipv6Single: 'ipv6-single',
     Ipv6Ns: 'ipv6-ns', //ipv6 neighbor solicitation
     Ipv6Rs: 'ipv6-rs', //ipv6 router solicitation
+    WaitFor: 'wait-for',
 }
 
 const connectionMap = new Map<string, string[]>([
-    [NODE_TYPES.IpRange, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing]],
-    [NODE_TYPES.IpSingle, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing]],
-    [NODE_TYPES.ArpScan, [NODE_TYPES.NetOutput]],
-    [NODE_TYPES.IcmpPing, [NODE_TYPES.NetOutput]],
-    [NODE_TYPES.Icmpv6Ping, [NODE_TYPES.NetOutput]],
-    [NODE_TYPES.Ipv6Single, [NODE_TYPES.Ipv6Ns]],
-    [NODE_TYPES.Ipv6Ns, [NODE_TYPES.NetOutput]],
-    [NODE_TYPES.Ipv6Rs, [NODE_TYPES.NetOutput]],
+    [NODE_TYPES.IpRange, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.IpSingle, [NODE_TYPES.ArpScan, NODE_TYPES.IcmpPing, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.ArpScan, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.IcmpPing, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.Icmpv6Ping, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.Ipv6Single, [NODE_TYPES.Ipv6Ns, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.Ipv6Ns, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
+    [NODE_TYPES.Ipv6Rs, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
+    [
+        NODE_TYPES.WaitFor,
+        [
+            NODE_TYPES.NetOutput,
+            NODE_TYPES.ArpScan,
+            NODE_TYPES.IcmpPing,
+            NODE_TYPES.Icmpv6Ping,
+            NODE_TYPES.Ipv6Ns,
+            NODE_TYPES.WaitFor,
+        ],
+    ],
 ])
 
 const checkBasedOnTypes = (sourceType: string | null, targetType: string | null): boolean => {

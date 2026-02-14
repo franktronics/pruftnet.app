@@ -16,3 +16,4 @@ export { NodeIpv6Single, type Ipv6SingleProps, type Ipv6SingleNodeData } from '.
 export { NodeIpv6Ns, type Ipv6NsProps, type Ipv6NsNodeData } from './node-ipv6-ns'
 export { NodeIpv6Rs, type Ipv6RsProps, type Ipv6RsNodeData } from './node-ipv6-rs'
 export { NodeIcmpv6Ping, type Icmpv6PingProps, type Icmpv6PingNodeData } from './node-icmpv6-ping'
+export { NodeWaitFor, type WaitForProps, type WaitForNodeData } from './node-wait-for'

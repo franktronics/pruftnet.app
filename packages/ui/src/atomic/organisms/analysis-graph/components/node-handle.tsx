@@ -23,6 +23,7 @@ export const NodeHandle = (props: NodeHandle) => {
                 width: '0.75em',
                 height: '0.75em',
             }}
+            className="flex items-center justify-center"
             id={`handle/${nodeType}/${nodeId}/${type}/${pos}`}
             {...rest}
         >
@@ -30,8 +31,6 @@ export const NodeHandle = (props: NodeHandle) => {
                 className={cn(
                     'border-background bg-primary border-2',
                     'pointer-events-none size-3 rounded-full',
-                    'absolute',
-                    type === 'source' ? '-right-0.5' : '-left-0.5',
                     className,
                 )}
             ></div>

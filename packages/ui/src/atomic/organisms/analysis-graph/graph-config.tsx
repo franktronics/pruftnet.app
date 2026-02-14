@@ -10,6 +10,7 @@ import {
     NodeIpv6Ns,
     NodeIpv6Rs,
     NodeIcmpv6Ping,
+    NodeWaitFor,
 } from './nodes'
 
 export const edgeTypes = {
@@ -26,4 +27,5 @@ export const nodeTypes = {
     'ipv6-ns': NodeIpv6Ns,
     'ipv6-rs': NodeIpv6Rs,
     'icmpv6-ping': NodeIcmpv6Ping,
+    'wait-for': NodeWaitFor,
 }

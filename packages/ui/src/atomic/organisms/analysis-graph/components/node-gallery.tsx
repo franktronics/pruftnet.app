@@ -1,5 +1,5 @@
 import { useReactFlow } from '@xyflow/react'
-import { Plus, Radar, Network, Database, Popsicle, Radio, RadioTower } from 'lucide-react'
+import { Plus, Radar, Network, Database, Popsicle, Radio, RadioTower, Loader } from 'lucide-react'
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle, Button } from '../../../atoms'
 import { cn } from '@repo/utils'
 import { ReactNode } from 'react'
@@ -75,6 +75,12 @@ const nodeTypes: NodeType[] = [
         label: 'ICMPv6 Ping',
         description: 'Ping a host using ICMPv6 protocol',
         icon: <Popsicle className="size-5" />,
+    },
+    {
+        type: 'wait-for',
+        label: 'Wait For',
+        description: 'Delay transmission until secondary input receives data',
+        icon: <Loader className="size-5" />,
     },
 ]
 
