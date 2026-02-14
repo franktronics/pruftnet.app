@@ -49,6 +49,57 @@
 - Routes defined in `@repo/core-node`, served via Express middleware and WebSocket server
 - Context uses `MapStore` for stateful data across procedures
 
+## Workflow Architecture (Nodes → Steps → Injectors)
+
+### Overview
+
+Users create visual workflows with React Flow → Save to DB → Execute on backend
+
+### 3-Layer System
+
+**1. Frontend Nodes** (`packages/ui/src/atomic/organisms/analysis-graph/nodes/`)
+
+- React components with custom handles (inputs/outputs)
+- Registered in `graph-config.tsx` with type mapping
+- Added to `node-gallery.tsx` for user selection
+- Handle format: `"handle/{nodeType}/{nodeId}/{handleType}/{position}"`
+
+**2. Backend Steps** (`packages/core-node/src/utils/analysis-workflow/steps/`)
+
+- Implement `WorkflowStep` interface with `execute()` method
+- Receive `context` (shared state) and `input` (node data + predecessor outputs)
+- Return `WorkflowStepOutput` with results for next nodes
+- Registered in `workflow-step-factory.ts`
+- Orchestrator (`workflow-orchestrator.ts`) builds dependency graph and executes steps
+
+**3. C++ Injectors** (`packages/core-cpp/src/cpp/injector/`)
+
+- Native packet injectors (e.g., `ipv6rs_injector.cpp`)
+- Wrapped with N-API bindings (`.napi.hpp` files)
+- TypeScript wrappers in `packages/core-cpp/src/ts/injector/`
+- Exposed via `main.cpp` addon registration
+- Called by steps through factory functions in `injector-factory.ts`
+
+### Adding New Injector (Example: IPv6 RS)
+
+**Step 1:** C++ injector (`ipv6rs_injector.{hpp,cpp}`) → Register in `main.cpp`
+**Step 2:** TS wrapper (`ipv6rs-injector.ts`) → Add factory function (`injector-factory.ts`)
+**Step 3:** Backend step (`ipv6-rs-step.ts`) → Register in `workflow-step-factory.ts`
+**Step 4:** Frontend node (`node-ipv6-rs.tsx`) → Add to `graph-config.tsx` + `node-gallery.tsx`
+**Step 5:** Build with `pnpm build:core`
+
+### Multi-Handle Nodes (Wait-For Pattern)
+
+**Challenge:** Orchestrator only knows `edge.source`/`edge.target`, not `sourceHandle`/`targetHandle`
+
+**Solution:** Store connection metadata in `node.data` (updated by custom hooks)
+
+- Frontend hook watches edges, updates `node.data` with connected node IDs
+- Backend step reads metadata from `node.data` to identify inputs
+- Example: `use-wait-for-metadata.ts` tracks primary input (Left) vs triggers (Top)
+
+**⚠️ Hook Pattern:** Use functional updates `setNodes((currentNodes) => ...)` to avoid infinite loops. Never pass `nodes` as hook parameter—only `setNodes`.
+
 ## Documentation Sources
 
 - Network protocols: [RFC Editor](https://www.rfc-editor.org/)
