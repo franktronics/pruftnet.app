@@ -175,7 +175,7 @@ export const PacketHexViewer = (props: PacketHexViewerProps) => {
                         Offset
                     </div>
                     {lines.map((line, lineIndex) => (
-                        <div key={lineIndex} className="flex items-start">
+                        <div key={lineIndex} className="flex items-center">
                             <div className="text-muted-foreground mr-1 w-12 shrink-0 py-0.5 text-xs">
                                 {getLineOffset(lineIndex)}
                             </div>
