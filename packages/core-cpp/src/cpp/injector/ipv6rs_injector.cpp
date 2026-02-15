@@ -1,4 +1,5 @@
 #include "ipv6rs_injector.hpp"
+#include <algorithm>
 #include <arpa/inet.h>
 #include <cstring>
 #include <errno.h>
