@@ -42,5 +42,20 @@
             "description": "Urgent Pointer",
             "type": "int"
         }
+    },
+    "next_protocol": {
+        "selector": "16_16",
+        "start_after": "calculate: [96_4] * 4 * 8",
+        "mappings": {
+            "53": {
+                "file": "dns.json"
+            },
+            "80": {
+                "file": "http.json"
+            },
+            "443": {
+                "file": "tls.json"
+            }
+        }
     }
 }

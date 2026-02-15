@@ -1,0 +1,18 @@
+{
+    "name": "LLDP",
+    "description": "Link Layer Discovery Protocol (IEEE 802.1AB)",
+    "header": {
+        "0_7": {
+            "description": "TLV Type - Chassis ID",
+            "type": "int"
+        },
+        "7_9": {
+            "description": "TLV Length",
+            "type": "int"
+        },
+        "16_8": {
+            "description": "Chassis ID Subtype",
+            "type": "int"
+        }
+    }
+}

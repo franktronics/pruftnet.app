@@ -18,5 +18,23 @@
             "description": "Checksum",
             "type": "hex"
         }
+    },
+    "next_protocol": {
+        "selector": "16_16",
+        "start_after": "64",
+        "mappings": {
+            "53": {
+                "file": "dns.json"
+            },
+            "67": {
+                "file": "dhcp.json"
+            },
+            "68": {
+                "file": "dhcp.json"
+            },
+            "80": {
+                "file": "http.json"
+            }
+        }
     }
 }

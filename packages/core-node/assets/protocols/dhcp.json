@@ -1,0 +1,54 @@
+{
+    "name": "DHCP",
+    "description": "Dynamic Host Configuration Protocol (RFC 2131)",
+    "header": {
+        "0_8": {
+            "description": "OP - Message Type (1=Request, 2=Reply)",
+            "type": "int"
+        },
+        "8_8": {
+            "description": "HTYPE - Hardware Type (1=Ethernet)",
+            "type": "int"
+        },
+        "16_8": {
+            "description": "HLEN - Hardware Address Length",
+            "type": "int"
+        },
+        "24_8": {
+            "description": "HOPS - Relay Agent Hops",
+            "type": "int"
+        },
+        "32_32": {
+            "description": "XID - Transaction ID",
+            "type": "hex"
+        },
+        "64_16": {
+            "description": "SECS - Seconds Elapsed",
+            "type": "int"
+        },
+        "80_16": {
+            "description": "FLAGS - Broadcast Flag",
+            "type": "hex"
+        },
+        "96_32": {
+            "description": "CIADDR - Client IP Address",
+            "type": "ipv4"
+        },
+        "128_32": {
+            "description": "YIADDR - Your IP Address",
+            "type": "ipv4"
+        },
+        "160_32": {
+            "description": "SIADDR - Server IP Address",
+            "type": "ipv4"
+        },
+        "192_32": {
+            "description": "GIADDR - Gateway IP Address",
+            "type": "ipv4"
+        },
+        "224_128": {
+            "description": "CHADDR - Client Hardware Address",
+            "type": "bytes"
+        }
+    }
+}

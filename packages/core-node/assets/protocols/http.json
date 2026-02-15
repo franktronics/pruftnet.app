@@ -1,0 +1,22 @@
+{
+    "name": "HTTP",
+    "description": "Hypertext Transfer Protocol (RFC 7230)",
+    "header": {
+        "0_8": {
+            "description": "Method First Byte",
+            "type": "int"
+        },
+        "8_8": {
+            "description": "Method Second Byte",
+            "type": "int"
+        },
+        "16_8": {
+            "description": "Method Third Byte",
+            "type": "int"
+        },
+        "24_8": {
+            "description": "Space after Method",
+            "type": "int"
+        }
+    }
+}

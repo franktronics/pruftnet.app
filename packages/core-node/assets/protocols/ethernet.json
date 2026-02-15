@@ -30,6 +30,15 @@
             },
             "0x8100": {
                 "file": "vlan.json"
+            },
+            "0x8847": {
+                "file": "mpls.json"
+            },
+            "0x8848": {
+                "file": "mpls.json"
+            },
+            "0x88CC": {
+                "file": "lldp.json"
             }
         }
     }

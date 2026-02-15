@@ -1,0 +1,22 @@
+{
+    "name": "MPLS Payload",
+    "description": "Heuristic Bridge for MPLS Payload Detection",
+    "header": {
+        "0_4": {
+            "description": "IP Version Heuristic",
+            "type": "int"
+        }
+    },
+    "next_protocol": {
+        "selector": "0_4",
+        "start_after": "0",
+        "mappings": {
+            "4": {
+                "file": "ipv4.json"
+            },
+            "6": {
+                "file": "ipv6.json"
+            }
+        }
+    }
+}
