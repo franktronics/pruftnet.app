@@ -1,21 +1,13 @@
 import { getEdgeParams } from '@repo/utils'
-import type { EdgeProps, Node, Edge } from '@xyflow/react'
+import type { EdgeProps, Edge } from '@xyflow/react'
 import { getBezierPath, EdgeLabelRenderer, useInternalNode } from '@xyflow/react'
 
-export type DeviceEdgeData<T extends Node = Node> = Edge<{
-    /**
-     * The key to lookup in the source node's `data` object. For additional safety,
-     * you can parameterize the `DataEdge` over the type of one of your nodes to
-     * constrain the possible values of this key.
-     *
-     * If no key is provided this edge behaves identically to React Flow's default
-     * edge component.
-     */
-    key?: keyof T['data']
+export type DeviceEdgeData = Edge<{
+    numPackets: number
 }>
 
 export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
-    const { id, style, markerEnd, markerStart, source, target } = props
+    const { id, style, markerEnd, markerStart, source, target, data } = props
     const sourceNode = useInternalNode(source)
     const targetNode = useInternalNode(target)
 
@@ -51,7 +43,7 @@ export const GraphDeviceEdge = (props: EdgeProps<DeviceEdgeData>) => {
                         transform: `translate(${labelX}px,${labelY}px) translate(-50%, -50%)`,
                     }}
                 >
-                    <pre className="text-xs">2</pre>
+                    <pre className="text-xs">{data?.numPackets || ''}</pre>
                 </div>
             </EdgeLabelRenderer>
         </>

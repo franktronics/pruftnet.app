@@ -25,13 +25,19 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                 >
                     <Computer className="size-6" />
                     <Handle type="source" position={Position.Top} className="hidden" />
-                    <p className="absolute top-[calc(100%+0.5rem)]">
+                    <p className="absolute top-[calc(100%+0.5rem)] flex flex-col">
                         <span>{mac}</span>
                         <span>{vendor ? vendor.slice(0, 10) : ''}</span>
                     </p>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent>test</PopoverContent>
+            <PopoverContent>
+                <div className="flex flex-col gap-1">
+                    {vendor?.split('\n').map((line) => (
+                        <span key={line}>{line}</span>
+                    ))}
+                </div>
+            </PopoverContent>
         </Popover>
     )
 }

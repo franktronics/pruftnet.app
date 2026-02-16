@@ -26,6 +26,9 @@ export const TabGraph = (props: TabGraphProps) => {
             target: connection.target,
             animated: true,
             markerEnd: { type: 'arrowclosed' },
+            data: {
+                numPackets: connection.data.numPackets,
+            },
         }))
         return [nodes, edges]
     }, [devices, connections, vendorOui])

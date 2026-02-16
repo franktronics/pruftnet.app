@@ -41,8 +41,12 @@ export const useNetworkAnalyzer = () => {
             devicesStore,
             connectionsStore,
         )
-        setDevicesStore((prev) => new Map([...prev, ...devices]))
-        setConnectionsStore((prev) => new Map([...prev, ...connections]))
+        if (devices.size > 0) {
+            setDevicesStore((prev) => new Map([...prev, ...devices]))
+        }
+        if (connections.size > 0) {
+            setConnectionsStore((prev) => new Map([...prev, ...connections]))
+        }
     }
     return {
         registerPacket: handleRegisterPacket,
