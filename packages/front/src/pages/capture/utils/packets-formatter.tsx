@@ -25,19 +25,55 @@ class DefaultPacketFormater extends PacketFormater {
         return hex.match(/.{2}/g)?.join(':').toUpperCase() ?? '00:00:00:00:00:00'
     }
 
+    private formatIpv4Address(value: string | number | bigint): string {
+        const num = Number(value)
+        const octet1 = (num >>> 24) & 0xff
+        const octet2 = (num >>> 16) & 0xff
+        const octet3 = (num >>> 8) & 0xff
+        const octet4 = num & 0xff
+        return `${octet1}.${octet2}.${octet3}.${octet4}`
+    }
+
+    private findFieldByPattern(layer: number, pattern: RegExp): string | number | bigint | undefined {
+        const layerData = this.packet.parsed[layer]
+        if (!layerData) return undefined
+
+        const matchingKey = Object.keys(layerData).find((key) => pattern.test(key))
+        return matchingKey ? layerData[matchingKey] : undefined
+    }
+
+    private hasIpv4Layer(): boolean {
+        const etherType = this.findFieldByPattern(0, /^96_16_/)
+        return etherType !== undefined && Number(etherType) === 0x0800
+    }
+
     public getTime(): string {
         const time = this.packet.raw.timestamp
         return time.toString()
     }
 
     public getSource(): string {
-        const source = this.packet.parsed[0]['48_48_48']
-        return source !== undefined ? this.formatMacAddress(source) : 'not found'
+        if (this.hasIpv4Layer()) {
+            const sourceIp = this.findFieldByPattern(1, /^96_32_/)
+            if (sourceIp !== undefined) {
+                return this.formatIpv4Address(sourceIp)
+            }
+        }
+
+        const sourceMac = this.findFieldByPattern(0, /^48_48_/)
+        return sourceMac !== undefined ? this.formatMacAddress(sourceMac) : 'not found'
     }
 
     public getDestination(): string {
-        const destination = this.packet.parsed[0]['0_48_0']
-        return destination !== undefined ? this.formatMacAddress(destination) : 'not found'
+        if (this.hasIpv4Layer()) {
+            const destIp = this.findFieldByPattern(1, /^128_32_/)
+            if (destIp !== undefined) {
+                return this.formatIpv4Address(destIp)
+            }
+        }
+
+        const destMac = this.findFieldByPattern(0, /^0_48_/)
+        return destMac !== undefined ? this.formatMacAddress(destMac) : 'not found'
     }
 
     public getProtocol(): string {
