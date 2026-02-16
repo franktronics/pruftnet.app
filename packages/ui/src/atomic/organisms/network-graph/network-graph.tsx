@@ -1,4 +1,4 @@
-import { type ComponentPropsWithoutRef, useCallback } from 'react'
+import { type ComponentPropsWithoutRef, useCallback, useEffect } from 'react'
 import {
     ReactFlow,
     addEdge,
@@ -20,84 +20,16 @@ export type NetworkGraphProps = {
     enableForceLayout?: boolean
     alphaDecay?: number
     velocityDecay?: number
+    injectedNodes?: Node[]
+    injectedEdges?: Edge[]
 } & ComponentPropsWithoutRef<'div'>
 
 const nodeTypes = {
-    device: GraphDeviceNode,
+    unknown: GraphDeviceNode,
 }
 const edgeTypes = {
     exchange: GraphDeviceEdge,
 }
-
-const initialNodes: Node[] = [
-    {
-        id: 'd1',
-        position: { x: -200, y: -100 },
-        type: 'device',
-        data: { mac: 'D1:1A:2B:3C:4D:5E' },
-    },
-    { id: 'd2', position: { x: 0, y: 0 }, type: 'device', data: { mac: 'D2:22:33:44:55:66' } },
-    {
-        id: 'd3',
-        position: { x: 200, y: -100 },
-        type: 'device',
-        data: { mac: 'D3:33:44:55:66:77' },
-    },
-    {
-        id: 'd4',
-        position: { x: 100, y: 100 },
-        type: 'device',
-        data: { mac: 'D4:44:55:66:77:88' },
-    },
-    {
-        id: 'd5',
-        position: { x: -100, y: 100 },
-        type: 'device',
-        data: { mac: 'D5:55:66:77:88:99' },
-    },
-]
-const initialEdges: Edge[] = [
-    {
-        id: 'd1->d2',
-        type: 'exchange',
-        source: 'd1',
-        target: 'd2',
-        animated: true,
-        markerEnd: { type: 'arrowclosed' },
-    },
-    {
-        id: 'd2->d3',
-        type: 'exchange',
-        source: 'd2',
-        target: 'd3',
-        animated: true,
-        markerEnd: { type: 'arrowclosed' },
-    },
-    {
-        id: 'd2->d4',
-        type: 'exchange',
-        source: 'd2',
-        target: 'd4',
-        animated: true,
-        markerEnd: { type: 'arrowclosed' },
-    },
-    {
-        id: 'd1->d5',
-        type: 'exchange',
-        source: 'd1',
-        target: 'd5',
-        animated: true,
-        markerEnd: { type: 'arrowclosed' },
-    },
-    {
-        id: 'd3->d4',
-        type: 'exchange',
-        source: 'd3',
-        target: 'd4',
-        animated: true,
-        markerEnd: { type: 'arrowclosed' },
-    },
-]
 
 export const NetworkGraph = (props: NetworkGraphProps) => {
     const {
@@ -106,11 +38,13 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
         enableForceLayout = true,
         alphaDecay,
         velocityDecay,
+        injectedNodes = [],
+        injectedEdges = [],
         ...rest
     } = props
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+    const [nodes, setNodes, onNodesChange] = useNodesState(injectedNodes)
+    const [edges, setEdges, onEdgesChange] = useEdgesState(injectedEdges)
     const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [])
 
     const { fixNodePosition, releaseNodePosition, updateNodePosition } = useForceLayout(
@@ -146,6 +80,11 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
         },
         [releaseNodePosition],
     )
+
+    useEffect(() => {
+        setNodes(injectedNodes)
+        setEdges(injectedEdges)
+    }, [injectedNodes, injectedEdges])
 
     return (
         <div {...rest}>

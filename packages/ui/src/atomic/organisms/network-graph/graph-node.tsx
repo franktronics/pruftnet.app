@@ -4,6 +4,7 @@ import { type NodeProps, type Node, Handle, Position } from '@xyflow/react'
 
 export type DeviceNodeData = Node<{
     mac: string
+    vendor?: string
 }>
 export type GraphDeviceNodeProps = {
     className?: string
@@ -11,7 +12,7 @@ export type GraphDeviceNodeProps = {
 
 export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
     const { className, data } = props
-    const { mac } = data
+    const { mac, vendor } = data
 
     return (
         <Popover>
@@ -24,7 +25,10 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                 >
                     <Computer className="size-6" />
                     <Handle type="source" position={Position.Top} className="hidden" />
-                    <p className="absolute top-[calc(100%+0.5rem)]">{mac}</p>
+                    <p className="absolute top-[calc(100%+0.5rem)]">
+                        <span>{mac}</span>
+                        <span>{vendor ? vendor.slice(0, 10) : ''}</span>
+                    </p>
                 </Button>
             </PopoverTrigger>
             <PopoverContent>test</PopoverContent>

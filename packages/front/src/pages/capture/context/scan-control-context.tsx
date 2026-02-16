@@ -9,6 +9,7 @@ import type {
     PacketDataWithoutRaw,
     WorkflowEvent,
 } from '@repo/core-node/types'
+import { useNetworkAnalyzer } from '../utils/network-analyzer'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -30,6 +31,12 @@ export type ScanControlContextType = {
     setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
     startWorkflow: () => void
     workflowEvents: WorkflowEvent[]
+
+    analyzer: {
+        devices: ReturnType<typeof useNetworkAnalyzer>['devices']
+        connections: ReturnType<typeof useNetworkAnalyzer>['connections']
+        vendorOui: ReturnType<typeof useNetworkAnalyzer>['vendorOui']
+    }
 }
 
 export type ContextNetinterface = {
@@ -57,6 +64,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
     const closeConnectionFct = useRef<() => void>(null)
     const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
+    const { registerPacket, devices, connections, vendorOui } = useNetworkAnalyzer()
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -103,6 +111,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                     {
                         onmessage: (data: PacketDataWithoutRaw) => {
                             setPackets((old) => [...old, data])
+                            registerPacket(data)
                         },
                         onerror: (error) => {
                             setCaptureStatus(CAPTURE_STATUS.ERROR)
@@ -149,6 +158,11 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         setSelectedAnalysis,
         startWorkflow: handleStartWorkflow,
         workflowEvents: wokflowEvents,
+        analyzer: {
+            devices,
+            connections,
+            vendorOui,
+        },
     }
 
     return (
