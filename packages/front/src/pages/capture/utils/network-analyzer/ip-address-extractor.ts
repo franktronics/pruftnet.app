@@ -36,14 +36,9 @@ export class IpAddressExtractor {
         return matchingKey && layerData[matchingKey] !== undefined ? layerData[matchingKey] : null
     }
 
-    private findIpLayer(packet: PacketDataWithoutRaw): number | null {
-        for (let i = 0; i < packet.parsed.length; i++) {
-            const file = packet.parsed[i]?.file
-            if (file?.includes('ipv4.json') || file?.includes('ipv6.json')) {
-                return i
-            }
-        }
-        return null
+    private getEtherType(packet: PacketDataWithoutRaw): number | null {
+        const etherType = this.findFieldByPattern(packet, 0, /^96_16_/)
+        return etherType !== null ? Number(etherType) : null
     }
 
     public extractIpAddresses(packet: PacketDataWithoutRaw): IpAddresses {
@@ -54,14 +49,12 @@ export class IpAddressExtractor {
             destIpv6: null,
         }
 
-        const ipLayer = this.findIpLayer(packet)
-        if (ipLayer === null) return result
+        const etherType = this.getEtherType(packet)
+        if (etherType === null) return result
 
-        const layerFile = packet.parsed[ipLayer]?.file
-
-        if (layerFile?.includes('ipv4.json')) {
-            const sourceIp = this.findFieldByPattern(packet, ipLayer, /^96_32_/)
-            const destIp = this.findFieldByPattern(packet, ipLayer, /^128_32_/)
+        if (etherType === 0x0800) {
+            const sourceIp = this.findFieldByPattern(packet, 1, /^96_32_/)
+            const destIp = this.findFieldByPattern(packet, 1, /^128_32_/)
 
             if (sourceIp !== null) {
                 result.sourceIpv4 = this.formatIpv4Address(sourceIp)
@@ -69,9 +62,9 @@ export class IpAddressExtractor {
             if (destIp !== null) {
                 result.destIpv4 = this.formatIpv4Address(destIp)
             }
-        } else if (layerFile?.includes('ipv6.json')) {
-            const sourceIp = this.findFieldByPattern(packet, ipLayer, /^64_128_/)
-            const destIp = this.findFieldByPattern(packet, ipLayer, /^192_128_/)
+        } else if (etherType === 0x86dd) {
+            const sourceIp = this.findFieldByPattern(packet, 1, /^64_128_/)
+            const destIp = this.findFieldByPattern(packet, 1, /^192_128_/)
 
             if (sourceIp !== null) {
                 result.sourceIpv6 = this.formatIpv6Address(sourceIp)
