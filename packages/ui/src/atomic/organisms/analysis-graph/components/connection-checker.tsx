@@ -20,7 +20,10 @@ const connectionMap = new Map<string, string[]>([
     [NODE_TYPES.ArpScan, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
     [NODE_TYPES.IcmpPing, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
     [NODE_TYPES.Icmpv6Ping, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
-    [NODE_TYPES.Ipv6Single, [NODE_TYPES.Ipv6Ns, NODE_TYPES.WaitFor]],
+    [
+        NODE_TYPES.Ipv6Single,
+        [NODE_TYPES.Ipv6Ns, NODE_TYPES.Ipv6Rs, NODE_TYPES.Icmpv6Ping, NODE_TYPES.WaitFor],
+    ],
     [NODE_TYPES.Ipv6Ns, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
     [NODE_TYPES.Ipv6Rs, [NODE_TYPES.NetOutput, NODE_TYPES.WaitFor]],
     [
