@@ -1,10 +1,13 @@
 import { Popover, PopoverTrigger, PopoverContent, Button } from '../../atoms'
 import { Computer } from 'lucide-react'
 import { type NodeProps, type Node, Handle, Position } from '@xyflow/react'
+import { cond } from '@repo/utils'
 
 export type DeviceNodeData = Node<{
     mac: string
     vendor?: string
+    ipv4?: string
+    ipv6?: string
 }>
 export type GraphDeviceNodeProps = {
     className?: string
@@ -12,7 +15,7 @@ export type GraphDeviceNodeProps = {
 
 export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
     const { className, data } = props
-    const { mac, vendor } = data
+    const { mac, vendor, ipv4, ipv6 } = data
 
     return (
         <Popover>
@@ -26,7 +29,7 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                     <Computer className="size-6" />
                     <Handle type="source" position={Position.Top} className="hidden" />
                     <p className="absolute top-[calc(100%+0.5rem)] flex flex-col">
-                        <span>{mac}</span>
+                        <span>{cond([!!ipv4, ipv4], [!!ipv6, ipv6], [!!mac, mac])}</span>
                         <span>{vendor ? vendor.slice(0, 10) : ''}</span>
                     </p>
                 </Button>
