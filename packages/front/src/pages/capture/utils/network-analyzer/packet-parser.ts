@@ -37,8 +37,15 @@ export class PacketParser {
         this.connectionManager = new ConnectionManager()
     }
 
+    private isMulticastMac(mac: string): boolean {
+        const firstOctet = parseInt(mac.substring(0, 2), 16)
+        return (firstOctet & 0x01) === 0x01
+    }
+
     private shouldFilterPacket(sourceMac: string, destMac: string): boolean {
         if (destMac === 'FF:FF:FF:FF:FF:FF') return true
+
+        if (this.isMulticastMac(destMac)) return true
 
         if (sourceMac === '00:00:00:00:00:00' || destMac === '00:00:00:00:00:00') return true
 

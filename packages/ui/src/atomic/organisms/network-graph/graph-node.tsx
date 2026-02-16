@@ -40,6 +40,7 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                         <span key={line}>{line}</span>
                     ))}
                 </div>
+                <div className="flex flex-col gap-1">{JSON.stringify(data)}</div>
             </PopoverContent>
         </Popover>
     )
