@@ -17,6 +17,8 @@ export const TabGraph = (props: TabGraphProps) => {
             data: {
                 mac: device.data.mac,
                 vendor: vendorOui[device.data.mac]?.vendor || undefined,
+                ipv4: device.data.ipv4,
+                ipv6: device.data.ipv6,
             },
         }))
         const edges: Edge[] = connections.map((connection) => ({
