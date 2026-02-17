@@ -3,7 +3,7 @@ import { type ComponentPropsWithoutRef } from 'react'
 import { CAPTURE_STATUS, useScanControlContext } from '../context/scan-control-context'
 import { Button, Spinner } from '@repo/ui/atoms'
 import { Popup } from '@repo/ui/organisms'
-import { CircleX, Play, Square } from 'lucide-react'
+import { CircleX, Loader, Play, Square } from 'lucide-react'
 
 export type ActionsControlProps = {} & ComponentPropsWithoutRef<'section'>
 
@@ -87,6 +87,9 @@ const ActionBtn = (props: ActionBtnProps) => {
                 [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'Initializing ...'],
                 [captureStatus === CAPTURE_STATUS.ERROR, 'Retry capture'],
             )}
+            {captureStatus === CAPTURE_STATUS.CAPTURING ? (
+                <Loader className="animate-[spin_0.5s_linear_infinite]" size={16} />
+            ) : null}
         </Button>
     )
 }
