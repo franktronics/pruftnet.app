@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { prisma } from '../db-config'
@@ -10,7 +10,9 @@ import type { Image } from '../../generated/prisma/client'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const IMAGES_DIR = join(__dirname, '../../assets/images')
+// Use CORE_NODE_ROOT if defined (Electron bundled context), otherwise resolve from __dirname
+const packageRoot = process.env.CORE_NODE_ROOT || resolve(__dirname, '..')
+const IMAGES_DIR = join(packageRoot, 'assets/images')
 
 interface Base64ImageData {
     mimeType: string

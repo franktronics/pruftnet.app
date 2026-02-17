@@ -21,7 +21,8 @@ export class SettingsController {
                 const settings = await this.settingsRepo.getSettings()
                 store.settings.set('settings', settings)
                 return settings
-            } catch (error) {
+            } catch (error: any) {
+                console.error('Error retrieving settings:', error)
                 new ServerError({
                     message: 'Failed to retrieve settings',
                     whatToDo: 'Please retry later or contact support.',

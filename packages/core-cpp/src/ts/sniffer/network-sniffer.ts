@@ -1,13 +1,16 @@
 import type { PacketCallback } from '../types/basics.js'
 import addon from '../addon.js'
-import { dirname } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Use CORE_CPP_ROOT if defined (Electron bundled context), otherwise resolve from __dirname
+const packageRoot = process.env.CORE_CPP_ROOT || resolve(__dirname, '../..')
+
 function getProtocolsPath(): string {
-    return `${__dirname}/../../protocols`
+    return `${packageRoot}/protocols`
 }
 
 /**
