@@ -23,6 +23,8 @@ export default defineConfig({
             'react/jsx-dev-runtime',
             'use-sync-external-store/shim',
             'use-sync-external-store/shim/index.js',
+            'use-sync-external-store/shim/with-selector',
+            'use-sync-external-store/shim/with-selector.js',
             'scheduler',
         ],
         entries: ['src/renderer.tsx'],
