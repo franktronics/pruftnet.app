@@ -21,10 +21,7 @@ export class DeviceManager {
         }
     }
 
-    public ensureDevice(
-        mac: string,
-        devicesStore: Map<string, DeviceBasisType>,
-    ): DeviceResult {
+    public ensureDevice(mac: string, devicesStore: Map<string, DeviceBasisType>): DeviceResult {
         const existingDevice = devicesStore.get(mac)
         if (existingDevice) {
             return {

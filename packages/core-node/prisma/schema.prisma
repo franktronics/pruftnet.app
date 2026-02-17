@@ -10,6 +10,15 @@ datasource db {
   provider = "sqlite"
 }
 
+// Image
+model Image {
+  id        Int       @id @default(autoincrement())
+  path      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  analysis  Analysis?
+}
+
 // Analysis
 model Analysis {
   id          Int      @id @default(autoincrement())
@@ -18,6 +27,8 @@ model Analysis {
   data        Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  imageId     Int?     @unique
+  image       Image?   @relation(fields: [imageId], references: [id])
 }
 
 // Settings

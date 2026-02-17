@@ -26,6 +26,7 @@
         "@xyflow/react": "^12.10.0",
         "class-variance-authority": "^0.7.1",
         "d3-force": "^3.0.0",
+        "html-to-image": "^1.11.13",
         "lucide-react": "^0.563.0",
         "radix-ui": "^1.4.3",
         "react-resizable-panels": "^4.6.2",

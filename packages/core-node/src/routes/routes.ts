@@ -30,6 +30,7 @@ export const appRouter = createRouter({
         create: AnalysisController.make().create,
         store: AnalysisController.make().store,
         get: AnalysisController.make().get,
+        getImage: AnalysisController.make().getImage,
         delete: AnalysisController.make().delete,
         list: AnalysisController.make().list,
     },

@@ -1,7 +1,11 @@
 import { prisma } from '../db-config'
 import { Prisma, type Analysis } from '../../generated/prisma/client'
 
-export type AnalysisSummary = Omit<Analysis, 'data'>
+export type AnalysisSummary = Omit<Analysis, 'data' | 'imageId'>
+
+export type AnalysisWithImage = Analysis & {
+    image: { id: number; path: string } | null
+}
 
 export class AnalysisRepository {
     public async createAnalysis(
@@ -24,6 +28,7 @@ export class AnalysisRepository {
             title?: string
             description?: string
             data?: Prisma.InputJsonValue
+            imageId?: number | null
         },
     ): Promise<Analysis> {
         return prisma.analysis.update({
@@ -35,6 +40,13 @@ export class AnalysisRepository {
     public async getAnalysisById(analysisId: number): Promise<Analysis | null> {
         return prisma.analysis.findUnique({
             where: { id: analysisId },
+        })
+    }
+
+    public async getAnalysisWithImage(analysisId: number): Promise<AnalysisWithImage | null> {
+        return prisma.analysis.findUnique({
+            where: { id: analysisId },
+            include: { image: true },
         })
     }
 

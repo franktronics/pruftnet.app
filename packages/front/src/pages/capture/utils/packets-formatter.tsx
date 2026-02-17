@@ -34,7 +34,10 @@ class DefaultPacketFormater extends PacketFormater {
         return `${octet1}.${octet2}.${octet3}.${octet4}`
     }
 
-    private findFieldByPattern(layer: number, pattern: RegExp): string | number | bigint | undefined {
+    private findFieldByPattern(
+        layer: number,
+        pattern: RegExp,
+    ): string | number | bigint | undefined {
         const layerData = this.packet.parsed[layer]
         if (!layerData) return undefined
 
