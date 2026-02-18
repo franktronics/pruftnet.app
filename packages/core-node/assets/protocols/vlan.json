@@ -1,0 +1,37 @@
+{
+    "name": "VLAN",
+    "description": "802.1Q Virtual LAN Tag",
+    "header": {
+        "0_3": {
+            "description": "Priority Code Point (PCP)",
+            "type": "int"
+        },
+        "3_1": {
+            "description": "Drop Eligible Indicator (DEI)",
+            "type": "int"
+        },
+        "4_12": {
+            "description": "VLAN Identifier (VID)",
+            "type": "int"
+        },
+        "16_16": {
+            "description": "EtherType",
+            "type": "hex"
+        }
+    },
+    "next_protocol": {
+        "selector": "16_16",
+        "start_after": "32",
+        "mappings": {
+            "0x0800": {
+                "file": "ipv4.json"
+            },
+            "0x0806": {
+                "file": "arp.json"
+            },
+            "0x86DD": {
+                "file": "ipv6.json"
+            }
+        }
+    }
+}

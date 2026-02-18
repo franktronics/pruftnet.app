@@ -1,0 +1,22 @@
+{
+    "name": "ICMPv6",
+    "description": "Internet Control Message Protocol for IPv6",
+    "header": {
+        "0_8": {
+            "description": "Type",
+            "type": "int"
+        },
+        "8_8": {
+            "description": "Code",
+            "type": "int"
+        },
+        "16_16": {
+            "description": "Checksum",
+            "type": "hex"
+        },
+        "32_32": {
+            "description": "Message Body",
+            "type": "bytes"
+        }
+    }
+}

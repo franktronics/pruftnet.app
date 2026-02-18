@@ -1,0 +1,42 @@
+{
+    "name": "ARP",
+    "description": "Address Resolution Protocol",
+    "header": {
+        "0_16": {
+            "description": "Hardware Type (HTYPE)",
+            "type": "hex"
+        },
+        "16_16": {
+            "description": "Protocol Type (PTYPE)",
+            "type": "hex"
+        },
+        "32_8": {
+            "description": "Hardware Address Length",
+            "type": "int"
+        },
+        "40_8": {
+            "description": "Protocol Address Length",
+            "type": "int"
+        },
+        "48_16": {
+            "description": "Operation (1=request, 2=reply)",
+            "type": "int"
+        },
+        "64_48": {
+            "description": "Sender Hardware Address (MAC)",
+            "type": "mac"
+        },
+        "112_32": {
+            "description": "Sender Protocol Address (IP)",
+            "type": "ipv4"
+        },
+        "144_48": {
+            "description": "Target Hardware Address (MAC)",
+            "type": "mac"
+        },
+        "192_32": {
+            "description": "Target Protocol Address (IP)",
+            "type": "ipv4"
+        }
+    }
+}

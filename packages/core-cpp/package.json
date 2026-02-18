@@ -1,0 +1,36 @@
+{
+    "name": "@repo/core-cpp",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "dist/ts/index.js",
+    "types": "dist/ts/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/ts/index.js",
+            "require": "./dist/ts/index.js",
+            "types": "./dist/ts/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build:cpp": "cmake-js compile",
+        "build:ts": "tsc",
+        "build": "pnpm run build:cpp && pnpm run build:ts",
+        "test:build": "cd tests && mkdir -p build && cd build && cmake .. && cmake --build .",
+        "test:run": "cd tests && bash test.sh"
+    },
+    "dependencies": {
+        "node-addon-api": "^8.5.0"
+    },
+    "devDependencies": {
+        "cmake-js": "^8.0.0",
+        "typescript": "^5.9.3",
+        "rimraf": "^6.1.2",
+        "@types/node": "^25.2.3"
+    },
+    "packageManager": "pnpm@10.29.3",
+    "files": [
+        "dist/**/*",
+        "build/Release/*.node",
+        "src/protocols/**/*"
+    ]
+}

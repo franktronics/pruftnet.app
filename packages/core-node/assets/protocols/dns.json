@@ -1,0 +1,58 @@
+{
+    "name": "DNS",
+    "description": "Domain Name System (RFC 1035)",
+    "header": {
+        "0_16": {
+            "description": "Transaction ID",
+            "type": "hex"
+        },
+        "16_1": {
+            "description": "QR - Query/Response",
+            "type": "int"
+        },
+        "17_4": {
+            "description": "Opcode",
+            "type": "int"
+        },
+        "21_1": {
+            "description": "AA - Authoritative Answer",
+            "type": "int"
+        },
+        "22_1": {
+            "description": "TC - Truncated",
+            "type": "int"
+        },
+        "23_1": {
+            "description": "RD - Recursion Desired",
+            "type": "int"
+        },
+        "24_1": {
+            "description": "RA - Recursion Available",
+            "type": "int"
+        },
+        "25_3": {
+            "description": "Z - Reserved",
+            "type": "int"
+        },
+        "28_4": {
+            "description": "RCode - Response Code",
+            "type": "int"
+        },
+        "32_16": {
+            "description": "QDCOUNT - Question Count",
+            "type": "int"
+        },
+        "48_16": {
+            "description": "ANCOUNT - Answer Count",
+            "type": "int"
+        },
+        "64_16": {
+            "description": "NSCOUNT - Authority Count",
+            "type": "int"
+        },
+        "80_16": {
+            "description": "ARCOUNT - Additional Count",
+            "type": "int"
+        }
+    }
+}

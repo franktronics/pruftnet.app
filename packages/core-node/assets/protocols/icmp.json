@@ -1,0 +1,22 @@
+{
+    "name": "ICMP",
+    "description": "Internet Control Message Protocol",
+    "header": {
+        "0_8": {
+            "description": "ICMP Type",
+            "type": "int"
+        },
+        "8_8": {
+            "description": "ICMP Code",
+            "type": "int"
+        },
+        "16_16": {
+            "description": "Checksum",
+            "type": "hex"
+        },
+        "32_32": {
+            "description": "Rest of Header",
+            "type": "bytes"
+        }
+    }
+}

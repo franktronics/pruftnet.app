@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Image
+model Image {
+  id        Int       @id @default(autoincrement())
+  path      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  analysis  Analysis?
+}
+
+// Analysis
+model Analysis {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  data        Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  imageId     Int?     @unique
+  image       Image?   @relation(fields: [imageId], references: [id])
+}
+
+// Settings
+model Settings {
+  id                  Int                @id @default(autoincrement())
+  maxPacketBufferSize Int
+  promiscuousMode     Boolean
+  protocolEntryFile   String
+  defaultCaptureTab   DefaultCaptureTab
+  connectionLineType  ConnectionLineType
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+enum DefaultCaptureTab {
+  scan
+  graph
+}
+
+enum ConnectionLineType {
+  bezier
+  straight
+  step
+}
+
+// Logs
+model Log {
+  id        Int       @id @default(autoincrement())
+  level     LogLevel
+  source    LogSource
+  title     String
+  message   String
+  context   Json?
+  createdAt DateTime  @default(now())
+}
+
+enum LogLevel {
+  debug
+  info
+  warn
+  error
+}
+
+enum LogSource {
+  frontend
+  backend
+}

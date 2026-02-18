@@ -1,0 +1,30 @@
+{
+    "name": "@repo/core-node",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./types": "./src/types.ts",
+        "./schema": "./src/schema.ts"
+    },
+    "scripts": {
+        "type-check": "tsc --noEmit",
+        "prisma": "prisma"
+    },
+    "dependencies": {
+        "@prisma/adapter-better-sqlite3": "^7.4.0",
+        "@prisma/client": "^7.4.0",
+        "@repo/core-cpp": "workspace:*",
+        "@repo/utils": "workspace:*",
+        "dotenv": "^17.2.4",
+        "oui-data": "^1.1.530",
+        "zod": "^4.3.6"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/node": "^25.2.3",
+        "prisma": "^7.4.0",
+        "typescript": "~5.9.3"
+    }
+}

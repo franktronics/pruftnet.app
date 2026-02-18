@@ -1,0 +1,53 @@
+{
+    "name": "IPv6",
+    "description": "Internet Protocol version 6",
+    "header": {
+        "0_4": {
+            "description": "Version",
+            "type": "int"
+        },
+        "4_8": {
+            "description": "Traffic Class",
+            "type": "hex"
+        },
+        "12_20": {
+            "description": "Flow Label",
+            "type": "hex"
+        },
+        "32_16": {
+            "description": "Payload Length",
+            "type": "int"
+        },
+        "48_8": {
+            "description": "Next Header",
+            "type": "int"
+        },
+        "56_8": {
+            "description": "Hop Limit",
+            "type": "int"
+        },
+        "64_128": {
+            "description": "Source Address",
+            "type": "ipv6"
+        },
+        "192_128": {
+            "description": "Destination Address",
+            "type": "ipv6"
+        }
+    },
+    "next_protocol": {
+        "selector": "48_8",
+        "start_after": "320",
+        "mappings": {
+            "6": {
+                "file": "tcp.json"
+            },
+            "17": {
+                "file": "udp.json"
+            },
+            "58": {
+                "file": "icmpv6.json"
+            }
+        }
+    }
+}

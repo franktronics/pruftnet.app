@@ -1,0 +1,40 @@
+{
+    "name": "UDP",
+    "description": "User Datagram Protocol",
+    "header": {
+        "0_16": {
+            "description": "Source Port",
+            "type": "int"
+        },
+        "16_16": {
+            "description": "Destination Port",
+            "type": "int"
+        },
+        "32_16": {
+            "description": "Length",
+            "type": "int"
+        },
+        "48_16": {
+            "description": "Checksum",
+            "type": "hex"
+        }
+    },
+    "next_protocol": {
+        "selector": "16_16",
+        "start_after": "64",
+        "mappings": {
+            "53": {
+                "file": "dns.json"
+            },
+            "67": {
+                "file": "dhcp.json"
+            },
+            "68": {
+                "file": "dhcp.json"
+            },
+            "80": {
+                "file": "http.json"
+            }
+        }
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "outDir": "dist",
+        "declaration": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "noUncheckedIndexedAccess": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "target": "ES2022",
+        "jsx": "react-jsx",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "types": ["node"]
+    },
+    "include": ["src", "../front/src/pages/capture/utils/network-analyzer"],
+    "exclude": ["node_modules", "dist"]
+}

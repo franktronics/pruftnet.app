@@ -1,0 +1,61 @@
+{
+    "name": "TCP",
+    "description": "Transmission Control Protocol",
+    "header": {
+        "0_16": {
+            "description": "Source Port",
+            "type": "int"
+        },
+        "16_16": {
+            "description": "Destination Port",
+            "type": "int"
+        },
+        "32_32": {
+            "description": "Sequence Number",
+            "type": "int"
+        },
+        "64_32": {
+            "description": "Acknowledgment Number",
+            "type": "int"
+        },
+        "96_4": {
+            "description": "Data Offset",
+            "type": "int"
+        },
+        "100_3": {
+            "description": "Reserved",
+            "type": "hex"
+        },
+        "103_9": {
+            "description": "Flags (NS,CWR,ECE,URG,ACK,PSH,RST,SYN,FIN)",
+            "type": "hex"
+        },
+        "112_16": {
+            "description": "Window Size",
+            "type": "int"
+        },
+        "128_16": {
+            "description": "Checksum",
+            "type": "hex"
+        },
+        "144_16": {
+            "description": "Urgent Pointer",
+            "type": "int"
+        }
+    },
+    "next_protocol": {
+        "selector": "16_16",
+        "start_after": "calculate: [96_4] * 4 * 8",
+        "mappings": {
+            "53": {
+                "file": "dns.json"
+            },
+            "80": {
+                "file": "http.json"
+            },
+            "443": {
+                "file": "tls.json"
+            }
+        }
+    }
+}

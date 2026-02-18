@@ -1,0 +1,42 @@
+@layer components {
+    .scrollbar-thin {
+        /* Webkit scrollbars (Chrome, Safari, Edge) */
+        &::-webkit-scrollbar {
+            @apply w-1 h-1; /* 4px width/height - very thin for macOS */
+        }
+        
+        &::-webkit-scrollbar-track {
+            @apply bg-transparent;
+        }
+        
+        &::-webkit-scrollbar-thumb {
+            @apply bg-border rounded-full;
+            transition: background-color 0.2s ease;
+        }
+        
+        &::-webkit-scrollbar-thumb:hover {
+            @apply bg-muted-foreground/50;
+        }
+        
+        &::-webkit-scrollbar-corner {
+            @apply bg-transparent;
+        }
+        
+        /* Firefox scrollbars */
+        scrollbar-width: thin;
+        scrollbar-color: theme(colors.border) transparent;
+        
+        /* For dark mode compatibility */
+        .dark & {
+            scrollbar-color: theme(colors.border) transparent;
+        }
+        
+        .dark &::-webkit-scrollbar-thumb {
+            @apply bg-border;
+        }
+        
+        .dark &::-webkit-scrollbar-thumb:hover {
+            @apply bg-muted-foreground/30;
+        }
+    }
+}

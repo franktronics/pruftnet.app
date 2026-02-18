@@ -1,0 +1,18 @@
+{
+    "name": "TLS",
+    "description": "Transport Layer Security (RFC 5246, RFC 8446)",
+    "header": {
+        "0_8": {
+            "description": "Content Type (0x16=Handshake, 0x17=Application Data)",
+            "type": "hex"
+        },
+        "8_16": {
+            "description": "Version (0x0301=TLS1.0, 0x0303=TLS1.2, 0x0304=TLS1.3)",
+            "type": "hex"
+        },
+        "24_16": {
+            "description": "Length",
+            "type": "int"
+        }
+    }
+}

@@ -1,0 +1,34 @@
+{
+    "name": "MPLS",
+    "description": "Multi-Protocol Label Switching (RFC 3032)",
+    "header": {
+        "0_20": {
+            "description": "Label",
+            "type": "int"
+        },
+        "20_3": {
+            "description": "Traffic Class (Exp)",
+            "type": "int"
+        },
+        "23_1": {
+            "description": "Bottom of Stack (S)",
+            "type": "int"
+        },
+        "24_8": {
+            "description": "Time to Live (TTL)",
+            "type": "int"
+        }
+    },
+    "next_protocol": {
+        "selector": "23_1",
+        "start_after": "32",
+        "mappings": {
+            "0": {
+                "file": "mpls.json"
+            },
+            "1": {
+                "file": "mpls_payload.json"
+            }
+        }
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "name": "Ethernet",
+    "description": "Ethernet II Frame",
+    "header": {
+        "0_48": {
+            "description": "Destination MAC Address",
+            "type": "mac"
+        },
+        "48_48": {
+            "description": "Source MAC Address",
+            "type": "mac"
+        },
+        "96_16": {
+            "description": "EtherType - Protocol Identifier",
+            "type": "hex"
+        }
+    },
+    "next_protocol": {
+        "selector": "96_16",
+        "start_after": "112",
+        "mappings": {
+            "0x0800": {
+                "file": "ipv4.json"
+            },
+            "0x0806": {
+                "file": "arp.json"
+            },
+            "0x86DD": {
+                "file": "ipv6.json"
+            },
+            "0x8100": {
+                "file": "vlan.json"
+            },
+            "0x8847": {
+                "file": "mpls.json"
+            },
+            "0x8848": {
+                "file": "mpls.json"
+            },
+            "0x88CC": {
+                "file": "lldp.json"
+            }
+        }
+    }
+}
