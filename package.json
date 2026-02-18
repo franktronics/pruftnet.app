@@ -1,6 +1,6 @@
 {
     "name": "pruftnet",
-    "private": true,
+    "private": false,
     "type": "module",
     "scripts": {
         "dev:web": "pnpm -F @repo/web run dev",
