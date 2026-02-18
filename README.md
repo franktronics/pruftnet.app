@@ -2,6 +2,8 @@
 
 Network analysis tool with visual workflow builder, packet injection, and real-time analysis.
 
+![Preview](https://pruftnet.app/analysis.jpeg)
+
 ## Features
 
 - **Visual Workflow Builder** - Create network analysis workflows with React Flow
