@@ -1,11 +1,17 @@
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { prisma } from '../db-config'
 import { settingsSchema, type AppSettings } from '../models/settings-model'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const DEFAULT_PROTOCOL_ENTRY_FILE = resolve(__dirname, '../../assets/protocols/ethernet.json')
 
 const DEFAULT_SETTINGS: AppSettings = {
     maxPacketBufferSize: 10000,
     promiscuousMode: true,
-    protocolEntryFile:
-        '/home/wb207/Documents/pruftnet/packages/core-node/assets/protocols/ethernet.json',
+    protocolEntryFile: DEFAULT_PROTOCOL_ENTRY_FILE,
     defaultCaptureTab: 'scan',
     connectionLineType: 'straight',
 }
