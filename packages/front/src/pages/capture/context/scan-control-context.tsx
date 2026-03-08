@@ -7,6 +7,7 @@ import type {
     AnalysisSummary,
     NetworkInterfaceInfo,
     PacketDataWithoutRaw,
+    SniffingEvent,
     WorkflowEvent,
 } from '@repo/core-node/types'
 import { useNetworkAnalyzer } from '../utils/network-analyzer'
@@ -15,13 +16,14 @@ export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
     CAPTURING: 'CAPTURING',
     INNITIALIZING: 'INNITIALIZING',
+    STOPPING: 'STOPPING',
     ERROR: 'ERROR',
 } as const
 export type CAPTURE_STATUS = (typeof CAPTURE_STATUS)[keyof typeof CAPTURE_STATUS]
 
 export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
-    changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
+    changeCaptureStatus: () => void
     packets: { parsed: any; raw: any; id: number }[]
     cleanupPackets: () => Promise<boolean>
     packetsEmpty: boolean
@@ -94,39 +96,43 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         return true
     }
 
-    const handleChangeCaptureStatus = useCallback(
-        async (status: CAPTURE_STATUS) => {
-            if (interf.name === '') {
-                toast.warning('Select an interface')
-                return
-            }
-            if (status === CAPTURE_STATUS.IDLE) {
-                await stopScan({})
-                if (closeConnectionFct.current) closeConnectionFct.current()
-                setCaptureStatus(CAPTURE_STATUS.IDLE)
-            } else if (status === CAPTURE_STATUS.INNITIALIZING) {
-                setPackets([])
-                const { closeConnection } = await wsFetcher.scan.start.handle(
-                    { interface: interf.name },
-                    {
-                        onmessage: (data: PacketDataWithoutRaw) => {
+    const handleChangeCaptureStatus = useCallback(async () => {
+        if (interf.name === '') {
+            toast.warning('Select an interface')
+            return
+        }
+        if (status === CAPTURE_STATUS.IDLE) {
+            await stopScan({})
+            if (closeConnectionFct.current) closeConnectionFct.current()
+            setCaptureStatus(CAPTURE_STATUS.IDLE)
+        } else if (status === CAPTURE_STATUS.INNITIALIZING) {
+            setPackets([])
+            const { closeConnection } = await wsFetcher.scan.start.handle(
+                { interface: interf.name },
+                {
+                    onmessage: (data: SniffingEvent) => {
+                        if (data.type === 'packet') {
                             setPackets((old) => [...old, data])
                             registerPacket(data)
-                        },
-                        onerror: (error) => {
+                        } else if (data.type === 'error') {
                             setCaptureStatus(CAPTURE_STATUS.ERROR)
-                            toast.error(<ClientErrorParser error={error} />, {
+                            toast.error(data.message, {
                                 duration: 5000,
                             })
-                        },
+                        }
                     },
-                )
-                closeConnectionFct.current = closeConnection
-                setCaptureStatus(CAPTURE_STATUS.CAPTURING)
-            }
-        },
-        [interf.name, selectedAnalysis, stopScan],
-    )
+                    onerror: (error) => {
+                        setCaptureStatus(CAPTURE_STATUS.ERROR)
+                        toast.error(<ClientErrorParser error={error} />, {
+                            duration: 5000,
+                        })
+                    },
+                },
+            )
+            closeConnectionFct.current = closeConnection
+            setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+        }
+    }, [interf.name, selectedAnalysis, stopScan])
 
     const handleStartWorkflow = useCallback(async () => {
         if (!selectedAnalysis) return

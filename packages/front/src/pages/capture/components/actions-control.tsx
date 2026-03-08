@@ -12,14 +12,6 @@ export const ActionsControl = (props: ActionsControlProps) => {
     const { captureStatus, changeCaptureStatus, interf, packetsEmpty, cleanupPackets } =
         useScanControlContext()
 
-    const handleBtnClick = () => {
-        if (captureStatus === CAPTURE_STATUS.IDLE || captureStatus === CAPTURE_STATUS.ERROR) {
-            changeCaptureStatus(CAPTURE_STATUS.INNITIALIZING)
-        } else if (captureStatus === CAPTURE_STATUS.CAPTURING) {
-            changeCaptureStatus(CAPTURE_STATUS.IDLE)
-        }
-    }
-
     const btnDisabled = interf.name === '' || captureStatus === CAPTURE_STATUS.INNITIALIZING
     const displayPopup =
         !packetsEmpty &&
@@ -34,7 +26,7 @@ export const ActionsControl = (props: ActionsControlProps) => {
                     <ActionBtn
                         captureStatus={captureStatus}
                         btnDisabled={btnDisabled}
-                        onHandleBtnClick={handleBtnClick}
+                        onHandleBtnClick={changeCaptureStatus}
                     />
                 }
                 onConfirm={async () => {
@@ -66,6 +58,7 @@ const ActionBtn = (props: ActionBtnProps) => {
                 [captureStatus === CAPTURE_STATUS.IDLE, 'default'],
                 [captureStatus === CAPTURE_STATUS.CAPTURING, 'destructive'],
                 [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'secondary'],
+                [captureStatus === CAPTURE_STATUS.STOPPING, 'secondary'],
                 [captureStatus === CAPTURE_STATUS.ERROR, 'destructive'],
             )}
             disabled={btnDisabled}
@@ -85,11 +78,19 @@ const ActionBtn = (props: ActionBtnProps) => {
                 [captureStatus === CAPTURE_STATUS.IDLE, 'Start capture'],
                 [captureStatus === CAPTURE_STATUS.CAPTURING, 'Stop capture'],
                 [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'Initializing ...'],
+                [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'Stopping ...'],
                 [captureStatus === CAPTURE_STATUS.ERROR, 'Retry capture'],
             )}
-            {captureStatus === CAPTURE_STATUS.CAPTURING ? (
-                <Loader className="animate-[spin_0.5s_linear_infinite]" size={16} />
-            ) : null}
+            {cond(
+                [
+                    captureStatus === CAPTURE_STATUS.CAPTURING,
+                    <Loader className="animate-[spin_0.5s_linear_infinite]" size={16} />,
+                ],
+                [
+                    captureStatus === CAPTURE_STATUS.STOPPING,
+                    <Loader className="animate-[spin_1.1s_linear_infinite]" size={16} />,
+                ],
+            ) ?? null}
         </Button>
     )
 }

@@ -7,6 +7,7 @@ import {
 import { z } from 'zod'
 import { procedure, wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
+import PQueue from 'p-queue'
 
 export type PacketDataWithoutRaw = {
     id: number
@@ -20,8 +21,23 @@ export interface PacketData {
     raw: RawPacketData<string>
 }
 
+export type SniffingEvent =
+    | { type: 'start' }
+    | { type: 'end' }
+    | { type: 'error'; message: string }
+    | ({ type: 'packet' } & PacketDataWithoutRaw)
+
 export class ScanController {
     constructor() {}
+
+    private async AddDalay(time: number = 2000) {
+        return new Promise((resolve) => {
+            const timer = setTimeout(() => {
+                resolve(true)
+                clearTimeout(timer)
+            }, time)
+        })
+    }
 
     private makeSniffing() {
         return wsProcedure
@@ -30,29 +46,38 @@ export class ScanController {
                     interface: z.string().nonempty(),
                 }),
             )
-            .handle(async ({ input, store }, returnCb: (data: PacketDataWithoutRaw) => void) => {
+            .handle(async ({ input, store }, returnCb: (data: SniffingEvent) => void) => {
                 const sniffer = new NetworkSniffer(
                     store.settings.get('settings')?.protocolEntryFile || '',
                 )
-                const scanId = Date.now()
-                store.scan.set(scanId, sniffer)
+                const queue = new PQueue({ concurrency: 1 })
+
+                store.sniffer.set('sniffer', sniffer)
+                store.snifferQueue.set('queue', queue)
 
                 let counter = 0
+                const startTime = Date.now()
                 try {
-                    sniffer.startSniffing(input.interface, (packet: CPP_PacketData) => {
-                        store.packets.set(counter, packet)
-                        returnCb({
-                            id: counter,
-                            parsed: packet.parsed,
-                            raw: {
-                                length: packet.raw.length,
-                                timestamp: packet.raw.timestamp - scanId,
-                                valid: packet.raw.valid,
-                            },
+                    sniffer.startSniffing(input.interface, async (packet: CPP_PacketData) => {
+                        await queue.add(async () => {
+                            store.packets.set(counter, packet)
+                            returnCb({
+                                type: 'packet',
+                                id: counter,
+                                parsed: packet.parsed,
+                                raw: {
+                                    length: packet.raw.length,
+                                    timestamp: packet.raw.timestamp - startTime,
+                                    valid: packet.raw.valid,
+                                },
+                            })
+                            await this.AddDalay()
+                            counter += 1
                         })
-                        counter += 1
                     })
-                } catch (err) {
+                    returnCb({ type: 'start' })
+                } catch (err: any) {
+                    returnCb({ type: 'error', message: err?.message || 'Error starting sniffer' })
                     console.error('Error starting sniffer:', err)
                 }
             })
@@ -60,17 +85,17 @@ export class ScanController {
 
     private stopSniffing() {
         return procedure.input(z.object({})).mutation(async ({ store }) => {
-            for (const [scanId, sniffer] of store.scan.toArray()) {
-                sniffer.stopSniffing()
-                store.scan.delete(scanId)
-            }
+            const sniffer = store.sniffer.get('sniffer')
+            sniffer?.stopSniffing()
             return true
         })
     }
 
     private isSniffing() {
         return procedure.input(z.object({})).query(async ({ store }) => {
-            return store.scan.size() > 0
+            const sniffer = store.sniffer.get('sniffer')
+            const queue = store.snifferQueue.get('queue')
+            return !!sniffer && !!queue
         })
     }
 

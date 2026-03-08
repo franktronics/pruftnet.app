@@ -7,7 +7,7 @@ export type {
     NetworkInterfaceInfoIPv6,
 } from 'os'
 
-export type { PacketDataWithoutRaw, PacketData } from './controllers/scan-controller'
+export type { PacketDataWithoutRaw, PacketData, SniffingEvent } from './controllers/scan-controller'
 export type { ParsedPacket, RawPacketData, ParsedProtocolLayer } from '@repo/core-cpp'
 
 export type { AppSettings } from './models/settings-model'
