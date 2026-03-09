@@ -60,26 +60,40 @@ export class ScanController {
                 const startTime = Date.now()
                 try {
                     sniffer.startSniffing(input.interface, async (packet: CPP_PacketData) => {
-                        await queue.add(async () => {
-                            store.packets.set(counter, packet)
-                            returnCb({
-                                type: 'packet',
-                                id: counter,
-                                parsed: packet.parsed,
-                                raw: {
-                                    length: packet.raw.length,
-                                    timestamp: packet.raw.timestamp - startTime,
-                                    valid: packet.raw.valid,
-                                },
+                        try {
+                            await queue.add(async () => {
+                                store.packets.set(counter, packet)
+                                returnCb({
+                                    type: 'packet',
+                                    id: counter,
+                                    parsed: packet.parsed,
+                                    raw: {
+                                        length: packet.raw.length,
+                                        timestamp: packet.raw.timestamp - startTime,
+                                        valid: packet.raw.valid,
+                                    },
+                                })
+                                await this.AddDalay(this.PACKET_PROCESSING_DELAY)
+                                counter += 1
                             })
-                            await this.AddDalay(this.PACKET_PROCESSING_DELAY)
-                            counter += 1
-                        })
+                        } catch (err: any) {
+                            sniffer.stopSniffing()
+                            store.sniffer.clear()
+                            store.snifferQueue.clear()
+                            store.packets.clear()
+                            returnCb({
+                                type: 'error',
+                                message: err?.message || 'Error processing packet after sniffing',
+                            })
+                        }
                     })
                     returnCb({ type: 'start' })
                 } catch (err: any) {
+                    sniffer.stopSniffing()
+                    store.sniffer.clear()
+                    store.snifferQueue.clear()
+                    store.packets.clear()
                     returnCb({ type: 'error', message: err?.message || 'Error starting sniffer' })
-                    console.error('Error starting sniffer:', err)
                 }
             })
     }
@@ -94,6 +108,15 @@ export class ScanController {
             store.sniffer.clear()
             store.snifferQueue.clear()
 
+            return true
+        })
+    }
+
+    private cleanup() {
+        return procedure.input(z.object({})).mutation(async ({ store }) => {
+            store.sniffer.clear()
+            store.snifferQueue.clear()
+            store.packets.clear()
             return true
         })
     }
@@ -129,15 +152,6 @@ export class ScanController {
                     },
                 }
             })
-    }
-
-    private cleanup() {
-        return procedure.input(z.object({})).mutation(async ({ store }) => {
-            store.packets.clear()
-            store.sniffer.clear()
-            store.snifferQueue.clear()
-            return true
-        })
     }
 
     static make() {

@@ -118,6 +118,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                                 toast.error(data.message, {
                                     duration: 5000,
                                 })
+                                closeConnection()
                             } else if (data.type === 'start') {
                                 setCaptureStatus(CAPTURE_STATUS.CAPTURING)
                             }
@@ -127,6 +128,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                             toast.error(<ClientErrorParser error={error} />, {
                                 duration: 5000,
                             })
+                            closeConnection()
                         },
                     },
                 )
