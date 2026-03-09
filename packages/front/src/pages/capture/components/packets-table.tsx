@@ -1,10 +1,17 @@
 import { Table, TableBody, TableHead, TableHeader, Badge, TableRow } from '@repo/ui/atoms'
-import { useMemo, useRef, type ComponentProps, type ComponentPropsWithoutRef } from 'react'
+import {
+    useMemo,
+    useRef,
+    useEffect,
+    type ComponentProps,
+    type ComponentPropsWithoutRef,
+} from 'react'
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
 import { cn, useQuery } from '@repo/utils'
 import type { PacketDataWithoutRaw } from '@repo/core-node/types'
 import { PacketFormaterFactory } from '../utils/packets-formatter'
 import { fetcher } from '../../../config/client-trpc'
+import { useScanControlContext } from '../context/scan-control-context'
 
 export type RowDataType = {
     index: number
@@ -23,6 +30,8 @@ export type PacketsTableProps = {
 } & ComponentPropsWithoutRef<'div'>
 export const PacketsTable = (props: PacketsTableProps) => {
     const { packets, className, onHandleRowSelect, selectedRow, ...rest } = props
+    const { autoScroll } = useScanControlContext()
+    const prevPacketsLengthRef = useRef(packets.length)
 
     const parentRef = useRef<HTMLDivElement>(null)
     const virtualizer = useVirtualizer({
@@ -31,6 +40,13 @@ export const PacketsTable = (props: PacketsTableProps) => {
         estimateSize: () => 53,
         overscan: 10,
     })
+
+    useEffect(() => {
+        if (autoScroll && packets.length > prevPacketsLengthRef.current && packets.length > 0) {
+            virtualizer.scrollToIndex(packets.length - 1, { align: 'end' })
+        }
+        prevPacketsLengthRef.current = packets.length
+    }, [packets.length, autoScroll, virtualizer])
 
     return (
         <div {...rest} className={cn('flex flex-col overflow-hidden rounded-lg border', className)}>

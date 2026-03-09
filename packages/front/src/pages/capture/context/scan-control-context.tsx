@@ -33,6 +33,8 @@ export type ScanControlContextType = {
     setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
     startWorkflow: () => void
     workflowEvents: WorkflowEvent[]
+    autoScroll: boolean
+    setAutoScroll: Dispatch<SetStateAction<boolean>>
 
     analyzer: {
         devices: ReturnType<typeof useNetworkAnalyzer>['devices']
@@ -64,6 +66,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
     const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
     const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
+    const [autoScroll, setAutoScroll] = useState<boolean>(true)
     const closeConnectionFct = useRef<() => void>(null)
     const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
     const { registerPacket, devices, connections, vendorOui } = useNetworkAnalyzer()
@@ -175,6 +178,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         setSelectedAnalysis,
         startWorkflow: handleStartWorkflow,
         workflowEvents: wokflowEvents,
+        autoScroll,
+        setAutoScroll,
         analyzer: {
             devices,
             connections,
