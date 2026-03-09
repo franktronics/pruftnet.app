@@ -101,36 +101,44 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             toast.warning('Select an interface')
             return
         }
-        if (status === CAPTURE_STATUS.IDLE) {
-            await stopScan({})
-            if (closeConnectionFct.current) closeConnectionFct.current()
-            setCaptureStatus(CAPTURE_STATUS.IDLE)
-        } else if (status === CAPTURE_STATUS.INNITIALIZING) {
-            setPackets([])
-            const { closeConnection } = await wsFetcher.scan.start.handle(
-                { interface: interf.name },
-                {
-                    onmessage: (data: SniffingEvent) => {
-                        if (data.type === 'packet') {
-                            setPackets((old) => [...old, data])
-                            registerPacket(data)
-                        } else if (data.type === 'error') {
+        switch (captureStatus) {
+            case CAPTURE_STATUS.IDLE:
+            case CAPTURE_STATUS.ERROR:
+                setCaptureStatus(CAPTURE_STATUS.INNITIALIZING)
+                setPackets([])
+                const { closeConnection } = await wsFetcher.scan.start.handle(
+                    { interface: interf.name },
+                    {
+                        onmessage: (data: SniffingEvent) => {
+                            if (data.type === 'packet') {
+                                setPackets((old) => [...old, data])
+                                registerPacket(data)
+                            } else if (data.type === 'error') {
+                                setCaptureStatus(CAPTURE_STATUS.ERROR)
+                                toast.error(data.message, {
+                                    duration: 5000,
+                                })
+                            } else if (data.type === 'start') {
+                                setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+                            }
+                        },
+                        onerror: (error) => {
                             setCaptureStatus(CAPTURE_STATUS.ERROR)
-                            toast.error(data.message, {
+                            toast.error(<ClientErrorParser error={error} />, {
                                 duration: 5000,
                             })
-                        }
+                        },
                     },
-                    onerror: (error) => {
-                        setCaptureStatus(CAPTURE_STATUS.ERROR)
-                        toast.error(<ClientErrorParser error={error} />, {
-                            duration: 5000,
-                        })
-                    },
-                },
-            )
-            closeConnectionFct.current = closeConnection
-            setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+                )
+                closeConnectionFct.current = closeConnection
+                setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+                break
+            case CAPTURE_STATUS.CAPTURING:
+                setCaptureStatus(CAPTURE_STATUS.STOPPING)
+                await stopScan({})
+                if (closeConnectionFct.current) closeConnectionFct.current()
+                setCaptureStatus(CAPTURE_STATUS.IDLE)
+                break
         }
     }, [interf.name, selectedAnalysis, stopScan])
 
@@ -147,6 +155,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                     toast.error(<ClientErrorParser error={error} />, {
                         duration: 5000,
                     })
+                    closeConnection()
                 },
             },
         )

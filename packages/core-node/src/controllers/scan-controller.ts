@@ -23,14 +23,15 @@ export interface PacketData {
 
 export type SniffingEvent =
     | { type: 'start' }
-    | { type: 'end' }
     | { type: 'error'; message: string }
     | ({ type: 'packet' } & PacketDataWithoutRaw)
 
 export class ScanController {
+    private PACKET_PROCESSING_DELAY = 0
     constructor() {}
 
-    private async AddDalay(time: number = 2000) {
+    private async AddDalay(time: number) {
+        if (time === 0) return true
         return new Promise((resolve) => {
             const timer = setTimeout(() => {
                 resolve(true)
@@ -71,7 +72,7 @@ export class ScanController {
                                     valid: packet.raw.valid,
                                 },
                             })
-                            await this.AddDalay()
+                            await this.AddDalay(this.PACKET_PROCESSING_DELAY)
                             counter += 1
                         })
                     })
@@ -86,7 +87,13 @@ export class ScanController {
     private stopSniffing() {
         return procedure.input(z.object({})).mutation(async ({ store }) => {
             const sniffer = store.sniffer.get('sniffer')
+            const snifferQueue = store.snifferQueue.get('queue')
             sniffer?.stopSniffing()
+            await snifferQueue?.onIdle()
+
+            store.sniffer.clear()
+            store.snifferQueue.clear()
+
             return true
         })
     }
@@ -127,7 +134,8 @@ export class ScanController {
     private cleanup() {
         return procedure.input(z.object({})).mutation(async ({ store }) => {
             store.packets.clear()
-            store.scan.clear()
+            store.sniffer.clear()
+            store.snifferQueue.clear()
             return true
         })
     }

@@ -12,7 +12,10 @@ export const ActionsControl = (props: ActionsControlProps) => {
     const { captureStatus, changeCaptureStatus, interf, packetsEmpty, cleanupPackets } =
         useScanControlContext()
 
-    const btnDisabled = interf.name === '' || captureStatus === CAPTURE_STATUS.INNITIALIZING
+    const btnDisabled =
+        interf.name === '' ||
+        captureStatus === CAPTURE_STATUS.INNITIALIZING ||
+        captureStatus === CAPTURE_STATUS.STOPPING
     const displayPopup =
         !packetsEmpty &&
         (captureStatus === CAPTURE_STATUS.IDLE || captureStatus === CAPTURE_STATUS.ERROR)
@@ -56,8 +59,8 @@ const ActionBtn = (props: ActionBtnProps) => {
         <Button
             variant={cond(
                 [captureStatus === CAPTURE_STATUS.IDLE, 'default'],
-                [captureStatus === CAPTURE_STATUS.CAPTURING, 'destructive'],
                 [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'secondary'],
+                [captureStatus === CAPTURE_STATUS.CAPTURING, 'destructive'],
                 [captureStatus === CAPTURE_STATUS.STOPPING, 'secondary'],
                 [captureStatus === CAPTURE_STATUS.ERROR, 'destructive'],
             )}
@@ -76,9 +79,9 @@ const ActionBtn = (props: ActionBtnProps) => {
             )}{' '}
             {cond(
                 [captureStatus === CAPTURE_STATUS.IDLE, 'Start capture'],
-                [captureStatus === CAPTURE_STATUS.CAPTURING, 'Stop capture'],
                 [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'Initializing ...'],
-                [captureStatus === CAPTURE_STATUS.INNITIALIZING, 'Stopping ...'],
+                [captureStatus === CAPTURE_STATUS.CAPTURING, 'Stop capture'],
+                [captureStatus === CAPTURE_STATUS.STOPPING, 'Stopping ...'],
                 [captureStatus === CAPTURE_STATUS.ERROR, 'Retry capture'],
             )}
             {cond(
