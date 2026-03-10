@@ -1,5 +1,7 @@
 # Prüftnet
 
+![Preview](https://pruftnet.app/analysis.jpeg)
+
 Network analysis tool with visual workflow builder, packet injection, and real-time analysis.
 
 ## Features

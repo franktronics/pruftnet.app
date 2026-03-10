@@ -75,7 +75,7 @@ export class ScanController {
                                         timestamp: packet.raw.timestamp - startTime,
                                         valid: packet.raw.valid,
                                     },
-                                    hostUpdates,
+                                    hostUpdates: hostUpdates,
                                 })
                                 await this.AddDalay(this.PACKET_PROCESSING_DELAY)
                                 counter += 1
