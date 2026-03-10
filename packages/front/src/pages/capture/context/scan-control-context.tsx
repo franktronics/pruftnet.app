@@ -7,6 +7,7 @@ import type {
     AnalysisSummary,
     NetworkInterfaceInfo,
     PacketDataWithoutRaw,
+    SniffingEvent,
     WorkflowEvent,
 } from '@repo/core-node/types'
 import { useNetworkAnalyzer } from '../utils/network-analyzer'
@@ -15,13 +16,14 @@ export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
     CAPTURING: 'CAPTURING',
     INNITIALIZING: 'INNITIALIZING',
+    STOPPING: 'STOPPING',
     ERROR: 'ERROR',
 } as const
 export type CAPTURE_STATUS = (typeof CAPTURE_STATUS)[keyof typeof CAPTURE_STATUS]
 
 export type ScanControlContextType = {
     captureStatus: CAPTURE_STATUS
-    changeCaptureStatus: (capturing: CAPTURE_STATUS) => void
+    changeCaptureStatus: () => void
     packets: { parsed: any; raw: any; id: number }[]
     cleanupPackets: () => Promise<boolean>
     packetsEmpty: boolean
@@ -31,6 +33,8 @@ export type ScanControlContextType = {
     setSelectedAnalysis: Dispatch<SetStateAction<AnalysisSummary | null>>
     startWorkflow: () => void
     workflowEvents: WorkflowEvent[]
+    autoScroll: boolean
+    setAutoScroll: Dispatch<SetStateAction<boolean>>
 
     analyzer: {
         devices: ReturnType<typeof useNetworkAnalyzer>['devices']
@@ -62,6 +66,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [interf, setInterface] = useState<ContextNetinterface>({ name: '', infos: [] })
     const [packets, setPackets] = useState<PacketDataWithoutRaw[]>([])
     const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisSummary | null>(null)
+    const [autoScroll, setAutoScroll] = useState<boolean>(true)
     const closeConnectionFct = useRef<() => void>(null)
     const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
     const { registerPacket, devices, connections, vendorOui } = useNetworkAnalyzer()
@@ -94,39 +99,53 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         return true
     }
 
-    const handleChangeCaptureStatus = useCallback(
-        async (status: CAPTURE_STATUS) => {
-            if (interf.name === '') {
-                toast.warning('Select an interface')
-                return
-            }
-            if (status === CAPTURE_STATUS.IDLE) {
-                await stopScan({})
-                if (closeConnectionFct.current) closeConnectionFct.current()
-                setCaptureStatus(CAPTURE_STATUS.IDLE)
-            } else if (status === CAPTURE_STATUS.INNITIALIZING) {
+    const handleChangeCaptureStatus = useCallback(async () => {
+        if (interf.name === '') {
+            toast.warning('Select an interface')
+            return
+        }
+        switch (captureStatus) {
+            case CAPTURE_STATUS.IDLE:
+            case CAPTURE_STATUS.ERROR:
+                setCaptureStatus(CAPTURE_STATUS.INNITIALIZING)
                 setPackets([])
                 const { closeConnection } = await wsFetcher.scan.start.handle(
                     { interface: interf.name },
                     {
-                        onmessage: (data: PacketDataWithoutRaw) => {
-                            setPackets((old) => [...old, data])
-                            registerPacket(data)
+                        onmessage: (data: SniffingEvent) => {
+                            if (data.type === 'packet') {
+                                setPackets((old) => [...old, data])
+                                registerPacket(data)
+                            } else if (data.type === 'error') {
+                                setCaptureStatus(CAPTURE_STATUS.ERROR)
+                                toast.error(data.message, {
+                                    duration: 5000,
+                                })
+                                closeConnection()
+                            } else if (data.type === 'start') {
+                                setCaptureStatus(CAPTURE_STATUS.CAPTURING)
+                            }
                         },
                         onerror: (error) => {
                             setCaptureStatus(CAPTURE_STATUS.ERROR)
                             toast.error(<ClientErrorParser error={error} />, {
                                 duration: 5000,
                             })
+                            closeConnection()
                         },
                     },
                 )
                 closeConnectionFct.current = closeConnection
                 setCaptureStatus(CAPTURE_STATUS.CAPTURING)
-            }
-        },
-        [interf.name, selectedAnalysis, stopScan],
-    )
+                break
+            case CAPTURE_STATUS.CAPTURING:
+                setCaptureStatus(CAPTURE_STATUS.STOPPING)
+                await stopScan({})
+                if (closeConnectionFct.current) closeConnectionFct.current()
+                setCaptureStatus(CAPTURE_STATUS.IDLE)
+                break
+        }
+    }, [interf.name, selectedAnalysis, stopScan])
 
     const handleStartWorkflow = useCallback(async () => {
         if (!selectedAnalysis) return
@@ -141,6 +160,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                     toast.error(<ClientErrorParser error={error} />, {
                         duration: 5000,
                     })
+                    closeConnection()
                 },
             },
         )
@@ -158,6 +178,8 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         setSelectedAnalysis,
         startWorkflow: handleStartWorkflow,
         workflowEvents: wokflowEvents,
+        autoScroll,
+        setAutoScroll,
         analyzer: {
             devices,
             connections,

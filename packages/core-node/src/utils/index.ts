@@ -16,3 +16,5 @@ export {
     type WorkflowEventCallback,
     WorkflowEventFactory,
 } from './analysis-workflow/workflow-types'
+
+export * from './host-analyzer/index'
