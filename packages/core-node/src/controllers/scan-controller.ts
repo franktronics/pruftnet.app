@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { procedure, wsProcedure } from '../routes/root'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
 import PQueue from 'p-queue'
+import { HostAnalyser } from '../utils'
 
 export type PacketDataWithoutRaw = {
     id: number
@@ -52,6 +53,7 @@ export class ScanController {
                     store.settings.get('settings')?.protocolEntryFile || '',
                 )
                 const queue = new PQueue({ concurrency: 1 })
+                const hostAnalyser = new HostAnalyser(store.analysedHosts)
 
                 store.sniffer.set('sniffer', sniffer)
                 store.snifferQueue.set('queue', queue)
@@ -63,6 +65,7 @@ export class ScanController {
                         try {
                             await queue.add(async () => {
                                 store.packets.set(counter, packet)
+                                const hostUpdates = await hostAnalyser.addPacket(packet)
                                 returnCb({
                                     type: 'packet',
                                     id: counter,
@@ -72,6 +75,7 @@ export class ScanController {
                                         timestamp: packet.raw.timestamp - startTime,
                                         valid: packet.raw.valid,
                                     },
+                                    hostUpdates,
                                 })
                                 await this.AddDalay(this.PACKET_PROCESSING_DELAY)
                                 counter += 1
