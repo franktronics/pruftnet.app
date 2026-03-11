@@ -1,5 +1,5 @@
 import { NetworkGraph } from '@repo/ui/organisms'
-import { useMemo, useState, type ComponentPropsWithoutRef } from 'react'
+import { useEffect, useMemo, useState, type ComponentPropsWithoutRef } from 'react'
 import { useScanControlContext } from '../context/scan-control-context'
 import type { Edge, Node } from '@repo/utils'
 import { HostFilter } from './host-filter'
@@ -8,7 +8,19 @@ export type TabGraphProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabGraph = (props: TabGraphProps) => {
     const { ...rest } = props
     const { hostData } = useScanControlContext() //hostData: Map<string, HostBaseData>
-    const [filteredHost, setFilteredHost] = useState(hostData)
+    const [excludedHostMacs, setExcludedHostMacs] = useState<string[]>([])
+
+    useEffect(() => {
+        setExcludedHostMacs((currentExcludedMacs) =>
+            currentExcludedMacs.filter((mac) => hostData.has(mac)),
+        )
+    }, [hostData])
+
+    const filteredHost = useMemo(() => {
+        const excludedMacs = new Set(excludedHostMacs)
+
+        return new Map(Array.from(hostData.entries()).filter(([mac]) => !excludedMacs.has(mac)))
+    }, [hostData, excludedHostMacs])
 
     const [nodes, edges] = useMemo(() => {
         const nodes: Node[] = Array.from(filteredHost.values()).map((host) => ({
@@ -20,6 +32,10 @@ export const TabGraph = (props: TabGraphProps) => {
         const edges: Edge[] = []
         filteredHost.forEach((host) => {
             Object.entries(host.connectedTo).forEach(([targetMac, linkData]) => {
+                if (!filteredHost.has(targetMac)) {
+                    return
+                }
+
                 const edgeId = `${host.mac}-${targetMac}`
                 edges.push({
                     id: edgeId,
@@ -33,7 +49,7 @@ export const TabGraph = (props: TabGraphProps) => {
             })
         })
         return [nodes, edges]
-    }, [hostData])
+    }, [filteredHost])
 
     return (
         <section {...rest}>
@@ -48,8 +64,8 @@ export const TabGraph = (props: TabGraphProps) => {
             >
                 <HostFilter
                     hostData={hostData}
-                    filteredHost={filteredHost}
-                    onSetFilteredHost={setFilteredHost}
+                    excludedHostMacs={excludedHostMacs}
+                    onChangeExcludedHostMacs={setExcludedHostMacs}
                 />
             </NetworkGraph>
         </section>
