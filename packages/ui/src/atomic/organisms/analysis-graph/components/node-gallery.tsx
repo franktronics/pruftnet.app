@@ -1,6 +1,6 @@
 import { useReactFlow } from '@xyflow/react'
 import { Plus, Radar, Network, Database, Popsicle, Radio, RadioTower, Loader } from 'lucide-react'
-import { SheetContent, SheetDescription, SheetHeader, SheetTitle, Button } from '../../../atoms'
+import { DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, Button } from '../../../atoms'
 import { cn } from '@repo/utils'
 import { ReactNode } from 'react'
 
@@ -104,14 +104,14 @@ export const NodeGallery = (props: NodeGalleryProps) => {
     }
 
     return (
-        <SheetContent side="right">
-            <SheetHeader>
-                <SheetTitle>Node Gallery</SheetTitle>
-                <SheetDescription>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>Node Gallery</DrawerTitle>
+                <DrawerDescription>
                     Add nodes to your network analysis graph by clicking the Add button
-                </SheetDescription>
-            </SheetHeader>
-            <div className="flex flex-col gap-3 px-2">
+                </DrawerDescription>
+            </DrawerHeader>
+            <div className="no-scrollbar flex flex-col gap-3 overflow-y-auto px-4 pb-4">
                 {nodeTypes.map((node) => (
                     <div
                         key={node.type}
@@ -135,6 +135,6 @@ export const NodeGallery = (props: NodeGalleryProps) => {
                     </div>
                 ))}
             </div>
-        </SheetContent>
+        </DrawerContent>
     )
 }

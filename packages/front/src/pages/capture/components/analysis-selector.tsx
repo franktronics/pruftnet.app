@@ -85,7 +85,7 @@ export const AnalysisSelector = (props: AnalysisSelectorProps) => {
                     <X />
                 </Button>
             ) : null}
-            {captureStatus !== 'CAPTURING' ? (
+            {captureStatus === 'CAPTURING' ? (
                 <Button
                     onClick={() => startWorkflow()}
                     variant="secondary"

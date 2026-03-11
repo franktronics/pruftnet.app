@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react'
 import { Plus } from 'lucide-react'
 import { NodeGallery, GraphControls, checkConnection, GraphProvider } from './components'
-import { Sheet, SheetTrigger } from '../../atoms/sheet/sheet'
+import { Drawer, DrawerTrigger } from '../../atoms/drawer/drawer'
 import { Button } from '../../atoms/button/button'
 import { edgeTypes, nodeTypes } from './graph-config'
 
@@ -54,7 +54,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
 
     return (
         <div {...rest}>
-            <Sheet open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+            <Drawer open={isGalleryOpen} onOpenChange={setIsGalleryOpen} direction="right">
                 <GraphProvider>
                     <ReactFlow
                         nodes={nodes}
@@ -74,7 +74,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                         <GraphControls />
                         <Background gap={16} />
                         <Panel position="top-right" className="flex items-center gap-2">
-                            <SheetTrigger asChild>
+                            <DrawerTrigger asChild>
                                 <Button
                                     size="sm"
                                     variant="outline"
@@ -84,7 +84,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                                     <Plus className="size-4" />
                                     Add Node
                                 </Button>
-                            </SheetTrigger>
+                            </DrawerTrigger>
                             <Button
                                 size="sm"
                                 variant="default"
@@ -98,7 +98,7 @@ export const AnalysisGraph = (props: AnalysisGraphProps) => {
                     </ReactFlow>
                 </GraphProvider>
                 <NodeGallery onOpenChange={setIsGalleryOpen} />
-            </Sheet>
+            </Drawer>
         </div>
     )
 }
