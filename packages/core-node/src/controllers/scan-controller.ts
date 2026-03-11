@@ -1,14 +1,14 @@
 import {
     NetworkSniffer,
     type PacketData as CPP_PacketData,
-    type RawPacketData,
     type ParsedPacket,
+    type RawPacketData,
 } from '@repo/core-cpp'
 import { z } from 'zod'
-import { procedure, wsProcedure } from '../routes/root'
-import { ServerError } from '../../../utils/src/trpc/server/server-error'
 import PQueue from 'p-queue'
-import { HostAnalyser } from '../utils'
+import { ServerError } from '../../../utils/src/trpc/server/server-error'
+import { procedure, wsProcedure } from '../routes/root'
+import { HostAnalyser, type HostBaseData } from '../utils'
 
 export type PacketDataWithoutRaw = {
     id: number
@@ -25,7 +25,7 @@ export interface PacketData {
 export type SniffingEvent =
     | { type: 'start' }
     | { type: 'error'; message: string }
-    | ({ type: 'packet' } & PacketDataWithoutRaw)
+    | ({ type: 'packet'; hostUpdates: HostBaseData[] } & PacketDataWithoutRaw)
 
 export class ScanController {
     private PACKET_PROCESSING_DELAY = 0
@@ -55,6 +55,7 @@ export class ScanController {
                 const queue = new PQueue({ concurrency: 1 })
                 const hostAnalyser = new HostAnalyser(store.analysedHosts)
 
+                store.analysedHosts.clear()
                 store.sniffer.set('sniffer', sniffer)
                 store.snifferQueue.set('queue', queue)
 
@@ -85,6 +86,7 @@ export class ScanController {
                             store.sniffer.clear()
                             store.snifferQueue.clear()
                             store.packets.clear()
+                            store.analysedHosts.clear()
                             returnCb({
                                 type: 'error',
                                 message: err?.message || 'Error processing packet after sniffing',
@@ -97,6 +99,7 @@ export class ScanController {
                     store.sniffer.clear()
                     store.snifferQueue.clear()
                     store.packets.clear()
+                    store.analysedHosts.clear()
                     returnCb({ type: 'error', message: err?.message || 'Error starting sniffer' })
                 }
             })
@@ -121,6 +124,7 @@ export class ScanController {
             store.sniffer.clear()
             store.snifferQueue.clear()
             store.packets.clear()
+            store.analysedHosts.clear()
             return true
         })
     }

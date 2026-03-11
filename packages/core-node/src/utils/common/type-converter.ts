@@ -1,4 +1,18 @@
 export class TypeConverter {
+    static bytesToMacString(bytes: ArrayLike<number>): string {
+        if (bytes.length !== 6) {
+            throw new Error(`Invalid MAC address byte length: ${bytes.length}. Expected length: 6`)
+        }
+
+        return Array.from(bytes, (byte) => {
+            if (!Number.isInteger(byte) || byte < 0 || byte > 255) {
+                throw new Error(`Invalid MAC address byte: ${byte}`)
+            }
+
+            return byte.toString(16).padStart(2, '0').toUpperCase()
+        }).join(':')
+    }
+
     static macStringToBytes(mac: string): number[] {
         const parts = mac.split(':')
         if (parts.length !== 6) {
