@@ -12,7 +12,9 @@
     "dependencies": {
         "@tanstack/react-query": "^5.90.21",
         "@xyflow/react": "^12.10.0",
+        "@repo/core-cpp": "workspace:*",
         "clsx": "^2.1.1",
+        "oui-data": "^1.1.530",
         "tailwind-merge": "^3.4.0",
         "zod": "^4.3.6"
     },
@@ -27,8 +29,5 @@
         "@types/ws": "^8.18.1",
         "electron": "40.4.0",
         "typescript": "~5.9.3"
-    },
-    "imports": {
-        "#*": "./src/*"
     }
 }

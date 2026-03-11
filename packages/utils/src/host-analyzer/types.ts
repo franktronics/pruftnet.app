@@ -1,4 +1,5 @@
 export type HostBaseData = {
+    type: 'host' | 'router' | 'me'
     mac: string
     vendor: string
     ipv4?: string

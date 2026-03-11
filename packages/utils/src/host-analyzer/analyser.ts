@@ -1,8 +1,8 @@
-import ouiData from 'oui-data' with { type: 'json' }
 import type { PacketData } from '@repo/core-cpp'
-import type { StoreType } from '../../routes/root'
-import { TypeConverter } from '../common/type-converter'
+import type { StoreType } from '../../../core-node/src/routes/root'
 import type { HostBaseData } from './types'
+import { TypeConverter } from '../converter/type-converter'
+import { getVendorFromMac } from '../vendor-oui'
 
 export class HostAnalyser {
     constructor(private analysedHostsStore: StoreType['analysedHosts']) {}
@@ -45,8 +45,9 @@ export class HostAnalyser {
         }
 
         return {
+            type: 'host',
             mac,
-            vendor: this.getVendor(mac),
+            vendor: getVendorFromMac(mac) || 'Unknown Vendor',
             connectedTo: {},
         }
     }
@@ -73,13 +74,5 @@ export class HostAnalyser {
             ...currentLink,
             numPacketsReceived: currentLink.numPacketsReceived + 1,
         }
-    }
-
-    private getVendor(mac: string) {
-        const normalized = mac
-            .toUpperCase()
-            .replace(/[^A-F0-9]/g, '')
-            .slice(0, 6)
-        return (ouiData as Record<string, string>)[normalized] ?? 'Unknown Vendor'
     }
 }

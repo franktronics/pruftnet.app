@@ -1,14 +1,9 @@
 import { Popover, PopoverTrigger, PopoverContent, Button } from '../../atoms'
 import { Computer } from 'lucide-react'
 import { type NodeProps, type Node, Handle, Position } from '@xyflow/react'
-import { cond } from '@repo/utils'
+import { cond, type HostBaseData } from '@repo/utils'
 
-export type DeviceNodeData = Node<{
-    mac: string
-    vendor?: string
-    ipv4?: string
-    ipv6?: string
-}>
+export type DeviceNodeData = Node<HostBaseData>
 export type GraphDeviceNodeProps = {
     className?: string
 } & NodeProps<DeviceNodeData>

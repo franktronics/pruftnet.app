@@ -8,7 +8,7 @@ import { z } from 'zod'
 import PQueue from 'p-queue'
 import { ServerError } from '../../../utils/src/trpc/server/server-error'
 import { procedure, wsProcedure } from '../routes/root'
-import { HostAnalyser, type HostBaseData } from '../utils'
+import { HostAnalyser, type HostBaseData } from '@repo/utils'
 
 export type PacketDataWithoutRaw = {
     id: number
@@ -25,7 +25,7 @@ export interface PacketData {
 export type SniffingEvent =
     | { type: 'start' }
     | { type: 'error'; message: string }
-    | ({ type: 'packet'; hostUpdates: HostBaseData[] } & PacketDataWithoutRaw)
+    | { type: 'packet'; hostUpdates: HostBaseData[]; packet: PacketDataWithoutRaw }
 
 export class ScanController {
     private PACKET_PROCESSING_DELAY = 0
@@ -69,14 +69,16 @@ export class ScanController {
                                 const hostUpdates = await hostAnalyser.addPacket(packet)
                                 returnCb({
                                     type: 'packet',
-                                    id: counter,
-                                    parsed: packet.parsed,
-                                    raw: {
-                                        length: packet.raw.length,
-                                        timestamp: packet.raw.timestamp - startTime,
-                                        valid: packet.raw.valid,
-                                    },
                                     hostUpdates: hostUpdates,
+                                    packet: {
+                                        id: counter,
+                                        parsed: packet.parsed,
+                                        raw: {
+                                            length: packet.raw.length,
+                                            timestamp: packet.raw.timestamp - startTime,
+                                            valid: packet.raw.valid,
+                                        },
+                                    },
                                 })
                                 await this.AddDalay(this.PACKET_PROCESSING_DELAY)
                                 counter += 1

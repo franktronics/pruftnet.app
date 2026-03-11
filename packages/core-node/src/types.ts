@@ -18,5 +18,3 @@ export type { Analysis } from '../generated/prisma/client'
 export type { AnalysisSummary } from './repository/analysis-repository'
 
 export type { WorkflowEvent } from './utils'
-
-export type { VendorOuiData } from './controllers/vendor-oui-controller'

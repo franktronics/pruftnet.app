@@ -5,7 +5,6 @@ import { SettingsController } from '../controllers/settings-controller'
 import { ProtocolFileController } from '../controllers/protocol-file-controller'
 import { AnalysisController } from '../controllers/analysis-controller'
 import { LoggerController } from '../controllers/logger-controller'
-import { VendorOUIController } from '../controllers/vendor-oui-controller'
 
 const { createRouter } = trpcServer
 
@@ -38,9 +37,6 @@ export const appRouter = createRouter({
         create: LoggerController.make().create,
         list: LoggerController.make().list,
         clear: LoggerController.make().clear,
-    },
-    vendor: {
-        getOui: VendorOUIController.make().get,
     },
 })
 

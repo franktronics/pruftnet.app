@@ -25,7 +25,7 @@ export type NetworkGraphProps = {
 } & ComponentPropsWithoutRef<'div'>
 
 const nodeTypes = {
-    unknown: GraphDeviceNode,
+    device: GraphDeviceNode,
 }
 const edgeTypes = {
     exchange: GraphDeviceEdge,

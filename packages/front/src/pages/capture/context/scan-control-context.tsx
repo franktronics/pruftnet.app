@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { ComponentPropsWithoutRef, Dispatch, SetStateAction } from 'react'
 import { wsFetcher, fetcher } from '../../../config/client-trpc'
-import { ClientErrorParser, queryClient, useMutateFetcher } from '@repo/utils'
+import { ClientErrorParser, queryClient, useMutateFetcher, type HostBaseData } from '@repo/utils'
 import { toast } from '@repo/ui/atoms'
 import type {
     AnalysisSummary,
@@ -10,7 +10,6 @@ import type {
     SniffingEvent,
     WorkflowEvent,
 } from '@repo/core-node/types'
-import { useNetworkAnalyzer } from '../utils/network-analyzer'
 
 export const CAPTURE_STATUS = {
     IDLE: 'IDLE',
@@ -35,12 +34,7 @@ export type ScanControlContextType = {
     workflowEvents: WorkflowEvent[]
     autoScroll: boolean
     setAutoScroll: Dispatch<SetStateAction<boolean>>
-
-    analyzer: {
-        devices: ReturnType<typeof useNetworkAnalyzer>['devices']
-        connections: ReturnType<typeof useNetworkAnalyzer>['connections']
-        vendorOui: ReturnType<typeof useNetworkAnalyzer>['vendorOui']
-    }
+    hostData: Map<string, HostBaseData>
 }
 
 export type ContextNetinterface = {
@@ -69,7 +63,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [autoScroll, setAutoScroll] = useState<boolean>(true)
     const closeConnectionFct = useRef<() => void>(null)
     const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
-    const { registerPacket, devices, connections, vendorOui } = useNetworkAnalyzer()
+    const [hostData, setHostData] = useState<Map<string, HostBaseData>>(new Map())
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
@@ -114,8 +108,14 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                     {
                         onmessage: (data: SniffingEvent) => {
                             if (data.type === 'packet') {
-                                setPackets((old) => [...old, data])
-                                registerPacket(data)
+                                setPackets((old) => [...old, data.packet])
+                                setHostData((old) => {
+                                    const newMap = new Map(old)
+                                    data.hostUpdates.forEach((host) => {
+                                        newMap.set(host.mac, host)
+                                    })
+                                    return newMap
+                                })
                             } else if (data.type === 'error') {
                                 setCaptureStatus(CAPTURE_STATUS.ERROR)
                                 toast.error(data.message, {
@@ -180,11 +180,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
         workflowEvents: wokflowEvents,
         autoScroll,
         setAutoScroll,
-        analyzer: {
-            devices,
-            connections,
-            vendorOui,
-        },
+        hostData,
     }
 
     return (

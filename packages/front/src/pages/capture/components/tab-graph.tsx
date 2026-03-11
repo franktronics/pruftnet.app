@@ -6,34 +6,32 @@ import type { Edge, Node } from '@repo/utils'
 export type TabGraphProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabGraph = (props: TabGraphProps) => {
     const { ...rest } = props
-    const { analyzer } = useScanControlContext()
-    const { devices, connections, vendorOui } = analyzer
+    const { hostData } = useScanControlContext() //hostData: Map<string, HostBaseData>
 
     const [nodes, edges] = useMemo(() => {
-        const nodes: Node[] = devices.map((device) => ({
-            id: device.id,
-            type: device.type,
+        const nodes: Node[] = Array.from(hostData.values()).map((host) => ({
+            id: host.mac,
+            type: 'device',
             position: { x: 0, y: 0 },
-            data: {
-                mac: device.data.mac,
-                vendor: vendorOui[device.data.mac]?.vendor || undefined,
-                ipv4: device.data.ipv4,
-                ipv6: device.data.ipv6,
-            },
+            data: host,
         }))
-        const edges: Edge[] = connections.map((connection) => ({
-            id: connection.id,
-            type: 'exchange',
-            source: connection.source,
-            target: connection.target,
-            animated: true,
-            markerEnd: { type: 'arrowclosed' },
-            data: {
-                numPackets: connection.data.numPackets,
-            },
-        }))
+        const edges: Edge[] = []
+        hostData.forEach((host) => {
+            Object.entries(host.connectedTo).forEach(([targetMac, linkData]) => {
+                const edgeId = `${host.mac}-${targetMac}`
+                edges.push({
+                    id: edgeId,
+                    type: 'exchange',
+                    source: host.mac,
+                    target: targetMac,
+                    animated: true,
+                    markerEnd: { type: 'arrowclosed' },
+                    data: linkData,
+                })
+            })
+        })
         return [nodes, edges]
-    }, [devices, connections, vendorOui])
+    }, [hostData])
 
     return (
         <section {...rest}>
