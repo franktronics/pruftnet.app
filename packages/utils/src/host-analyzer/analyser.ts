@@ -4,11 +4,17 @@ import type { HostBaseData } from './types'
 import { TypeConverter } from '../converter/type-converter'
 import { getVendorFromMac } from '../vendor-oui'
 
+const ETHERNET_HEADER_LENGTH = 14
+const IPV4_ETHER_TYPE = 0x0800
+const IPV6_ETHER_TYPE = 0x86dd
+const IPV4_HEADER_MIN_LENGTH = 20
+const IPV6_HEADER_LENGTH = 40
+
 export class HostAnalyser {
     constructor(private analysedHostsStore: StoreType['analysedHosts']) {}
 
     public async addPacket(packet: PacketData): Promise<HostBaseData[]> {
-        if (!packet.raw.valid || packet.raw.data.length < 14) {
+        if (!packet.raw.valid || packet.raw.data.length < ETHERNET_HEADER_LENGTH) {
             return []
         }
 
@@ -23,6 +29,7 @@ export class HostAnalyser {
 
         this.incrementSentPackets(sourceHost, destinationMac)
         this.incrementReceivedPackets(destinationHost, sourceMac)
+        this.updateHostIpData(packet.raw.data, sourceHost, destinationHost)
 
         this.analysedHostsStore.set(sourceMac, sourceHost)
         this.analysedHostsStore.set(destinationMac, destinationHost)
@@ -35,6 +42,67 @@ export class HostAnalyser {
             destinationMac: TypeConverter.bytesToMacString(rawData.slice(0, 6)),
             sourceMac: TypeConverter.bytesToMacString(rawData.slice(6, 12)),
         }
+    }
+
+    private extractEtherType(rawData: Uint8Array): number {
+        return (rawData[12]! << 8) | rawData[13]!
+    }
+
+    private updateHostIpData(
+        rawData: Uint8Array,
+        sourceHost: HostBaseData,
+        destinationHost: HostBaseData,
+    ): void {
+        const etherType = this.extractEtherType(rawData)
+
+        if (etherType === IPV4_ETHER_TYPE) {
+            this.updateIpv4Data(rawData, sourceHost, destinationHost)
+            return
+        }
+
+        if (etherType === IPV6_ETHER_TYPE) {
+            this.updateIpv6Data(rawData, sourceHost, destinationHost)
+        }
+    }
+
+    private updateIpv4Data(
+        rawData: Uint8Array,
+        sourceHost: HostBaseData,
+        destinationHost: HostBaseData,
+    ): void {
+        if (rawData.length < ETHERNET_HEADER_LENGTH + IPV4_HEADER_MIN_LENGTH) {
+            return
+        }
+
+        const ipHeaderOffset = ETHERNET_HEADER_LENGTH
+        const version = rawData[ipHeaderOffset]! >> 4
+
+        if (version !== 4) {
+            return
+        }
+
+        sourceHost.ipv4 = TypeConverter.bytesToIpv4String(rawData.slice(26, 30))
+        destinationHost.ipv4 = TypeConverter.bytesToIpv4String(rawData.slice(30, 34))
+    }
+
+    private updateIpv6Data(
+        rawData: Uint8Array,
+        sourceHost: HostBaseData,
+        destinationHost: HostBaseData,
+    ): void {
+        if (rawData.length < ETHERNET_HEADER_LENGTH + IPV6_HEADER_LENGTH) {
+            return
+        }
+
+        const ipHeaderOffset = ETHERNET_HEADER_LENGTH
+        const version = rawData[ipHeaderOffset]! >> 4
+
+        if (version !== 6) {
+            return
+        }
+
+        sourceHost.ipv6 = TypeConverter.bytesToIpv6String(rawData.slice(22, 38))
+        destinationHost.ipv6 = TypeConverter.bytesToIpv6String(rawData.slice(38, 54))
     }
 
     private upsertHost(mac: string): HostBaseData {

@@ -1,4 +1,5 @@
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
+import { FormCheckbox } from './form-checkbox'
 import { FormInput } from './form-input'
 import { FormMultiHostSelect } from './form-multi-host-select'
 import { FormSubBtn } from './form-subscribe-btn'
@@ -10,6 +11,7 @@ const { useAppForm, withForm, withFieldGroup } = createFormHook({
     fieldContext,
     formContext,
     fieldComponents: {
+        FormCheckbox,
         FormInput,
         FormMultiHostSelect,
         FormTextarea,

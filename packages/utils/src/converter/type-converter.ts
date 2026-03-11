@@ -1,4 +1,42 @@
 export class TypeConverter {
+    static bytesToIpv4String(bytes: ArrayLike<number>): string {
+        if (bytes.length !== 4) {
+            throw new Error(`Invalid IPv4 byte length: ${bytes.length}. Expected length: 4`)
+        }
+
+        return Array.from(bytes, (byte) => {
+            if (!Number.isInteger(byte) || byte < 0 || byte > 255) {
+                throw new Error(`Invalid IPv4 byte: ${byte}`)
+            }
+
+            return byte.toString(10)
+        }).join('.')
+    }
+
+    static bytesToIpv6String(bytes: ArrayLike<number>): string {
+        if (bytes.length !== 16) {
+            throw new Error(`Invalid IPv6 byte length: ${bytes.length}. Expected length: 16`)
+        }
+
+        const normalizedBytes = Array.from(bytes, (byte) => {
+            if (!Number.isInteger(byte) || byte < 0 || byte > 255) {
+                throw new Error(`Invalid IPv6 byte: ${byte}`)
+            }
+
+            return byte
+        })
+
+        const groups = [] as string[]
+        for (let index = 0; index < normalizedBytes.length; index += 2) {
+            const leftByte = normalizedBytes[index]!
+            const rightByte = normalizedBytes[index + 1]!
+            const value = (leftByte << 8) | rightByte
+            groups.push(value.toString(16).padStart(4, '0'))
+        }
+
+        return groups.join(':')
+    }
+
     static bytesToMacString(bytes: ArrayLike<number>): string {
         if (bytes.length !== 6) {
             throw new Error(`Invalid MAC address byte length: ${bytes.length}. Expected length: 6`)
