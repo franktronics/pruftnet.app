@@ -9,6 +9,8 @@ const IPV4_ETHER_TYPE = 0x0800
 const IPV6_ETHER_TYPE = 0x86dd
 const IPV4_HEADER_MIN_LENGTH = 20
 const IPV6_HEADER_LENGTH = 40
+const ICMPV6_NEXT_HEADER = 58
+const ICMPV6_ROUTER_ADVERTISEMENT_TYPE = 134
 
 export class HostAnalyser {
     constructor(private analysedHostsStore: StoreType['analysedHosts']) {}
@@ -103,6 +105,29 @@ export class HostAnalyser {
 
         sourceHost.ipv6 = TypeConverter.bytesToIpv6String(rawData.slice(22, 38))
         destinationHost.ipv6 = TypeConverter.bytesToIpv6String(rawData.slice(38, 54))
+
+        this.updateRouterTypeFromIpv6Icmp(rawData, sourceHost)
+    }
+
+    private updateRouterTypeFromIpv6Icmp(rawData: Uint8Array, sourceHost: HostBaseData): void {
+        const nextHeaderOffset = ETHERNET_HEADER_LENGTH + 6
+        const icmpv6HeaderOffset = ETHERNET_HEADER_LENGTH + IPV6_HEADER_LENGTH
+
+        if (rawData.length <= icmpv6HeaderOffset) {
+            return
+        }
+
+        const nextHeader = rawData[nextHeaderOffset]
+
+        if (nextHeader !== ICMPV6_NEXT_HEADER) {
+            return
+        }
+
+        const icmpv6Type = rawData[icmpv6HeaderOffset]
+
+        if (icmpv6Type === ICMPV6_ROUTER_ADVERTISEMENT_TYPE) {
+            sourceHost.type = 'router'
+        }
     }
 
     private upsertHost(mac: string): HostBaseData {

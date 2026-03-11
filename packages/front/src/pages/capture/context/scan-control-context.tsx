@@ -115,7 +115,7 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
             },
         ],
     ])
-    const [hostData, setHostData] = useState<Map<string, HostBaseData>>(fakeHostDataMap)
+    const [hostData, setHostData] = useState<Map<string, HostBaseData>>(new Map())
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,
