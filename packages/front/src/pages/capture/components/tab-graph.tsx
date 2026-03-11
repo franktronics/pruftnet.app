@@ -1,22 +1,24 @@
 import { NetworkGraph } from '@repo/ui/organisms'
-import { useMemo, type ComponentPropsWithoutRef } from 'react'
+import { useMemo, useState, type ComponentPropsWithoutRef } from 'react'
 import { useScanControlContext } from '../context/scan-control-context'
 import type { Edge, Node } from '@repo/utils'
+import { HostFilter } from './host-filter'
 
 export type TabGraphProps = {} & ComponentPropsWithoutRef<'section'>
 export const TabGraph = (props: TabGraphProps) => {
     const { ...rest } = props
     const { hostData } = useScanControlContext() //hostData: Map<string, HostBaseData>
+    const [filteredHost, setFilteredHost] = useState(hostData)
 
     const [nodes, edges] = useMemo(() => {
-        const nodes: Node[] = Array.from(hostData.values()).map((host) => ({
+        const nodes: Node[] = Array.from(filteredHost.values()).map((host) => ({
             id: host.mac,
             type: 'device',
             position: { x: 0, y: 0 },
             data: host,
         }))
         const edges: Edge[] = []
-        hostData.forEach((host) => {
+        filteredHost.forEach((host) => {
             Object.entries(host.connectedTo).forEach(([targetMac, linkData]) => {
                 const edgeId = `${host.mac}-${targetMac}`
                 edges.push({
@@ -43,7 +45,13 @@ export const TabGraph = (props: TabGraphProps) => {
                 className="h-full w-full"
                 injectedNodes={nodes}
                 injectedEdges={edges}
-            ></NetworkGraph>
+            >
+                <HostFilter
+                    hostData={hostData}
+                    filteredHost={filteredHost}
+                    onSetFilteredHost={setFilteredHost}
+                />
+            </NetworkGraph>
         </section>
     )
 }

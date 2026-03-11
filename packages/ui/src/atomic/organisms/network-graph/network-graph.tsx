@@ -8,6 +8,7 @@ import {
     ConnectionMode,
     type Node,
     type Edge,
+    Panel,
 } from '@xyflow/react'
 import { GraphDeviceNode } from './graph-node'
 import { GraphDeviceEdge } from './graph-edge'
@@ -40,6 +41,7 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
         velocityDecay,
         injectedNodes = [],
         injectedEdges = [],
+        children,
         ...rest
     } = props
 
@@ -103,6 +105,7 @@ export const NetworkGraph = (props: NetworkGraphProps) => {
                 proOptions={{ hideAttribution: true }}
                 connectionMode={ConnectionMode.Loose}
             >
+                <Panel position="top-right">{children}</Panel>
                 <GraphControls />
                 <Background />
             </ReactFlow>
