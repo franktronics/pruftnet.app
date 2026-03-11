@@ -6,7 +6,7 @@ import type {
     WorkflowStepInput,
     WorkflowStepOutput,
 } from '../workflow-step'
-import { TypeConverter } from '../../common/type-converter'
+import { TypeConverter } from '@repo/utils'
 
 const arpScanSchema = z.object({
     delay: z.number().min(0).max(5000).optional(),
