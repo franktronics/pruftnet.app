@@ -63,7 +63,59 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
     const [autoScroll, setAutoScroll] = useState<boolean>(true)
     const closeConnectionFct = useRef<() => void>(null)
     const [wokflowEvents, setWorkflowEvents] = useState<WorkflowEvent[]>([])
-    const [hostData, setHostData] = useState<Map<string, HostBaseData>>(new Map())
+
+    const fakeHostDataMap = new Map<string, HostBaseData>([
+        [
+            '00:11:22:33:44:55',
+            {
+                type: 'router',
+                mac: '00:11:22:33:44:55',
+                ipv4: '192.168.2.1',
+                vendor: 'VendorA',
+                connectedTo: {
+                    '66:77:88:99:AA:BB': {
+                        numPacketsReceived: 10,
+                        numPacketsSend: 5,
+                    },
+                    'AA:BB:CC:DD:EE:FF': {
+                        numPacketsReceived: 2,
+                        numPacketsSend: 2,
+                    },
+                },
+            },
+        ],
+        [
+            '66:77:88:99:AA:BB',
+            {
+                type: 'me',
+                mac: '66:77:88:99:AA:BB',
+                ipv4: '192.168.2.1',
+                vendor: 'VendorB',
+                connectedTo: {
+                    '00:11:22:33:44:55': {
+                        numPacketsReceived: 5,
+                        numPacketsSend: 10,
+                    },
+                },
+            },
+        ],
+        [
+            'AA:BB:CC:DD:EE:FF',
+            {
+                type: 'host',
+                mac: 'AA:BB:CC:DD:EE:FF',
+                ipv6: 'fe80::1',
+                vendor: 'VendorC',
+                connectedTo: {
+                    '00:11:22:33:44:55': {
+                        numPacketsReceived: 2,
+                        numPacketsSend: 2,
+                    },
+                },
+            },
+        ],
+    ])
+    const [hostData, setHostData] = useState<Map<string, HostBaseData>>(fakeHostDataMap)
 
     const { mutateData: stopScan } = useMutateFetcher({
         procedure: fetcher.scan.stop,

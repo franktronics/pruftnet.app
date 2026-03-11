@@ -24,7 +24,7 @@ export const TabGraph = (props: TabGraphProps) => {
                     type: 'exchange',
                     source: host.mac,
                     target: targetMac,
-                    animated: true,
+                    animated: false,
                     markerEnd: { type: 'arrowclosed' },
                     data: linkData,
                 })
@@ -37,9 +37,9 @@ export const TabGraph = (props: TabGraphProps) => {
         <section {...rest}>
             <NetworkGraph
                 forceStrength={-30}
-                forceDistance={200}
-                alphaDecay={0.01}
-                velocityDecay={0.4}
+                forceDistance={250}
+                alphaDecay={0.05}
+                velocityDecay={0.8}
                 className="h-full w-full"
                 injectedNodes={nodes}
                 injectedEdges={edges}
