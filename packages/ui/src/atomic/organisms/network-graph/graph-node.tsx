@@ -112,7 +112,7 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
     }, {} as ChartConfig)
 
     return (
-        <Drawer direction="left">
+        <Drawer direction="right">
             <DrawerTrigger asChild>
                 <Button
                     variant="outline"
@@ -250,7 +250,7 @@ const TrafficRepartitionSection = (props: TrafficRepartitionSectionProps) => {
                 <div className="bg-card rounded-xl border p-4">
                     <ChartContainer
                         config={connectionsChartConfig}
-                        className="[&_.recharts-pie-label-text]:fill-foreground mx-auto min-h-60 w-full max-w-60"
+                        className="[&_.recharts-pie-label-text]:fill-foreground mx-auto min-h-60 w-full"
                     >
                         <PieChart accessibilityLayer>
                             <Pie
