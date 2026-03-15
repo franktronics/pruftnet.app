@@ -25,7 +25,7 @@ export interface PacketData {
 export type SniffingEvent =
     | { type: 'start' }
     | { type: 'error'; message: string }
-    | { type: 'packet'; hostUpdates: HostBaseData[]; packet: PacketDataWithoutRaw }
+    | { type: 'packet'; hostUpdates: Map<string, HostBaseData>; packet: PacketDataWithoutRaw }
 
 export class ScanController {
     private PACKET_PROCESSING_DELAY = 0
@@ -53,7 +53,9 @@ export class ScanController {
                     store.settings.get('settings')?.protocolEntryFile || '',
                 )
                 const queue = new PQueue({ concurrency: 1 })
-                const hostAnalyser = new HostAnalyser(store.analysedHosts)
+                const hostAnalyser = new HostAnalyser(store.analysedHosts, {
+                    interface: input.interface,
+                })
 
                 store.analysedHosts.clear()
                 store.sniffer.set('sniffer', sniffer)

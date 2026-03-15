@@ -1,8 +1,9 @@
 import type { PacketData } from '@repo/core-cpp'
 import type { StoreType } from '../../../core-node/src/routes/root'
-import type { HostBaseData } from './types'
 import { TypeConverter } from '../converter/type-converter'
 import { getVendorFromMac } from '../vendor-oui'
+import type { AnalyserCheck, HostBaseData } from './types'
+import { ValidityCheck } from './checks/validity-check'
 
 const ETHERNET_HEADER_LENGTH = 14
 const IPV4_ETHER_TYPE = 0x0800
@@ -12,7 +13,7 @@ const IPV6_HEADER_LENGTH = 40
 const ICMPV6_NEXT_HEADER = 58
 const ICMPV6_ROUTER_ADVERTISEMENT_TYPE = 134
 
-export class HostAnalyser {
+export class HostAnalyser0 {
     constructor(private analysedHostsStore: StoreType['analysedHosts']) {}
 
     public async addPacket(packet: PacketData): Promise<HostBaseData[]> {
@@ -167,5 +168,36 @@ export class HostAnalyser {
             ...currentLink,
             numPacketsReceived: currentLink.numPacketsReceived + 1,
         }
+    }
+}
+
+export class HostAnalyser {
+    private checksTable: AnalyserCheck[] = [new ValidityCheck()]
+
+    constructor(
+        private analysedHostsStore: StoreType['analysedHosts'],
+        private options: { interface: string },
+    ) {}
+
+    public async addPacket(packet: PacketData): Promise<Map<string, HostBaseData>> {
+        const updatedHosts: Map<string, HostBaseData> = new Map() // Map<MAC, HostBaseData>
+        for (const check of this.checksTable) {
+            const { action, updatedHost } = await check.check(
+                packet,
+                this.analysedHostsStore,
+                this.options,
+            )
+            if (updatedHost) {
+                //update the analysedHostsStore and patch the updatedHosts map with the new host data
+                for (const host of updatedHost) {
+                    this.analysedHostsStore.set(host.mac, host)
+                    updatedHosts.set(host.mac, host)
+                }
+            }
+            if (action === 'stop') {
+                break
+            }
+        }
+        return updatedHosts
     }
 }
