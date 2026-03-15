@@ -161,13 +161,9 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                         onmessage: (data: SniffingEvent) => {
                             if (data.type === 'packet') {
                                 setPackets((old) => [...old, data.packet])
-                                setHostData((old) => {
-                                    const newMap = new Map(old)
-                                    data.hostUpdates.forEach((host) => {
-                                        newMap.set(host.mac, host)
-                                    })
-                                    return newMap
-                                })
+                                if (data.hostUpdates.size > 0) {
+                                    setHostData((old) => new Map([...old, ...data.hostUpdates]))
+                                }
                             } else if (data.type === 'error') {
                                 setCaptureStatus(CAPTURE_STATUS.ERROR)
                                 toast.error(data.message, {

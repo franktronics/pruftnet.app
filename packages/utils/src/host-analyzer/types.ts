@@ -1,5 +1,5 @@
-import { PacketData } from '@repo/core-cpp'
-import { MapStoreType } from '../trpc/trpc-types'
+import type { PacketData } from '@repo/core-cpp'
+import type { MapStoreType } from '../trpc/trpc-types'
 
 export type HostBaseData = {
     type: 'host' | 'router' | 'me'
@@ -18,11 +18,31 @@ export type HostBaseData = {
     >
 }
 
-export type CheckFunction = (
-    packet: PacketData,
-    analysedHostsStore: MapStoreType<string, HostBaseData>,
-    options: { interface: string },
-) => Promise<{ action: 'stop' | 'continue'; updatedHost?: HostBaseData[] }>
-export interface AnalyserCheck {
-    check: CheckFunction
+export type HostAnalyserOptions = {
+    interface: string
+}
+
+export type AnalysisContext = {
+    rawData: Uint8Array
+    sourceMac?: string
+    destinationMac?: string
+    sourceHost?: HostBaseData
+    destinationHost?: HostBaseData
+    etherType?: number
+}
+
+export type CheckAction = 'stop' | 'continue'
+
+export type CheckResult = {
+    action: CheckAction
+    updatedHosts?: HostBaseData[]
+}
+
+export abstract class AnalyserCheck {
+    public abstract check(
+        packet: PacketData,
+        analysedHostsStore: MapStoreType<string, HostBaseData>,
+        options: HostAnalyserOptions,
+        context: AnalysisContext,
+    ): Promise<CheckResult>
 }
