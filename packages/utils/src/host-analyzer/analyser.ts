@@ -4,9 +4,17 @@ import { IpCheck } from './checks/ip-check'
 import { MacCheck } from './checks/mac-check'
 import { RouterAdvertisementCheck } from './checks/router-advertisement-check'
 import { ValidityCheck } from './checks/validity-check'
-import type { AnalysisContext, AnalyserCheck, HostAnalyserOptions, HostBaseData } from './types'
+import type {
+    AnalysisContext,
+    AnalyserCheck,
+    HostAnalyserOptions,
+    HostAnalyserRuntime,
+    HostBaseData,
+} from './types'
 
 export class HostAnalyser {
+    private currentMachineMac: string | null = null
+
     private checksTable: AnalyserCheck[] = [
         new ValidityCheck(),
         new MacCheck(),
@@ -18,6 +26,13 @@ export class HostAnalyser {
         private analysedHostsStore: MapStoreType<string, HostBaseData>,
         private options: HostAnalyserOptions,
     ) {}
+
+    private runtime: HostAnalyserRuntime = {
+        getCurrentMachineMac: () => this.currentMachineMac,
+        setCurrentMachineMac: (mac: string) => {
+            this.currentMachineMac = mac
+        },
+    }
 
     public async addPacket(packet: PacketData): Promise<Map<string, HostBaseData>> {
         const updatedHosts = new Map<string, HostBaseData>()
@@ -31,6 +46,7 @@ export class HostAnalyser {
                 this.analysedHostsStore,
                 this.options,
                 context,
+                this.runtime,
             )
 
             if (checkUpdatedHosts) {

@@ -2,7 +2,13 @@ import type { PacketData } from '@repo/core-cpp'
 import type { MapStoreType } from '../../trpc/trpc-types'
 import { TypeConverter } from '../../converter/type-converter'
 import { AnalyserCheck } from '../types'
-import type { AnalysisContext, CheckResult, HostAnalyserOptions, HostBaseData } from '../types'
+import type {
+    AnalysisContext,
+    CheckResult,
+    HostAnalyserOptions,
+    HostAnalyserRuntime,
+    HostBaseData,
+} from '../types'
 
 const ETHERNET_HEADER_LENGTH = 14
 const IPV4_ETHER_TYPE = 0x0800
@@ -16,6 +22,7 @@ export class IpCheck extends AnalyserCheck {
         _analysedHostsStore: MapStoreType<string, HostBaseData>,
         _options: HostAnalyserOptions,
         context: AnalysisContext,
+        _runtime: HostAnalyserRuntime,
     ): Promise<CheckResult> {
         if (!context.sourceHost || !context.destinationHost) {
             return { action: 'stop' }

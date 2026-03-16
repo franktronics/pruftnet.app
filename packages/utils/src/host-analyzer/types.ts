@@ -38,11 +38,17 @@ export type CheckResult = {
     updatedHosts?: HostBaseData[]
 }
 
+export type HostAnalyserRuntime = {
+    getCurrentMachineMac: () => string | null
+    setCurrentMachineMac: (mac: string) => void
+}
+
 export abstract class AnalyserCheck {
     public abstract check(
         packet: PacketData,
         analysedHostsStore: MapStoreType<string, HostBaseData>,
         options: HostAnalyserOptions,
         context: AnalysisContext,
+        runtime: HostAnalyserRuntime,
     ): Promise<CheckResult>
 }
