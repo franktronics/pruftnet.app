@@ -95,7 +95,11 @@ export function FormMultiHostSelect(props: FormMultiHostSelectProps) {
                         <ChevronDown className="text-muted-foreground size-4" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[22rem] p-2" align="start" {...rest}>
+                <PopoverContent
+                    className="max-h-[min(30rem,70vh)] w-88 overflow-auto p-2"
+                    align="start"
+                    {...rest}
+                >
                     <div className="space-y-1">
                         {Array.from(hosts.values()).length === 0 ? (
                             <div className="text-muted-foreground px-3 py-4 text-sm">
@@ -147,7 +151,10 @@ function formatHostOptionLabel(host: HostBaseData): string {
         ? `${host.vendor.slice(0, 10)}${host.vendor.length > 10 ? '...' : ''}`
         : 'Unknown vendor'
 
-    const address = host.ipv4 || host.ipv6
+    let address = host.ipv4 || host.ipv6
+    if (address && address.length > 15) {
+        address = address?.slice(0, 7) + '...' + address?.slice(-6)
+    }
 
     return address ? `${truncatedVendor} - ${address}` : truncatedVendor
 }

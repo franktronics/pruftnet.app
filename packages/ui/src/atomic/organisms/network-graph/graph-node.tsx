@@ -123,16 +123,16 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                     <DeviceIcon className={cn('size-6', { 'text-primary': data.type === 'me' })} />
                     <Handle type="source" position={Position.Top} className="hidden" />
                     <p className="absolute top-[calc(100%+0.5rem)] flex flex-col">
-                        <span>{primaryLabel}</span>
-                        <span>
-                            {primaryLabel
-                                ? primaryLabel.slice(0, 15) +
-                                  (primaryLabel.length > 15 ? '...' : '')
-                                : ''}
-                        </span>
-                        <span>
-                            {vendor ? vendor.slice(0, 10) + (vendor.length > 10 ? '...' : '') : ''}
-                        </span>
+                        {primaryLabel ? (
+                            <span>
+                                {primaryLabel.length > 15
+                                    ? primaryLabel.slice(0, 7) + '...' + primaryLabel.slice(-6)
+                                    : primaryLabel}
+                            </span>
+                        ) : null}
+                        {vendor ? (
+                            <span>{vendor.length > 12 ? vendor.slice(0, 13) + '...' : vendor}</span>
+                        ) : null}
                     </p>
                 </Button>
             </DrawerTrigger>
