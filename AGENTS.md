@@ -49,6 +49,17 @@
 - Routes defined in `@repo/core-node`, served via Express middleware and WebSocket server
 - Context uses `MapStore` for stateful data across procedures
 
+## Host Analyzer
+
+- Shared packet-to-host analysis lives in `packages/utils/src/host-analyzer/`
+- `HostAnalyser` is an orchestrator: for each captured packet, it runs an ordered list of checks and merges updated hosts into the `analysedHosts` store
+- Checks live in `packages/utils/src/host-analyzer/checks/` and inherit from the abstract `AnalyserCheck` base class
+- Checks share an `AnalysisContext` to reuse extracted packet data between steps instead of reparsing everything each time
+- Typical flow: packet validity check -> MAC extraction / host upsert -> protocol-specific enrichment (ARP, IPv4/IPv6, router advertisement, etc.)
+- A check can return `stop` to end analysis early when later checks are no longer useful for that packet
+- `MacCheck` is also responsible for identifying the current machine from `os.networkInterfaces()` using the selected capture interface, then marking that host as `type: 'me'`
+- `HostAnalyser.addPacket()` returns a `Map<mac, HostBaseData>` containing only the hosts changed by the current packet; this map is streamed by the backend and merged into frontend state during capture
+
 ## Workflow Architecture (Nodes → Steps → Injectors)
 
 ### Overview
