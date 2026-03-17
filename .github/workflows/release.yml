@@ -1,0 +1,203 @@
+name: Release
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+permissions:
+    contents: write
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    # Build the Electron desktop app
+    build-desktop:
+        name: Build Desktop (${{ matrix.arch }})
+        runs-on: ubuntu-24.04
+        strategy:
+            fail-fast: false
+            matrix:
+                arch: [x64, arm64]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Set up QEMU
+              if: matrix.arch == 'arm64'
+              uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+              with:
+                  platforms: arm64
+
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y cmake libpcap-dev
+
+            - name: Install arm64 cross-compilation dependencies
+              if: matrix.arch == 'arm64'
+              run: |
+                  sudo dpkg --add-architecture arm64
+                  sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/ubuntu.sources
+                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+              with:
+                  node-version: 22
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build C++ core (x64)
+              if: matrix.arch == 'x64'
+              run: pnpm build:core
+
+            - name: Build C++ core (arm64)
+              if: matrix.arch == 'arm64'
+              env:
+                  CC: aarch64-linux-gnu-gcc
+                  CXX: aarch64-linux-gnu-g++
+                  npm_config_arch: arm64
+              run: pnpm build:core
+
+            - name: Rebuild native modules for Electron
+              run: pnpm -F @repo/desktop run rebuild
+              env:
+                  npm_config_arch: ${{ matrix.arch }}
+
+            - name: Build Electron app
+              run: pnpm -F @repo/desktop run make -- --arch=${{ matrix.arch }}
+
+            - name: Upload .deb artifact
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: desktop-deb-${{ matrix.arch }}
+                  path: apps/desktop/out/make/deb/${{ matrix.arch }}/*.deb
+                  if-no-files-found: error
+
+            - name: Upload .zip artifact
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: desktop-zip-${{ matrix.arch }}
+                  path: apps/desktop/out/make/zip/linux/${{ matrix.arch }}/*.zip
+                  if-no-files-found: error
+
+    # Build the standalone server
+    build-server:
+        name: Build Server (${{ matrix.arch }})
+        runs-on: ubuntu-24.04
+        strategy:
+            fail-fast: false
+            matrix:
+                arch: [x64, arm64]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Set up QEMU
+              if: matrix.arch == 'arm64'
+              uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+              with:
+                  platforms: arm64
+
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y cmake libpcap-dev
+
+            - name: Install arm64 cross-compilation dependencies
+              if: matrix.arch == 'arm64'
+              run: |
+                  sudo dpkg --add-architecture arm64
+                  sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/ubuntu.sources
+                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+              with:
+                  node-version: 22
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build C++ core (x64)
+              if: matrix.arch == 'x64'
+              run: pnpm build:core
+
+            - name: Build C++ core (arm64)
+              if: matrix.arch == 'arm64'
+              env:
+                  CC: aarch64-linux-gnu-gcc
+                  CXX: aarch64-linux-gnu-g++
+                  npm_config_arch: arm64
+              run: pnpm build:core
+
+            - name: Rebuild better-sqlite3 for target architecture
+              if: matrix.arch == 'arm64'
+              env:
+                  CC: aarch64-linux-gnu-gcc
+                  CXX: aarch64-linux-gnu-g++
+                  npm_config_arch: arm64
+              run: |
+                  cd node_modules/better-sqlite3
+                  pnpm rebuild
+
+            - name: Build and package server
+              run: pnpm -F @repo/web run package
+              env:
+                  TARGET_ARCH: ${{ matrix.arch }}
+
+            - name: Upload server artifact
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: server-${{ matrix.arch }}
+                  path: apps/web/dist/*.tar.gz
+                  if-no-files-found: error
+
+    # Create GitHub Release and upload all artifacts
+    release:
+        name: Create Release
+        runs-on: ubuntu-24.04
+        needs: [build-desktop, build-server]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Download all artifacts
+              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+              with:
+                  path: artifacts
+
+            - name: List artifacts
+              run: find artifacts -type f
+
+            - name: Create Release
+              uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+              with:
+                  draft: false
+                  prerelease: ${{ contains(github.ref, '-') }}
+                  generate_release_notes: true
+                  files: |
+                      artifacts/desktop-deb-x64/*.deb
+                      artifacts/desktop-deb-arm64/*.deb
+                      artifacts/desktop-zip-x64/*.zip
+                      artifacts/desktop-zip-arm64/*.zip
+                      artifacts/server-x64/*.tar.gz
+                      artifacts/server-arm64/*.tar.gz
