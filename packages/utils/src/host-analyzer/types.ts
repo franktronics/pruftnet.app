@@ -4,7 +4,7 @@ import type { MapStoreType } from '../trpc/trpc-types'
 export type HostBaseData = {
     type: 'host' | 'router' | 'me'
     mac: string
-    vendor: string
+    vendor: string | null
     ipv4?: string
     ipv6?: string
 

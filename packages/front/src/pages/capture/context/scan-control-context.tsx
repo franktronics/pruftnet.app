@@ -161,8 +161,17 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                         onmessage: (data: SniffingEvent) => {
                             if (data.type === 'packet') {
                                 setPackets((old) => [...old, data.packet])
-                                if (data.hostUpdates.size > 0) {
-                                    setHostData((old) => new Map([...old, ...data.hostUpdates]))
+                                console.log(data.hostUpdates)
+                                if (data.hostUpdates.length > 0) {
+                                    setHostData(
+                                        (old) =>
+                                            new Map([
+                                                ...old,
+                                                ...data.hostUpdates.map(
+                                                    (ob) => [ob.mac, ob] as const,
+                                                ),
+                                            ]),
+                                    )
                                 }
                             } else if (data.type === 'error') {
                                 setCaptureStatus(CAPTURE_STATUS.ERROR)

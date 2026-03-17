@@ -64,7 +64,7 @@ export class MacCheck extends AnalyserCheck {
         return {
             type: 'host',
             mac,
-            vendor: getVendorFromMac(mac) || 'Unknown Vendor',
+            vendor: getVendorFromMac(mac),
             connectedTo: {},
         }
     }

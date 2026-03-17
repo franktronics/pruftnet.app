@@ -25,7 +25,7 @@ export interface PacketData {
 export type SniffingEvent =
     | { type: 'start' }
     | { type: 'error'; message: string }
-    | { type: 'packet'; hostUpdates: Map<string, HostBaseData>; packet: PacketDataWithoutRaw }
+    | { type: 'packet'; hostUpdates: HostBaseData[]; packet: PacketDataWithoutRaw }
 
 export class ScanController {
     private PACKET_PROCESSING_DELAY = 0
@@ -71,7 +71,7 @@ export class ScanController {
                                 const hostUpdates = await hostAnalyser.addPacket(packet)
                                 returnCb({
                                     type: 'packet',
-                                    hostUpdates: hostUpdates,
+                                    hostUpdates: Array.from(hostUpdates.values()),
                                     packet: {
                                         id: counter,
                                         parsed: packet.parsed,

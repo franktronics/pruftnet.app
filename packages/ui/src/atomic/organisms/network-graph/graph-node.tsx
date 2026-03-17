@@ -125,6 +125,12 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                     <p className="absolute top-[calc(100%+0.5rem)] flex flex-col">
                         <span>{primaryLabel}</span>
                         <span>
+                            {primaryLabel
+                                ? primaryLabel.slice(0, 15) +
+                                  (primaryLabel.length > 15 ? '...' : '')
+                                : ''}
+                        </span>
+                        <span>
                             {vendor ? vendor.slice(0, 10) + (vendor.length > 10 ? '...' : '') : ''}
                         </span>
                     </p>
