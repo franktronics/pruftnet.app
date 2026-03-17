@@ -120,7 +120,7 @@ export const GraphDeviceNode = (props: GraphDeviceNodeProps) => {
                     className={cn('relative size-12.5 rounded-full', className)}
                     tabIndex={0}
                 >
-                    <Computer className={cn('size-6', { 'text-primary': data.type === 'me' })} />
+                    <DeviceIcon className={cn('size-6', { 'text-primary': data.type === 'me' })} />
                     <Handle type="source" position={Position.Top} className="hidden" />
                     <p className="absolute top-[calc(100%+0.5rem)] flex flex-col">
                         <span>{primaryLabel}</span>

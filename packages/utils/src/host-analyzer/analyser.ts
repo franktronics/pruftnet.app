@@ -1,5 +1,6 @@
 import type { PacketData } from '@repo/core-cpp'
 import type { MapStoreType } from '../trpc/trpc-types'
+import { ArpCheck } from './checks/arp-check'
 import { IpCheck } from './checks/ip-check'
 import { MacCheck } from './checks/mac-check'
 import { RouterAdvertisementCheck } from './checks/router-advertisement-check'
@@ -18,6 +19,7 @@ export class HostAnalyser {
     private checksTable: AnalyserCheck[] = [
         new ValidityCheck(),
         new MacCheck(),
+        new ArpCheck(),
         new IpCheck(),
         new RouterAdvertisementCheck(),
     ]
