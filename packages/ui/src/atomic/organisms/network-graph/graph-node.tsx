@@ -217,7 +217,7 @@ const OverviewSection = (props: OverviewSectionProps) => {
 
 type HostDetailsSectionProps = {
     mac: string
-    vendor: string
+    vendor: string | null
     ipv4?: string
     ipv6?: string
     totalPackets: number

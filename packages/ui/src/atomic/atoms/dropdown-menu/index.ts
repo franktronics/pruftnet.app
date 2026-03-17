@@ -14,4 +14,4 @@ export {
     DropdownMenuSub,
     DropdownMenuSubTrigger,
     DropdownMenuSubContent,
-} from './dropdown-menu.tsx'
+} from './dropdown-menu'

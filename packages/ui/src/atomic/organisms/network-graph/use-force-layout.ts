@@ -59,7 +59,7 @@ export const useForceLayout = (
                 y: existingNode?.y ?? node.position.y,
                 fx: null,
                 fy: null,
-            }
+            } as ForceNode
         })
 
         nodesRef.current = forceNodes

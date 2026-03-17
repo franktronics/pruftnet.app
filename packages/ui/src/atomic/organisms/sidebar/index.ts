@@ -23,4 +23,4 @@ export {
     SidebarSeparator,
     SidebarTrigger,
     useSidebar,
-} from './sidebar.tsx'
+} from './sidebar'
