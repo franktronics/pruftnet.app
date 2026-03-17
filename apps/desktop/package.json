@@ -1,7 +1,7 @@
 {
     "name": "@repo/desktop",
     "productName": "Pruftnet",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Network analysis and packet capture application",
     "main": ".vite/build/main.js",
     "type": "module",
