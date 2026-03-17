@@ -23,11 +23,11 @@ jobs:
                 arch: [x64, arm64]
         steps:
             - name: Checkout
-              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
             - name: Set up QEMU
               if: matrix.arch == 'arm64'
-              uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+              uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
               with:
                   platforms: arm64
 
@@ -47,10 +47,10 @@ jobs:
                   sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
 
             - name: Setup pnpm
-              uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+              uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
             - name: Setup Node.js
-              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+              uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
               with:
                   node-version: 22
                   cache: pnpm
@@ -79,14 +79,14 @@ jobs:
               run: pnpm -F @repo/desktop run make -- --arch=${{ matrix.arch }}
 
             - name: Upload .deb artifact
-              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
                   name: desktop-deb-${{ matrix.arch }}
                   path: apps/desktop/out/make/deb/${{ matrix.arch }}/*.deb
                   if-no-files-found: error
 
             - name: Upload .zip artifact
-              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
                   name: desktop-zip-${{ matrix.arch }}
                   path: apps/desktop/out/make/zip/linux/${{ matrix.arch }}/*.zip
@@ -102,11 +102,11 @@ jobs:
                 arch: [x64, arm64]
         steps:
             - name: Checkout
-              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
             - name: Set up QEMU
               if: matrix.arch == 'arm64'
-              uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+              uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
               with:
                   platforms: arm64
 
@@ -126,10 +126,10 @@ jobs:
                   sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
 
             - name: Setup pnpm
-              uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+              uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
             - name: Setup Node.js
-              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+              uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
               with:
                   node-version: 22
                   cache: pnpm
@@ -165,7 +165,7 @@ jobs:
                   TARGET_ARCH: ${{ matrix.arch }}
 
             - name: Upload server artifact
-              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
                   name: server-${{ matrix.arch }}
                   path: apps/web/dist/*.tar.gz
@@ -178,10 +178,10 @@ jobs:
         needs: [build-desktop, build-server]
         steps:
             - name: Checkout
-              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
             - name: Download all artifacts
-              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
               with:
                   path: artifacts
 
@@ -189,7 +189,7 @@ jobs:
               run: find artifacts -type f
 
             - name: Create Release
-              uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+              uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
               with:
                   draft: false
                   prerelease: ${{ contains(github.ref, '-') }}
