@@ -1,1 +1,1 @@
-export { FileUploader, type FileUploadZoneProps } from './file-uploader.tsx'
+export { FileUploader, type FileUploadZoneProps } from './file-uploader'

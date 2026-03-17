@@ -6,4 +6,4 @@ export {
     BreadcrumbPage,
     BreadcrumbSeparator,
     BreadcrumbEllipsis,
-} from './breadcrumb.tsx'
+} from './breadcrumb'

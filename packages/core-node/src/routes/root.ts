@@ -1,9 +1,8 @@
-import { trpcServer, trpcContext, type MapStoreType } from '@repo/utils'
+import { trpcServer, trpcContext, type MapStoreType, HostBaseData } from '@repo/utils'
 import { NetworkSniffer, type PacketData } from '@repo/core-cpp'
 import { ProtocolFile } from '../services/protocol-file-loader-service'
 import { AppSettings } from '../models/settings-model'
 import PQueue from 'p-queue'
-import { HostBaseData } from '../utils'
 
 const { createWsProcedure, createProcedure } = trpcServer
 const { MapStore } = trpcContext

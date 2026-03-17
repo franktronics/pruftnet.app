@@ -61,6 +61,3 @@ build/Release
 .npm
 .eslintcache
 bin/
-
-# pnpm lockfile
-pnpm-lock.yaml

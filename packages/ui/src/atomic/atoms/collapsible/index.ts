@@ -1,1 +1,1 @@
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible.tsx'
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible'

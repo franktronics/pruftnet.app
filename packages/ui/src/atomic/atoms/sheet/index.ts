@@ -7,4 +7,4 @@ export {
     SheetFooter,
     SheetTitle,
     SheetDescription,
-} from './sheet.tsx'
+} from './sheet'

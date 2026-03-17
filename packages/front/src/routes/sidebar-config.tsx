@@ -7,21 +7,18 @@ export const SidebarConfig = {
             url: '/',
             icon: Radar,
             isActive: true,
-            items: [],
         },
         {
             title: 'Analysis',
             url: '/analysis',
             icon: Database,
             isActive: true,
-            items: [],
         },
         {
             title: 'Monitoring',
             url: '/monitoring',
             icon: Binoculars,
             isActive: true,
-            items: [],
         },
     ],
     navSecondary: [
