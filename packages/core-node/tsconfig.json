@@ -9,6 +9,7 @@
         "skipLibCheck": true,
         "strict": true,
         "target": "ES2022",
+        "jsx": "react-jsx",
         "module": "ESNext",
         "moduleResolution": "bundler",
         "types": ["node"]

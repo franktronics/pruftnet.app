@@ -60,5 +60,8 @@ jobs:
             - name: Build C++ core
               run: pnpm build:core
 
+            - name: Generate Prisma client
+              run: pnpm --filter @repo/core-node prisma generate
+
             - name: Type check
               run: pnpm -r exec tsc --noEmit
