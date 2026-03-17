@@ -4,7 +4,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 
-// Use CORE_NODE_ROOT if defined (Electron bundled context), otherwise resolve from import.meta.url
+const isPackaged = process.env.IS_PACKAGED === 'true'
+const userDataPath = process.env.USER_DATA_PATH
+
+// Use CORE_NODE_ROOT if defined (Electron dev context), otherwise resolve from import.meta.url
 const packageRoot =
     process.env.CORE_NODE_ROOT ||
     (() => {
@@ -13,15 +16,19 @@ const packageRoot =
         return path.resolve(__dirname, '..')
     })()
 
-// Load .env from the core-node package (skip if DATABASE_URL already set via Vite define)
+// Load .env from the core-node package (skip if DATABASE_URL already set via Vite define or main.ts)
 if (!process.env.DATABASE_URL) {
     dotenv.config({ path: path.join(packageRoot, '.env') })
 }
 
+// Database URL resolution:
+// 1. Production (packaged): use DATABASE_URL set by main.ts (userData/pruftnet.db)
+// 2. Development: use DATABASE_URL from env or default to ./dev.db
 const connectionString = process.env.DATABASE_URL || 'file:./dev.db'
 
-// Resolve relative SQLite paths from the core-node package root
-// If the path is already absolute (starts with /), use it directly
+// Resolve relative SQLite paths from the appropriate root
+// Production: DATABASE_URL is already absolute (set by main.ts)
+// Development: resolve relative to packageRoot
 const dbPath = connectionString.replace('file:', '')
 const resolvedUrl = connectionString.startsWith('file:')
     ? `file:${path.isAbsolute(dbPath) ? dbPath : path.resolve(packageRoot, dbPath)}`
@@ -30,4 +37,4 @@ const resolvedUrl = connectionString.startsWith('file:')
 const adapter = new PrismaBetterSqlite3({ url: resolvedUrl })
 const prisma = new PrismaClient({ adapter })
 
-export { prisma }
+export { prisma, isPackaged, userDataPath }

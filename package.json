@@ -6,6 +6,7 @@
         "dev:web": "pnpm -F @repo/web run dev",
         "dev:desktop": "node setup-dev.js && pnpm -F @repo/desktop run dev",
         "build:core": "pnpm -F @repo/core-cpp run build",
+        "build:desktop": "pnpm build:core && pnpm -F @repo/desktop run rebuild && pnpm -F @repo/desktop run make",
         "db:init": "pnpm --filter @repo/core-node prisma migrate dev && pnpm --filter @repo/core-node prisma generate",
         "db:studio": "pnpm --filter @repo/core-node prisma studio",
         "format": "prettier --write .",

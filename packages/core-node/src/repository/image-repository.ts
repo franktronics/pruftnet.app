@@ -3,16 +3,21 @@ import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { prisma } from '../db-config'
+import { prisma, isPackaged, userDataPath } from '../db-config'
 
 import type { Image } from '../../generated/prisma/client'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// Use CORE_NODE_ROOT if defined (Electron bundled context), otherwise resolve from __dirname
+// Use CORE_NODE_ROOT if defined (Electron dev context), otherwise resolve from __dirname
 const packageRoot = process.env.CORE_NODE_ROOT || resolve(__dirname, '..')
-const IMAGES_DIR = join(packageRoot, 'assets/images')
+
+// Images directory:
+// Production: userData/images (writable)
+// Development: assets/images (relative to packageRoot)
+const IMAGES_DIR =
+    isPackaged && userDataPath ? join(userDataPath, 'images') : join(packageRoot, 'assets/images')
 
 interface Base64ImageData {
     mimeType: string

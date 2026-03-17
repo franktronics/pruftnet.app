@@ -1,12 +1,23 @@
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { prisma } from '../db-config'
+import { prisma, isPackaged } from '../db-config'
 import { settingsSchema, type AppSettings } from '../models/settings-model'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const DEFAULT_PROTOCOL_ENTRY_FILE = resolve(__dirname, '../../assets/protocols/ethernet.json')
+// Resolve assets path based on environment
+// Production: use RESOURCES_PATH set by main.ts (process.resourcesPath)
+// Development: resolve relative to __dirname
+const getAssetsPath = () => {
+    const resourcesPath = process.env.RESOURCES_PATH
+    if (isPackaged && resourcesPath) {
+        return join(resourcesPath, 'assets')
+    }
+    return resolve(__dirname, '../../assets')
+}
+
+const DEFAULT_PROTOCOL_ENTRY_FILE = join(getAssetsPath(), 'protocols/ethernet.json')
 
 const DEFAULT_SETTINGS: AppSettings = {
     maxPacketBufferSize: 10000,
