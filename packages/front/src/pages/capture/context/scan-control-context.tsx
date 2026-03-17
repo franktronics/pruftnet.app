@@ -161,7 +161,6 @@ export const ScanControlProvider = (props: ScanControlProviderProps) => {
                         onmessage: (data: SniffingEvent) => {
                             if (data.type === 'packet') {
                                 setPackets((old) => [...old, data.packet])
-                                console.log(data.hostUpdates)
                                 if (data.hostUpdates.length > 0) {
                                     setHostData(
                                         (old) =>
