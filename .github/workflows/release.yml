@@ -82,7 +82,7 @@ jobs:
     # Build the Electron desktop app
     build-desktop:
         name: Build Desktop (${{ matrix.arch }})
-        runs-on: ubuntu-24.04
+        runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
         needs: [validate-changelog]
         strategy:
             fail-fast: false
@@ -92,26 +92,10 @@ jobs:
             - name: Checkout
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-            - name: Set up QEMU
-              if: matrix.arch == 'arm64'
-              uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-              with:
-                  platforms: arm64
-
             - name: Install system dependencies
               run: |
                   sudo apt-get update
                   sudo apt-get install -y cmake libpcap-dev
-
-            - name: Install arm64 cross-compilation dependencies
-              if: matrix.arch == 'arm64'
-              run: |
-                  sudo dpkg --add-architecture arm64
-                  sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/ubuntu.sources
-                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-                  sudo apt-get update
-                  sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
 
             - name: Setup pnpm
               uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
@@ -125,25 +109,17 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Build C++ core (x64)
-              if: matrix.arch == 'x64'
+            - name: Build C++ core
               run: pnpm build:core
 
-            - name: Build C++ core (arm64)
-              if: matrix.arch == 'arm64'
-              env:
-                  CC: aarch64-linux-gnu-gcc
-                  CXX: aarch64-linux-gnu-g++
-                  npm_config_arch: arm64
-              run: pnpm build:core
+            - name: Generate Prisma client
+              run: pnpm --filter @repo/core-node prisma generate
 
             - name: Rebuild native modules for Electron
               run: pnpm -F @repo/desktop run rebuild
-              env:
-                  npm_config_arch: ${{ matrix.arch }}
 
             - name: Build Electron app
-              run: pnpm -F @repo/desktop run make -- --arch=${{ matrix.arch }}
+              run: pnpm -F @repo/desktop run make
 
             - name: Upload .deb artifact
               uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -162,7 +138,7 @@ jobs:
     # Build the standalone server
     build-server:
         name: Build Server (${{ matrix.arch }})
-        runs-on: ubuntu-24.04
+        runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
         needs: [validate-changelog]
         strategy:
             fail-fast: false
@@ -172,26 +148,10 @@ jobs:
             - name: Checkout
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-            - name: Set up QEMU
-              if: matrix.arch == 'arm64'
-              uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-              with:
-                  platforms: arm64
-
             - name: Install system dependencies
               run: |
                   sudo apt-get update
                   sudo apt-get install -y cmake libpcap-dev
-
-            - name: Install arm64 cross-compilation dependencies
-              if: matrix.arch == 'arm64'
-              run: |
-                  sudo dpkg --add-architecture arm64
-                  sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/ubuntu.sources
-                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-                  echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-                  sudo apt-get update
-                  sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libpcap-dev:arm64
 
             - name: Setup pnpm
               uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
@@ -205,32 +165,14 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Build C++ core (x64)
-              if: matrix.arch == 'x64'
+            - name: Build C++ core
               run: pnpm build:core
 
-            - name: Build C++ core (arm64)
-              if: matrix.arch == 'arm64'
-              env:
-                  CC: aarch64-linux-gnu-gcc
-                  CXX: aarch64-linux-gnu-g++
-                  npm_config_arch: arm64
-              run: pnpm build:core
-
-            - name: Rebuild better-sqlite3 for target architecture
-              if: matrix.arch == 'arm64'
-              env:
-                  CC: aarch64-linux-gnu-gcc
-                  CXX: aarch64-linux-gnu-g++
-                  npm_config_arch: arm64
-              run: |
-                  cd node_modules/better-sqlite3
-                  pnpm rebuild
+            - name: Generate Prisma client
+              run: pnpm --filter @repo/core-node prisma generate
 
             - name: Build and package server
               run: pnpm -F @repo/web run package
-              env:
-                  TARGET_ARCH: ${{ matrix.arch }}
 
             - name: Upload server artifact
               uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
