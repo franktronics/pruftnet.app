@@ -36,6 +36,7 @@ const config: ForgeConfig = {
             // Native C++ addon
             '../../packages/core-cpp/build/Release/repo-core.node',
         ],
+        icon: 'assets/icons/icon',
     },
     rebuildConfig: {},
     makers: [
@@ -53,6 +54,14 @@ const config: ForgeConfig = {
             },
         }),
         // Uncomment if rpmbuild is installed: new MakerRpm({}),
+        {
+            name: '@electron-forge/maker-deb',
+            config: {
+                options: {
+                    icon: 'assets/icons/icon.png',
+                },
+            },
+        },
     ],
     hooks: {
         postPackage: async (_config, { outputPaths }) => {

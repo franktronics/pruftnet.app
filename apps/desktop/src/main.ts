@@ -49,6 +49,7 @@ const initApp = async () => {
             webPreferences: {
                 preload: path.join(__dirname, 'preload.js'),
             },
+            icon: path.join(__dirname, '../assets/icons/icon.png'),
         })
 
         // and load the index.html of the app.
