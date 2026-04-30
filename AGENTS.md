@@ -1,5 +1,15 @@
 # Agent Guidelines for Pruftnet
 
+## First-time Setup (after cloning)
+
+```sh
+pnpm install
+pnpm setup       # rebuilds better-sqlite3, generates Prisma client, applies migrations
+pnpm build:core  # compile C++ addon
+```
+
+Re-run `pnpm setup` any time you switch Node versions — `better-sqlite3` is a native addon that must be compiled both for Node (web) and for Electron (desktop). `pnpm setup` builds and caches both binaries. `pnpm dev:web` and `pnpm dev:desktop` automatically restore the correct binary before starting.
+
 ## Build/Test Commands
 
 - `pnpm test` - Run all C++ tests (Catch2 framework)

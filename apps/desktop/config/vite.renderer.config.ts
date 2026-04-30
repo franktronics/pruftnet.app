@@ -26,6 +26,10 @@ export default defineConfig({
             'use-sync-external-store/shim/with-selector',
             'use-sync-external-store/shim/with-selector.js',
             'scheduler',
+            // recharts uses es-toolkit/compat/* which are CJS files; pre-bundling
+            // converts them to ESM so Vite does not serve raw CJS to the browser.
+            'recharts',
+            'es-toolkit/compat',
         ],
         entries: ['src/renderer.tsx'],
         force: false,
