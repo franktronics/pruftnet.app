@@ -11,17 +11,18 @@
     },
     "scripts": {
         "lint": "eslint .",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
         "@repo/core-node": "workspace:*",
         "@repo/ui": "workspace:*",
         "@repo/utils": "workspace:*",
-        "@tailwindcss/vite": "^4.1.18",
-        "@tanstack/react-form": "^1.28.0",
-        "@tanstack/react-router": "^1.159.5",
-        "@tanstack/react-virtual": "^3.13.18",
-        "lucide-react": "^0.563.0",
+        "@tailwindcss/vite": "^4.2.4",
+        "@tanstack/react-form": "^1.29.1",
+        "@tanstack/react-router": "^1.168.26",
+        "@tanstack/react-virtual": "^3.13.24",
+        "lucide-react": "^1.14.0",
         "tw-animate-css": "^1.4.0"
     },
     "peerDependencies": {
@@ -31,11 +32,11 @@
     "devDependencies": {
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
-        "@vitejs/plugin-react-swc": "^4.2.3",
-        "globals": "^17.3.0",
-        "tailwindcss": "^4.1.18",
-        "typescript": "~5.9.3",
-        "typescript-eslint": "^8.55.0",
-        "vite": "^7.3.1"
+        "@vitejs/plugin-react-swc": "^4.3.0",
+        "globals": "^17.5.0",
+        "tailwindcss": "^4.2.4",
+        "typescript": "~6.0.3",
+        "typescript-eslint": "^8.59.1",
+        "vite": "^8.0.10"
     }
 }

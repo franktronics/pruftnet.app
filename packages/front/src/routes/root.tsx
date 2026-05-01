@@ -5,6 +5,7 @@ import {
     createRouter,
     useRouterState,
 } from '@tanstack/react-router'
+import type { RouterHistory } from '@tanstack/history'
 import Error404 from '../pages/error/404'
 import Capture from '../pages/capture'
 import { DashboardLayout, type BreadcrumbItem } from '@repo/ui/templates'
@@ -76,6 +77,10 @@ const routeTree = rootRoute.addChildren([
     monitoringRouteTree,
 ])
 export const router = createRouter({ routeTree } as any)
+
+export function createAppRouter(history?: RouterHistory) {
+    return createRouter({ routeTree, history } as any)
+}
 
 declare module '@tanstack/react-router' {
     interface Register {

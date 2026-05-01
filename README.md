@@ -16,7 +16,8 @@ Network analysis tool with visual workflow builder, packet injection, and real-t
 - **Frontend**: React, React Flow, Tailwind CSS, Shadcn UI
 - **Backend**: Node.js, Express, Custom tRPC-like implementation
 - **Native**: C++ with N-API bindings for packet capture/injection
-- **Build**: pnpm workspaces, Turborepo, CMake
+- **Database**: SQLite via Drizzle ORM (migrations applied automatically at startup)
+- **Build**: pnpm workspaces, CMake, Electron Forge
 
 ## Prerequisites
 
@@ -25,55 +26,105 @@ Network analysis tool with visual workflow builder, packet injection, and real-t
 - CMake (for C++ build)
 - sudo privileges (for packet capture: `CAP_NET_RAW`, `CAP_NET_ADMIN`)
 
-## Installation
+---
+
+## Getting Started
+
+### 1. Install dependencies
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Build C++ native modules
-pnpm build:core
-
-# Initialize database
-pnpm db:init
 ```
+
+### 2. Build the C++ native addon
+
+```bash
+pnpm build:core
+```
+
+This compiles the C++ packet capture/injection code into a `.node` binary loaded at runtime.
+
+### 3. Grant capture capabilities (Linux/macOS)
+
+```bash
+# macOS / Linux — grant CAP_NET_RAW and CAP_NET_ADMIN to node
+pnpm setup:caps
+```
+
+> On macOS you may need to run the app with `sudo` instead.
+
+---
 
 ## Development
 
+### Web mode
+
+Starts an Express server + Vite HMR. Open `http://localhost:5173` in your browser.
+
 ```bash
-# Start web app
 pnpm dev:web
-
-# Start desktop app
-pnpm dev:desktop
-
-# Run tests
-pnpm test
-
-# Format code
-pnpm format
 ```
+
+### Desktop mode
+
+Starts the Electron app with hot reload.
+
+```bash
+pnpm dev:desktop
+```
+
+> Both modes apply DB migrations automatically on first run — no manual DB setup needed.
+
+---
+
+## Build for Production
+
+### Desktop app (Electron)
+
+Produces a `.app` (macOS), `.exe` (Windows), or `.deb` (Linux) in `apps/desktop/out/`.
+
+```bash
+pnpm build:desktop
+```
+
+### Web server
+
+Bundles the Express server + frontend for deployment.
+
+```bash
+pnpm build:server
+```
+
+---
+
+## Other Commands
+
+```bash
+pnpm typecheck       # TypeScript type checking across all packages
+pnpm format          # Format all files with Prettier
+pnpm test            # Run C++ tests (Catch2)
+pnpm db:generate     # Generate Drizzle SQL migrations after schema changes
+pnpm db:migrate      # Apply migrations to dev.db manually (auto-runs on startup)
+```
+
+---
 
 ## Project Structure
 
 ```
-packages/
-├── core-cpp      # C++ network analysis with N-API bindings
-├── core-node     # Node.js backend with tRPC controllers
-├── front         # React frontend (shared by web/desktop)
-├── ui            # Shadcn UI components
-└── utils         # Shared utilities + tRPC implementation
-
 apps/
-├── web           # Express server + static frontend
-└── desktop       # Electron wrapper
+├── web/          Express server — serves frontend, loads C++ addon
+└── desktop/      Electron wrapper — main process loads C++ addon
+
+packages/
+├── core-cpp/     Native C++ module (packet capture, parsing, injection)
+├── core-node/    Node.js backend (tRPC procedures, Drizzle ORM, SQLite)
+├── front/        React frontend (shared by web and desktop)
+├── ui/           Shadcn UI component library
+└── utils/        Shared types, host analyzer, custom tRPC implementation
 ```
 
-## Documentation
-
-- [Network Protocols](https://www.rfc-editor.org/)
-- [React](https://react.dev/reference/react)
-- [TypeScript](https://www.typescriptlang.org/docs/)
+---
 
 ## License
 

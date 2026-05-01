@@ -4,6 +4,8 @@ import { createExpressMiddleware, createElectronHandler } from './server/server'
 import { createWsRouter, createWsProcedure } from './server/ws-procedure'
 import { createWSSMiddleware, createIPCStreamHandler } from './server/ws-server'
 
+export { ServerError }
+
 export const trpcServer = {
     ServerError,
 

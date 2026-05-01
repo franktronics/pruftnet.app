@@ -10,13 +10,13 @@
         "type-check": "tsc --noEmit"
     },
     "dependencies": {
-        "@tanstack/react-query": "^5.90.21",
-        "@xyflow/react": "^12.10.0",
         "@repo/core-cpp": "workspace:*",
+        "@tanstack/react-query": "^5.100.6",
+        "@xyflow/react": "^12.10.2",
         "clsx": "^2.1.1",
-        "oui-data": "^1.1.530",
-        "tailwind-merge": "^3.4.0",
-        "zod": "^4.3.6"
+        "oui-data": "^1.1.571",
+        "tailwind-merge": "^3.5.0",
+        "zod": "^4.4.1"
     },
     "peerDependencies": {
         "react": "^19.2.0",
@@ -27,7 +27,7 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "@types/ws": "^8.18.1",
-        "electron": "40.4.0",
-        "typescript": "~5.9.3"
+        "electron": "41.3.0",
+        "typescript": "~6.0.3"
     }
 }

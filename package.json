@@ -1,40 +1,42 @@
 {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "name": "pruftnet",
     "private": false,
     "type": "module",
     "scripts": {
-        "dev:web": "pnpm -F @repo/web run dev",
-        "dev:desktop": "node setup-dev.js && pnpm -F @repo/desktop run dev",
+        "dev:web": "node setup.js --web && pnpm -F @repo/web run dev",
+        "dev:desktop": "node setup.js --desktop && node setup-dev.js && pnpm -F @repo/desktop run dev",
         "build:core": "pnpm -F @repo/core-cpp run build",
         "build:desktop": "pnpm build:core && pnpm -F @repo/desktop run rebuild && pnpm -F @repo/desktop run make",
         "build:server": "pnpm build:core && pnpm -F @repo/web run package",
-        "db:init": "pnpm --filter @repo/core-node prisma migrate dev && pnpm --filter @repo/core-node prisma generate",
-        "db:studio": "pnpm --filter @repo/core-node prisma studio",
+        "setup": "node setup.js",
+        "db:generate": "pnpm --filter @repo/core-node run db:generate",
+        "db:migrate": "pnpm --filter @repo/core-node run db:migrate",
         "format": "prettier --write .",
         "clean": "node clean.js",
         "setup:caps": "sudo setcap cap_net_raw,cap_net_admin=eip $(which node)",
-        "check:caps": "getcap $(which node)"
+        "check:caps": "getcap $(which node)",
+        "typecheck": "pnpm -r --filter=@repo/core-node --filter=@repo/front --filter=@repo/ui --filter=@repo/utils run type-check"
     },
     "packageManager": "pnpm@10.28.1",
     "engines": {
         "node": ">=18"
     },
     "devDependencies": {
-        "@types/node": "^24.10.1",
-        "prettier": "^3.6.2",
-        "prettier-plugin-tailwindcss": "^0.7.1"
+        "@types/node": "^25.6.0",
+        "prettier": "^3.8.3",
+        "prettier-plugin-tailwindcss": "^0.8.0"
     },
     "pnpm": {
         "onlyBuiltDependencies": [
-            "@prisma/engines",
             "@swc/core",
             "@tailwindcss/oxide",
             "better-sqlite3",
             "electron",
             "electron-winstaller",
             "esbuild",
-            "prisma",
+            "fs-xattr",
+            "macos-alias",
             "unrs-resolver"
         ],
         "overrides": {

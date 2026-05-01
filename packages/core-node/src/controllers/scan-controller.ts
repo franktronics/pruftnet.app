@@ -6,7 +6,7 @@ import {
 } from '@repo/core-cpp'
 import { z } from 'zod'
 import PQueue from 'p-queue'
-import { ServerError } from '../../../utils/src/trpc/server/server-error'
+import { ServerError } from '@repo/utils'
 import { procedure, wsProcedure } from '../routes/root'
 import { HostAnalyser, type HostBaseData } from '@repo/utils'
 

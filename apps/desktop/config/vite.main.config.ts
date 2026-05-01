@@ -43,8 +43,6 @@ export default defineConfig(({ mode }) => {
                     ...nodeBuiltins,
                     /\.node$/,
                     'better-sqlite3',
-                    'bindings',
-                    'file-uri-to-path',
                 ],
             },
             minify: false,

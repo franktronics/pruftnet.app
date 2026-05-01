@@ -10,21 +10,21 @@
     },
     "scripts": {
         "type-check": "tsc --noEmit",
-        "prisma": "prisma"
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate"
     },
     "dependencies": {
-        "@prisma/adapter-better-sqlite3": "^7.4.0",
-        "@prisma/client": "^7.4.0",
         "@repo/core-cpp": "workspace:*",
         "@repo/utils": "workspace:*",
-        "dotenv": "^17.2.4",
-        "p-queue": "^9.1.0",
-        "zod": "^4.3.6"
+        "better-sqlite3": "^12.9.0",
+        "drizzle-orm": "^0.45.2",
+        "p-queue": "^9.2.0",
+        "zod": "^4.4.1"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.13",
-        "@types/node": "^25.2.3",
-        "prisma": "^7.4.0",
-        "typescript": "~5.9.3"
+        "@types/node": "^25.6.0",
+        "drizzle-kit": "^0.31.10",
+        "typescript": "~6.0.3"
     }
 }
