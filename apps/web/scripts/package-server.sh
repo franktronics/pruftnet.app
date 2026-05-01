@@ -65,11 +65,6 @@ echo "Copying assets..."
 mkdir -p "$PACKAGE_DIR/assets/protocols"
 cp -r "${ROOT_DIR}/packages/core-node/assets/protocols/"* "$PACKAGE_DIR/assets/protocols/"
 
-echo "Copying Prisma files..."
-mkdir -p "$PACKAGE_DIR/prisma/migrations"
-cp -r "${ROOT_DIR}/packages/core-node/prisma/migrations/"* "$PACKAGE_DIR/prisma/migrations/"
-cp "${ROOT_DIR}/packages/core-node/prisma/schema.prisma" "$PACKAGE_DIR/prisma/"
-
 echo "Creating start script..."
 cat > "$PACKAGE_DIR/start.sh" << 'EOF'
 #!/bin/bash
@@ -78,7 +73,7 @@ cat > "$PACKAGE_DIR/start.sh" << 'EOF'
 # Environment variables:
 #   PORT          - Server port (default: 3010)
 #   HOST          - Server host (default: 127.0.0.1)
-#   DATABASE_URL  - SQLite database path (default: file:./data/pruftnet.db)
+#   DATABASE_URL  - SQLite database URL (default: file:./data/pruftnet.db)
 #
 # Requirements:
 #   - Node.js >= 20
@@ -99,7 +94,7 @@ export HOST="${HOST:-127.0.0.1}"
 mkdir -p data
 
 # Set database path if not already set
-export DATABASE_URL="${DATABASE_URL:-file:./data/pruftnet.db}"
+export DATABASE_URL="${DATABASE_URL:-file:$SCRIPT_DIR/data/pruftnet.db}"
 
 # Set paths for native modules and assets
 export RESOURCES_PATH="$SCRIPT_DIR"
@@ -122,7 +117,7 @@ cat > "$PACKAGE_DIR/README.md" << EOF
 ## Requirements
 
 - Node.js >= 20
-- libpcap-dev (for packet capture)
+- libpcap (for packet capture)
 
 ## Quick Start
 
@@ -134,15 +129,17 @@ chmod +x start.sh
 ./start.sh
 \`\`\`
 
+The server will be available at http://127.0.0.1:3010
+
 ## Configuration
 
 Environment variables:
 
-| Variable      | Default              | Description                    |
-|---------------|----------------------|--------------------------------|
-| PORT          | 3010                 | HTTP server port               |
-| HOST          | 127.0.0.1            | Server bind address            |
-| DATABASE_URL  | file:./data/pruftnet.db | SQLite database path       |
+| Variable      | Default                          | Description              |
+|---------------|----------------------------------|--------------------------|
+| PORT          | 3010                             | HTTP server port         |
+| HOST          | 127.0.0.1                        | Server bind address      |
+| DATABASE_URL  | file:./data/pruftnet.db          | SQLite database URL      |
 
 ## Packet Capture
 
@@ -154,13 +151,17 @@ sudo setcap cap_net_raw,cap_net_admin=eip \$(which node)
 
 ## Files
 
-- \`server.js\` - Main server bundle
-- \`client/\` - Web frontend (static files)
-- \`assets/\` - Protocol definitions
-- \`prisma/\` - Database schema and migrations
-- \`data/\` - Created at runtime, contains database
-- \`repo-core.node\` - Native C++ addon for packet capture
+- \`server.js\`          - Main server bundle
+- \`client/\`            - Web frontend (static files)
+- \`assets/\`            - Protocol definitions
+- \`data/\`              - Created at runtime, contains the SQLite database
+- \`repo-core.node\`     - Native C++ addon for packet capture
 - \`better_sqlite3.node\` - Native SQLite addon
+
+## Database
+
+The database is created automatically on first start using Drizzle ORM.
+No manual migration step is required.
 EOF
 
 echo "Creating tarball..."

@@ -82,5 +82,10 @@ if(MSVC
             /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
+# /bigobj required on MSVC: packet_parser.cpp exceeds default COFF section limit
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()
+
 # Define NAPI_VERSION
 add_definitions(-DNAPI_VERSION=8)
