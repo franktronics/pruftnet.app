@@ -6,23 +6,9 @@ import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
-import path from 'node:path'
+import { execSync } from 'node:child_process'
 import fs from 'node:fs'
-
-// Helper to copy directory recursively
-function copyDirSync(src: string, dest: string) {
-    fs.mkdirSync(dest, { recursive: true })
-    const entries = fs.readdirSync(src, { withFileTypes: true })
-    for (const entry of entries) {
-        const srcPath = path.join(src, entry.name)
-        const destPath = path.join(dest, entry.name)
-        if (entry.isDirectory()) {
-            copyDirSync(srcPath, destPath)
-        } else {
-            fs.copyFileSync(srcPath, destPath)
-        }
-    }
-}
+import path from 'node:path'
 
 const config: ForgeConfig = {
     packagerConfig: {
@@ -34,10 +20,26 @@ const config: ForgeConfig = {
         extraResource: [
             // Native C++ addon
             '../../packages/core-cpp/build/Release/repo-core.node',
+            // Protocol JSON files — included before signing so signature stays valid
+            '../../packages/core-node/assets/protocols',
         ],
         icon: 'assets/icons/icon',
     },
     rebuildConfig: {},
+    hooks: {
+        // FusesPlugin modifies the binary after electron-forge's initial signing,
+        // invalidating the signature on macOS. Re-sign with ad-hoc after packaging.
+        postPackage: async (_config, { outputPaths, platform }) => {
+            if (platform !== 'darwin') return
+            for (const outputPath of outputPaths) {
+                const appBundle = fs.readdirSync(outputPath).find((f) => f.endsWith('.app'))
+                if (!appBundle) continue
+                const appPath = path.join(outputPath, appBundle)
+                console.log(`\n✓ Re-signing ${appBundle} (ad-hoc)...`)
+                execSync(`codesign --sign - --force --deep "${appPath}"`, { stdio: 'inherit' })
+            }
+        },
+    },
     makers: [
         // Windows — produces a Squirrel installer (.exe)
         new MakerSquirrel({
@@ -57,37 +59,11 @@ const config: ForgeConfig = {
             },
         }),
     ],
-    hooks: {
-        postPackage: async (_config, { outputPaths }) => {
-            for (const outputPath of outputPaths) {
-                // On macOS the resources live inside the .app bundle.
-                // On Windows/Linux they live directly under outputPath/resources.
-                const appBundle = fs.readdirSync(outputPath).find((f) => f.endsWith('.app'))
-                const resourcesDir = appBundle
-                    ? path.join(outputPath, appBundle, 'Contents', 'Resources')
-                    : path.join(outputPath, 'resources')
-
-                // Copy protocol JSON files
-                const protocolsSrc = path.resolve(
-                    __dirname,
-                    '../../packages/core-node/assets/protocols',
-                )
-                const protocolsDest = path.join(resourcesDir, 'assets', 'protocols')
-                if (fs.existsSync(protocolsSrc)) {
-                    copyDirSync(protocolsSrc, protocolsDest)
-                    console.log(`✓ Copied protocols to ${protocolsDest}`)
-                }
-            }
-        },
-    },
     plugins: [
         new AutoUnpackNativesPlugin({}),
         new VitePlugin({
-            // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
-            // If you are familiar with Vite configuration, it will look really familiar.
             build: [
                 {
-                    // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
                     entry: 'src/main.ts',
                     config: 'config/vite.main.config.ts',
                     target: 'main',
@@ -105,8 +81,6 @@ const config: ForgeConfig = {
                 },
             ],
         }),
-        // Fuses are used to enable/disable various Electron functionality
-        // at package time, before code signing the application
         new FusesPlugin({
             version: FuseVersion.V1,
             [FuseV1Options.RunAsNode]: false,

@@ -8,15 +8,16 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const getAssetsPath = () => {
+const getProtocolsPath = () => {
     const resourcesPath = process.env.RESOURCES_PATH
     if (isPackaged && resourcesPath) {
-        return join(resourcesPath, 'assets')
+        // extraResource copies protocols/ directly into Contents/Resources/
+        return join(resourcesPath, 'protocols')
     }
-    return resolve(__dirname, '../../assets')
+    return resolve(__dirname, '../../assets/protocols')
 }
 
-const DEFAULT_PROTOCOL_ENTRY_FILE = join(getAssetsPath(), 'protocols/ethernet.json')
+const DEFAULT_PROTOCOL_ENTRY_FILE = join(getProtocolsPath(), 'ethernet.json')
 
 const DEFAULT_SETTINGS: AppSettings = {
     maxPacketBufferSize: 10000,
