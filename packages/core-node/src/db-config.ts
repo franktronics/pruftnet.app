@@ -1,11 +1,13 @@
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
-import { PrismaClient } from '../generated/prisma/client'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
+import * as schema from './db/schema'
 
-const isPackaged = process.env.IS_PACKAGED === 'true'
-const userDataPath = process.env.USER_DATA_PATH
+export const isPackaged = process.env.IS_PACKAGED === 'true'
+export const userDataPath = process.env.USER_DATA_PATH
 
 // Use CORE_NODE_ROOT if defined (Electron dev context), otherwise resolve from import.meta.url
 const packageRoot =
@@ -16,25 +18,38 @@ const packageRoot =
         return path.resolve(__dirname, '..')
     })()
 
-// Load .env from the core-node package (skip if DATABASE_URL already set via Vite define or main.ts)
+// Load .env from the core-node package (skip if DATABASE_URL already set)
 if (!process.env.DATABASE_URL) {
     dotenv.config({ path: path.join(packageRoot, '.env') })
 }
 
-// Database URL resolution:
-// 1. Production (packaged): use DATABASE_URL set by main.ts (userData/pruftnet.db)
-// 2. Development: use DATABASE_URL from env or default to ./dev.db
-const connectionString = process.env.DATABASE_URL || 'file:./dev.db'
+// Database path resolution:
+// 1. Production (packaged): userData/pruftnet.db (set by main.ts)
+// 2. Development: packageRoot/dev.db
+const rawUrl = process.env.DATABASE_URL || `file:${path.join(packageRoot, 'dev.db')}`
+const dbPath = rawUrl.replace(/^file:/, '')
+const resolvedDbPath = path.isAbsolute(dbPath) ? dbPath : path.resolve(packageRoot, dbPath)
 
-// Resolve relative SQLite paths from the appropriate root
-// Production: DATABASE_URL is already absolute (set by main.ts)
-// Development: resolve relative to packageRoot
-const dbPath = connectionString.replace('file:', '')
-const resolvedUrl = connectionString.startsWith('file:')
-    ? `file:${path.isAbsolute(dbPath) ? dbPath : path.resolve(packageRoot, dbPath)}`
-    : connectionString
+// Migrations folder:
+// In bundled builds the migrator reads SQL files from disk.
+// CORE_NODE_ROOT is set in dev; in prod RESOURCES_PATH is set by main.ts.
+// Fallback: resolve relative to this file (works in dev with ts-node/vite).
+const getMigrationsFolder = (): string => {
+    const resourcesPath = process.env.RESOURCES_PATH
+    if (isPackaged && resourcesPath) {
+        return path.join(resourcesPath, 'db', 'migrations')
+    }
+    // Dev: relative to packageRoot
+    return path.join(packageRoot, 'src', 'db', 'migrations')
+}
 
-const adapter = new PrismaBetterSqlite3({ url: resolvedUrl })
-const prisma = new PrismaClient({ adapter })
+const sqlite = new Database(resolvedDbPath)
+// Enable WAL for better concurrency
+sqlite.pragma('journal_mode = WAL')
 
-export { prisma, isPackaged, userDataPath }
+export const db = drizzle(sqlite, { schema })
+
+// Apply pending migrations on startup
+migrate(db, { migrationsFolder: getMigrationsFolder() })
+
+console.log(`✓ DB ready: ${resolvedDbPath}`)

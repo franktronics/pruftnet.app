@@ -30,6 +30,23 @@
 
 > Tests require `sudo` because packet capture needs `CAP_NET_RAW` / `CAP_NET_ADMIN`.
 
+### Build
+
+| Command | Description |
+|---------|-------------|
+| `pnpm build:desktop` | Build + package the Electron desktop app (produces `.app` / `.exe` / `.deb`) |
+| `pnpm build:server` | Build the web server for production deployment |
+
+### Database (Drizzle)
+
+| Command | Description |
+|---------|-------------|
+| `pnpm db:generate` | Generate SQL migration files from schema changes |
+| `pnpm db:migrate` | Apply pending migrations to dev.db |
+
+> Migrations are applied **automatically at runtime** on startup (dev and prod). No manual step needed for normal dev workflow.
+> Run `pnpm db:generate` after modifying `packages/core-node/src/db/schema.ts`.
+
 ### C++ build internals
 
 `pnpm build:core` runs cmake-js which:

@@ -1,14 +1,13 @@
+import { eq } from 'drizzle-orm'
+import { db, isPackaged } from '../db-config'
+import { settings, type Settings } from '../db/schema'
+import { settingsSchema, type AppSettings } from '../models/settings-model'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { prisma, isPackaged } from '../db-config'
-import { settingsSchema, type AppSettings } from '../models/settings-model'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// Resolve assets path based on environment
-// Production: use RESOURCES_PATH set by main.ts (process.resourcesPath)
-// Development: resolve relative to __dirname
 const getAssetsPath = () => {
     const resourcesPath = process.env.RESOURCES_PATH
     if (isPackaged && resourcesPath) {
@@ -27,6 +26,16 @@ const DEFAULT_SETTINGS: AppSettings = {
     connectionLineType: 'straight',
 }
 
+function toAppSettings(row: Settings): AppSettings {
+    return settingsSchema.parse({
+        maxPacketBufferSize: row.maxPacketBufferSize,
+        promiscuousMode: row.promiscuousMode,
+        protocolEntryFile: row.protocolEntryFile,
+        defaultCaptureTab: row.defaultCaptureTab,
+        connectionLineType: row.connectionLineType,
+    })
+}
+
 export class SettingsRepository {
     private defaultSettings: AppSettings
 
@@ -34,65 +43,71 @@ export class SettingsRepository {
         this.defaultSettings = settingsSchema.parse(DEFAULT_SETTINGS)
     }
 
-    private toAppSettings(settings: any): AppSettings {
-        return settingsSchema.parse({
-            maxPacketBufferSize: settings.maxPacketBufferSize,
-            promiscuousMode: settings.promiscuousMode,
-            protocolEntryFile: settings.protocolEntryFile,
-            defaultCaptureTab: settings.defaultCaptureTab,
-            connectionLineType: settings.connectionLineType,
-        })
-    }
-
     public async getSettings(): Promise<AppSettings> {
-        const existing = await prisma.settings.findFirst()
-        if (existing) return this.toAppSettings(existing)
+        const existing = db.select().from(settings).limit(1).all()[0]
+        if (existing) return toAppSettings(existing)
 
-        const created = await prisma.settings.create({ data: this.defaultSettings })
-        return this.toAppSettings(created)
+        const now = new Date().toISOString()
+        const [created] = db
+            .insert(settings)
+            .values({ ...this.defaultSettings, createdAt: now, updatedAt: now })
+            .returning()
+            .all()
+        return toAppSettings(created!)
     }
 
     public async updateSettings(partialSettings: Partial<AppSettings>): Promise<AppSettings> {
-        const current = await prisma.settings.findFirst()
+        const current = db.select().from(settings).limit(1).all()[0]
+        const now = new Date().toISOString()
 
-        let id: number | undefined
+        let id: number
         let base: AppSettings
 
         if (!current) {
-            const created = await prisma.settings.create({ data: this.defaultSettings })
-            id = created.id
+            const [created] = db
+                .insert(settings)
+                .values({ ...this.defaultSettings, createdAt: now, updatedAt: now })
+                .returning()
+                .all()
+            id = created!.id
             base = this.defaultSettings
         } else {
             id = current.id
-            base = this.toAppSettings(current)
+            base = toAppSettings(current)
         }
 
-        const merged = settingsSchema.parse({
-            ...base,
-            ...partialSettings,
-        })
+        const merged = settingsSchema.parse({ ...base, ...partialSettings })
 
-        const updated = await prisma.settings.update({
-            where: { id: id as number },
-            data: merged,
-        })
+        const [updated] = db
+            .update(settings)
+            .set({ ...merged, updatedAt: now })
+            .where(eq(settings.id, id))
+            .returning()
+            .all()
 
-        return this.toAppSettings(updated)
+        return toAppSettings(updated!)
     }
 
     public async resetSettings(): Promise<AppSettings> {
-        const existing = await prisma.settings.findFirst()
+        const existing = db.select().from(settings).limit(1).all()[0]
+        const now = new Date().toISOString()
 
         if (!existing) {
-            const created = await prisma.settings.create({ data: this.defaultSettings })
-            return this.toAppSettings(created)
+            const [created] = db
+                .insert(settings)
+                .values({ ...this.defaultSettings, createdAt: now, updatedAt: now })
+                .returning()
+                .all()
+            return toAppSettings(created!)
         }
 
-        const updated = await prisma.settings.update({
-            where: { id: existing.id },
-            data: this.defaultSettings,
-        })
+        const [updated] = db
+            .update(settings)
+            .set({ ...this.defaultSettings, updatedAt: now })
+            .where(eq(settings.id, existing.id))
+            .returning()
+            .all()
 
-        return this.toAppSettings(updated)
+        return toAppSettings(updated!)
     }
 }

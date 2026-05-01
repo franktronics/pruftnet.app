@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { procedure } from '../routes/root'
 import { trpcServer } from '@repo/utils'
 import { AnalysisRepository, type AnalysisSummary } from '../repository/analysis-repository'
-import { Prisma, type Analysis } from '../../generated/prisma/client'
+import type { Analysis } from '../db/schema'
 import { LoggerService } from '../services/logger-service'
 import { ImageService } from '../services/image-service'
 
@@ -40,7 +40,7 @@ export class AnalysisController {
                     return await this.analysisRepo.createAnalysis(
                         input.title,
                         input.description,
-                        input.data as Prisma.InputJsonValue,
+                        input.data,
                     )
                 } catch (error) {
                     new ServerError({
@@ -68,13 +68,13 @@ export class AnalysisController {
                 const updateData: {
                     title?: string
                     description?: string
-                    data?: Prisma.InputJsonValue
+                    data?: unknown
                     imageId?: number | null
                 } = {}
 
                 if (input.title !== undefined) updateData.title = input.title
                 if (input.description !== undefined) updateData.description = input.description
-                if (input.data !== undefined) updateData.data = input.data as Prisma.InputJsonValue
+                if (input.data !== undefined) updateData.data = input.data
 
                 // Handle image update
                 if (input.image !== undefined) {
@@ -119,13 +119,6 @@ export class AnalysisController {
                 try {
                     return await this.analysisRepo.updateAnalysis(input.analysisId, updateData)
                 } catch (error: any) {
-                    if (error?.code === 'P2025') {
-                        new ServerError({
-                            message: 'Analysis not found',
-                            whatToDo: 'Please verify the analysis ID.',
-                            code: 404,
-                        }).throw()
-                    }
                     new ServerError({
                         message: 'Failed to update analysis',
                         whatToDo: 'Please retry later or contact support.',
@@ -234,13 +227,6 @@ export class AnalysisController {
 
                     return { success: true }
                 } catch (error: any) {
-                    if (error?.code === 'P2025') {
-                        new ServerError({
-                            message: 'Analysis not found',
-                            whatToDo: 'Please verify the analysis ID.',
-                            code: 404,
-                        }).throw()
-                    }
                     new ServerError({
                         message: 'Failed to delete analysis',
                         whatToDo: 'Please retry later or contact support.',

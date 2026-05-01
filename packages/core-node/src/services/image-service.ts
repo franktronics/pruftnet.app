@@ -1,4 +1,4 @@
-import type { Image } from '../../generated/prisma/client'
+import type { Image } from '../db/schema'
 
 import { ImageRepository } from '../repository/image-repository'
 

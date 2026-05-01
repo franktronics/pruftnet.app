@@ -60,7 +60,12 @@ const config: ForgeConfig = {
     hooks: {
         postPackage: async (_config, { outputPaths }) => {
             for (const outputPath of outputPaths) {
-                const resourcesDir = path.join(outputPath, 'resources')
+                // On macOS the resources live inside the .app bundle.
+                // On Windows/Linux they live directly under outputPath/resources.
+                const appBundle = fs.readdirSync(outputPath).find((f) => f.endsWith('.app'))
+                const resourcesDir = appBundle
+                    ? path.join(outputPath, appBundle, 'Contents', 'Resources')
+                    : path.join(outputPath, 'resources')
 
                 // Copy protocol JSON files
                 const protocolsSrc = path.resolve(
@@ -73,27 +78,15 @@ const config: ForgeConfig = {
                     console.log(`✓ Copied protocols to ${protocolsDest}`)
                 }
 
-                // Copy Prisma migrations
+                // Copy Drizzle migrations
                 const migrationsSrc = path.resolve(
                     __dirname,
-                    '../../packages/core-node/prisma/migrations',
+                    '../../packages/core-node/src/db/migrations',
                 )
-                const migrationsDest = path.join(resourcesDir, 'prisma', 'migrations')
+                const migrationsDest = path.join(resourcesDir, 'db', 'migrations')
                 if (fs.existsSync(migrationsSrc)) {
                     copyDirSync(migrationsSrc, migrationsDest)
                     console.log(`✓ Copied migrations to ${migrationsDest}`)
-                }
-
-                // Copy Prisma schema
-                const schemaSrc = path.resolve(
-                    __dirname,
-                    '../../packages/core-node/prisma/schema.prisma',
-                )
-                const schemaDest = path.join(resourcesDir, 'prisma', 'schema.prisma')
-                if (fs.existsSync(schemaSrc)) {
-                    fs.mkdirSync(path.dirname(schemaDest), { recursive: true })
-                    fs.copyFileSync(schemaSrc, schemaDest)
-                    console.log(`✓ Copied schema.prisma to ${path.dirname(schemaDest)}`)
                 }
             }
         },

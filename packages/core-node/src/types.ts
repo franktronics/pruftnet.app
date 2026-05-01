@@ -14,7 +14,7 @@ export type { AppSettings } from './models/settings-model'
 
 export type { ProtocolFile, ProtocolFileData } from './services/protocol-file-loader-service'
 
-export type { Analysis } from '../generated/prisma/client'
+export type { Analysis } from './db/schema'
 export type { AnalysisSummary } from './repository/analysis-repository'
 
 export type { WorkflowEvent } from './utils'
