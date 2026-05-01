@@ -44,7 +44,6 @@
         "@repo/core-node": "workspace:*",
         "@repo/front": "workspace:*",
         "@repo/utils": "workspace:*",
-        "better-sqlite3": "^12.9.0",
         "electron-squirrel-startup": "^1.0.1",
         "react": "^19.2.5",
         "react-dom": "^19.2.5"

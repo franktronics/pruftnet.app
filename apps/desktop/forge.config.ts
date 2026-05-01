@@ -77,17 +77,6 @@ const config: ForgeConfig = {
                     copyDirSync(protocolsSrc, protocolsDest)
                     console.log(`✓ Copied protocols to ${protocolsDest}`)
                 }
-
-                // Copy Drizzle migrations
-                const migrationsSrc = path.resolve(
-                    __dirname,
-                    '../../packages/core-node/src/db/migrations',
-                )
-                const migrationsDest = path.join(resourcesDir, 'db', 'migrations')
-                if (fs.existsSync(migrationsSrc)) {
-                    copyDirSync(migrationsSrc, migrationsDest)
-                    console.log(`✓ Copied migrations to ${migrationsDest}`)
-                }
             }
         },
     },
