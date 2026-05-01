@@ -2,7 +2,6 @@ import type { ForgeConfig } from '@electron-forge/shared-types'
 import { MakerSquirrel } from '@electron-forge/maker-squirrel'
 import { MakerZIP } from '@electron-forge/maker-zip'
 import { MakerDeb } from '@electron-forge/maker-deb'
-import { MakerRpm } from '@electron-forge/maker-rpm'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives'
@@ -40,10 +39,13 @@ const config: ForgeConfig = {
     },
     rebuildConfig: {},
     makers: [
+        // Windows — produces a Squirrel installer (.exe)
         new MakerSquirrel({
             name: 'Pruftnet',
         }),
+        // macOS + Linux — produces a .zip
         new MakerZIP({}, ['darwin', 'linux']),
+        // Linux — produces a .deb package
         new MakerDeb({
             options: {
                 name: 'pruftnet',
@@ -51,17 +53,9 @@ const config: ForgeConfig = {
                 bin: 'pruftnet',
                 maintainer: 'Franktronics',
                 homepage: 'https://pruftnet.app',
+                icon: 'assets/icons/icon.png',
             },
         }),
-        // Uncomment if rpmbuild is installed: new MakerRpm({}),
-        {
-            name: '@electron-forge/maker-deb',
-            config: {
-                options: {
-                    icon: 'assets/icons/icon.png',
-                },
-            },
-        },
     ],
     hooks: {
         postPackage: async (_config, { outputPaths }) => {

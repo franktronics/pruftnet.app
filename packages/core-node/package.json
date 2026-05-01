@@ -13,18 +13,18 @@
         "prisma": "prisma"
     },
     "dependencies": {
-        "@prisma/adapter-better-sqlite3": "^7.4.0",
-        "@prisma/client": "^7.4.0",
+        "@prisma/adapter-better-sqlite3": "^7.8.0",
+        "@prisma/client": "^7.8.0",
         "@repo/core-cpp": "workspace:*",
         "@repo/utils": "workspace:*",
-        "dotenv": "^17.2.4",
-        "p-queue": "^9.1.0",
-        "zod": "^4.3.6"
+        "dotenv": "^17.4.2",
+        "p-queue": "^9.2.0",
+        "zod": "^4.4.1"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.13",
-        "@types/node": "^25.2.3",
-        "prisma": "^7.4.0",
-        "typescript": "~5.9.3"
+        "@types/node": "^25.6.0",
+        "prisma": "^7.8.0",
+        "typescript": "~6.0.3"
     }
 }

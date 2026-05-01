@@ -25,24 +25,18 @@ jobs:
 
             - name: Validate changelog structure
               run: |
-                  # Check CHANGELOG.md exists
                   if [ ! -f CHANGELOG.md ]; then
                     echo "::error::CHANGELOG.md not found"
                     exit 1
                   fi
-
-                  # Check header exists
                   if ! grep -q "^# Changelog" CHANGELOG.md; then
                     echo "::error::CHANGELOG.md must start with '# Changelog'"
                     exit 1
                   fi
-
-                  # Check at least one version entry exists
                   if ! grep -qE "^## \[[0-9]+\.[0-9]+\.[0-9]+\]" CHANGELOG.md; then
                     echo "::error::CHANGELOG.md must contain at least one version entry (## [x.y.z])"
                     exit 1
                   fi
-
                   echo "Changelog structure is valid"
 
             - name: Extract release notes
@@ -50,25 +44,17 @@ jobs:
               run: |
                   VERSION="${{ github.ref_name }}"
                   VERSION_NO_V="${VERSION#v}"
-
                   echo "Looking for version: ${VERSION_NO_V}"
-
-                  # Check if version exists in changelog
                   if ! grep -q "^## \[${VERSION_NO_V}\]" CHANGELOG.md; then
                     echo "::error::No changelog entry found for version ${VERSION_NO_V}"
                     echo "::error::Please add a '## [${VERSION_NO_V}]' section to CHANGELOG.md before releasing"
                     exit 1
                   fi
-
-                  # Extract the section for this version (from ## [version] to next ## [ or end of file)
                   awk "/^## \[${VERSION_NO_V}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md > release_notes.md
-
-                  # Check if release notes are not empty
                   if [ ! -s release_notes.md ]; then
                     echo "::error::Changelog entry for version ${VERSION_NO_V} is empty"
                     exit 1
                   fi
-
                   echo "Release notes extracted successfully:"
                   cat release_notes.md
 
@@ -79,23 +65,73 @@ jobs:
                   path: release_notes.md
                   if-no-files-found: error
 
-    # Build the Electron desktop app
+    # Build desktop app — one job per OS/arch combination
     build-desktop:
-        name: Build Desktop (${{ matrix.arch }})
-        runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+        name: Desktop (${{ matrix.name }})
         needs: [validate-changelog]
+        runs-on: ${{ matrix.runner }}
         strategy:
             fail-fast: false
             matrix:
-                arch: [x64, arm64]
+                include:
+                    # ── Linux ──────────────────────────────────────────────
+                    - name: linux-x64
+                      runner: ubuntu-24.04
+                      os: linux
+                      arch: x64
+                      system_deps: sudo apt-get update && sudo apt-get install -y cmake libpcap-dev
+
+                    - name: linux-arm64
+                      runner: ubuntu-24.04-arm
+                      os: linux
+                      arch: arm64
+                      system_deps: sudo apt-get update && sudo apt-get install -y cmake libpcap-dev
+
+                    # ── macOS ──────────────────────────────────────────────
+                    # macos-13  = Intel x64
+                    # macos-14  = Apple Silicon arm64
+                    - name: mac-x64
+                      runner: macos-13
+                      os: darwin
+                      arch: x64
+                      system_deps: brew install cmake libpcap
+
+                    - name: mac-arm64
+                      runner: macos-14
+                      os: darwin
+                      arch: arm64
+                      system_deps: brew install cmake libpcap
+
+                    # ── Windows ────────────────────────────────────────────
+                    # WinPcap/Npcap SDK must be present to build the C++ core.
+                    # We download the Npcap SDK and point cmake-js at it via env.
+                    - name: win-x64
+                      runner: windows-latest
+                      os: win32
+                      arch: x64
+                      system_deps: ''
+
+                    - name: win-arm64
+                      runner: windows-11-arm
+                      os: win32
+                      arch: arm64
+                      system_deps: ''
+
         steps:
             - name: Checkout
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-            - name: Install system dependencies
+            - name: Install system dependencies (Linux / macOS)
+              if: matrix.os != 'win32' && matrix.system_deps != ''
+              run: ${{ matrix.system_deps }}
+
+            - name: Download Npcap SDK (Windows)
+              if: matrix.os == 'win32'
+              shell: pwsh
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y cmake libpcap-dev
+                  Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile npcap-sdk.zip
+                  Expand-Archive npcap-sdk.zip -DestinationPath C:\npcap-sdk
+                  echo "NPCAP_SDK=C:\npcap-sdk" >> $env:GITHUB_ENV
 
             - name: Setup pnpm
               uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
@@ -121,29 +157,49 @@ jobs:
             - name: Build Electron app
               run: pnpm -F @repo/desktop run make
 
-            - name: Upload .deb artifact
+            # ── Upload artifacts per platform ──────────────────────────────
+
+            - name: Upload .deb (Linux)
+              if: matrix.os == 'linux'
               uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
                   name: desktop-deb-${{ matrix.arch }}
                   path: apps/desktop/out/make/deb/${{ matrix.arch }}/*.deb
                   if-no-files-found: error
 
-            - name: Upload .zip artifact
+            - name: Upload .zip (Linux / macOS)
+              if: matrix.os != 'win32'
               uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
-                  name: desktop-zip-${{ matrix.arch }}
-                  path: apps/desktop/out/make/zip/linux/${{ matrix.arch }}/*.zip
+                  name: desktop-zip-${{ matrix.name }}
+                  path: apps/desktop/out/make/zip/${{ matrix.os }}/${{ matrix.arch }}/*.zip
                   if-no-files-found: error
 
-    # Build the standalone server
+            - name: Upload .exe (Windows)
+              if: matrix.os == 'win32'
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+              with:
+                  name: desktop-win-${{ matrix.arch }}
+                  path: apps/desktop/out/make/squirrel.windows/${{ matrix.arch }}/*.exe
+                  if-no-files-found: error
+
+    # Build the standalone server (Linux only — server targets)
     build-server:
-        name: Build Server (${{ matrix.arch }})
-        runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+        name: Server (${{ matrix.name }})
         needs: [validate-changelog]
+        runs-on: ${{ matrix.runner }}
         strategy:
             fail-fast: false
             matrix:
-                arch: [x64, arm64]
+                include:
+                    - name: linux-x64
+                      runner: ubuntu-24.04
+                      arch: x64
+
+                    - name: linux-arm64
+                      runner: ubuntu-24.04-arm
+                      arch: arm64
+
         steps:
             - name: Checkout
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -181,7 +237,7 @@ jobs:
                   path: apps/web/dist/*.tar.gz
                   if-no-files-found: error
 
-    # Create GitHub Release and upload all artifacts
+    # Create GitHub Release and attach all artifacts
     release:
         name: Create Release
         runs-on: ubuntu-24.04
@@ -210,7 +266,11 @@ jobs:
                   files: |
                       artifacts/desktop-deb-x64/*.deb
                       artifacts/desktop-deb-arm64/*.deb
-                      artifacts/desktop-zip-x64/*.zip
-                      artifacts/desktop-zip-arm64/*.zip
+                      artifacts/desktop-zip-linux-x64/*.zip
+                      artifacts/desktop-zip-linux-arm64/*.zip
+                      artifacts/desktop-zip-mac-x64/*.zip
+                      artifacts/desktop-zip-mac-arm64/*.zip
+                      artifacts/desktop-win-x64/*.exe
+                      artifacts/desktop-win-arm64/*.exe
                       artifacts/server-x64/*.tar.gz
                       artifacts/server-arm64/*.tar.gz

@@ -19,13 +19,13 @@
         "test:run": "cd tests && bash test.sh"
     },
     "dependencies": {
-        "node-addon-api": "^8.5.0"
+        "node-addon-api": "^8.7.0"
     },
     "devDependencies": {
+        "@types/node": "^25.6.0",
         "cmake-js": "^8.0.0",
-        "typescript": "^5.9.3",
-        "rimraf": "^6.1.2",
-        "@types/node": "^25.2.3"
+        "rimraf": "^6.1.3",
+        "typescript": "^6.0.3"
     },
     "packageManager": "pnpm@10.29.3",
     "files": [
