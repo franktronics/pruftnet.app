@@ -2,6 +2,7 @@ import type { ForgeConfig } from '@electron-forge/shared-types'
 import { MakerSquirrel } from '@electron-forge/maker-squirrel'
 import { MakerZIP } from '@electron-forge/maker-zip'
 import { MakerDeb } from '@electron-forge/maker-deb'
+import { MakerDMG } from '@electron-forge/maker-dmg'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives'
@@ -45,6 +46,14 @@ const config: ForgeConfig = {
         new MakerSquirrel({
             name: 'Pruftnet',
         }),
+        // macOS — produces a .dmg installer
+        new MakerDMG(
+            {
+                name: 'Pruftnet',
+                overwrite: true,
+            },
+            ['darwin'],
+        ),
         // macOS + Linux — produces a .zip
         new MakerZIP({}, ['darwin', 'linux']),
         // Linux — produces a .deb package

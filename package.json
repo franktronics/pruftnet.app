@@ -29,14 +29,14 @@
     },
     "pnpm": {
         "onlyBuiltDependencies": [
-            "@prisma/engines",
             "@swc/core",
             "@tailwindcss/oxide",
             "better-sqlite3",
             "electron",
             "electron-winstaller",
             "esbuild",
-            "prisma",
+            "fs-xattr",
+            "macos-alias",
             "unrs-resolver"
         ],
         "overrides": {

@@ -8,6 +8,8 @@
 |---------|-------------|
 | `pnpm install` | Install all dependencies across the monorepo |
 | `pnpm setup` | Build `better-sqlite3` for Node + Electron and cache both binaries. Re-run when switching Node versions. |
+| `pnpm setup --build-node` | Build `better-sqlite3` for Node only (used in CI server builds) |
+| `pnpm setup --build-electron` | Build `better-sqlite3` for Electron only (used in CI desktop builds) |
 | `pnpm build:core` | Compile C++ → `.node` addon via CMake + cmake-js, then generate TypeScript types |
 
 > `pnpm dev:web` and `pnpm dev:desktop` automatically restore the correct `better-sqlite3` binary before starting.

@@ -94,13 +94,13 @@ jobs:
                       runner: macos-13
                       os: darwin
                       arch: x64
-                      system_deps: brew install cmake libpcap
+                      system_deps: brew install cmake
 
                     - name: mac-arm64
                       runner: macos-14
                       os: darwin
                       arch: arm64
-                      system_deps: brew install cmake libpcap
+                      system_deps: brew install cmake
 
                     # ── Windows ────────────────────────────────────────────
                     # WinPcap/Npcap SDK must be present to build the C++ core.
@@ -149,7 +149,7 @@ jobs:
               run: pnpm build:core
 
             - name: Build native modules
-              run: pnpm setup
+              run: pnpm setup --build-electron
 
             - name: Rebuild native modules for Electron
               run: pnpm -F @repo/desktop run rebuild
@@ -165,6 +165,14 @@ jobs:
               with:
                   name: desktop-deb-${{ matrix.arch }}
                   path: apps/desktop/out/make/deb/${{ matrix.arch }}/*.deb
+                  if-no-files-found: error
+
+            - name: Upload .dmg (macOS)
+              if: matrix.os == 'darwin'
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+              with:
+                  name: desktop-dmg-${{ matrix.arch }}
+                  path: apps/desktop/out/make/*.dmg
                   if-no-files-found: error
 
             - name: Upload .zip (Linux / macOS)
@@ -225,7 +233,7 @@ jobs:
               run: pnpm build:core
 
             - name: Build native modules
-              run: pnpm setup
+              run: pnpm setup --build-node
 
             - name: Build and package server
               run: pnpm -F @repo/web run package
@@ -266,6 +274,8 @@ jobs:
                   files: |
                       artifacts/desktop-deb-x64/*.deb
                       artifacts/desktop-deb-arm64/*.deb
+                      artifacts/desktop-dmg-x64/*.dmg
+                      artifacts/desktop-dmg-arm64/*.dmg
                       artifacts/desktop-zip-linux-x64/*.zip
                       artifacts/desktop-zip-linux-arm64/*.zip
                       artifacts/desktop-zip-mac-x64/*.zip
