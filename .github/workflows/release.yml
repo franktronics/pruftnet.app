@@ -149,7 +149,7 @@ jobs:
               run: pnpm build:core
 
             - name: Build native modules
-              run: pnpm setup --build-electron
+              run: node setup.js --build-electron
 
             - name: Rebuild native modules for Electron
               run: pnpm -F @repo/desktop run rebuild
@@ -233,7 +233,7 @@ jobs:
               run: pnpm build:core
 
             - name: Build native modules
-              run: pnpm setup --build-node
+              run: node setup.js --build-node
 
             - name: Build and package server
               run: pnpm -F @repo/web run package

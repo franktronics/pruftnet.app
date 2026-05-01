@@ -61,7 +61,7 @@ jobs:
               run: pnpm build:core
 
             - name: Build native modules
-              run: pnpm setup --build-node
+              run: node setup.js --build-node
 
             - name: Type check
               run: pnpm typecheck
