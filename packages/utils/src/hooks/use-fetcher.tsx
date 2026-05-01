@@ -1,4 +1,3 @@
-import { HttpMethod } from '@repo/utils'
 import { cn } from '../classnames/classnames'
 import { ClientError } from '../trpc/client/client-error'
 import {
@@ -11,6 +10,7 @@ import {
 } from '@tanstack/react-query'
 import { ComponentPropsWithoutRef, PropsWithChildren, useCallback } from 'react'
 import { toast } from 'sonner'
+import { HttpMethod } from '../trpc/trpc-types'
 
 export type QueryFetcherProps<T> = {
     procedure: () => Promise<T>

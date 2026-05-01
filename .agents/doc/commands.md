@@ -19,6 +19,7 @@
 | `pnpm dev:web` | Start Express server + Vite HMR (web mode) |
 | `pnpm dev:desktop` | Start Electron desktop app with hot reload |
 | `pnpm format` | Format all files with Prettier |
+| `pnpm typecheck` | Run TypeScript type checking across all TS packages |
 
 ### Testing
 

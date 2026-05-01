@@ -11,7 +11,8 @@
     },
     "scripts": {
         "lint": "eslint .",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
         "@repo/core-node": "workspace:*",

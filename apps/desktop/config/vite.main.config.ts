@@ -34,9 +34,11 @@ export default defineConfig(({ mode }) => {
                 fileName: 'main',
             },
             outDir: '.vite/build',
+            ssr: true,
             rollupOptions: {
                 output: {
                     entryFileNames: 'main.js',
+                    format: 'es',
                 },
                 external: [
                     'electron',

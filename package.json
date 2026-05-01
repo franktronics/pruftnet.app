@@ -15,7 +15,8 @@
         "format": "prettier --write .",
         "clean": "node clean.js",
         "setup:caps": "sudo setcap cap_net_raw,cap_net_admin=eip $(which node)",
-        "check:caps": "getcap $(which node)"
+        "check:caps": "getcap $(which node)",
+        "typecheck": "pnpm -r --filter=@repo/core-node --filter=@repo/front --filter=@repo/ui --filter=@repo/utils run type-check"
     },
     "packageManager": "pnpm@10.28.1",
     "engines": {
