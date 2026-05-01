@@ -1,6 +1,7 @@
 import './styles/main.css'
 import { RouterProvider } from '@tanstack/react-router'
-import { router } from './routes/root'
+import { router as defaultRouter, createAppRouter } from './routes/root'
+import type { RouterHistory } from '@tanstack/history'
 import { ThemeProvider, type Theme } from '@repo/ui/molecules'
 import { Toaster } from '@repo/ui/atoms'
 import { StrictMode } from 'react'
@@ -12,7 +13,8 @@ const handleChangeTheme = (theme: Theme) => {
     ;(window as any).electron?.changeTheme(theme)
 }
 
-export const Main = () => {
+export const Main = ({ history }: { history?: RouterHistory } = {}) => {
+    const router = history ? createAppRouter(history) : defaultRouter
     return (
         <StrictMode>
             <FetcherProvider>

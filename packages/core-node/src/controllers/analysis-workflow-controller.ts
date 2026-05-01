@@ -1,7 +1,7 @@
 import { AnalysisRepository } from '../repository/analysis-repository'
 import { z } from 'zod'
 import { wsProcedure } from '../routes/root'
-import { ServerError } from '../../../utils/src/trpc/server/server-error'
+import { ServerError } from '@repo/utils'
 import {
     prepareGraph,
     ReactFlowGraph,
