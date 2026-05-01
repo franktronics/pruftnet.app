@@ -148,8 +148,8 @@ jobs:
             - name: Build C++ core
               run: pnpm build:core
 
-            - name: Generate Prisma client
-              run: pnpm --filter @repo/core-node prisma generate
+            - name: Build native modules
+              run: pnpm setup
 
             - name: Rebuild native modules for Electron
               run: pnpm -F @repo/desktop run rebuild
@@ -224,8 +224,8 @@ jobs:
             - name: Build C++ core
               run: pnpm build:core
 
-            - name: Generate Prisma client
-              run: pnpm --filter @repo/core-node prisma generate
+            - name: Build native modules
+              run: pnpm setup
 
             - name: Build and package server
               run: pnpm -F @repo/web run package
