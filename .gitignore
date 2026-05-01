@@ -45,6 +45,8 @@ dist-electron
 
 #db
 *.db
+*.db-shm
+*.db-wal
 
 # Runtime data
 pids

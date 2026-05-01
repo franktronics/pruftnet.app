@@ -7,8 +7,8 @@
  *   1. Build better-sqlite3 for Node (web mode)  → cached in build/Release-node/
  *   2. Build better-sqlite3 for Electron          → cached in build/Release-electron/
  *   3. Restore the Node binary to build/Release/  (default for dev:web)
- *   4. Generate the Prisma client (generated/prisma)
- *   5. Apply pending migrations to dev.db
+ *
+ * Migrations are applied automatically at runtime — no manual step needed.
  *
  * Switching runtimes:
  *   node setup.js --web       restore Node binary      (before pnpm dev:web)
@@ -16,11 +16,10 @@
  */
 
 import { execSync } from 'node:child_process'
-import { existsSync, copyFileSync, mkdirSync } from 'node:fs'
+import { copyFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const ROOT = import.meta.dirname
-const CORE_NODE = resolve(ROOT, 'packages/core-node')
 const BETTER_SQLITE3 = resolve(ROOT, 'node_modules/better-sqlite3')
 const NODE_GYP = resolve(ROOT, 'node_modules/.bin/node-gyp')
 const ELECTRON_REBUILD = resolve(ROOT, 'node_modules/.bin/electron-rebuild')
@@ -60,36 +59,22 @@ if (arg === '--desktop') {
 // ---------------------------------------------------------------------------
 
 // 1a. Build for Node and cache
-console.log('=== Step 1a: build better-sqlite3 for Node ===')
+console.log('=== Step 1: build better-sqlite3 for Node ===')
 run(`${NODE_GYP} rebuild --release`, { cwd: BETTER_SQLITE3 })
 mkdirSync(CACHE_NODE, { recursive: true })
 copyFileSync(resolve(RELEASE, BINARY), resolve(CACHE_NODE, BINARY))
 
 // 1b. Build for Electron and cache
-console.log('\n=== Step 1b: build better-sqlite3 for Electron ===')
+console.log('\n=== Step 2: build better-sqlite3 for Electron ===')
 run(`${ELECTRON_REBUILD} -f -w better-sqlite3`, { cwd: DESKTOP })
 mkdirSync(CACHE_ELECTRON, { recursive: true })
 copyFileSync(resolve(RELEASE, BINARY), resolve(CACHE_ELECTRON, BINARY))
 
 // 1c. Restore Node binary as default (web mode)
-console.log('\n=== Step 1c: restoring Node binary as default ===')
+console.log('\n=== Step 3: restoring Node binary as default ===')
 copyFileSync(resolve(CACHE_NODE, BINARY), resolve(RELEASE, BINARY))
 
-// 2. Generate Prisma client
-console.log('\n=== Step 2: prisma generate ===')
-run('pnpm prisma generate', { cwd: CORE_NODE })
-
-// 3. Apply migrations
-console.log('\n=== Step 3: prisma migrate deploy ===')
-run('pnpm prisma migrate deploy', { cwd: CORE_NODE })
-
-const dbPath = resolve(CORE_NODE, 'dev.db')
-if (!existsSync(dbPath)) {
-    console.error(`\nERROR: Expected database file not found at ${dbPath}`)
-    process.exit(1)
-}
-
-console.log(`\n✓ Setup complete. Database: ${dbPath}`)
+console.log('\n✓ Setup complete.')
 console.log('  Web mode:     pnpm dev:web')
 console.log('  Desktop mode: pnpm dev:desktop')
 console.log('')
