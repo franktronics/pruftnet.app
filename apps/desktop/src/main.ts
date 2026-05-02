@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
+import squirrelStartup from 'electron-squirrel-startup'
 import path from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
@@ -9,12 +9,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// electron-squirrel-startup is CJS — use createRequire to avoid bundling issues.
-if (process.platform === 'win32') {
-    const _require = createRequire(import.meta.url)
-    const started: boolean = _require('electron-squirrel-startup')
-    if (started) app.quit()
-}
+if (squirrelStartup) app.quit()
 
 // Determine if running in packaged mode
 const isPackaged = app.isPackaged
