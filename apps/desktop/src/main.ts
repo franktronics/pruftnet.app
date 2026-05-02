@@ -1,15 +1,15 @@
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
-import squirrelStartup from 'electron-squirrel-startup'
 import path from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { handleSquirrelEvents } from './bootstrap/squirrel.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (squirrelStartup) app.quit()
+handleSquirrelEvents()
 
 // Determine if running in packaged mode
 const isPackaged = app.isPackaged
