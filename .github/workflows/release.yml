@@ -88,16 +88,16 @@ jobs:
                       system_deps: sudo apt-get update && sudo apt-get install -y cmake libpcap-dev
 
                     # ── macOS ──────────────────────────────────────────────
-                    # macos-13  = Intel x64
-                    # macos-14  = Apple Silicon arm64
+                    # macos-26-intel = Intel x64 (4 CPU / 14 GB)
+                    # macos-26       = Apple Silicon arm64 (M1, 3 CPU / 7 GB)
                     - name: mac-x64
-                      runner: macos-13
+                      runner: macos-26-intel
                       os: darwin
                       arch: x64
                       system_deps: brew install cmake
 
                     - name: mac-arm64
-                      runner: macos-14
+                      runner: macos-26
                       os: darwin
                       arch: arm64
                       system_deps: brew install cmake
@@ -106,7 +106,7 @@ jobs:
                     # WinPcap/Npcap SDK must be present to build the C++ core.
                     # We download the Npcap SDK and point cmake-js at it via env.
                     - name: win-x64
-                      runner: windows-latest
+                      runner: windows-2025
                       os: win32
                       arch: x64
                       system_deps: ''
