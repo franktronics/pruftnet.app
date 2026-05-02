@@ -11,6 +11,40 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
+/**
+ * Recursively copies a npm package and all its runtime dependencies
+ * into destNodeModules, following each package's `dependencies` field.
+ * Build-only deps (devDependencies) are excluded.
+ */
+function copyModuleWithDeps(
+    moduleName: string,
+    srcNodeModules: string,
+    destNodeModules: string,
+    visited = new Set<string>(),
+): void {
+    if (visited.has(moduleName)) return
+    visited.add(moduleName)
+
+    const modSrc = path.join(srcNodeModules, moduleName)
+    const modDest = path.join(destNodeModules, moduleName)
+
+    if (!fs.existsSync(modSrc)) return
+    if (!fs.existsSync(modDest)) {
+        fs.cpSync(modSrc, modDest, { recursive: true })
+        console.log(`  ✓ Copied ${moduleName}`)
+    }
+
+    // Recurse into runtime dependencies only
+    const pkgJson = path.join(modSrc, 'package.json')
+    if (!fs.existsSync(pkgJson)) return
+    const pkg = JSON.parse(fs.readFileSync(pkgJson, 'utf-8')) as {
+        dependencies?: Record<string, string>
+    }
+    for (const dep of Object.keys(pkg.dependencies ?? {})) {
+        copyModuleWithDeps(dep, srcNodeModules, destNodeModules, visited)
+    }
+}
+
 const config: ForgeConfig = {
     packagerConfig: {
         name: 'Pruftnet',
@@ -28,6 +62,22 @@ const config: ForgeConfig = {
     },
     rebuildConfig: {},
     hooks: {
+        // Copy runtime node_modules into the Vite build output before packaging
+        // so they end up inside the asar. Vite externalises these modules but
+        // Forge only packages what is in the build output directory.
+        // We recursively follow each package's `dependencies` to include all
+        // transitive runtime deps.
+        packageAfterCopy: async (_config, buildPath) => {
+            const srcNodeModules = path.resolve(__dirname, '../../node_modules')
+            const destNodeModules = path.join(buildPath, 'node_modules')
+            fs.mkdirSync(destNodeModules, { recursive: true })
+
+            const runtimeModules = ['better-sqlite3', 'electron-squirrel-startup']
+            const visited = new Set<string>()
+            for (const mod of runtimeModules) {
+                copyModuleWithDeps(mod, srcNodeModules, destNodeModules, visited)
+            }
+        },
         // FusesPlugin modifies the binary after electron-forge's initial signing,
         // invalidating the signature on macOS. Re-sign with ad-hoc after packaging.
         postPackage: async (_config, { outputPaths, platform }) => {
