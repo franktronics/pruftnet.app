@@ -94,13 +94,13 @@ jobs:
                       runner: macos-26-intel
                       os: darwin
                       arch: x64
-                      system_deps: brew install cmake
+                      system_deps: brew list cmake &>/dev/null || brew install cmake
 
                     - name: mac-arm64
                       runner: macos-26
                       os: darwin
                       arch: arm64
-                      system_deps: brew install cmake
+                      system_deps: brew list cmake &>/dev/null || brew install cmake
 
                     # ── Windows ────────────────────────────────────────────
                     # WinPcap/Npcap SDK must be present to build the C++ core.
@@ -167,6 +167,13 @@ jobs:
                   path: apps/desktop/out/make/deb/${{ matrix.arch }}/*.deb
                   if-no-files-found: error
 
+            - name: Rename .dmg with arch (macOS)
+              if: matrix.os == 'darwin'
+              run: |
+                  src=$(ls apps/desktop/out/make/*.dmg | head -1)
+                  base="${src%.dmg}"
+                  mv "$src" "${base}-${{ matrix.arch }}.dmg"
+
             - name: Upload .dmg (macOS)
               if: matrix.os == 'darwin'
               uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -182,6 +189,14 @@ jobs:
                   name: desktop-zip-${{ matrix.name }}
                   path: apps/desktop/out/make/zip/${{ matrix.os }}/${{ matrix.arch }}/*.zip
                   if-no-files-found: error
+
+            - name: Rename .exe with arch (Windows)
+              if: matrix.os == 'win32'
+              shell: pwsh
+              run: |
+                  $src = Get-ChildItem "apps/desktop/out/make/squirrel.windows/${{ matrix.arch }}/*.exe" | Select-Object -First 1
+                  $dest = $src.DirectoryName + "\" + $src.BaseName + "-${{ matrix.arch }}" + $src.Extension
+                  Rename-Item $src.FullName $dest
 
             - name: Upload .exe (Windows)
               if: matrix.os == 'win32'
@@ -266,7 +281,7 @@ jobs:
               run: find artifacts -type f
 
             - name: Create Release
-              uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
+              uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
               with:
                   draft: false
                   prerelease: ${{ contains(github.ref, '-') }}
