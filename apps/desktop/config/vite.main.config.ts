@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
                 },
                 external: [
                     'electron',
+                    'electron-squirrel-startup',
                     ...nodeBuiltins,
                     /\.node$/,
                     'better-sqlite3',
