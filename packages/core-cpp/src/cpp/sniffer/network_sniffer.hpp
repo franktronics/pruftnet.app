@@ -24,6 +24,7 @@ public:
   bool startSniffing(const std::string& interface_name, std::unique_ptr<PacketCallback> callback);
   void stopSniffing();
   bool isRunning() const;
+  const std::string& getLastError() const;
 
 private:
   std::unique_ptr<PacketCapture> packet_capture_;
@@ -35,6 +36,7 @@ private:
 
   std::atomic<bool> is_running_;
   std::atomic<bool> should_stop_;
+  std::string last_error_;
 
   std::unique_ptr<PacketCallback> packet_callback_;
   std::mutex callback_mutex_;

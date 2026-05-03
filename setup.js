@@ -20,7 +20,7 @@
  */
 
 import { execSync } from 'node:child_process'
-import { copyFileSync, mkdirSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const ROOT = import.meta.dirname
@@ -46,6 +46,12 @@ const arg = process.argv[2]
 
 if (arg === '--web') {
     console.log('=== Restoring Node binary for web mode ===')
+    if (!existsSync(resolve(CACHE_NODE, BINARY))) {
+        console.log('Cache missing — building better-sqlite3 for Node first...')
+        run(`${NODE_GYP} rebuild --release`, { cwd: BETTER_SQLITE3 })
+        mkdirSync(CACHE_NODE, { recursive: true })
+        copyFileSync(resolve(RELEASE, BINARY), resolve(CACHE_NODE, BINARY))
+    }
     copyFileSync(resolve(CACHE_NODE, BINARY), resolve(RELEASE, BINARY))
     console.log('✓ Node binary restored. You can now run: pnpm dev:web')
     process.exit(0)
@@ -53,6 +59,12 @@ if (arg === '--web') {
 
 if (arg === '--desktop') {
     console.log('=== Restoring Electron binary for desktop mode ===')
+    if (!existsSync(resolve(CACHE_ELECTRON, BINARY))) {
+        console.log('Cache missing — building better-sqlite3 for Electron first...')
+        run(`${ELECTRON_REBUILD} -f -w better-sqlite3`, { cwd: DESKTOP })
+        mkdirSync(CACHE_ELECTRON, { recursive: true })
+        copyFileSync(resolve(RELEASE, BINARY), resolve(CACHE_ELECTRON, BINARY))
+    }
     copyFileSync(resolve(CACHE_ELECTRON, BINARY), resolve(RELEASE, BINARY))
     console.log('✓ Electron binary restored. You can now run: pnpm dev:desktop')
     process.exit(0)

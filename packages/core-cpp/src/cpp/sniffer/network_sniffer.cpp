@@ -21,6 +21,7 @@ bool NetworkSniffer::startSniffing(const std::string& interface_name, std::uniqu
   packet_capture_ = std::make_unique<PacketCapture>(interface_name);
 
   if (!packet_capture_->initialize()) {
+    last_error_ = packet_capture_->getLastError();
     packet_capture_.reset();
     return false;
   }
@@ -140,4 +141,8 @@ void NetworkSniffer::setParser(std::unique_ptr<ParserModel> parser) {
 
 ParserModel* NetworkSniffer::getParser() const {
   return parser_.get();
+}
+
+const std::string& NetworkSniffer::getLastError() const {
+  return last_error_;
 }

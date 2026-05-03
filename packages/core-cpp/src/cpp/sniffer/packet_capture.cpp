@@ -83,8 +83,12 @@ bool PacketCapture::createRawSocket() {
   raw_socket_ = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
   if (raw_socket_ < 0) {
-    std::cerr << "Error creating raw socket: " << strerror(errno) << std::endl;
-    std::cerr << "Note: Raw sockets require root privileges" << std::endl;
+    if (errno == EPERM || errno == EACCES) {
+      last_error_ = "Insufficient privileges: raw sockets require root privileges. Please run the application as root/administrator.";
+    } else {
+      last_error_ = std::string("Error creating raw socket: ") + strerror(errno);
+    }
+    std::cerr << last_error_ << std::endl;
     return false;
   }
 
@@ -122,9 +126,14 @@ bool PacketCapture::bindToInterface() {
   socket_address.sll_ifindex = interface_index;
 
   if (bind(raw_socket_, reinterpret_cast<struct sockaddr*>(&socket_address), sizeof(socket_address)) < 0) {
-    std::cerr << "Error binding to interface " << interface_name_ << ": " << strerror(errno) << std::endl;
+    last_error_ = std::string("Error binding to interface ") + interface_name_ + ": " + strerror(errno);
+    std::cerr << last_error_ << std::endl;
     return false;
   }
 
   return true;
+}
+
+const std::string& PacketCapture::getLastError() const {
+  return last_error_;
 }

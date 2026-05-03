@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-05-04
+
+### Fixed
+
+- **Dev mode launcher** (`setup.js`): `--web` and `--desktop` flags now auto-build and cache the `better-sqlite3` binary on first run if the cache directories (`Release-node/`, `Release-electron/`) are missing, instead of crashing with `ENOENT`. Subsequent runs use the cache directly.
+- **Root privilege check for network capture**: `new NetworkSniffer()` now throws `"Insufficient privileges: raw sockets require root privileges..."` immediately if the process is not running as root/administrator, instead of silently returning `false` from `startSniffing`. Error propagates to the frontend via the existing `{ type: 'error', message }` tRPC stream event. Added `isSnifferPrivileged()` helper (exported from `@repo/core-cpp`) checking `process.getuid() === 0` on Unix and `IsUserAnAdmin` via PowerShell on Windows.
+- **C++ raw socket error propagation**: `PacketCapture::createRawSocket()` now stores a human-readable error in `last_error_` (distinguishing `EPERM`/`EACCES` from other socket errors) instead of logging to `stderr` only. `NetworkSniffer::startSniffing()` propagates `last_error_` up; the NAPI wrapper throws a JavaScript `Error` with that message when `startSniffing` returns `false`.
+- **Electron runtime deps externalization** (`forge.config.ts`): added `packageAfterCopy` hook with recursive `copyModuleWithDeps()` to bundle `better-sqlite3` and its transitive runtime dependencies inside the asar archive, fixing `MODULE_NOT_FOUND` errors in packaged Linux `.deb` builds.
+- **`electron-squirrel-startup` CJS/ESM incompatibility**: removed from Vite externals; moved Squirrel event handling into `apps/desktop/src/bootstrap/squirrel.ts` using `createRequire` behind a Windows platform guard, fixing startup crash on Windows builds under Vite 8 / Rolldown.
+
 ## [0.1.1] - 2026-05-02
 
 ### Changed

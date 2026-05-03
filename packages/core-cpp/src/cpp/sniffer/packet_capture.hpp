@@ -20,10 +20,13 @@ public:
   void stopCapture();
   bool isCapturing() const;
 
+  const std::string& getLastError() const;
+
 private:
   std::string interface_name_;
   int raw_socket_;
   std::atomic<bool> is_capturing_;
+  std::string last_error_;
 
   bool createRawSocket();
   int getInterfaceIndex();
