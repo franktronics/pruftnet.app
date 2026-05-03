@@ -150,6 +150,10 @@ Napi::Value NetworkSnifferWrapper::StartSniffing(const Napi::CallbackInfo& info)
   if (!success) {
     tsfn_.Release();
     tsfn_active_ = false;
+    const std::string& err = sniffer_->getLastError();
+    if (!err.empty()) {
+      Napi::Error::New(env, err).ThrowAsJavaScriptException();
+    }
     return Napi::Boolean::New(env, false);
   }
 
