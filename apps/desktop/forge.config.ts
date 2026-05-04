@@ -115,6 +115,9 @@ const config: ForgeConfig = {
                 maintainer: 'Franktronics',
                 homepage: 'https://pruftnet.app',
                 icon: 'assets/icons/icon.png',
+                scripts: {
+                    postinst: 'scripts/deb-postinst.sh',
+                },
             },
         }),
     ],

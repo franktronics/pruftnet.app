@@ -97,6 +97,10 @@ export class NetworkSniffer {
             throw new Error('NetworkSniffer is only available on Linux.')
         }
 
+        if (!isSnifferAvailable()) {
+            throw new Error('NetworkSniffer is only available on Linux.')
+        }
+
         const path = protocolsPath ?? getProtocolsPath()
 
         try {
