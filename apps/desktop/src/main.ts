@@ -5,6 +5,11 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { handleSquirrelEvents } from './bootstrap/squirrel.js'
 
+// Must run before Chromium initializes — allows root to open a display on Linux
+if (process.platform === 'linux' && process.getuid?.() === 0) {
+    app.commandLine.appendSwitch('no-sandbox')
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 

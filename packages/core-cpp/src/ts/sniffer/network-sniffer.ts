@@ -2,7 +2,6 @@ import type { PacketCallback } from '../types/basics.js'
 import addon from '../addon.js'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -23,27 +22,6 @@ export function isSnifferAvailable(): boolean {
 }
 
 /**
- * Check if the current process has sufficient privileges for raw socket capture.
- * On Unix: checks process UID === 0 (root).
- * On Windows: checks if running as Administrator via PowerShell.
- * @returns true if running with root/admin privileges
- */
-export function isSnifferPrivileged(): boolean {
-    if (process.platform === 'win32') {
-        try {
-            const result = execSync(
-                'powershell -Command "[bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match \'S-1-5-32-544\')"',
-                { encoding: 'utf8', timeout: 3000 },
-            ).trim()
-            return result === 'True'
-        } catch {
-            return false
-        }
-    }
-    return process.getuid?.() === 0
-}
-
-/**
  * NetworkSniffer class for capturing and parsing network packets
  *
  * Uses the native sniffer with integrated parser for high-performance
@@ -52,7 +30,6 @@ export function isSnifferPrivileged(): boolean {
  *
  * **Note: Only available on Linux.** On other platforms, the constructor
  * will throw an error. Use `isSnifferAvailable()` to check platform support.
- * **Requires root/administrator privileges.** Use `isSnifferPrivileged()` to check.
  *
  * @example
  * ```typescript
@@ -87,10 +64,8 @@ export class NetworkSniffer {
     private nativeInstance: InstanceType<typeof addon.NetworkSniffer>
 
     constructor(protocolsPath?: string) {
-        if (!isSnifferPrivileged()) {
-            throw new Error(
-                'Insufficient privileges: raw sockets require root privileges. Please run the application as root/administrator.',
-            )
+        if (!isSnifferAvailable()) {
+            throw new Error('NetworkSniffer is only available on Linux.')
         }
 
         if (!isSnifferAvailable()) {
