@@ -6,6 +6,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev:server": "pnpm --filter @repo/server dev",
+    "dev:desktop": "pnpm --filter @repo/desktop dev",
     "format": "prettier --write .",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"

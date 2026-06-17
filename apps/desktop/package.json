@@ -1,0 +1,28 @@
+{
+  "name": "@repo/desktop",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "pnpm --filter @repo/server build && pnpm run build && electron .",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "electron .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@repo/server": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
+    "electron": "^42.4.1",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

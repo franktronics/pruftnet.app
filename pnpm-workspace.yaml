@@ -2,10 +2,19 @@ packages:
   - "apps/*"
   - "packages/*"
 
+allowBuilds:
+  "@parcel/watcher": false
+  esbuild: true
+  msgpackr-extract: false
+
 catalog:
+  "@effect/platform": "^0.96.1"
+  "@effect/platform-node": "^0.107.0"
   "@eslint/js": "^10"
+  "@types/node": "^25.9.3"
   "@types/react": "^19"
   "@types/react-dom": "^19"
+  effect: "^3.21.3"
   eslint: "^10"
   eslint-plugin-react-hooks: "^7.1.1"
   globals: "^17"
@@ -13,3 +22,6 @@ catalog:
   react-dom: "^19.2.6"
   typescript: "~6"
   typescript-eslint: "^8"
+
+minimumReleaseAgeExclude:
+  - '@tanstack/react-router@1.170.16'
