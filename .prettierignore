@@ -1,0 +1,11 @@
+/dist/
+dist
+build
+out
+/src/stories/
+.vite
+package-lock.json
+node_modules
+*.css
+*.cc
+*.hpp
