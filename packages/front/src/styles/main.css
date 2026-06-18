@@ -20,11 +20,37 @@
 .desktop-titlebar {
   height: var(--desktop-titlebar-height);
   min-height: var(--desktop-titlebar-height);
-  padding-right: var(--desktop-titlebar-controls-right);
 }
 
-[data-desktop-platform="darwin"] .desktop-titlebar {
-  padding-left: 88px;
+.desktop-titlebar-actions {
+  margin-right: var(--desktop-titlebar-controls-right);
+}
+
+.desktop-titlebar-sidebar-boundary {
+  width: var(--sidebar-width);
+  transition:
+    width 200ms ease-linear,
+    border-color 200ms ease-linear;
+}
+
+.desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-sidebar-boundary {
+  width: var(--sidebar-width-icon);
+  border-right-color: transparent;
+}
+
+.desktop-titlebar-trigger {
+  left: calc(var(--sidebar-width) - 2rem);
+  transition: left 200ms ease-linear;
+}
+
+.desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-trigger {
+  left: 0.75rem;
+}
+
+[data-desktop-platform="darwin"]
+  .desktop-titlebar[data-sidebar-state="collapsed"]
+  .desktop-titlebar-trigger {
+  left: 88px;
 }
 
 .drag-region {
