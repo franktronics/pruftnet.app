@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router"
-import { GearIcon, HouseIcon } from "@phosphor-icons/react"
+import { Settings, House } from "lucide-react"
 import type { ComponentProps } from "react"
 
 import { Button, Separator } from "@repo/ui/atoms"
@@ -26,7 +26,7 @@ const mainNavigation = [
   {
     title: "Home",
     to: "/",
-    icon: HouseIcon,
+    icon: House,
   },
 ] as const
 
@@ -34,7 +34,7 @@ const footerNavigation = [
   {
     title: "Settings",
     to: "/settings",
-    icon: GearIcon,
+    icon: Settings,
   },
 ] as const
 
@@ -106,7 +106,7 @@ function SettingsButton() {
       aria-label="Open settings"
       render={<Link to="/settings" />}
     >
-      <GearIcon />
+      <Settings />
     </Button>
   )
 }

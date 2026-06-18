@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "@repo/utils"
 import { Button } from "../atoms/button"
-import { CaretLeftIcon, CaretRightIcon, DotsThreeIcon } from "@phosphor-icons/react"
+import { ChevronLeft, ChevronRight, Ellipsis } from "lucide-react"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -74,7 +74,7 @@ function PaginationPrevious({
       className={cn("pl-2!", className)}
       {...props}
     >
-      <CaretLeftIcon data-icon="inline-start" />
+      <ChevronLeft data-icon="inline-start" />
       <span className="hidden sm:block">{text}</span>
     </PaginationLink>
   )
@@ -93,7 +93,7 @@ function PaginationNext({
       {...props}
     >
       <span className="hidden sm:block">{text}</span>
-      <CaretRightIcon data-icon="inline-end" />
+      <ChevronRight data-icon="inline-end" />
     </PaginationLink>
   )
 }
@@ -112,7 +112,7 @@ function PaginationEllipsis({
       )}
       {...props}
     >
-      <DotsThreeIcon
+      <Ellipsis
       />
       <span className="sr-only">More pages</span>
     </span>

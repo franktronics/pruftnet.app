@@ -20,7 +20,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./dropdown-menu"
-import { CheckIcon } from "@phosphor-icons/react"
+import { Check } from "lucide-react"
 
 function Menubar({ className, ...props }: MenubarPrimitive.Props) {
   return (
@@ -125,7 +125,7 @@ function MenubarCheckboxItem({
     >
       <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon
+          <Check
           />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
@@ -160,7 +160,7 @@ function MenubarRadioItem({
     >
       <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
         <MenuPrimitive.RadioItemIndicator>
-          <CheckIcon
+          <Check
           />
         </MenuPrimitive.RadioItemIndicator>
       </span>

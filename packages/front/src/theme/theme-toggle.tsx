@@ -1,4 +1,4 @@
-import { DesktopIcon, MoonIcon, SunIcon } from "@phosphor-icons/react"
+import { Monitor, Moon, Sun } from "lucide-react"
 
 import { Button } from "@repo/ui/atoms"
 import {
@@ -14,11 +14,11 @@ import type { Theme } from "./theme"
 const themeOptions: Array<{
   readonly label: string
   readonly value: Theme
-  readonly icon: typeof SunIcon
+  readonly icon: typeof Sun
 }> = [
-  { label: "Light", value: "light", icon: SunIcon },
-  { label: "Dark", value: "dark", icon: MoonIcon },
-  { label: "System", value: "system", icon: DesktopIcon },
+  { label: "Light", value: "light", icon: Sun },
+  { label: "Dark", value: "dark", icon: Moon },
+  { label: "System", value: "system", icon: Monitor },
 ]
 
 export function ThemeToggle() {

@@ -8,7 +8,7 @@ import {
 
 import { cn } from "@repo/utils"
 import { Button, buttonVariants } from "../atoms/button"
-import { CaretLeftIcon, CaretRightIcon, CaretDownIcon } from "@phosphor-icons/react"
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 
 function Calendar({
   className,
@@ -144,18 +144,18 @@ function Calendar({
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <CaretLeftIcon className={cn("size-4", className)} {...props} />
+              <ChevronLeft className={cn("size-4", className)} {...props} />
             )
           }
 
           if (orientation === "right") {
             return (
-              <CaretRightIcon className={cn("size-4", className)} {...props} />
+              <ChevronRight className={cn("size-4", className)} {...props} />
             )
           }
 
           return (
-            <CaretDownIcon className={cn("size-4", className)} {...props} />
+            <ChevronDown className={cn("size-4", className)} {...props} />
           )
         },
         DayButton: ({ ...props }) => (

@@ -14,9 +14,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
     "@repo/ui": "workspace:*",
     "@tanstack/react-router": "^1.170.16",
+    "lucide-react": "^1.20.0",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
