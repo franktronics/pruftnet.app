@@ -74,7 +74,10 @@ function DesktopTitleBar() {
             data-sidebar-state={state}
         >
             <div className="desktop-titlebar-sidebar-boundary h-full shrink-0 border-r" />
-            <SidebarTrigger className="desktop-titlebar-trigger no-drag-region absolute top-1/2 z-10 -translate-y-1/2 bg-background" />
+            <SidebarTrigger
+                variant="outline"
+                className="desktop-titlebar-trigger no-drag-region bg-background absolute z-10 active:translate-y-0"
+            />
 
             <div className="min-w-0 flex-1" />
             <div className="desktop-titlebar-actions no-drag-region flex items-center gap-1 px-3">
@@ -90,10 +93,7 @@ function WebHeader() {
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
             <div className="flex flex-1 items-center gap-2 px-4">
                 <SidebarTrigger className="-ml-1" />
-                <Separator
-                    orientation="vertical"
-                    className="mr-2 data-[orientation=vertical]:h-4"
-                />
+                <Separator orientation="vertical" className="my-1.5 mr-2" />
                 <span className="text-sm font-medium tracking-tight">Pruftnet</span>
                 <div className="ml-auto flex items-center gap-1">
                     <SettingsButton />
@@ -107,7 +107,7 @@ function WebHeader() {
 function SettingsButton() {
     return (
         <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             aria-label="Open settings"
             render={<Link to="/settings" />}

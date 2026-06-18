@@ -40,6 +40,7 @@
 
 .desktop-titlebar-trigger {
   left: calc(var(--sidebar-width) - 2rem);
+  top: calc((var(--desktop-titlebar-height) - 1.75rem) / 2);
   transition: left 200ms ease-linear;
 }
 
