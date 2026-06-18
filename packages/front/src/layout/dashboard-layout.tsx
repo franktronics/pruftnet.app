@@ -76,7 +76,7 @@ function DesktopTitleBar() {
             <div className="desktop-titlebar-sidebar-boundary h-full shrink-0 border-r" />
             <SidebarTrigger
                 variant="outline"
-                className="desktop-titlebar-trigger no-drag-region bg-background absolute z-10 active:translate-y-0"
+                className="desktop-titlebar-trigger no-drag-region bg-sidebar absolute z-10 active:translate-y-0"
             />
 
             <div className="min-w-0 flex-1" />
