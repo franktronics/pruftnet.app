@@ -5,6 +5,7 @@ import { isTheme, type Theme } from "./theme"
 declare global {
   interface Window {
     readonly pruftnet?: {
+      readonly platform: string
       readonly setTheme: (theme: Theme) => Promise<"dark" | "light">
     }
   }

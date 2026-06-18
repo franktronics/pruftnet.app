@@ -1,16 +1,8 @@
-import { Link, Outlet, useMatches, useRouterState } from "@tanstack/react-router"
+import { Link, Outlet, useRouterState } from "@tanstack/react-router"
 import { GearIcon, HouseIcon } from "@phosphor-icons/react"
-import { Fragment, type ComponentProps } from "react"
+import type { ComponentProps } from "react"
 
-import { Separator } from "@repo/ui/atoms"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@repo/ui/molecules"
+import { Button, Separator } from "@repo/ui/atoms"
 import {
   Sidebar,
   SidebarContent,
@@ -50,78 +42,98 @@ function isActiveRoute(pathname: string, to: string) {
   return to === "/" ? pathname === "/" : pathname.startsWith(to)
 }
 
-function useBreadcrumbs() {
-  return useMatches({
-    select: (matches) =>
-      matches
-        .map((match) => ({
-          title: match.staticData.breadcrumb,
-          to: match.pathname,
-        }))
-        .filter((breadcrumb): breadcrumb is { title: string; to: string } =>
-          Boolean(breadcrumb.title)
-        ),
-  })
-}
-
 export function DashboardLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const breadcrumbs = useBreadcrumbs()
+  const isDesktop = typeof window !== "undefined" && Boolean(window.pruftnet)
 
   return (
-    <SidebarProvider>
-      <AppSidebar pathname={pathname} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex flex-1 items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                {breadcrumbs.map((breadcrumb, index) => {
-                  const isLast = index === breadcrumbs.length - 1
-
-                  return (
-                    <Fragment key={`${breadcrumb.to}-${breadcrumb.title}`}>
-                      <BreadcrumbItem className={isLast ? undefined : "hidden md:block"}>
-                        {isLast ? (
-                          <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
-                        ) : (
-                          <BreadcrumbLink render={<Link to={breadcrumb.to} />}>
-                            {breadcrumb.title}
-                          </BreadcrumbLink>
-                        )}
-                      </BreadcrumbItem>
-                      {!isLast && <BreadcrumbSeparator className="hidden md:block" />}
-                    </Fragment>
-                  )
-                })}
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto">
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Outlet />
-        </main>
-      </SidebarInset>
+    <SidebarProvider className={isDesktop ? "flex-col" : undefined}>
+      {isDesktop && <DesktopTitleBar />}
+      <div className="flex min-h-0 flex-1">
+        <AppSidebar pathname={pathname} isDesktop={isDesktop} />
+        <SidebarInset>
+          {!isDesktop && <WebHeader />}
+          <main className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   )
 }
 
+function DesktopTitleBar() {
+  return (
+    <header className="desktop-titlebar drag-region flex shrink-0 items-center border-b bg-background/95 px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <SidebarTrigger className="no-drag-region" />
+        <span className="truncate text-sm font-medium tracking-tight">Pruftnet</span>
+      </div>
+      <div className="no-drag-region flex items-center gap-1">
+        <SettingsButton />
+        <ThemeToggle />
+      </div>
+    </header>
+  )
+}
+
+function WebHeader() {
+  return (
+    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+      <div className="flex flex-1 items-center gap-2 px-4">
+        <SidebarTrigger className="-ml-1" />
+        <Separator
+          orientation="vertical"
+          className="mr-2 data-[orientation=vertical]:h-4"
+        />
+        <span className="text-sm font-medium tracking-tight">Pruftnet</span>
+        <div className="ml-auto flex items-center gap-1">
+          <SettingsButton />
+          <ThemeToggle />
+        </div>
+      </div>
+    </header>
+  )
+}
+
+function SettingsButton() {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label="Open settings"
+      render={<Link to="/settings" />}
+    >
+      <GearIcon />
+    </Button>
+  )
+}
+
 function AppSidebar({
+  className,
+  isDesktop,
   pathname,
   ...props
-}: ComponentProps<typeof Sidebar> & { readonly pathname: string }) {
+}: ComponentProps<typeof Sidebar> & {
+  readonly isDesktop: boolean
+  readonly pathname: string
+}) {
+  const desktopSidebarClassName =
+    "[top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]"
+
   return (
-    <Sidebar collapsible="icon" variant="floating" {...props}>
+    <Sidebar
+      collapsible="icon"
+      variant="floating"
+      className={
+        isDesktop
+          ? [desktopSidebarClassName, className].filter(Boolean).join(" ")
+          : className
+      }
+      {...props}
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

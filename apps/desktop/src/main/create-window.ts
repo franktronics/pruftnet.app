@@ -17,6 +17,13 @@ export async function createMainWindow() {
     minWidth: 960,
     minHeight: 640,
     title: "Pruftnet",
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#00000000",
+      symbolColor: "#737373",
+      height: 48,
+    },
+    trafficLightPosition: { x: 16, y: 14 },
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

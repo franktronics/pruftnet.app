@@ -1,4 +1,41 @@
 @import "@repo/ui/styles.css";
 
+@custom-variant wco (&:is(.wco, .wco *));
+
 @source "../**/*.{ts,tsx}";
 @source "../../../ui/src/**/*.{ts,tsx}";
+
+:root {
+  --desktop-titlebar-height: 48px;
+  --desktop-titlebar-controls-right: 0.75rem;
+}
+
+.wco {
+  --desktop-titlebar-height: env(titlebar-area-height, 48px);
+  --desktop-titlebar-controls-right: calc(
+    100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 0.75rem
+  );
+}
+
+.desktop-titlebar {
+  height: var(--desktop-titlebar-height);
+  min-height: var(--desktop-titlebar-height);
+  padding-right: var(--desktop-titlebar-controls-right);
+}
+
+[data-desktop-platform="darwin"] .desktop-titlebar {
+  padding-left: 88px;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.drag-region button,
+.drag-region input,
+.drag-region textarea,
+.drag-region select,
+.drag-region a,
+.no-drag-region {
+  -webkit-app-region: no-drag;
+}
