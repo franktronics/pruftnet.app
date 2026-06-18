@@ -11,6 +11,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.vite
+out
 *.tsbuildinfo
 
 # Environment

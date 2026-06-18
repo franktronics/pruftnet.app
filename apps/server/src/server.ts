@@ -4,8 +4,8 @@ import { createServer } from "node:http"
 import { Effect, Scope } from "effect"
 
 import type { ServerConfig } from "./config.js"
-import { createViteDevServer, serveViteFrontend } from "./http/vite-dev.js"
 import { serveStaticFrontend } from "./http/static-files.js"
+import { createViteDevServer, serveViteFrontend } from "./http/vite-dev.js"
 
 type StartedServer = {
   readonly address: string
@@ -48,9 +48,10 @@ function close(server: NodeServer) {
 export function startServer(config: ServerConfig): Effect.Effect<StartedServer, Error, Scope.Scope> {
   return Effect.acquireRelease(
     Effect.gen(function* () {
-      const vite = config.mode === "development"
-        ? yield* Effect.promise(() => createViteDevServer(config))
-        : undefined
+      const vite =
+        config.mode === "development"
+          ? yield* Effect.promise(() => createViteDevServer(config))
+          : undefined
       const serveFrontend = vite
         ? serveViteFrontend(vite, config)
         : (request: IncomingMessage, response: ServerResponse) => {

@@ -3,12 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./dist/index.js"
-    }
-  },
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.build.json",

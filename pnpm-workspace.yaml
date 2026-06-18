@@ -2,9 +2,14 @@ packages:
   - "apps/*"
   - "packages/*"
 
+nodeLinker: hoisted
+
 allowBuilds:
   "@parcel/watcher": false
+  electron-winstaller: true
   esbuild: true
+  fs-xattr: false
+  macos-alias: false
   msgpackr-extract: false
 
 catalog:
@@ -22,6 +27,9 @@ catalog:
   react-dom: "^19.2.6"
   typescript: "~6"
   typescript-eslint: "^8"
+
+overrides:
+  "@electron/rebuild": "^4.0.4"
 
 minimumReleaseAgeExclude:
   - '@tanstack/react-router@1.170.16'

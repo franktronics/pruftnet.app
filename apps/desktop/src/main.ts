@@ -1,73 +1,35 @@
-import { app, BrowserWindow } from "electron"
-import type { Event as ElectronEvent } from "electron"
-import { NodeRuntime } from "@effect/platform-node"
-import { Effect } from "effect"
-import { loadServerConfig, startServer } from "@repo/server"
+import { app, BrowserWindow } from 'electron'
 
-const serverConfig = loadServerConfig({
-  host: "127.0.0.1",
-})
-const frontendUrl = `http://${serverConfig.host}:${serverConfig.port}`
-const frontendOrigin = new URL(frontendUrl).origin
+import { createMainWindow } from './main/create-window.js'
+import { registerIpcHandlers } from './main/ipc.js'
 
-function isAllowedNavigation(navigationUrl: string) {
-  try {
-    const url = new URL(navigationUrl)
-    return url.origin === frontendOrigin
-  } catch {
-    return false
-  }
+if (process.platform === 'win32') {
+    const { default: started } = await import('electron-squirrel-startup')
+    if (started) {
+        app.quit()
+    }
 }
 
-function protectWindowNavigation(window: BrowserWindow) {
-  window.webContents.on(
-    "will-navigate",
-    (event: ElectronEvent, navigationUrl: string) => {
-      if (!isAllowedNavigation(navigationUrl)) {
-        event.preventDefault()
-      }
-    }
-  )
+async function bootstrap() {
+    await app.whenReady()
 
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
+    registerIpcHandlers()
+    await createMainWindow()
+
+    app.on('activate', async () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            await createMainWindow()
+        }
+    })
 }
 
-const createMainWindow = Effect.gen(function* () {
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 960,
-    minHeight: 640,
-    title: "Pruftnet",
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  })
-
-  protectWindowNavigation(window)
-  yield* Effect.promise(() => window.loadURL(frontendUrl))
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit()
+    }
 })
 
-const program = Effect.gen(function* () {
-  const server = yield* startServer(serverConfig)
-  yield* Effect.log(`Desktop backend listening on ${server.address}`)
-
-  yield* Effect.promise(() => app.whenReady())
-  yield* createMainWindow
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      void Effect.runPromise(createMainWindow)
-    }
-  })
-
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit()
-    }
-  })
+bootstrap().catch((error: unknown) => {
+    console.error('Failed to start desktop app', error)
+    app.quit()
 })
-
-NodeRuntime.runMain(Effect.scoped(program))

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
-import { join } from "node:path"
 import type { IncomingMessage, ServerResponse } from "node:http"
+import { join } from "node:path"
 import type { ViteDevServer } from "vite"
 
 import type { ServerConfig } from "../config.js"

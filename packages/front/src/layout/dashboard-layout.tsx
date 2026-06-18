@@ -1,6 +1,6 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router"
+import { Link, Outlet, useMatches, useRouterState } from "@tanstack/react-router"
 import { GearIcon, HouseIcon } from "@phosphor-icons/react"
-import type { ComponentProps } from "react"
+import { Fragment, type ComponentProps } from "react"
 
 import { Separator } from "@repo/ui/atoms"
 import {
@@ -28,6 +28,8 @@ import {
   SidebarTrigger,
 } from "@repo/ui/organisms"
 
+import { ThemeToggle } from "../theme/theme-toggle"
+
 const mainNavigation = [
   {
     title: "Home",
@@ -44,31 +46,36 @@ const footerNavigation = [
   },
 ] as const
 
-const pageTitles = {
-  "/": "Home",
-  "/settings": "Settings",
-} as const
-
-function getPageTitle(pathname: string) {
-  return pageTitles[pathname as keyof typeof pageTitles] ?? "Pruftnet"
-}
-
 function isActiveRoute(pathname: string, to: string) {
   return to === "/" ? pathname === "/" : pathname.startsWith(to)
+}
+
+function useBreadcrumbs() {
+  return useMatches({
+    select: (matches) =>
+      matches
+        .map((match) => ({
+          title: match.staticData.breadcrumb,
+          to: match.pathname,
+        }))
+        .filter((breadcrumb): breadcrumb is { title: string; to: string } =>
+          Boolean(breadcrumb.title)
+        ),
+  })
 }
 
 export function DashboardLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const pageTitle = getPageTitle(pathname)
+  const breadcrumbs = useBreadcrumbs()
 
   return (
     <SidebarProvider>
       <AppSidebar pathname={pathname} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex flex-1 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
@@ -76,15 +83,29 @@ export function DashboardLayout() {
             />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink render={<Link to="/" />}>Pruftnet</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-                </BreadcrumbItem>
+                {breadcrumbs.map((breadcrumb, index) => {
+                  const isLast = index === breadcrumbs.length - 1
+
+                  return (
+                    <Fragment key={`${breadcrumb.to}-${breadcrumb.title}`}>
+                      <BreadcrumbItem className={isLast ? undefined : "hidden md:block"}>
+                        {isLast ? (
+                          <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink render={<Link to={breadcrumb.to} />}>
+                            {breadcrumb.title}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                      {!isLast && <BreadcrumbSeparator className="hidden md:block" />}
+                    </Fragment>
+                  )
+                })}
               </BreadcrumbList>
             </Breadcrumb>
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 pt-0">

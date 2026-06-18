@@ -2,27 +2,45 @@
   "name": "@repo/desktop",
   "private": true,
   "version": "0.0.1",
+  "productName": "Pruftnet",
   "type": "module",
-  "main": "dist/main.js",
+  "main": ".vite/build/main.js",
   "scripts": {
-    "dev": "pnpm --filter @repo/server build && pnpm run build && electron .",
-    "build": "tsc -p tsconfig.build.json",
-    "start": "electron .",
+    "dev": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
-    "@repo/server": "workspace:*",
-    "effect": "catalog:"
+    "@repo/front": "workspace:*",
+    "electron-squirrel-startup": "^1.0.1",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron-forge/shared-types": "^7.11.1",
+    "@electron/fuses": "^2.1.1",
     "@eslint/js": "catalog:",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.2",
     "electron": "^42.4.1",
     "eslint": "catalog:",
     "globals": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vite": "^8.0.16"
   }
 }

@@ -1,7 +1,7 @@
 import { constants } from "node:fs"
 import { access, readFile } from "node:fs/promises"
-import { extname, join, resolve } from "node:path"
 import type { IncomingMessage, ServerResponse } from "node:http"
+import { extname, join, resolve } from "node:path"
 
 const contentTypes: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -48,7 +48,12 @@ function resolveAssetPath(frontendDistPath: string, requestUrl: string) {
   return candidate
 }
 
-function sendResponse(response: ServerResponse, status: number, body: string | Uint8Array, contentType: string) {
+function sendResponse(
+  response: ServerResponse,
+  status: number,
+  body: string | Uint8Array,
+  contentType: string
+) {
   response.writeHead(status, { "content-type": contentType })
   response.end(body)
 }
