@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process"
 
-import { desktopDir, resolveElectronLaunchCommand } from "./electron-runtime.mjs"
+import { desktopDir, resolveElectronLaunchCommand } from "./electron-runtime.ts"
 
-const childEnv = { ...process.env }
+const childEnv: NodeJS.ProcessEnv = { ...process.env }
 delete childEnv.ELECTRON_RUN_AS_NODE
 delete childEnv.VITE_DEV_SERVER_URL
 

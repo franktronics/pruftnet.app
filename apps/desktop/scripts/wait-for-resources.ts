@@ -5,7 +5,31 @@ import * as Timers from "node:timers/promises"
 
 const defaultTcpHosts = ["127.0.0.1", "localhost", "::1"]
 
-async function fileExists(filePath) {
+interface TcpReadyInput {
+  host: string
+  port: number
+  connectTimeoutMs?: number
+}
+
+interface PendingResourcesInput {
+  baseDir: string
+  files: readonly string[]
+  tcpPort: number
+  tcpHosts: readonly string[]
+  connectTimeoutMs: number
+}
+
+interface WaitForResourcesInput {
+  baseDir: string
+  files?: readonly string[]
+  intervalMs?: number
+  timeoutMs?: number
+  tcpHost?: string
+  tcpPort: number
+  connectTimeoutMs?: number
+}
+
+async function fileExists(filePath: string) {
   try {
     await FileSystem.access(filePath)
     return true
@@ -14,12 +38,12 @@ async function fileExists(filePath) {
   }
 }
 
-function tcpPortIsReady({ host, port, connectTimeoutMs = 500 }) {
-  return new Promise((resolveReady) => {
+function tcpPortIsReady({ host, port, connectTimeoutMs = 500 }: TcpReadyInput) {
+  return new Promise<boolean>((resolveReady) => {
     const socket = Net.createConnection({ host, port })
     let settled = false
 
-    const finish = (ready) => {
+    const finish = (ready: boolean) => {
       if (settled) {
         return
       }
@@ -37,8 +61,14 @@ function tcpPortIsReady({ host, port, connectTimeoutMs = 500 }) {
   })
 }
 
-async function resolvePendingResources({ baseDir, files, tcpPort, tcpHosts, connectTimeoutMs }) {
-  const pendingFiles = []
+async function resolvePendingResources({
+  baseDir,
+  files,
+  tcpPort,
+  tcpHosts,
+  connectTimeoutMs,
+}: PendingResourcesInput) {
+  const pendingFiles: string[] = []
 
   for (const relativeFilePath of files) {
     const ready = await fileExists(Path.resolve(baseDir, relativeFilePath))
@@ -66,7 +96,7 @@ export async function waitForResources({
   tcpHost,
   tcpPort,
   connectTimeoutMs = 500,
-}) {
+}: WaitForResourcesInput) {
   if (!Number.isInteger(tcpPort) || tcpPort <= 0) {
     throw new TypeError("waitForResources requires a positive integer tcpPort")
   }
@@ -88,7 +118,7 @@ export async function waitForResources({
     }
 
     if (Date.now() - startedAt >= timeoutMs) {
-      const pendingResources = []
+      const pendingResources: string[] = []
       if (!tcpReady) {
         pendingResources.push(tcpHost ? `tcp:${tcpHost}:${tcpPort}` : `tcp:${tcpPort}`)
       }

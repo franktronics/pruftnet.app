@@ -1,5 +1,5 @@
-import { spawn, spawnSync } from "node:child_process"
-import { watch } from "node:fs"
+import { spawn, spawnSync, type ChildProcess } from "node:child_process"
+import { watch, type FSWatcher } from "node:fs"
 import * as NodeOS from "node:os"
 import { join } from "node:path"
 
@@ -7,8 +7,8 @@ import {
   desktopDir,
   killChildTreeByPid,
   resolveElectronLaunchCommand,
-} from "./electron-runtime.mjs"
-import { waitForResources } from "./wait-for-resources.mjs"
+} from "./electron-runtime.ts"
+import { waitForResources } from "./wait-for-resources.ts"
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL?.trim()
 if (!devServerUrl) {
@@ -39,15 +39,15 @@ await waitForResources({
   tcpPort: port,
 })
 
-const childEnv = { ...process.env }
+const childEnv: NodeJS.ProcessEnv = { ...process.env }
 delete childEnv.ELECTRON_RUN_AS_NODE
 
 let shuttingDown = false
-let restartTimer = null
-let currentApp = null
+let restartTimer: NodeJS.Timeout | null = null
+let currentApp: ChildProcess | null = null
 let restartQueue = Promise.resolve()
-const expectedExits = new WeakSet()
-const watchers = []
+const expectedExits = new WeakSet<ChildProcess>()
+const watchers: FSWatcher[] = []
 
 function cleanupStaleDevApps() {
   if (hostPlatform === "win32") {
@@ -108,7 +108,7 @@ async function stopApp() {
   currentApp = null
   expectedExits.add(app)
 
-  await new Promise((resolve) => {
+  await new Promise<void>((resolveStop) => {
     let settled = false
 
     const finish = () => {
@@ -117,7 +117,7 @@ async function stopApp() {
       }
 
       settled = true
-      resolve()
+      resolveStop()
     }
 
     app.once("exit", finish)
@@ -178,7 +178,7 @@ function startWatchers() {
   }
 }
 
-function killChildTree(signal) {
+function killChildTree(signal: string) {
   if (hostPlatform === "win32") {
     return
   }
@@ -188,7 +188,7 @@ function killChildTree(signal) {
   })
 }
 
-async function shutdown(exitCode) {
+async function shutdown(exitCode: number) {
   if (shuttingDown) return
   shuttingDown = true
 
@@ -203,8 +203,8 @@ async function shutdown(exitCode) {
 
   await stopApp()
   killChildTree("SIGTERM")
-  await new Promise((resolve) => {
-    setTimeout(resolve, childTreeGracePeriodMs)
+  await new Promise<void>((resolveShutdown) => {
+    setTimeout(resolveShutdown, childTreeGracePeriodMs)
   })
   killChildTree("SIGKILL")
 

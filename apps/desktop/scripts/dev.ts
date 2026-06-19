@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process"
+import { spawn, spawnSync, type ChildProcess } from "node:child_process"
 import * as NodeOS from "node:os"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -14,7 +14,7 @@ if (!Number.isInteger(rendererPort) || rendererPort <= 0 || rendererPort > 65535
   throw new Error("PRUFTNET_DESKTOP_DEV_PORT must be a valid TCP port.")
 }
 
-function formatHostForUrl(host) {
+function formatHostForUrl(host: string) {
   if (host === "0.0.0.0" || host === "::") {
     return "127.0.0.1"
   }
@@ -27,15 +27,15 @@ function formatHostForUrl(host) {
 }
 
 const devServerUrl = `http://${formatHostForUrl(rendererHost)}:${rendererPort}/`
-const childEnv = {
+const childEnv: NodeJS.ProcessEnv = {
   ...process.env,
   VITE_DEV_SERVER_URL: devServerUrl,
 }
 
-const children = []
+const children: ChildProcess[] = []
 let shuttingDown = false
 
-function spawnChild(label, command, args) {
+function spawnChild(label: string, command: string, args: readonly string[]) {
   const child = spawn(command, args, {
     cwd: desktopDir,
     env: childEnv,
@@ -65,7 +65,7 @@ function spawnChild(label, command, args) {
   return child
 }
 
-function killChild(child, signal) {
+function killChild(child: ChildProcess, signal: NodeJS.Signals) {
   if (child.exitCode !== null || child.signalCode !== null) {
     return
   }
@@ -85,7 +85,7 @@ function killChild(child, signal) {
   }
 }
 
-async function shutdown(exitCode) {
+async function shutdown(exitCode: number) {
   if (shuttingDown) {
     return
   }
@@ -95,8 +95,8 @@ async function shutdown(exitCode) {
     killChild(child, "SIGTERM")
   }
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 1_200)
+  await new Promise<void>((resolveShutdown) => {
+    setTimeout(resolveShutdown, 1_200)
   })
 
   for (const child of children) {
@@ -133,7 +133,7 @@ spawnChild("preload watcher", pnpmCommand, [
   "config/vite.preload.config.ts",
   "--watch",
 ])
-spawnChild("electron launcher", process.execPath, ["scripts/dev-electron.mjs"])
+spawnChild("electron launcher", pnpmCommand, ["exec", "tsx", "scripts/dev-electron.ts"])
 
 process.once("SIGINT", () => {
   void shutdown(130)

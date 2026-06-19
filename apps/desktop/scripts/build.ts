@@ -9,7 +9,7 @@ const desktopDir = resolve(scriptsDir, "..")
 const pnpmCommand = hostPlatform === "win32" ? "pnpm.cmd" : "pnpm"
 
 function createBuildEnv() {
-  const buildEnv = { ...process.env }
+  const buildEnv: NodeJS.ProcessEnv = { ...process.env }
   delete buildEnv.VITE_DEV_SERVER_URL
 
   for (const [key, value] of Object.entries(buildEnv)) {
@@ -28,8 +28,8 @@ function createBuildEnv() {
   return buildEnv
 }
 
-function run(label, command, args, env) {
-  return new Promise((resolveRun, rejectRun) => {
+function run(label: string, command: string, args: readonly string[], env: NodeJS.ProcessEnv) {
+  return new Promise<void>((resolveRun, rejectRun) => {
     const child = spawn(command, args, {
       cwd: desktopDir,
       env,
@@ -56,25 +56,22 @@ function run(label, command, args, env) {
 const buildEnv = createBuildEnv()
 const builderArgs = process.argv.slice(2)
 
-await run("build main process", pnpmCommand, [
-  "exec",
-  "vite",
-  "build",
-  "--config",
-  "config/vite.main.config.ts",
-], buildEnv)
-await run("build preload", pnpmCommand, [
-  "exec",
-  "vite",
-  "build",
-  "--config",
-  "config/vite.preload.config.ts",
-], buildEnv)
-await run("build renderer", pnpmCommand, [
-  "exec",
-  "vite",
-  "build",
-  "--config",
-  "config/vite.renderer.config.ts",
-], buildEnv)
+await run(
+  "build main process",
+  pnpmCommand,
+  ["exec", "vite", "build", "--config", "config/vite.main.config.ts"],
+  buildEnv,
+)
+await run(
+  "build preload",
+  pnpmCommand,
+  ["exec", "vite", "build", "--config", "config/vite.preload.config.ts"],
+  buildEnv,
+)
+await run(
+  "build renderer",
+  pnpmCommand,
+  ["exec", "vite", "build", "--config", "config/vite.renderer.config.ts"],
+  buildEnv,
+)
 await run("electron-builder", pnpmCommand, ["exec", "electron-builder", ...builderArgs], buildEnv)
