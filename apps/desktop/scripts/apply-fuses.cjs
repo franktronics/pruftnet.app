@@ -63,8 +63,29 @@ function resolveElectronBinaryPath(context) {
   return electronBinaryPath
 }
 
-module.exports = async function applyFuses(context) {
+function resolveFuseTarget(context) {
   const electronBinaryPath = resolveElectronBinaryPath(context)
+  const fuseTargetPath = path.relative(context.appOutDir, electronBinaryPath)
+
+  if (fuseTargetPath.startsWith("..") || path.isAbsolute(fuseTargetPath)) {
+    throw new Error(
+      `Electron binary must be inside appOutDir to apply fuses. Binary: ${electronBinaryPath}. appOutDir: ${context.appOutDir}`,
+    )
+  }
+
+  return { electronBinaryPath, fuseTargetPath }
+}
+
+module.exports = async function applyFuses(context) {
+  const { electronBinaryPath, fuseTargetPath } = resolveFuseTarget(context)
+  const previousCwd = process.cwd()
+
   console.log(`[desktop] Applying Electron fuses to ${electronBinaryPath}`)
-  await flipFuses(electronBinaryPath, fuseOptions)
+
+  try {
+    process.chdir(context.appOutDir)
+    await flipFuses(fuseTargetPath, fuseOptions)
+  } finally {
+    process.chdir(previousCwd)
+  }
 }
