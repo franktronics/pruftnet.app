@@ -12,6 +12,7 @@ files:
   - package.json
 
 asar: true
+afterPack: scripts/apply-fuses.cjs
 
 mac:
   category: public.app-category.developer-tools

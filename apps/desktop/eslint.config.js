@@ -12,8 +12,6 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.node,
-        MAIN_WINDOW_VITE_DEV_SERVER_URL: "readonly",
-        MAIN_WINDOW_VITE_NAME: "readonly",
       },
     },
   },

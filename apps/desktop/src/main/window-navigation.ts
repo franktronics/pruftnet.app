@@ -1,13 +1,17 @@
 import type { BrowserWindow, Event as ElectronEvent } from "electron"
 
+import { getDesktopDevServerUrl } from "./runtime-config.js"
+
 function isAllowedNavigation(navigationUrl: string) {
-  if (!MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+  const devServerUrl = getDesktopDevServerUrl()
+
+  if (!devServerUrl) {
     return navigationUrl.startsWith("file://")
   }
 
   try {
     const url = new URL(navigationUrl)
-    return url.origin === new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL).origin
+    return url.origin === new URL(devServerUrl).origin
   } catch {
     return false
   }
