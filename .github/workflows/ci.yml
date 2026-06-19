@@ -48,5 +48,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pruftnet-ci-linux
-          path: apps/desktop/release/*
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.rpm
+            !apps/desktop/release/*-unpacked/**
+            !apps/desktop/release/builder-debug.yml
           if-no-files-found: error
