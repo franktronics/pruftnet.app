@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config.js'
 import { protectWindowNavigation } from './window-navigation.js'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
@@ -19,17 +20,11 @@ function getWindowIconPath() {
 }
 
 function getRendererPath() {
-    const rendererName =
-        typeof MAIN_WINDOW_VITE_NAME === 'undefined' ? 'main_window' : MAIN_WINDOW_VITE_NAME
-
-    return join(currentDirectory, `../renderer/${rendererName}/index.html`)
+    return join(currentDirectory, `../renderer/${getRendererDirectoryName()}/index.html`)
 }
 
 export async function createMainWindow() {
-    const devServerUrl =
-        typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === 'undefined'
-            ? undefined
-            : MAIN_WINDOW_VITE_DEV_SERVER_URL
+    const devServerUrl = getDesktopDevServerUrl()
 
     const window = new BrowserWindow({
         width: 1600,

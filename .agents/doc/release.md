@@ -22,6 +22,8 @@ It runs:
 
 The workflow uses the GitHub `preview` environment because CI artifacts are non-production validation builds.
 
+Desktop artifacts are produced with the root `pnpm build` command. That command runs the custom desktop build script, builds the Electron main process, preload script, and renderer with Vite, then packages the app with `electron-builder`. Electron fuses are applied during the `electron-builder` `afterPack` hook.
+
 ## Preview Releases
 
 Preview releases are built from tags on `develop`.

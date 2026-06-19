@@ -30,7 +30,8 @@ export function ThemeToggle() {
         <DropdownMenu>
             <DropdownMenuTrigger
                 render={
-                    <Button variant="outline" size="icon" aria-label="Change theme">
+                    <Button variant="outline" aria-label="Change theme" className="space-x-1">
+                        {theme[0].toUpperCase() + theme.slice(1)}
                         <ActiveIcon />
                     </Button>
                 }

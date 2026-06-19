@@ -1,6 +1,10 @@
 /dist/
 dist
 build
+dist-electron
+dist-ssr
+out
+release
 out
 /src/stories/
 .vite
