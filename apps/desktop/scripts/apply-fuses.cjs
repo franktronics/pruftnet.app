@@ -3,14 +3,18 @@ const path = require("node:path")
 
 const { flipFuses, FuseV1Options, FuseVersion } = require("@electron/fuses")
 
-const fuseOptions = {
-  version: FuseVersion.V1,
-  [FuseV1Options.RunAsNode]: false,
-  [FuseV1Options.EnableCookieEncryption]: true,
-  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-  [FuseV1Options.EnableNodeCliInspectArguments]: false,
-  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-  [FuseV1Options.OnlyLoadAppFromAsar]: true,
+function createFuseOptions(context) {
+  return {
+    version: FuseVersion.V1,
+    resetAdHocDarwinSignature:
+      context.electronPlatformName === "darwin" && context.arch === 3,
+    [FuseV1Options.RunAsNode]: false,
+    [FuseV1Options.EnableCookieEncryption]: true,
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+    [FuseV1Options.EnableNodeCliInspectArguments]: false,
+    [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+    [FuseV1Options.OnlyLoadAppFromAsar]: true,
+  }
 }
 
 function unique(values) {
@@ -79,6 +83,7 @@ function resolveFuseTarget(context) {
 module.exports = async function applyFuses(context) {
   const { electronBinaryPath, fuseTargetPath } = resolveFuseTarget(context)
   const previousCwd = process.cwd()
+  const fuseOptions = createFuseOptions(context)
 
   console.log(`[desktop] Applying Electron fuses to ${electronBinaryPath}`)
 
