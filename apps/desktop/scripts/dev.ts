@@ -7,6 +7,7 @@ const hostPlatform = NodeOS.platform()
 const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const desktopDir = resolve(scriptsDir, "..")
 const pnpmCommand = hostPlatform === "win32" ? "pnpm.cmd" : "pnpm"
+const shouldUseShell = hostPlatform === "win32"
 const rendererHost = process.env.PRUFTNET_DESKTOP_DEV_HOST?.trim() || "127.0.0.1"
 const rendererPort = Number.parseInt(process.env.PRUFTNET_DESKTOP_DEV_PORT ?? "5173", 10)
 
@@ -39,6 +40,7 @@ function spawnChild(label: string, command: string, args: readonly string[]) {
   const child = spawn(command, args, {
     cwd: desktopDir,
     env: childEnv,
+    shell: shouldUseShell,
     stdio: "inherit",
   })
 

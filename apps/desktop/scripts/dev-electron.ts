@@ -31,6 +31,7 @@ const restartDebounceMs = 120
 const childTreeGracePeriodMs = 1_200
 const remoteDebuggingPort = process.env.PRUFTNET_DESKTOP_REMOTE_DEBUGGING_PORT?.trim()
 const hostPlatform = NodeOS.platform()
+const shouldUseShell = hostPlatform === "win32"
 
 await waitForResources({
   baseDir: desktopDir,
@@ -72,6 +73,7 @@ function startApp() {
   const app = spawn(electronCommand.electronPath, electronCommand.args, {
     cwd: desktopDir,
     env: childEnv,
+    shell: shouldUseShell,
     stdio: "inherit",
   })
 

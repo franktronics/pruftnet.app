@@ -67,7 +67,17 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pruftnet-preview-${{ matrix.name }}
-          path: apps/desktop/release/*
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.rpm
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            !apps/desktop/release/*-unpacked/**
+            !apps/desktop/release/mac*/**
+            !apps/desktop/release/win*/**
+            !apps/desktop/release/builder-debug.yml
           if-no-files-found: error
 
   release:

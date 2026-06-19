@@ -7,6 +7,7 @@ const hostPlatform = NodeOS.platform()
 const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const desktopDir = resolve(scriptsDir, "..")
 const pnpmCommand = hostPlatform === "win32" ? "pnpm.cmd" : "pnpm"
+const shouldUseShell = hostPlatform === "win32"
 
 function createBuildEnv() {
   const buildEnv: NodeJS.ProcessEnv = { ...process.env }
@@ -33,6 +34,7 @@ function run(label: string, command: string, args: readonly string[], env: NodeJ
     const child = spawn(command, args, {
       cwd: desktopDir,
       env,
+      shell: shouldUseShell,
       stdio: "inherit",
     })
 
