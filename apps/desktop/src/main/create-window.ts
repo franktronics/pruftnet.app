@@ -7,16 +7,37 @@ import { protectWindowNavigation } from './window-navigation.js'
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 
 function getPreloadPath() {
-    return join(currentDirectory, 'preload.js')
+    return join(currentDirectory, '../preload/preload.js')
+}
+
+function getWindowIconPath() {
+    if (process.platform === 'darwin') {
+        return undefined
+    }
+
+    return join(currentDirectory, '../../assets/icons/icon.png')
+}
+
+function getRendererPath() {
+    const rendererName =
+        typeof MAIN_WINDOW_VITE_NAME === 'undefined' ? 'main_window' : MAIN_WINDOW_VITE_NAME
+
+    return join(currentDirectory, `../renderer/${rendererName}/index.html`)
 }
 
 export async function createMainWindow() {
+    const devServerUrl =
+        typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === 'undefined'
+            ? undefined
+            : MAIN_WINDOW_VITE_DEV_SERVER_URL
+
     const window = new BrowserWindow({
         width: 1600,
         height: 1100,
         minWidth: 960,
         minHeight: 640,
         title: 'Pruftnet',
+        icon: getWindowIconPath(),
         titleBarStyle: 'hidden',
         titleBarOverlay: {
             color: '#00000000',
@@ -34,12 +55,10 @@ export async function createMainWindow() {
 
     protectWindowNavigation(window)
 
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+    if (devServerUrl) {
+        await window.loadURL(devServerUrl)
     } else {
-        await window.loadFile(
-            join(currentDirectory, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-        )
+        await window.loadFile(getRendererPath())
     }
 
     return window

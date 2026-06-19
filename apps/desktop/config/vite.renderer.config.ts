@@ -6,7 +6,12 @@ import { defineConfig } from "vite"
 const workspaceRoot = resolve(__dirname, "../../..")
 
 export default defineConfig({
+  base: "./",
   plugins: [react(), tailwindcss()],
+  build: {
+    outDir: "dist-electron/renderer/main_window",
+    emptyOutDir: true,
+  },
   resolve: {
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     alias: [

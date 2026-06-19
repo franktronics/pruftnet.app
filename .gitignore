@@ -10,9 +10,11 @@ lerna-debug.log*
 # Dependencies and builds
 node_modules
 dist
+dist-electron
 dist-ssr
 .vite
 out
+release
 *.tsbuildinfo
 
 # Environment

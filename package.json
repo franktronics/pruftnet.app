@@ -3,9 +3,10 @@
   "name": "pruftnet",
   "private": true,
   "type": "module",
-  "description": "",
+  "description": "Network analysis software",
   "main": "index.js",
   "scripts": {
+    "build": "pnpm --filter @repo/desktop build",
     "dev:server": "pnpm --filter @repo/server dev",
     "dev:desktop": "pnpm --filter @repo/desktop dev",
     "format": "prettier --write .",
@@ -13,8 +14,9 @@
     "typecheck": "pnpm -r typecheck"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Franklin Tenepo",
+  "homepage": "https://pruftnet.app",
+  "license": "MIT",
   "packageManager": "pnpm@11.7.0+sha512.19cc852c120c7125760f2443ee6be0ca5b40f9f50598de1a09a1f177503e010e57c23c77646e01e761de59bf874fb22a3398c33ab9691fc13eb946b6f0f4d620",
   "devDependencies": {
     "prettier": "^3.8.4"

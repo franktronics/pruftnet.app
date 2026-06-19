@@ -3,13 +3,6 @@ import { app, BrowserWindow } from 'electron'
 import { createMainWindow } from './main/create-window.js'
 import { registerIpcHandlers } from './main/ipc.js'
 
-if (process.platform === 'win32') {
-    const { default: started } = await import('electron-squirrel-startup')
-    if (started) {
-        app.quit()
-    }
-}
-
 async function bootstrap() {
     await app.whenReady()
 

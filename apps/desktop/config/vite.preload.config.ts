@@ -11,7 +11,7 @@ export default defineConfig({
       formats: ["es"],
       fileName: "preload",
     },
-    outDir: ".vite/build",
+    outDir: "dist-electron/preload",
     rollupOptions: {
       output: {
         entryFileNames: "preload.js",

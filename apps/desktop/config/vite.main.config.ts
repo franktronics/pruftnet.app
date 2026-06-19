@@ -11,12 +11,12 @@ export default defineConfig({
       formats: ["es"],
       fileName: "main",
     },
-    outDir: ".vite/build",
+    outDir: "dist-electron/main",
     rollupOptions: {
       output: {
         entryFileNames: "main.js",
       },
-      external: ["electron", "electron-squirrel-startup", ...nodeBuiltins],
+      external: ["electron", ...nodeBuiltins],
     },
     minify: false,
   },

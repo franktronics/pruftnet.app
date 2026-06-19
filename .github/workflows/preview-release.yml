@@ -1,0 +1,89 @@
+name: Preview Release
+
+on:
+  push:
+    tags:
+      - "v*-preview.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-tag:
+    name: Validate Preview Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require tag commit on develop
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/develop
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: validate-tag
+    runs-on: ${{ matrix.runner }}
+    environment: preview
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            runner: ubuntu-latest
+          - name: macos-arm64
+            runner: macos-latest
+          - name: windows-x64
+            runner: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop installers
+        run: pnpm build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pruftnet-preview-${{ matrix.name }}
+          path: apps/desktop/release/*
+          if-no-files-found: error
+
+  release:
+    name: Publish Preview Release
+    needs: build
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: artifacts/**/*
