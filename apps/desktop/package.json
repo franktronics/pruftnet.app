@@ -22,6 +22,7 @@
     "homepage": "https://pruftnet.app",
     "license": "MIT",
     "dependencies": {
+        "@repo/core": "workspace:*",
         "@repo/front": "workspace:*",
         "react": "catalog:",
         "react-dom": "catalog:"

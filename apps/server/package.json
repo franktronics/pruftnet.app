@@ -13,6 +13,7 @@
   "dependencies": {
     "@effect/platform": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@repo/core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
