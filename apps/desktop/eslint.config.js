@@ -1,7 +1,11 @@
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
 import js from "@eslint/js"
 import globals from "globals"
 import tseslint from "typescript-eslint"
 import { defineConfig, globalIgnores } from "eslint/config"
+
+const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig([
   globalIgnores(["dist", "dist-electron", ".vite", "out", "release"]),
@@ -12,6 +16,9 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.node,
+      },
+      parserOptions: {
+        tsconfigRootDir,
       },
     },
   },

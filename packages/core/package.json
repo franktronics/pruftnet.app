@@ -11,11 +11,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@effect/rpc": "catalog:",
     "@repo/shared": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "globals": "catalog:",
     "typescript": "catalog:",

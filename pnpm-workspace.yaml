@@ -1,35 +1,36 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+    - 'apps/*'
+    - 'packages/*'
 
 nodeLinker: hoisted
 
 allowBuilds:
-  "@parcel/watcher": false
-  electron-winstaller: true
-  esbuild: true
-  fs-xattr: false
-  macos-alias: false
-  msgpackr-extract: false
+    '@parcel/watcher': false
+    electron-winstaller: true
+    esbuild: true
+    fs-xattr: false
+    macos-alias: false
+    msgpackr-extract: false
 
 catalog:
-  "@effect/platform": "^0.96.1"
-  "@effect/platform-node": "^0.107.0"
-  "@eslint/js": "^10"
-  "@types/node": "^25.9.3"
-  "@types/react": "^19"
-  "@types/react-dom": "^19"
-  effect: "^3.21.3"
-  eslint: "^10"
-  eslint-plugin-react-hooks: "^7.1.1"
-  globals: "^17"
-  react: "^19.2.6"
-  react-dom: "^19.2.6"
-  typescript: "~6"
-  typescript-eslint: "^8"
+    '@effect/platform': '^0.96.1'
+    '@effect/platform-node': '^0.107.0'
+    '@effect/rpc': '^0.75.1'
+    '@eslint/js': '^10'
+    '@types/node': '^25.9.3'
+    '@types/react': '^19'
+    '@types/react-dom': '^19'
+    effect: '^3.21.3'
+    eslint: '^10'
+    eslint-plugin-react-hooks: '^7.1.1'
+    globals: '^17'
+    react: '^19.2.6'
+    react-dom: '^19.2.6'
+    typescript: '~6'
+    typescript-eslint: '^8'
 
 overrides:
-  "@electron/rebuild": "^4.0.4"
+    '@electron/rebuild': '^4.0.4'
 
 minimumReleaseAgeExclude:
-  - '@tanstack/react-router@1.170.16'
+    - '@tanstack/react-router@1.170.16'

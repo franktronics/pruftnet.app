@@ -211,6 +211,9 @@ catalogs:
     '@effect/platform-node':
       specifier: ^0.107.0
       version: 0.107.0
+    '@effect/rpc':
+      specifier: ^0.75.1
+      version: 0.75.1
     '@eslint/js':
       specifier: ^10
       version: 10.0.1
@@ -362,6 +365,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@effect/rpc':
+        specifier: 'catalog:'
+        version: 0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3)
       '@repo/shared':
         specifier: workspace:*
         version: link:../shared
@@ -372,6 +378,9 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.5.0(jiti@2.7.0))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.3
       eslint:
         specifier: 'catalog:'
         version: 10.5.0(jiti@2.7.0)
@@ -442,6 +451,12 @@ importers:
 
   packages/shared:
     dependencies:
+      '@effect/platform':
+        specifier: 'catalog:'
+        version: 0.96.1(effect@3.21.3)
+      '@effect/rpc':
+        specifier: 'catalog:'
+        version: 0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3)
       effect:
         specifier: 'catalog:'
         version: 3.21.3
