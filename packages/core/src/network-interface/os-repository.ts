@@ -5,7 +5,7 @@ import type { NetworkInterfaceInfo, NetworkInterfaces } from '@repo/shared/netwo
 import { InterfacesNotFound } from '@repo/shared/network-interface'
 import { Effect, Layer } from 'effect'
 
-import { NetworkInterfaceRepository } from './repository.js'
+import { NetworkInterfaceRepository } from './repository'
 
 function toNetworkInterfaceInfo(info: NodeNetworkInterfaceInfo): NetworkInterfaceInfo | undefined {
     const base = {

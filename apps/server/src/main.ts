@@ -1,8 +1,8 @@
 import { NodeRuntime } from "@effect/platform-node"
 import { Effect } from "effect"
 
-import { loadServerConfig } from "./config.js"
-import { startServer } from "./server.js"
+import { loadServerConfig } from "./config"
+import { startServer } from "./server"
 
 const config = loadServerConfig()
 

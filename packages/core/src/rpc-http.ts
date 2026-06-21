@@ -5,7 +5,7 @@ import { RpcSerialization, RpcServer } from '@effect/rpc'
 import { AppRpcGroup } from '@repo/shared'
 import { Effect, Scope } from 'effect'
 
-import { AppLayer } from './app.js'
+import { AppLayer } from './app'
 
 export const makeAppRpcNodeHandler: Effect.Effect<
     (request: IncomingMessage, response: ServerResponse) => void,

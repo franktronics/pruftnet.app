@@ -1,6 +1,6 @@
 import type { BrowserWindow, Event as ElectronEvent } from "electron"
 
-import { getDesktopDevServerUrl } from "./runtime-config.js"
+import { getDesktopDevServerUrl } from "./runtime-config"
 
 function isAllowedNavigation(navigationUrl: string) {
   const devServerUrl = getDesktopDevServerUrl()

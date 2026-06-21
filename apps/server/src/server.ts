@@ -4,9 +4,9 @@ import { createServer } from "node:http"
 import { Effect, Scope } from "effect"
 import { makeAppRpcNodeHandler } from "@repo/core"
 
-import type { ServerConfig } from "./config.js"
-import { serveStaticFrontend } from "./http/static-files.js"
-import { createViteDevServer, serveViteFrontend } from "./http/vite-dev.js"
+import type { ServerConfig } from "./config"
+import { serveStaticFrontend } from "./http/static-files"
+import { createViteDevServer, serveViteFrontend } from "./http/vite-dev"
 
 type StartedServer = {
   readonly address: string

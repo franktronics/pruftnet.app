@@ -37,10 +37,16 @@ function close(server: NodeServer) {
     })
 }
 
+const corsHeaders = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-allow-headers': 'b3, content-type, authorization, traceparent, baggage',
+}
+
 function setCorsHeaders(response: NodeJS.WritableStream & { setHeader: (name: string, value: string) => void }) {
-    response.setHeader('access-control-allow-origin', '*')
-    response.setHeader('access-control-allow-methods', 'POST, OPTIONS')
-    response.setHeader('access-control-allow-headers', 'content-type')
+    for (const [name, value] of Object.entries(corsHeaders)) {
+        response.setHeader(name, value)
+    }
 }
 
 export const startDesktopRpcServer: Effect.Effect<StartedDesktopRpcServer, Error> = Effect.gen(

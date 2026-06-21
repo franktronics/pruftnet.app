@@ -1,1 +1,1 @@
-export { NetworkInterfaceLive } from './handlers.js'
+export { NetworkInterfaceLive } from './handlers'

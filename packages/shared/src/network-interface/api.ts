@@ -1,6 +1,6 @@
 import { Rpc, RpcGroup } from '@effect/rpc'
-import { NetworkInterfacesSchema } from './schema.js'
-import { InterfacesNotFound } from './errors.js'
+import { NetworkInterfacesSchema } from './schema'
+import { InterfacesNotFound } from './errors'
 
 export class NetworkInterfaceRpcs extends RpcGroup.make(
     Rpc.make('NetworkInterfaces', {

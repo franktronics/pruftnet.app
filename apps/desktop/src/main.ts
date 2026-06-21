@@ -1,9 +1,9 @@
 import { app, BrowserWindow } from 'electron'
 import { Effect } from 'effect'
 
-import { createMainWindow } from './main/create-window.js'
-import { registerIpcHandlers } from './main/ipc.js'
-import { startDesktopRpcServer } from './main/rpc-server.js'
+import { createMainWindow } from './main/create-window'
+import { registerIpcHandlers } from './main/ipc'
+import { startDesktopRpcServer } from './main/rpc-server'
 
 async function bootstrap() {
     await app.whenReady()

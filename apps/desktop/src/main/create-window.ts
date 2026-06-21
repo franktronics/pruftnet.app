@@ -2,8 +2,8 @@ import { BrowserWindow } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config.js'
-import { protectWindowNavigation } from './window-navigation.js'
+import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config'
+import { protectWindowNavigation } from './window-navigation'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 

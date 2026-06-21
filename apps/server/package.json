@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "vite build --config config/vite.server.config.ts",
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

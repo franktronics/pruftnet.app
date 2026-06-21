@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { join } from "node:path"
 import type { ViteDevServer } from "vite"
 
-import type { ServerConfig } from "../config.js"
+import type { ServerConfig } from "../config"
 
 export async function createViteDevServer(config: ServerConfig) {
   const { createServer } = await import("vite")
