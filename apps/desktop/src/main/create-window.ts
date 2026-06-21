@@ -23,7 +23,11 @@ function getRendererPath() {
     return join(currentDirectory, `../renderer/${getRendererDirectoryName()}/index.html`)
 }
 
-export async function createMainWindow() {
+type MainWindowOptions = {
+    readonly rpcUrl: string
+}
+
+export async function createMainWindow(options: MainWindowOptions) {
     const devServerUrl = getDesktopDevServerUrl()
 
     const window = new BrowserWindow({
@@ -41,6 +45,7 @@ export async function createMainWindow() {
         },
         trafficLightPosition: { x: 16, y: 15 },
         webPreferences: {
+            additionalArguments: [`--pruftnet-rpc-url=${options.rpcUrl}`],
             contextIsolation: true,
             nodeIntegration: false,
             preload: getPreloadPath(),

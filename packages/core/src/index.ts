@@ -1,6 +1,6 @@
-import { Layer } from 'effect'
-import { NetworkInterfaceRpcs } from '@repo/shared/network-interface'
-import { NetworkInterfaceLive } from './network-interface'
+import { AppRpcGroup } from '@repo/shared'
+import { AppLayer } from './app.js'
+import { makeAppRpcNodeHandler } from './rpc-http.js'
 
-export const AppRpcGroup = NetworkInterfaceRpcs.merge()
-export const AppLayer = Layer.mergeAll(NetworkInterfaceLive)
+export { AppRpcGroup, makeAppRpcNodeHandler }
+export { AppLayer }

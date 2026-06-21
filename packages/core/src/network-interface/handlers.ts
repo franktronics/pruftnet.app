@@ -1,7 +1,8 @@
 import { Effect, Layer } from 'effect'
-import { NetworkInterfaceRepository } from './repository'
 import { NetworkInterfaceRpcs } from '@repo/shared/network-interface'
-import { NetworkInterfaceRepositoryLive } from './os-repository'
+
+import { NetworkInterfaceRepositoryLive } from './os-repository.js'
+import { NetworkInterfaceRepository } from './repository.js'
 
 export const NetworkInterfaceLive = NetworkInterfaceRpcs.toLayer(
     Effect.gen(function* () {

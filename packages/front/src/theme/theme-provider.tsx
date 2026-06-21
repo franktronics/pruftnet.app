@@ -6,6 +6,7 @@ declare global {
   interface Window {
     readonly pruftnet?: {
       readonly platform: string
+      readonly rpcUrl: string
       readonly setTheme: (theme: Theme) => Promise<"dark" | "light">
     }
   }

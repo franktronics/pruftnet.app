@@ -21,6 +21,13 @@ Run the desktop app in development mode:
 pnpm dev:desktop
 ```
 
+## RPC Runtime
+
+Shared RPC contracts live in `@repo/shared`. Core implementations live in `@repo/core` and are exposed through `AppLayer`.
+
+- Server mode mounts the core RPC handler at `/rpc`.
+- Desktop mode starts a local RPC server on a random `127.0.0.1` port and exposes its URL as `window.pruftnet.rpcUrl` through preload.
+
 ## Build
 
 Build the full Electron desktop app for the current operating system:

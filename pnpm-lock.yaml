@@ -270,6 +270,9 @@ importers:
       '@repo/front':
         specifier: workspace:*
         version: link:../../packages/front
+      effect:
+        specifier: 'catalog:'
+        version: 3.21.3
       react:
         specifier: 'catalog:'
         version: 19.2.7
@@ -365,6 +368,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 0.107.0(@effect/cluster@0.59.0(@effect/platform@0.96.1(effect@3.21.3))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/workflow@0.18.2(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/platform@0.96.1(effect@3.21.3))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(effect@3.21.3))(effect@3.21.3))(@effect/platform@0.96.1(effect@3.21.3))(@effect/rpc@0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/sql@0.51.1(@effect/experimental@0.60.0(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3))(effect@3.21.3)
       '@effect/rpc':
         specifier: 'catalog:'
         version: 0.75.1(@effect/platform@0.96.1(effect@3.21.3))(effect@3.21.3)
