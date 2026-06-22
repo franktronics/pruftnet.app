@@ -5,7 +5,9 @@
     "type": "module",
     "exports": {
         ".": "./src/index.ts",
-        "./network-interface": "./src/network-interface/index.ts"
+        "./network-interface": "./src/modules/network-interface/index.ts",
+        "./settings": "./src/modules/settings/index.ts",
+        "./utils": "./src/utils/index.ts"
     },
     "scripts": {
         "lint": "eslint .",

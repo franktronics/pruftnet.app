@@ -1,3 +1,3 @@
-import { NetworkInterfaceRpcs } from './network-interface'
+import { NetworkInterfaceRpcs } from './modules/network-interface'
 
 export const AppRpcGroup = NetworkInterfaceRpcs.merge()
