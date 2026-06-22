@@ -19,6 +19,7 @@ export const useGetNetworkInterfaces = ({ enabled }: { enabled?: boolean } = {})
 
     return useQuery({
         enabled: enabled ?? false,
+        retry: 2,
         staleTime: 60 * 1000, // 1 minute
         queryFn: getInterfaces,
         queryKey: ['network-interfaces'],

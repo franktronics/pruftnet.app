@@ -67,7 +67,12 @@ export function InterfaceSelector({ className, onChange, ...props }: InterfaceSe
                         <CommandInput placeholder="Filter interfaces by name or address..." />
                         <CommandList className="max-h-96">
                             {isFetching ? <InterfaceLoading /> : null}
-                            {error ? <InterfaceError onRetry={() => void refetch()} /> : null}
+                            {error ? (
+                                <InterfaceError
+                                    onRetry={() => void refetch()}
+                                    message={error.message}
+                                />
+                            ) : null}
                             {!isFetching && !error ? (
                                 <CommandEmpty>No network interfaces found.</CommandEmpty>
                             ) : null}
@@ -81,9 +86,7 @@ export function InterfaceSelector({ className, onChange, ...props }: InterfaceSe
                                             onSelect={() => selectInterface(item)}
                                             className="items-stretch py-2 pr-8"
                                         >
-                                            <InterfaceCard
-                                                item={item}
-                                            />
+                                            <InterfaceCard item={item} />
                                         </CommandItem>
                                     ))}
                                 </CommandGroup>
@@ -133,10 +136,10 @@ function InterfaceLoading() {
     )
 }
 
-function InterfaceError({ onRetry }: { readonly onRetry: () => void }) {
+function InterfaceError({ onRetry, message }: { onRetry: () => void; message: string }) {
     return (
         <div className="border-destructive/30 bg-destructive/10 text-destructive m-2 rounded-md border p-3 text-xs">
-            <p>Unable to load network interfaces.</p>
+            <p>{message}</p>
             <button
                 type="button"
                 onClick={onRetry}
@@ -149,11 +152,7 @@ function InterfaceError({ onRetry }: { readonly onRetry: () => void }) {
     )
 }
 
-function InterfaceCard({
-    item,
-}: {
-    readonly item: InterfaceSelection
-}) {
+function InterfaceCard({ item }: { readonly item: InterfaceSelection }) {
     const ipv4 = getPrimaryAddress(item.infos, 'IPv4')
     const ipv6 = getPrimaryAddress(item.infos, 'IPv6')
     const mac = getMacAddress(item.infos)
