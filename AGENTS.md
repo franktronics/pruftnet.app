@@ -7,9 +7,9 @@ Pruftnet is a network analysis software program similar to Wireshark that allows
 1. Performance first.
 2. Reliability first.
 3. Keep behavior predictable under load and during failures.
-
-If a tradeoff is required, choose correctness and robustness over short-term convenience.
-This repository is a VERY EARLY WIP. Proposing sweeping changes that improve long-term maintainability is encouraged.
+4. Always ensure that the implemented features are compatible with Linux, macOS, Windows, and server mode.
+5. If a tradeoff is required, choose correctness and robustness over short-term convenience.
+6. This repository is a VERY EARLY WIP. Proposing sweeping changes that improve long-term maintainability is encouraged.
 
 ## Maintainability
 
@@ -22,6 +22,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - `packages/front`: React frontend, which is the core content of the application. It is used by both the desktop and the server.
 - `packages/utils`: Shared runtime utilities consumed by both server and client applications.
 - `packages/ui`: Front-end component library built with Shadcn and organized using Atomic Design.
+- `packages/core`: The core of the backend. This package is included in both the desktop and server because they share the same logic.
 
 
 ## Rules that should always be followed for prompting:

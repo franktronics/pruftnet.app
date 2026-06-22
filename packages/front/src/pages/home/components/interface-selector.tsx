@@ -12,7 +12,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@repo/ui'
-import { Cable, ChevronDown, LoaderCircle, Network, RotateCw } from 'lucide-react'
+import { Cable, ChevronDown, EthernetPort, LoaderCircle, RotateCcwSquare, RotateCw } from 'lucide-react'
 
 import { useGetNetworkInterfaces } from '../hooks/use-network-interfaces'
 
@@ -157,11 +157,12 @@ function InterfaceCard({ item }: { readonly item: InterfaceSelection }) {
     const ipv6 = getPrimaryAddress(item.infos, 'IPv6')
     const mac = getMacAddress(item.infos)
     const kind = getInterfaceKind(item.infos)
+    const Icon = kind === 'loopback' ? RotateCcwSquare : EthernetPort
 
     return (
         <div className="grid w-full grid-cols-[auto_1fr] items-start gap-3">
             <span className="border-border bg-muted/40 mt-0.5 flex size-8 items-center justify-center rounded-md border">
-                <Network className="text-muted-foreground size-4" />
+                <Icon className="text-muted-foreground size-4" />
             </span>
             <span className="min-w-0 space-y-1">
                 <span className="flex min-w-0 items-center gap-2">

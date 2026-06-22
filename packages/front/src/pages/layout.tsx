@@ -110,6 +110,7 @@ function SettingsButton() {
             variant="outline"
             size="icon"
             aria-label="Open settings"
+            nativeButton={false}
             render={<Link to="/settings" />}
         >
             <Settings />
