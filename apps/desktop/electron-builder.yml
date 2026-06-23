@@ -3,61 +3,61 @@ productName: Pruftnet
 copyright: Copyright © 2026 Franklin Tenepo
 
 directories:
-  output: release
-  buildResources: assets
+    output: release
+    buildResources: assets
 
 files:
-  - dist-electron/**/*
-  - assets/**/*
-  - package.json
+    - dist-electron/**/*
+    - assets/**/*
+    - package.json
 
 asar: true
 afterPack: scripts/apply-fuses.cjs
 
 mac:
-  category: public.app-category.developer-tools
-  icon: assets/icons/icon.icns
-  target:
-    - target: dmg
-    - target: zip
-  identity: null
+    category: public.app-category.developer-tools
+    icon: assets/icons/icon.icns
+    target:
+        - target: dmg
+        - target: zip
+    identity: null
 
 dmg:
-  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 win:
-  icon: assets/icons/icon.ico
-  target:
-    - target: nsis
-  artifactName: ${productName}-${version}-${os}-${arch}-setup.${ext}
+    icon: assets/icons/icon.ico
+    target:
+        - target: nsis
+    artifactName: ${productName}-${version}-${os}-${arch}-setup.${ext}
 
 nsis:
-  oneClick: false
-  perMachine: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
-  shortcutName: Pruftnet
+    oneClick: false
+    perMachine: false
+    allowElevation: true
+    allowToChangeInstallationDirectory: true
+    createDesktopShortcut: true
+    createStartMenuShortcut: true
+    shortcutName: Pruftnet
 
 linux:
-  icon: assets/icons/icon.png
-  category: Network
-  executableName: pruftnet
-  maintainer: Franklin Tenepo
-  synopsis: Network analysis software
-  description: Network analysis software
-  target:
-    - target: AppImage
-    - target: deb
-    - target: rpm
-  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    icon: assets/icons/icon.png
+    category: Network
+    executableName: pruftnet
+    maintainer: Franklin Tenepo
+    synopsis: Network analysis software
+    description: Network analysis software
+    target:
+        - target: AppImage
+        - target: deb
+        - target: rpm
+    artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 appImage:
-  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 deb:
-  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 rpm:
-  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    artifactName: ${productName}-${version}-${os}-${arch}.${ext}

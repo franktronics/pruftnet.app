@@ -43,7 +43,9 @@ const corsHeaders = {
     'access-control-allow-headers': 'b3, content-type, authorization, traceparent, baggage',
 }
 
-function setCorsHeaders(response: NodeJS.WritableStream & { setHeader: (name: string, value: string) => void }) {
+function setCorsHeaders(
+    response: NodeJS.WritableStream & { setHeader: (name: string, value: string) => void },
+) {
     for (const [name, value] of Object.entries(corsHeaders)) {
         response.setHeader(name, value)
     }

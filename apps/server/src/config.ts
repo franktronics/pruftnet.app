@@ -1,43 +1,43 @@
-import { resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-export type ServerMode = "development" | "production"
+export type ServerMode = 'development' | 'production'
 
 export type ServerConfig = {
-  readonly mode: ServerMode
-  readonly host: string
-  readonly port: number
-  readonly frontendRootPath: string
-  readonly frontendViteConfigPath: string
-  readonly frontendDistPath: string
+    readonly mode: ServerMode
+    readonly host: string
+    readonly port: number
+    readonly frontendRootPath: string
+    readonly frontendViteConfigPath: string
+    readonly frontendDistPath: string
 }
 
-const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url))
+const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url))
 
 function readPort() {
-  const port = Number.parseInt(process.env.PORT ?? "3000", 10)
+    const port = Number.parseInt(process.env.PORT ?? '3000', 10)
 
-  if (Number.isNaN(port)) {
-    return 3000
-  }
+    if (Number.isNaN(port)) {
+        return 3000
+    }
 
-  return port
+    return port
 }
 
 export function loadServerConfig(overrides: Partial<ServerConfig> = {}): ServerConfig {
-  const mode = process.env.NODE_ENV === "production" ? "production" : "development"
+    const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development'
 
-  return {
-    mode,
-    host: process.env.HOST ?? (mode === "production" ? "127.0.0.1" : "0.0.0.0"),
-    port: readPort(),
-    frontendRootPath:
-      process.env.FRONTEND_ROOT_PATH ?? resolve(workspaceRoot, "packages/front"),
-    frontendViteConfigPath:
-      process.env.FRONTEND_VITE_CONFIG_PATH ??
-      resolve(workspaceRoot, "packages/front/vite.config.ts"),
-    frontendDistPath:
-      process.env.FRONTEND_DIST_PATH ?? resolve(workspaceRoot, "packages/front/dist"),
-    ...overrides,
-  }
+    return {
+        mode,
+        host: process.env.HOST ?? (mode === 'production' ? '127.0.0.1' : '0.0.0.0'),
+        port: readPort(),
+        frontendRootPath:
+            process.env.FRONTEND_ROOT_PATH ?? resolve(workspaceRoot, 'packages/front'),
+        frontendViteConfigPath:
+            process.env.FRONTEND_VITE_CONFIG_PATH ??
+            resolve(workspaceRoot, 'packages/front/vite.config.ts'),
+        frontendDistPath:
+            process.env.FRONTEND_DIST_PATH ?? resolve(workspaceRoot, 'packages/front/dist'),
+        ...overrides,
+    }
 }

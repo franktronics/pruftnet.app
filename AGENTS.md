@@ -1,5 +1,5 @@
-
 # Agent Guidelines for Pruftnet
+
 Pruftnet is a network analysis software program similar to Wireshark that allows to perform powerful network scans, map network topologies, add custom protocols, and conduct active analysis by injecting packets directly into the network.
 
 ## Core Priorities
@@ -24,8 +24,8 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - `packages/ui`: Front-end component library built with Shadcn and organized using Atomic Design.
 - `packages/core`: The core of the backend. This package is included in both the desktop and server because they share the same logic.
 
-
 ## Rules that should always be followed for prompting:
+
 - Code, documentation, and comments must always be written in English, regardless of the user's input language.
 - Always use the `caveman` skill in `full` mode for every Task or questions.
 - Always use the `effect-server` skill whenever you need to work on the server module/packages.

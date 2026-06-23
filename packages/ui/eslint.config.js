@@ -9,22 +9,22 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-    ],
-    languageOptions: {
-      globals: globals.browser,
-      parserOptions: {
-        tsconfigRootDir,
-      },
+    globalIgnores(['dist']),
+    {
+        files: ['**/*.{ts,tsx}'],
+        extends: [
+            js.configs.recommended,
+            tseslint.configs.recommended,
+            reactHooks.configs.flat.recommended,
+        ],
+        languageOptions: {
+            globals: globals.browser,
+            parserOptions: {
+                tsconfigRootDir,
+            },
+        },
+        rules: {
+            'react-hooks/set-state-in-effect': 'off',
+        },
     },
-    rules: {
-      'react-hooks/set-state-in-effect': 'off',
-    },
-  },
 ])
