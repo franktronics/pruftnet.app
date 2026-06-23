@@ -14,7 +14,7 @@ import {
 } from '@repo/ui'
 import { Cable, ChevronDown, EthernetPort, LoaderCircle, RotateCcwSquare } from 'lucide-react'
 
-import { BasicErrorAlert } from '../../../components/error-renderer'
+import { BasicErrorAlert } from '#/components/error-renderer'
 import { useGetNetworkInterfaces } from '../hooks/use-network-interfaces'
 
 type InterfaceSelection = {

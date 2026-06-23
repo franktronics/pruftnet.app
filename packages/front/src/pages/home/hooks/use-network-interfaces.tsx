@@ -2,8 +2,8 @@ import { RpcClient } from '@effect/rpc'
 import { NetworkInterfaceRpcs } from '@repo/shared/network-interface'
 import type { InterfacesNotFound, NetworkInterfaces } from '@repo/shared/network-interface'
 import { Effect } from 'effect'
-import { RpcClientLive } from '../../../config/rpc-client'
-import { runEffectPromise } from '../../../utils/run-effect-promise'
+import { RpcClientLive } from '#/config/rpc-client'
+import { runEffectPromise } from '#/utils/run-effect-promise'
 import { useQuery } from '@tanstack/react-query'
 
 const niClient = RpcClient.make(NetworkInterfaceRpcs).pipe(Effect.provide(RpcClientLive))

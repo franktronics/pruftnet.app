@@ -1,27 +1,30 @@
 {
-  "name": "@repo/core",
-  "private": true,
-  "version": "0.0.1",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@effect/platform-node": "catalog:",
-    "@effect/rpc": "catalog:",
-    "@repo/shared": "workspace:*",
-    "effect": "catalog:"
-  },
-  "devDependencies": {
-    "@eslint/js": "catalog:",
-    "@types/node": "catalog:",
-    "eslint": "catalog:",
-    "globals": "catalog:",
-    "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
-  }
+    "name": "@repo/core",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@effect/platform-node": "catalog:",
+        "@effect/rpc": "catalog:",
+        "@repo/shared": "workspace:*",
+        "effect": "catalog:"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "globals": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
+    },
+    "imports": {
+        "#/*": "./src/*"
+    }
 }

@@ -24,5 +24,8 @@
         "globals": "catalog:",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:"
+    },
+    "imports": {
+        "#/*": "./src/*"
     }
 }
