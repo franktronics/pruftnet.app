@@ -12,8 +12,9 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@repo/ui'
-import { Cable, ChevronDown, EthernetPort, LoaderCircle, RotateCcwSquare, RotateCw } from 'lucide-react'
+import { Cable, ChevronDown, EthernetPort, LoaderCircle, RotateCcwSquare } from 'lucide-react'
 
+import { BasicErrorAlert } from '../../../components/error-renderer'
 import { useGetNetworkInterfaces } from '../hooks/use-network-interfaces'
 
 type InterfaceSelection = {
@@ -68,10 +69,9 @@ export function InterfaceSelector({ className, onChange, ...props }: InterfaceSe
                         <CommandList className="max-h-96">
                             {isFetching ? <InterfaceLoading /> : null}
                             {error ? (
-                                <InterfaceError
-                                    onRetry={() => void refetch()}
-                                    message={error.message}
-                                />
+                                <div className="p-2">
+                                    <BasicErrorAlert error={error} onRetry={() => void refetch()} />
+                                </div>
                             ) : null}
                             {!isFetching && !error ? (
                                 <CommandEmpty>No network interfaces found.</CommandEmpty>
@@ -132,22 +132,6 @@ function InterfaceLoading() {
         <div className="text-muted-foreground flex items-center gap-2 px-3 py-4 text-xs">
             <LoaderCircle className="size-4 animate-spin" />
             Fetching network interfaces...
-        </div>
-    )
-}
-
-function InterfaceError({ onRetry, message }: { onRetry: () => void; message: string }) {
-    return (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive m-2 rounded-md border p-3 text-xs">
-            <p>{message}</p>
-            <button
-                type="button"
-                onClick={onRetry}
-                className="text-destructive mt-2 inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
-            >
-                <RotateCw className="size-3" />
-                Retry
-            </button>
         </div>
     )
 }

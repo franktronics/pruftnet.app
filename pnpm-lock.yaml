@@ -414,6 +414,9 @@ importers:
       '@repo/ui':
         specifier: workspace:*
         version: link:../ui
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.7)

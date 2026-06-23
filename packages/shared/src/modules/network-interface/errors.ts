@@ -1,8 +1,7 @@
 import { Schema } from 'effect'
+import { BasicErrorFields } from '../../utils'
 
 export class InterfacesNotFound extends Schema.TaggedError<InterfacesNotFound>()(
     'InterfacesNotFound',
-    {
-        message: Schema.String,
-    },
+    BasicErrorFields,
 ) {}

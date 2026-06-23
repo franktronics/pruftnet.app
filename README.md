@@ -27,6 +27,7 @@ Shared RPC contracts live in `@repo/shared`. Core implementations live in `@repo
 
 - Server mode mounts the core RPC handler at `/rpc`.
 - Desktop mode starts a local RPC server on a random `127.0.0.1` port and exposes its URL as `window.pruftnet.rpcUrl` through preload.
+- Expected RPC errors should use `Schema.TaggedError` and the shared `BasicErrorFields` model from `@repo/shared/utils` so frontend renderers can display `title`, optional `message`, optional `whatToDo`, `retryable`, and `severity` consistently.
 
 ## Build
 

@@ -40,8 +40,8 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 ## Documentation
 
-Always update documentation for significant changes or new features, and remove outdated information.
-Load the relevant doc file based on the task at hand:
+Always update documentations in `./.agents/doc/` for significant changes or new features, and remove outdated information.
+Load or create the relevant doc file based on the task at hand:
 
 - **Release process** → @.agents/doc/release.md
 

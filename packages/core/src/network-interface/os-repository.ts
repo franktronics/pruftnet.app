@@ -57,7 +57,15 @@ export const NetworkInterfaceRepositoryLive = Layer.succeed(NetworkInterfaceRepo
         return Effect.sync(readNetworkInterfaces).pipe(
             Effect.filterOrFail(
                 (interfaces) => Object.keys(interfaces).length > 0,
-                () => new InterfacesNotFound({ message: 'No network interfaces were found' }),
+                () =>
+                    new InterfacesNotFound({
+                        title: 'No network interfaces found',
+                        message:
+                            'The operating system did not return any usable network interface.',
+                        whatToDo: 'Check network settings or permissions, then retry.',
+                        retryable: true,
+                        severity: 'error',
+                    }),
             ),
         )
     },
