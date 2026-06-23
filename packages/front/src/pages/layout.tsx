@@ -141,24 +141,8 @@ function AppSidebar({
             }
             {...props}
         >
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" render={<Link to="/" />}>
-                            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                P
-                            </div>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-medium">Pruftnet</span>
-                                <span className="truncate text-xs">Dashboard</span>
-                            </div>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+                <SidebarGroup className="pt-2">
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {mainNavigation.map((item) => {
