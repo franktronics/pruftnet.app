@@ -43,6 +43,7 @@ Always update documentations in `./.agents/doc/` for significant changes or new 
 Load or create the relevant doc file based on the task at hand:
 
 - **Release process** → @.agents/doc/release.md
+- **Coding style** → @.agents/doc/coding-style.md
 
 ## External References
 
