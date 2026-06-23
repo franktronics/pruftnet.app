@@ -27,7 +27,6 @@ Long term maintainability is a core priority. If you add new functionality, firs
 ## Rules that should always be followed for prompting:
 
 - Code, documentation, and comments must always be written in English, regardless of the user's input language.
-- Always use the `caveman` skill in `full` mode for every Task or questions.
 - Always use the `effect-server` skill whenever you need to work on the server module/packages.
 - Always use the `frontend-design` skill whenever a task involves UI/UX design, visual design, layout, or frontend styling decisions.
 
