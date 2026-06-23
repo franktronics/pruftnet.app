@@ -6,6 +6,7 @@ dist-ssr
 out
 release
 out
+.agents/
 /src/stories/
 .vite
 package-lock.json
