@@ -15,6 +15,7 @@ dist-ssr
 .vite
 out
 release
+packages/core/cpp/build
 *.tsbuildinfo
 
 # Environment
