@@ -9,8 +9,6 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
     SidebarInset,
     SidebarMenu,
     SidebarMenuButton,
@@ -21,6 +19,7 @@ import {
     useSidebar,
 } from '@repo/ui/organisms'
 
+import pruftnetIcon from '../assets/pruftnet-icon.png'
 import { ThemeToggle } from '../theme/theme-toggle'
 
 const mainNavigation = [
@@ -67,13 +66,21 @@ export function DashboardLayout() {
 
 function DesktopTitleBar() {
     const { state } = useSidebar()
+    const desktopPlatform = typeof window === 'undefined' ? undefined : window.pruftnet?.platform
 
     return (
         <header
             className="desktop-titlebar drag-region bg-background/95 relative flex shrink-0 items-center border-b p-0"
+            data-desktop-platform={desktopPlatform}
             data-sidebar-state={state}
         >
             <div className="desktop-titlebar-sidebar-boundary h-full shrink-0 border-r" />
+            <div className="desktop-titlebar-brand pointer-events-none absolute z-10 flex items-center gap-2 overflow-hidden">
+                <img src={pruftnetIcon} alt="" className="size-5 shrink-0" aria-hidden="true" />
+                <span className="desktop-titlebar-brand-text text-sidebar-foreground text-sm font-medium tracking-tight">
+                    Pruftnet
+                </span>
+            </div>
             <SidebarTrigger
                 variant="outline"
                 className="desktop-titlebar-trigger no-drag-region bg-sidebar absolute z-10 active:translate-y-0"
