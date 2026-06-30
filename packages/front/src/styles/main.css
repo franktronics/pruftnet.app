@@ -7,6 +7,7 @@
 
 :root {
   --desktop-titlebar-height: 48px;
+  --desktop-titlebar-collapsed-brand-width: 9.5rem;
   --desktop-titlebar-controls-right: 0.75rem;
 }
 
@@ -67,18 +68,25 @@
 }
 
 .desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-brand {
-  left: 3.25rem;
-  max-width: 1.25rem;
+  max-width: calc(var(--desktop-titlebar-collapsed-brand-width) - 3.75rem);
 }
 
-.desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-brand-text {
-  opacity: 0;
+.desktop-titlebar:not([data-desktop-platform="darwin"])[data-sidebar-state="collapsed"]
+  .desktop-titlebar-sidebar-boundary {
+  width: var(--desktop-titlebar-collapsed-brand-width);
+  background-color: var(--sidebar);
+  border-right-color: var(--border);
 }
 
 [data-desktop-platform="darwin"]
   .desktop-titlebar[data-sidebar-state="collapsed"]
   .desktop-titlebar-trigger {
   left: 88px;
+}
+
+.desktop-titlebar:not([data-desktop-platform="darwin"])[data-sidebar-state="collapsed"]
+  .desktop-titlebar-trigger {
+  left: calc(var(--desktop-titlebar-collapsed-brand-width) - 2rem);
 }
 
 [data-desktop-platform="darwin"] .desktop-titlebar-brand,
