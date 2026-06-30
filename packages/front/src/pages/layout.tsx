@@ -70,7 +70,7 @@ function DesktopTitleBar() {
 
     return (
         <header
-            className="desktop-titlebar drag-region bg-background/95 relative flex shrink-0 items-center border-b p-0"
+            className="desktop-titlebar drag-region bg-background/95 relative flex shrink-0 items-center p-0"
             data-desktop-platform={desktopPlatform}
             data-sidebar-state={state}
         >
