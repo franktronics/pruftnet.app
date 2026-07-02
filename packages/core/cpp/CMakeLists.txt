@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.24)
 
 project(PruftnetSniffing VERSION 0.1.0 LANGUAGES CXX)
 
-option(PRUFTNET_SNIFFING_BUILD_EXAMPLES "Build standalone sniffing examples" ON)
 option(PRUFTNET_SNIFFING_BUILD_TESTS "Build C++ sniffing tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -26,11 +25,16 @@ add_library(pruftnet_sniffing STATIC
     src/sniffing/empty_packet_parser.cpp
     src/sniffing/internal_stats.cpp
     src/sniffing/link_type.cpp
+    src/sniffing/live_pcap_packet_source.cpp
     src/sniffing/network_sniffer.cpp
+    src/sniffing/offline_pcap_packet_source.cpp
     src/sniffing/packet_ring.cpp
-    src/sniffing/pcap_session.cpp
+    src/sniffing/packet_source.cpp
+    src/sniffing/pcap_handle.cpp
     src/sniffing/sniffer_error.cpp
     src/sniffing/sniffer_options.cpp
+    src/sniffing/sniffer_options_validation.cpp
+    src/sniffing/sniffer_runtime.cpp
 )
 
 target_include_directories(pruftnet_sniffing
@@ -55,16 +59,33 @@ else()
     target_compile_options(pruftnet_sniffing PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-if(PRUFTNET_SNIFFING_BUILD_EXAMPLES)
-    add_executable(sniffing_smoke_test examples/sniffing_smoke_test.cpp)
-    target_link_libraries(sniffing_smoke_test PRIVATE pruftnet_sniffing)
-endif()
-
 if(PRUFTNET_SNIFFING_BUILD_TESTS)
     enable_testing()
 
-    add_executable(packet_ring_tests tests/packet_ring_tests.cpp)
-    target_include_directories(packet_ring_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-    target_link_libraries(packet_ring_tests PRIVATE pruftnet_sniffing)
-    add_test(NAME packet_ring_tests COMMAND packet_ring_tests)
+    function(pruftnet_add_sniffing_test target source)
+        add_executable(${target} ${source})
+        target_include_directories(${target}
+            PRIVATE
+                "${CMAKE_CURRENT_SOURCE_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        )
+        target_link_libraries(${target} PRIVATE pruftnet_sniffing)
+    endfunction()
+
+    pruftnet_add_sniffing_test(packet_ring_tests tests/unit/packet_ring_tests.cpp)
+    add_test(NAME unit.packet_ring COMMAND packet_ring_tests)
+
+    pruftnet_add_sniffing_test(sniffer_options_tests tests/unit/sniffer_options_tests.cpp)
+    add_test(NAME unit.sniffer_options COMMAND sniffer_options_tests)
+
+    pruftnet_add_sniffing_test(sniffing_offline_pcap_tests tests/integration/sniffing_offline_pcap_tests.cpp)
+    target_compile_definitions(sniffing_offline_pcap_tests
+        PRIVATE
+            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+    )
+    add_test(NAME integration.sniffing_offline_pcap COMMAND sniffing_offline_pcap_tests)
+
+    pruftnet_add_sniffing_test(sniffing_live_tests tests/integration/sniffing_live_tests.cpp)
+    add_test(NAME integration.sniffing_live COMMAND sniffing_live_tests)
+    set_tests_properties(integration.sniffing_live PROPERTIES SKIP_RETURN_CODE 77)
 endif()

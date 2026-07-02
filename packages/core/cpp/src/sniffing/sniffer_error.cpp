@@ -30,6 +30,8 @@ std::string to_string(SnifferErrorCode code) {
         return "InvalidOptions";
     case SnifferErrorCode::PcapCreateFailed:
         return "PcapCreateFailed";
+    case SnifferErrorCode::PcapOpenFailed:
+        return "PcapOpenFailed";
     case SnifferErrorCode::PcapConfigureFailed:
         return "PcapConfigureFailed";
     case SnifferErrorCode::PcapActivateFailed:

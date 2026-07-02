@@ -2,6 +2,19 @@
 
 namespace pruftnet::sniffing::internal {
 
+void InternalStats::reset() noexcept {
+    packets_seen_.store(0, std::memory_order_relaxed);
+    packets_enqueued_.store(0, std::memory_order_relaxed);
+    packets_parsed_.store(0, std::memory_order_relaxed);
+    app_ring_drops_.store(0, std::memory_order_relaxed);
+    pcap_dispatch_calls_.store(0, std::memory_order_relaxed);
+    pcap_dispatch_errors_.store(0, std::memory_order_relaxed);
+    pcap_recv_.store(0, std::memory_order_relaxed);
+    pcap_drop_.store(0, std::memory_order_relaxed);
+    pcap_ifdrop_.store(0, std::memory_order_relaxed);
+    max_ring_depth_.store(0, std::memory_order_relaxed);
+}
+
 void InternalStats::increment_packets_seen(std::uint64_t value) noexcept {
     packets_seen_.fetch_add(value, std::memory_order_relaxed);
 }

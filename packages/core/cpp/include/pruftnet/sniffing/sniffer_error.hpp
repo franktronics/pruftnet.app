@@ -16,6 +16,7 @@ enum class SnifferErrorCode {
     None,
     InvalidOptions,
     PcapCreateFailed,
+    PcapOpenFailed,
     PcapConfigureFailed,
     PcapActivateFailed,
     PermissionDenied,

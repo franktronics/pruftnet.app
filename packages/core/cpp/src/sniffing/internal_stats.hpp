@@ -10,6 +10,7 @@ namespace pruftnet::sniffing::internal {
 
 class InternalStats {
 public:
+    void reset() noexcept;
     void increment_packets_seen(std::uint64_t value = 1) noexcept;
     void increment_packets_enqueued(std::uint64_t value = 1) noexcept;
     void increment_packets_parsed(std::uint64_t value = 1) noexcept;
