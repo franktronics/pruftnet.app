@@ -12,6 +12,7 @@ node_modules
 dist
 dist-electron
 dist-ssr
+build
 .vite
 out
 release

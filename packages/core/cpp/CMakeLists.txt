@@ -85,6 +85,29 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
     )
     add_test(NAME integration.sniffing_offline_pcap COMMAND sniffing_offline_pcap_tests)
 
+    pruftnet_add_sniffing_test(sniffing_offline_bpf_tests tests/integration/sniffing_offline_bpf_tests.cpp)
+    target_compile_definitions(sniffing_offline_bpf_tests
+        PRIVATE
+            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+    )
+    add_test(NAME integration.sniffing_offline_bpf COMMAND sniffing_offline_bpf_tests)
+
+    pruftnet_add_sniffing_test(sniffing_offline_invalid_pcap_tests tests/integration/sniffing_offline_invalid_pcap_tests.cpp)
+    target_compile_definitions(sniffing_offline_invalid_pcap_tests
+        PRIVATE
+            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+    )
+    add_test(NAME integration.sniffing_offline_invalid_pcap COMMAND sniffing_offline_invalid_pcap_tests)
+
+    pruftnet_add_sniffing_test(sniffing_runtime_lifecycle_tests tests/integration/sniffing_runtime_lifecycle_tests.cpp)
+    add_test(NAME integration.sniffing_runtime_lifecycle COMMAND sniffing_runtime_lifecycle_tests)
+
+    pruftnet_add_sniffing_test(sniffing_runtime_error_tests tests/integration/sniffing_runtime_error_tests.cpp)
+    add_test(NAME integration.sniffing_runtime_errors COMMAND sniffing_runtime_error_tests)
+
+    pruftnet_add_sniffing_test(sniffing_ring_pressure_tests tests/integration/sniffing_ring_pressure_tests.cpp)
+    add_test(NAME integration.sniffing_ring_pressure COMMAND sniffing_ring_pressure_tests)
+
     pruftnet_add_sniffing_test(sniffing_live_tests tests/integration/sniffing_live_tests.cpp)
     add_test(NAME integration.sniffing_live COMMAND sniffing_live_tests)
     set_tests_properties(integration.sniffing_live PROPERTIES SKIP_RETURN_CODE 77)

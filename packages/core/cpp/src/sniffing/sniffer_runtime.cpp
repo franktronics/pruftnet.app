@@ -133,6 +133,13 @@ std::optional<SnifferError> SnifferRuntime::start() {
 
 void SnifferRuntime::stop() noexcept {
     request_stop();
+
+    const auto current_thread = std::this_thread::get_id();
+    if ((capture_thread_.joinable() && capture_thread_.get_id() == current_thread) ||
+        (parser_thread_.joinable() && parser_thread_.get_id() == current_thread)) {
+        return;
+    }
+
     join_threads();
     if (packet_source_) {
         packet_source_->close();
@@ -199,12 +206,6 @@ void SnifferRuntime::request_stop() noexcept {
 
 void SnifferRuntime::join_threads() noexcept {
     std::lock_guard lock(lifecycle_mutex_);
-
-    const auto current_thread = std::this_thread::get_id();
-    if ((capture_thread_.joinable() && capture_thread_.get_id() == current_thread) ||
-        (parser_thread_.joinable() && parser_thread_.get_id() == current_thread)) {
-        return;
-    }
 
     if (capture_thread_.joinable()) {
         capture_thread_.join();

@@ -75,6 +75,7 @@ Tests are split by scope:
 ```text
 tests/
   test_config.hpp
+  support/
   unit/
   integration/
   fixtures/
@@ -82,13 +83,31 @@ tests/
 
 Unit tests are deterministic and do not require packet capture permissions.
 
-Offline integration tests use `.pcap` fixtures and are part of the default CTest run. The initial fixture is:
+Integration tests cover both real `.pcap` input and deterministic fake sources. `tests/support/FakePacketSource` is used to exercise lifecycle, runtime error paths, packet metadata, truncation, stats failures, and ring pressure without relying on live interfaces.
+
+Offline integration tests use `.pcap` fixtures and are part of the default CTest run. The initial valid fixture is:
 
 ```text
 tests/fixtures/ethernet_ipv4_tcp_udp.pcap
 ```
 
 It contains 10 synthetic Ethernet/IPv4 packets: 5 UDP and 5 TCP packets.
+
+The suite also includes `tests/fixtures/invalid.pcap` to verify malformed pcap handling. The offline BPF tests currently assert these filters against the valid fixture: no filter, `udp`, `tcp`, `port 8080`, `icmp`, and an invalid filter expression.
+
+Current CTest targets:
+
+```text
+unit.packet_ring
+unit.sniffer_options
+integration.sniffing_offline_pcap
+integration.sniffing_offline_bpf
+integration.sniffing_offline_invalid_pcap
+integration.sniffing_runtime_lifecycle
+integration.sniffing_runtime_errors
+integration.sniffing_ring_pressure
+integration.sniffing_live
+```
 
 The live sniffing integration test is optional because it depends on local interfaces, permissions, and network traffic. It is skipped unless `PRUFTNET_TEST_INTERFACE` is set:
 
