@@ -21,6 +21,7 @@ import {
 
 import pruftnetIcon from '../assets/pruftnet-icon.png'
 import { ThemeToggle } from '../theme/theme-toggle'
+import { cn } from '@repo/utils'
 
 const mainNavigation = [
     {
@@ -74,7 +75,12 @@ function DesktopTitleBar() {
             data-desktop-platform={desktopPlatform}
             data-sidebar-state={state}
         >
-            <div className="desktop-titlebar-sidebar-boundary h-full shrink-0 border-r" />
+            <div
+                className={cn(
+                    'desktop-titlebar-sidebar-boundary h-full shrink-0 border-r',
+                    'border-border dark:border-border/50',
+                )}
+            />
             <div className="desktop-titlebar-brand pointer-events-none absolute z-10 flex items-center gap-2 overflow-hidden">
                 <img src={pruftnetIcon} alt="" className="size-5 shrink-0" aria-hidden="true" />
                 <span className="desktop-titlebar-brand-text text-sidebar-foreground text-sm font-medium tracking-tight">
@@ -82,8 +88,8 @@ function DesktopTitleBar() {
                 </span>
             </div>
             <SidebarTrigger
-                variant="outline"
-                className="desktop-titlebar-trigger no-drag-region bg-sidebar absolute z-10 active:translate-y-0"
+                variant="ghost"
+                className="desktop-titlebar-trigger no-drag-region absolute z-10 active:translate-y-0"
             />
 
             <div className="min-w-0 flex-1" />
