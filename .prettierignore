@@ -11,6 +11,7 @@ out
 .vite
 package-lock.json
 node_modules
+cpp
 *.css
 *.cc
 *.hpp

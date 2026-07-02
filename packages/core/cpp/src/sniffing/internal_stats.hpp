@@ -4,26 +4,11 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace pruftnet::capture {
+#include "pruftnet/sniffing/sniffer_stats.hpp"
 
-struct CaptureStatsSnapshot {
-    std::uint64_t packets_seen = 0;
-    std::uint64_t packets_enqueued = 0;
-    std::uint64_t packets_parsed = 0;
-    std::uint64_t app_ring_drops = 0;
-    std::uint64_t pcap_dispatch_calls = 0;
-    std::uint64_t pcap_dispatch_errors = 0;
-    std::uint64_t pcap_recv = 0;
-    std::uint64_t pcap_drop = 0;
-    std::uint64_t pcap_ifdrop = 0;
-    std::size_t ring_depth = 0;
-    std::size_t ring_capacity = 0;
-    std::size_t max_ring_depth = 0;
-    bool capture_thread_running = false;
-    bool parser_thread_running = false;
-};
+namespace pruftnet::sniffing::internal {
 
-class CaptureStats {
+class InternalStats {
 public:
     void increment_packets_seen(std::uint64_t value = 1) noexcept;
     void increment_packets_enqueued(std::uint64_t value = 1) noexcept;
@@ -34,7 +19,7 @@ public:
     void set_kernel_stats(std::uint64_t recv, std::uint64_t drop, std::uint64_t ifdrop) noexcept;
     void observe_ring_depth(std::size_t depth) noexcept;
 
-    CaptureStatsSnapshot snapshot(
+    [[nodiscard]] SnifferStatsSnapshot snapshot(
         std::size_t ring_depth,
         std::size_t ring_capacity,
         bool capture_thread_running,
@@ -53,4 +38,4 @@ private:
     std::atomic<std::size_t> max_ring_depth_{0};
 };
 
-} // namespace pruftnet::capture
+} // namespace pruftnet::sniffing::internal

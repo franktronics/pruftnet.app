@@ -1,18 +1,29 @@
-# C++ Capture Sniffing
+# C++ Sniffing Module
 
-The standalone capture prototype lives in `packages/core/cpp`.
+The standalone sniffing module lives in `packages/core/cpp`.
 
-The current implementation uses libpcap/Npcap for portable layer-2 packet capture, then moves packets through an application-owned bounded SPSC ring before invoking a parser stub. The parser is intentionally empty for now and only prints raw packet metadata/bytes.
+The current public API is `pruftnet::sniffing::NetworkSniffer`. It is configured with `SnifferOptions`, started with `start()`, stopped with `stop()`, and emits packets through a user-provided callback.
 
-Important defaults:
+Current pipeline:
 
-- CMake-based C++20 project.
-- `pcap_create()` configuration path, not `pcap_open_live()`.
-- `snaplen` defaults to 512 bytes.
-- pcap buffer defaults to 64 MiB.
-- application ring defaults to 65,536 slots.
-- accepted link types are `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, and `DLT_LOOP` when available.
-- unsupported link types fail at startup by default.
-- application ring overload drops newest packets and increments structured stats.
+```text
+libpcap/Npcap
+  -> capture thread
+  -> bounded SPSC packet ring
+  -> parser thread
+  -> empty parser
+  -> packet callback(raw packet, parsed packet, stats)
+```
 
-Future Node/server integration should not transform packet data into JS objects. The intended direction is a separate C++ capture process exposing a shared-memory ring to the Node core.
+Important constraints:
+
+- The capture thread never parses packets.
+- The packet callback is called from the parser thread.
+- `RawPacketView::bytes` is valid only during the callback.
+- Unsupported link types fail at `start()`.
+- Application ring overload drops newest packets and increments stats.
+- The parser is intentionally empty for now and returns `ParseStatus::NotParsed`.
+
+Default accepted link types are `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, and `DLT_LOOP` when available in local libpcap headers.
+
+Future Node/server integration should use this module from a separate C++ process and expose packet batches through a shared-memory ring rather than converting packet data into JS objects.

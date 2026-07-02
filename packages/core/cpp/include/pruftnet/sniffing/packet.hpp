@@ -1,16 +1,17 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 
-namespace pruftnet::capture {
+namespace pruftnet::sniffing {
 
 enum PacketFlags : std::uint32_t {
     PacketFlagNone = 0,
     PacketFlagTruncated = 1U << 0U,
-    PacketFlagUnsupportedLinkType = 1U << 1U,
 };
 
-struct PacketRecord {
+struct PacketMetadata {
     std::uint64_t sequence = 0;
     std::uint64_t timestamp_ns = 0;
     std::uint32_t interface_id = 0;
@@ -20,4 +21,9 @@ struct PacketRecord {
     std::uint32_t flags = PacketFlagNone;
 };
 
-} // namespace pruftnet::capture
+struct RawPacketView {
+    PacketMetadata metadata;
+    std::span<const std::byte> bytes;
+};
+
+} // namespace pruftnet::sniffing
