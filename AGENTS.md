@@ -45,6 +45,23 @@ Load or create the relevant doc file based on the task at hand:
 - **Release process** → @.agents/doc/release.md
 - **Coding style** → @.agents/doc/coding-style.md
 
+## External repositories
+This project vendors external repositories under `.repos/` as read-only reference material for coding
+agents:
+
+### External repos to use:
+- Wireshark: https://gitlab.com/wireshark/wireshark.git
+- Effect-smol: https://github.com/Effect-TS/effect-smol.git
+
+### How to use them
+- These repositories are not tracked by Git. If they do not already exist, you must use the links mentioned above to clone them before continuing.
+- Prefer examples and patterns from the vendored source code over generated guesses or web search results.
+- Do not edit files under `.repos/` unless explicitly asked.
+- Do not import from `.repos/`; application code must continue importing from normal package dependencies.
+- When writing Effect code, read `.repos/effect-smol/LLMS.md` first and inspect `.repos/effect-smol/` for
+  examples of idiomatic usage, tests, module structure, and API design.
+- When working on technical aspects related to networks, packets, or even dissectors, always inspect .repos/wireshark and/or search the internet to build a solid knowledge base.
+
 ## External References
 
 - Network protocols: [RFC Editor](https://www.rfc-editor.org/)

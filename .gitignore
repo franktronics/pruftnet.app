@@ -32,3 +32,6 @@ packages/core/cpp/build
 *.njsproj
 *.sln
 *.sw?
+
+## repos
+.repos
