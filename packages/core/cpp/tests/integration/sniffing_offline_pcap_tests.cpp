@@ -18,6 +18,7 @@
 #include "sniffing/sniffer_options_validation.hpp"
 #include "sniffing/sniffer_runtime.hpp"
 #include "tests/test_config.hpp"
+#include "tests/support/runtime_test_support.hpp"
 
 namespace {
 
@@ -47,18 +48,19 @@ int main() {
     assert(std::filesystem::exists(fixture));
 
     SnifferOptions options;
-    options.interface_id = 7;
-    options.ring_slots = 32;
-    options.pcap_dispatch_batch_size = 4;
+    SnifferInterfaceOptions interface_options;
+    interface_options.id = 7;
+    interface_options.ring_slots = 32;
+    interface_options.pcap_dispatch_batch_size = 4;
+    options.interfaces.push_back(interface_options);
     options.stats_poll_interval = std::chrono::milliseconds(0);
 
-    auto source_options = options;
     std::vector<ObservedPacket> observed;
     std::vector<SnifferEvent> events;
 
     SnifferRuntime runtime(
         options,
-        std::make_unique<OfflinePcapPacketSource>(fixture.string(), std::move(source_options)),
+        pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const RawPacketView& raw, const ParsedPacket& parsed, const SnifferStatsSnapshot&) {
             observed.push_back(ObservedPacket{raw.metadata, parsed.status, raw.bytes.size()});

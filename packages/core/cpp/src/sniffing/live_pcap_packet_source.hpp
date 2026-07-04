@@ -10,7 +10,7 @@ namespace pruftnet::sniffing::internal {
 
 class LivePcapPacketSource final : public PacketSource {
 public:
-    explicit LivePcapPacketSource(SnifferOptions options);
+    explicit LivePcapPacketSource(SnifferInterfaceOptions options);
     ~LivePcapPacketSource() override = default;
 
     PacketSourceOpenResult open() override;
@@ -29,7 +29,7 @@ public:
     [[nodiscard]] std::string source_name() const override;
 
 private:
-    SnifferOptions options_;
+    SnifferInterfaceOptions options_;
     PcapHandle handle_;
 };
 

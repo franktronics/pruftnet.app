@@ -12,6 +12,7 @@
 #include "sniffing/sniffer_options_validation.hpp"
 #include "sniffing/sniffer_runtime.hpp"
 #include "tests/support/fake_packet_source.hpp"
+#include "tests/support/runtime_test_support.hpp"
 
 namespace {
 
@@ -22,6 +23,8 @@ using pruftnet::sniffing::internal::SnifferOptionsValidation;
 using pruftnet::sniffing::internal::SnifferRuntime;
 using pruftnet::tests::FakePacketSource;
 using pruftnet::tests::fake_packet;
+using pruftnet::tests::one_source;
+using pruftnet::tests::single_interface_options;
 
 std::uint64_t count_ring_full_events(const std::vector<SnifferEvent>& events) {
     std::uint64_t count = 0;
@@ -42,16 +45,16 @@ int main() {
         source->packets.push_back(fake_packet(32, 32, index));
     }
 
-    SnifferOptions options;
-    options.ring_slots = 1;
-    options.pcap_dispatch_batch_size = 100;
+    SnifferOptions options = single_interface_options();
+    options.interfaces[0].ring_slots = 1;
+    options.interfaces[0].pcap_dispatch_batch_size = 100;
     options.stats_poll_interval = std::chrono::milliseconds(0);
 
     std::atomic<std::uint64_t> callbacks{0};
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         options,
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const auto&, const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);

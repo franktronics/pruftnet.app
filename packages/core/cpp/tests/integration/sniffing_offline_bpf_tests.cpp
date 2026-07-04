@@ -16,11 +16,13 @@
 #include "sniffing/sniffer_options_validation.hpp"
 #include "sniffing/sniffer_runtime.hpp"
 #include "tests/test_config.hpp"
+#include "tests/support/runtime_test_support.hpp"
 
 namespace {
 
 using pruftnet::sniffing::SnifferErrorCode;
 using pruftnet::sniffing::SnifferEvent;
+using pruftnet::sniffing::SnifferInterfaceOptions;
 using pruftnet::sniffing::SnifferOptions;
 using pruftnet::sniffing::SnifferSeverity;
 using pruftnet::sniffing::internal::OfflinePcapPacketSource;
@@ -38,17 +40,19 @@ bool has_error_event(const std::vector<SnifferEvent>& events) {
 
 std::uint64_t run_filter(const std::filesystem::path& fixture, std::string filter, std::uint64_t expected_packets) {
     SnifferOptions options;
-    options.bpf_filter = std::move(filter);
-    options.ring_slots = 32;
-    options.pcap_dispatch_batch_size = 4;
+    SnifferInterfaceOptions interface_options;
+    interface_options.id = 0;
+    interface_options.bpf_filter = std::move(filter);
+    interface_options.ring_slots = 32;
+    interface_options.pcap_dispatch_batch_size = 4;
+    options.interfaces.push_back(interface_options);
     options.stats_poll_interval = std::chrono::milliseconds(0);
 
-    auto source_options = options;
     std::uint64_t callback_count = 0;
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         options,
-        std::make_unique<OfflinePcapPacketSource>(fixture.string(), std::move(source_options)),
+        pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const auto&, const auto&, const auto&) {
             ++callback_count;
@@ -82,12 +86,13 @@ std::uint64_t run_filter(const std::filesystem::path& fixture, std::string filte
 
 void invalid_filter_fails_at_start(const std::filesystem::path& fixture) {
     SnifferOptions options;
-    options.bpf_filter = "tcp and";
+    SnifferInterfaceOptions interface_options;
+    interface_options.bpf_filter = "tcp and";
+    options.interfaces.push_back(interface_options);
 
-    auto source_options = options;
     SnifferRuntime runtime(
         options,
-        std::make_unique<OfflinePcapPacketSource>(fixture.string(), std::move(source_options)),
+        pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         {});

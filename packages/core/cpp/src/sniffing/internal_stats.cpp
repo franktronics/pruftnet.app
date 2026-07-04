@@ -1,5 +1,7 @@
 #include "sniffing/internal_stats.hpp"
 
+#include <utility>
+
 namespace pruftnet::sniffing::internal {
 
 void InternalStats::reset() noexcept {
@@ -59,12 +61,17 @@ void InternalStats::observe_ring_depth(std::size_t depth) noexcept {
     }
 }
 
-SnifferStatsSnapshot InternalStats::snapshot(
+InterfaceStatsSnapshot InternalStats::snapshot(
+    std::uint32_t interface_id,
+    std::string interface_name,
+    int link_type,
     std::size_t ring_depth,
     std::size_t ring_capacity,
-    bool capture_thread_running,
-    bool parser_thread_running) const noexcept {
-    SnifferStatsSnapshot snapshot;
+    bool capture_thread_running) const {
+    InterfaceStatsSnapshot snapshot;
+    snapshot.interface_id = interface_id;
+    snapshot.interface_name = std::move(interface_name);
+    snapshot.link_type = link_type;
     snapshot.packets_seen = packets_seen_.load(std::memory_order_relaxed);
     snapshot.packets_enqueued = packets_enqueued_.load(std::memory_order_relaxed);
     snapshot.packets_parsed = packets_parsed_.load(std::memory_order_relaxed);
@@ -78,7 +85,6 @@ SnifferStatsSnapshot InternalStats::snapshot(
     snapshot.ring_capacity = ring_capacity;
     snapshot.max_ring_depth = max_ring_depth_.load(std::memory_order_relaxed);
     snapshot.capture_thread_running = capture_thread_running;
-    snapshot.parser_thread_running = parser_thread_running;
     return snapshot;
 }
 

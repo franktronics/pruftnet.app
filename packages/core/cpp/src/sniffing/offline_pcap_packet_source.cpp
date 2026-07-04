@@ -13,7 +13,7 @@ int resolved_snapshot_length(pcap_t* handle) noexcept {
 
 } // namespace
 
-OfflinePcapPacketSource::OfflinePcapPacketSource(std::string file_path, SnifferOptions options)
+OfflinePcapPacketSource::OfflinePcapPacketSource(std::string file_path, SnifferInterfaceOptions options)
     : file_path_(std::move(file_path)), options_(std::move(options)) {}
 
 PacketSourceOpenResult OfflinePcapPacketSource::open() {
@@ -28,21 +28,30 @@ PacketSourceOpenResult OfflinePcapPacketSource::open() {
             "Failed to open offline pcap file.",
             file_path_,
             0,
-            errbuf);
+            errbuf,
+            false,
+            options_.id);
     }
 
     std::unique_ptr<pcap_t, decltype(&pcap_close)> handle(raw_handle, pcap_close);
 
     if (!options_.bpf_filter.empty()) {
         bpf_program program = {};
-        if (pcap_compile(handle.get(), &program, options_.bpf_filter.c_str(), 1, PCAP_NETMASK_UNKNOWN) != 0) {
+        if (pcap_compile(
+                handle.get(),
+                &program,
+                options_.bpf_filter.c_str(),
+                options_.bpf_optimize ? 1 : 0,
+                PCAP_NETMASK_UNKNOWN) != 0) {
             return make_sniffer_error(
                 SnifferErrorCode::FilterCompileFailed,
                 SnifferSeverity::Error,
                 "Failed to compile BPF filter.",
                 file_path_,
                 0,
-                pcap_geterr(handle.get()));
+                pcap_geterr(handle.get()),
+                false,
+                options_.id);
         }
 
         if (pcap_setfilter(handle.get(), &program) != 0) {
@@ -52,7 +61,9 @@ PacketSourceOpenResult OfflinePcapPacketSource::open() {
                 "Failed to apply BPF filter.",
                 file_path_,
                 0,
-                pcap_geterr(handle.get()));
+                pcap_geterr(handle.get()),
+                false,
+                options_.id);
             pcap_freecode(&program);
             return error;
         }

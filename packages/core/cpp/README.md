@@ -4,21 +4,21 @@ This directory contains the standalone C++ sniffing module. It is intentionally 
 
 ## Scope
 
-Current pipeline:
+Current live pipeline:
 
 ```text
-PacketSource
-  -> LivePcapPacketSource or OfflinePcapPacketSource
-  -> capture thread
-  -> bounded SPSC packet ring
-  -> parser thread
+SnifferRuntime
+  -> one PacketSource per configured interface
+  -> one capture thread per interface
+  -> one bounded SPSC packet ring per interface
+  -> single parser thread
   -> empty parser
   -> user packet callback
 ```
 
 The parser currently returns an empty future-proof `ParsedPacket` with `ParseStatus::NotParsed`. The callback receives both the raw packet view and the parsed result.
 
-`NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared capture/ring/parser pipeline against a `PacketSource`, which lets tests execute the same pipeline with offline `.pcap` fixtures.
+`NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared multi-interface capture/ring/parser pipeline against `PacketSource` instances, which lets tests execute the same pipeline with offline `.pcap` fixtures and fake sources.
 
 ## Public API
 
@@ -38,8 +38,11 @@ Minimal usage:
 
 ```cpp
 pruftnet::sniffing::SnifferOptions options;
-options.interface_name = "en0";
-options.promiscuous = false;
+
+pruftnet::sniffing::SnifferInterfaceOptions interface;
+interface.name = "en0";
+interface.promiscuous = false;
+options.interfaces.push_back(interface);
 
 pruftnet::sniffing::NetworkSniffer sniffer(
     options,
@@ -53,6 +56,26 @@ if (auto error = sniffer.start()) {
 
 sniffer.stop();
 ```
+
+`SnifferOptions::interfaces` may contain multiple interfaces. Each interface receives its own pcap handle, capture thread, and packet ring. Packet callbacks remain serialized on the single parser thread. `RawPacketView::metadata.interface_id` identifies the source interface for each packet.
+
+Per-interface live options are modeled after Wireshark/dumpcap capture options:
+
+- `name`: libpcap/Npcap interface name.
+- `id`: stable ID written to packet metadata; defaults to auto-assignment by interface order.
+- `promiscuous`: request promiscuous mode.
+- `monitor_mode`: request RF monitor mode when supported by libpcap and the interface.
+- `snaplen`: snapshot length.
+- `pcap_buffer_size_bytes`: kernel capture buffer size.
+- `read_timeout_ms`: pcap read timeout.
+- `pcap_dispatch_batch_size`: max packets per dispatch call.
+- `ring_slots`: application ring capacity for that interface.
+- `bpf_filter`: capture filter for that interface.
+- `bpf_optimize`: whether pcap should optimize the BPF program.
+- `requested_link_type`: optional requested DLT/link-layer type.
+- `timestamp_type`: optional pcap timestamp type name.
+
+Global options currently cover parser/runtime policy: accepted link types and stats polling interval.
 
 ## Build
 
@@ -106,6 +129,7 @@ integration.sniffing_offline_invalid_pcap
 integration.sniffing_runtime_lifecycle
 integration.sniffing_runtime_errors
 integration.sniffing_ring_pressure
+integration.sniffing_multi_interface
 integration.sniffing_live
 ```
 
@@ -119,24 +143,30 @@ Without `PRUFTNET_TEST_INTERFACE`, CTest marks `integration.sniffing_live` as sk
 
 ## Defaults
 
-- `snaplen`: 512 bytes
-- pcap buffer: 64 MiB
-- pcap read timeout: 10 ms
-- pcap dispatch batch size: 64 packets
-- application ring: 65,536 slots
+- per-interface `snaplen`: 512 bytes
+- per-interface pcap buffer: 64 MiB
+- per-interface pcap read timeout: 10 ms
+- per-interface pcap dispatch batch size: 64 packets
+- per-interface application ring: 65,536 slots
 - unsupported link type policy: `start()` fails
 - accepted link types: `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, `DLT_LOOP` when available in the local libpcap headers
 
 ## Design Notes
 
-The capture callback does no parsing. It copies packet bytes into a preallocated ring and returns quickly to reduce kernel drops.
+Each capture callback does no parsing. It copies packet bytes into that interface's preallocated ring and returns quickly to reduce kernel drops.
 
 The user packet callback is called from the parser thread, never from the capture thread.
 
+Every successful interface-ring push wakes the shared parser thread, so an idle interface cannot delay packets arriving on another interface.
+
 `RawPacketView::bytes` is valid only during the callback. This avoids an extra ownership layer and keeps the hot path predictable.
 
-When the application ring is full, the newest packet is dropped and `app_ring_drops` is incremented. The capture thread never blocks on parser throughput.
+When an interface application ring is full, the newest packet for that interface is dropped and `app_ring_drops` is incremented for that interface. Capture threads never block on parser throughput or on other interfaces.
 
-The packet ring slot size is derived from the active packet source snapshot length. Live capture uses the configured `snaplen`; offline capture uses the snapshot length recorded in the fixture.
+Packet ordering is defined by `PacketMetadata::sequence`, a global runtime arrival sequence. Timestamp ordering across interfaces is not guaranteed because pcap timestamp sources can differ by interface and OS.
+
+The packet ring slot size is derived from each active packet source snapshot length. Live capture uses the configured per-interface `snaplen`; offline capture uses the snapshot length recorded in the fixture.
+
+If file writing is added later, multi-interface captures should use pcapng rather than classic pcap, matching Wireshark/dumpcap behavior.
 
 Future Node/server integration should keep this module as the core capture engine, then connect it through a separate C++ process and a shared-memory ring.

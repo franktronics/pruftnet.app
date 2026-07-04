@@ -76,11 +76,13 @@ SnifferError make_sniffer_error(
     std::string interface_name,
     int pcap_status,
     std::string pcap_error,
-    bool recoverable) {
+    bool recoverable,
+    std::uint32_t interface_id) {
     SnifferError error;
     error.code = code;
     error.severity = severity;
     error.message = std::move(message);
+    error.interface_id = interface_id;
     error.interface_name = std::move(interface_name);
     error.pcap_status = pcap_status;
     error.pcap_error = std::move(pcap_error);
@@ -95,6 +97,7 @@ SnifferEvent SnifferEvent::from_error(const SnifferError& error) {
     event.severity = error.severity;
     event.code = error.code;
     event.message = error.message;
+    event.interface_id = error.interface_id;
     event.interface_name = error.interface_name;
     event.pcap_status = error.pcap_status;
     event.pcap_error = error.pcap_error;

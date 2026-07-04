@@ -11,7 +11,7 @@ namespace pruftnet::sniffing::internal {
 
 class OfflinePcapPacketSource final : public PacketSource {
 public:
-    OfflinePcapPacketSource(std::string file_path, SnifferOptions options);
+    OfflinePcapPacketSource(std::string file_path, SnifferInterfaceOptions options);
     ~OfflinePcapPacketSource() override = default;
 
     PacketSourceOpenResult open() override;
@@ -31,7 +31,7 @@ public:
 
 private:
     std::string file_path_;
-    SnifferOptions options_;
+    SnifferInterfaceOptions options_;
     PcapHandle handle_;
 };
 

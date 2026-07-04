@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "sniffing/live_pcap_packet_source.hpp"
 #include "sniffing/sniffer_runtime.hpp"
@@ -11,10 +12,21 @@ namespace pruftnet::sniffing {
 class NetworkSniffer::Impl {
 public:
     Impl(SnifferOptions options, PacketCallback packet_callback, EventCallback event_callback) {
-        auto source_options = options;
+        std::vector<std::unique_ptr<internal::PacketSource>> sources;
+        sources.reserve(options.interfaces.size());
+        for (std::size_t index = 0; index < options.interfaces.size(); ++index) {
+            auto interface_options = options.interfaces[index];
+            if (interface_options.id == kAutoInterfaceId) {
+                interface_options.id = static_cast<std::uint32_t>(index);
+                options.interfaces[index].id = interface_options.id;
+            }
+
+            sources.push_back(std::make_unique<internal::LivePcapPacketSource>(std::move(interface_options)));
+        }
+
         runtime_ = std::make_unique<internal::SnifferRuntime>(
             std::move(options),
-            std::make_unique<internal::LivePcapPacketSource>(std::move(source_options)),
+            std::move(sources),
             internal::SnifferOptionsValidation{.require_interface_name = true},
             std::move(packet_callback),
             std::move(event_callback));
@@ -28,7 +40,7 @@ public:
 
     bool is_running() const noexcept { return runtime_->is_running(); }
 
-    SnifferStatsSnapshot stats() const noexcept { return runtime_->stats(); }
+    SnifferStatsSnapshot stats() const { return runtime_->stats(); }
 
 private:
     std::unique_ptr<internal::SnifferRuntime> runtime_;
@@ -55,6 +67,6 @@ void NetworkSniffer::stop() noexcept { impl_->stop(); }
 
 bool NetworkSniffer::is_running() const noexcept { return impl_->is_running(); }
 
-SnifferStatsSnapshot NetworkSniffer::stats() const noexcept { return impl_->stats(); }
+SnifferStatsSnapshot NetworkSniffer::stats() const { return impl_->stats(); }
 
 } // namespace pruftnet::sniffing

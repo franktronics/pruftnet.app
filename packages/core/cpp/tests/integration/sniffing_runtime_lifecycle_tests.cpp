@@ -14,6 +14,7 @@
 #include "sniffing/sniffer_options_validation.hpp"
 #include "sniffing/sniffer_runtime.hpp"
 #include "tests/support/fake_packet_source.hpp"
+#include "tests/support/runtime_test_support.hpp"
 
 namespace {
 
@@ -27,13 +28,12 @@ using pruftnet::sniffing::internal::SnifferOptionsValidation;
 using pruftnet::sniffing::internal::SnifferRuntime;
 using pruftnet::tests::FakePacketSource;
 using pruftnet::tests::fake_packet;
+using pruftnet::tests::one_source;
+using pruftnet::tests::single_interface_options;
+using pruftnet::tests::wait_until_stopped;
 
 SnifferOptions base_options() {
-    SnifferOptions options;
-    options.ring_slots = 16;
-    options.pcap_dispatch_batch_size = 8;
-    options.stats_poll_interval = std::chrono::milliseconds(0);
-    return options;
+    return single_interface_options();
 }
 
 std::unique_ptr<FakePacketSource> empty_waiting_source() {
@@ -47,7 +47,7 @@ void stop_before_start_and_repeated_stop_are_safe() {
     auto source = empty_waiting_source();
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         EventCallback{});
@@ -61,7 +61,7 @@ void double_start_is_rejected() {
     auto source = empty_waiting_source();
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         EventCallback{});
@@ -78,7 +78,7 @@ void destructor_stops_running_runtime() {
     auto source = empty_waiting_source();
     auto runtime = std::make_unique<SnifferRuntime>(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         EventCallback{});
@@ -95,7 +95,7 @@ void offline_style_empty_source_stops_at_eof() {
     std::atomic<std::uint64_t> callbacks{0};
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const auto&, const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);
@@ -104,12 +104,7 @@ void offline_style_empty_source_stops_at_eof() {
 
     assert(!runtime.start().has_value());
 
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    while (runtime.is_running() && std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    runtime.stop();
+    wait_until_stopped(runtime);
     assert(!runtime.is_running());
     assert(callbacks.load(std::memory_order_relaxed) == 0);
     const auto stats = runtime.stats();
@@ -128,7 +123,7 @@ void callback_can_request_stop_without_deadlock() {
     std::atomic<std::uint64_t> callbacks{0};
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const auto&, const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);
@@ -139,12 +134,7 @@ void callback_can_request_stop_without_deadlock() {
 
     assert(!runtime.start().has_value());
 
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    while (runtime.is_running() && std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    runtime.stop();
+    wait_until_stopped(runtime);
     assert(!runtime.is_running());
     assert(callbacks.load(std::memory_order_relaxed) >= 1);
 }
@@ -159,13 +149,13 @@ void metadata_and_truncation_are_reported() {
     source->packets.push_back(std::move(packet));
 
     auto options = base_options();
-    options.interface_id = 99;
+    options.interfaces[0].id = 99;
 
     std::vector<RawPacketView> observed;
     std::vector<ParseStatus> parse_statuses;
     SnifferRuntime runtime(
         options,
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const RawPacketView& raw, const auto& parsed, const auto&) {
             observed.push_back(raw);
@@ -175,12 +165,7 @@ void metadata_and_truncation_are_reported() {
 
     assert(!runtime.start().has_value());
 
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    while (runtime.is_running() && std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    runtime.stop();
+    wait_until_stopped(runtime);
     assert(observed.size() == 1);
     assert(parse_statuses.size() == 1);
     assert(parse_statuses[0] == ParseStatus::NotParsed);

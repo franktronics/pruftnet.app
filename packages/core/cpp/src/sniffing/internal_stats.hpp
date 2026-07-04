@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 #include "pruftnet/sniffing/sniffer_stats.hpp"
 
@@ -20,11 +21,13 @@ public:
     void set_kernel_stats(std::uint64_t recv, std::uint64_t drop, std::uint64_t ifdrop) noexcept;
     void observe_ring_depth(std::size_t depth) noexcept;
 
-    [[nodiscard]] SnifferStatsSnapshot snapshot(
+    [[nodiscard]] InterfaceStatsSnapshot snapshot(
+        std::uint32_t interface_id,
+        std::string interface_name,
+        int link_type,
         std::size_t ring_depth,
         std::size_t ring_capacity,
-        bool capture_thread_running,
-        bool parser_thread_running) const noexcept;
+        bool capture_thread_running) const;
 
 private:
     std::atomic<std::uint64_t> packets_seen_{0};

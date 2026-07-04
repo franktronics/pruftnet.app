@@ -18,6 +18,7 @@ struct SnifferEvent {
     SnifferSeverity severity = SnifferSeverity::Info;
     SnifferErrorCode code = SnifferErrorCode::None;
     std::string message;
+    std::uint32_t interface_id = 0;
     std::string interface_name;
     int pcap_status = 0;
     std::string pcap_error;

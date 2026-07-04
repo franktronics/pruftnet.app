@@ -13,6 +13,7 @@
 #include "sniffing/sniffer_options_validation.hpp"
 #include "sniffing/sniffer_runtime.hpp"
 #include "tests/support/fake_packet_source.hpp"
+#include "tests/support/runtime_test_support.hpp"
 
 namespace {
 
@@ -26,11 +27,13 @@ using pruftnet::sniffing::internal::SnifferOptionsValidation;
 using pruftnet::sniffing::internal::SnifferRuntime;
 using pruftnet::tests::FakePacketSource;
 using pruftnet::tests::fake_packet;
+using pruftnet::tests::one_source;
+using pruftnet::tests::single_interface_options;
 
 SnifferOptions base_options() {
-    SnifferOptions options;
-    options.ring_slots = 8;
-    options.pcap_dispatch_batch_size = 4;
+    SnifferOptions options = single_interface_options();
+    options.interfaces[0].ring_slots = 8;
+    options.interfaces[0].pcap_dispatch_batch_size = 4;
     options.stats_poll_interval = std::chrono::milliseconds(0);
     return options;
 }
@@ -55,7 +58,7 @@ void wait_until_stopped(SnifferRuntime& runtime) {
 void null_packet_source_is_rejected() {
     SnifferRuntime runtime(
         base_options(),
-        nullptr,
+        one_source(nullptr),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         {});
@@ -69,7 +72,7 @@ void missing_packet_callback_is_rejected() {
     auto source = std::make_unique<FakePacketSource>();
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         {},
         {});
@@ -89,7 +92,7 @@ void open_failure_is_returned_from_start() {
 
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         {});
@@ -108,7 +111,7 @@ void unsupported_link_type_fails_start() {
 
     SnifferRuntime runtime(
         options,
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         {});
@@ -124,7 +127,7 @@ void invalid_snapshot_length_fails_start() {
 
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         {});
@@ -148,7 +151,7 @@ void open_warning_is_emitted_from_start() {
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
@@ -169,7 +172,7 @@ void dispatch_error_emits_event_and_updates_stats() {
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
@@ -196,7 +199,7 @@ void stats_read_error_emits_warning_event() {
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         options,
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
@@ -217,7 +220,7 @@ void packet_callback_throw_emits_fatal_event_and_stops() {
     std::vector<SnifferEvent> events;
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {
             throw std::runtime_error("callback failure");
@@ -240,7 +243,7 @@ void event_callback_throw_does_not_crash_runtime() {
     std::atomic<bool> event_seen{false};
     SnifferRuntime runtime(
         base_options(),
-        std::move(source),
+        one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [](const auto&, const auto&, const auto&) {},
         [&](const SnifferEvent&) {

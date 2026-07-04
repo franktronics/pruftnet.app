@@ -58,8 +58,12 @@ public:
     std::chrono::milliseconds no_packets_delay{0};
     bool stats_error = false;
     pruftnet::sniffing::internal::PcapKernelStats kernel_stats;
+    int open_calls = 0;
+    int close_calls = 0;
+    int interrupt_calls = 0;
 
     pruftnet::sniffing::internal::PacketSourceOpenResult open() override {
+        ++open_calls;
         next_packet_ = 0;
         interrupted_.store(false, std::memory_order_release);
         is_open_ = true;
@@ -73,9 +77,17 @@ public:
         return success;
     }
 
-    void close() noexcept override { is_open_ = false; }
+    void close() noexcept override {
+        ++close_calls;
+        is_open_ = false;
+    }
 
-    void interrupt() noexcept override { interrupted_.store(true, std::memory_order_release); }
+    void interrupt() noexcept override {
+        ++interrupt_calls;
+        interrupted_.store(true, std::memory_order_release);
+    }
+
+    [[nodiscard]] bool is_open() const noexcept { return is_open_; }
 
     [[nodiscard]] pruftnet::sniffing::internal::PacketSourceDispatchResult dispatch(
         int max_packets,

@@ -5,6 +5,7 @@
 #include "sniffing/sniffer_options_validation.hpp"
 
 using pruftnet::sniffing::SnifferErrorCode;
+using pruftnet::sniffing::SnifferInterfaceOptions;
 using pruftnet::sniffing::SnifferOptions;
 using pruftnet::sniffing::internal::SnifferOptionsValidation;
 using pruftnet::sniffing::internal::validate_sniffer_options;
@@ -18,6 +19,7 @@ void default_supported_link_types_are_available() {
 
 void live_validation_requires_interface_name() {
     SnifferOptions options;
+    options.interfaces.push_back(SnifferInterfaceOptions{});
     const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = true});
     assert(error.has_value());
     assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -25,6 +27,7 @@ void live_validation_requires_interface_name() {
 
 void offline_validation_allows_missing_interface_name() {
     SnifferOptions options;
+    options.interfaces.push_back(SnifferInterfaceOptions{});
     const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
     assert(!error.has_value());
 }
@@ -32,7 +35,8 @@ void offline_validation_allows_missing_interface_name() {
 void invalid_numeric_options_are_rejected() {
     {
         SnifferOptions options;
-        options.snaplen = 0;
+        options.interfaces.push_back(SnifferInterfaceOptions{});
+        options.interfaces[0].snaplen = 0;
         const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
         assert(error.has_value());
         assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -40,7 +44,8 @@ void invalid_numeric_options_are_rejected() {
 
     {
         SnifferOptions options;
-        options.pcap_buffer_size_bytes = 0;
+        options.interfaces.push_back(SnifferInterfaceOptions{});
+        options.interfaces[0].pcap_buffer_size_bytes = 0;
         const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
         assert(error.has_value());
         assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -48,7 +53,8 @@ void invalid_numeric_options_are_rejected() {
 
     {
         SnifferOptions options;
-        options.read_timeout_ms = -1;
+        options.interfaces.push_back(SnifferInterfaceOptions{});
+        options.interfaces[0].read_timeout_ms = -1;
         const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
         assert(error.has_value());
         assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -56,7 +62,8 @@ void invalid_numeric_options_are_rejected() {
 
     {
         SnifferOptions options;
-        options.pcap_dispatch_batch_size = 0;
+        options.interfaces.push_back(SnifferInterfaceOptions{});
+        options.interfaces[0].pcap_dispatch_batch_size = 0;
         const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
         assert(error.has_value());
         assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -64,7 +71,8 @@ void invalid_numeric_options_are_rejected() {
 
     {
         SnifferOptions options;
-        options.ring_slots = 0;
+        options.interfaces.push_back(SnifferInterfaceOptions{});
+        options.interfaces[0].ring_slots = 0;
         const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
         assert(error.has_value());
         assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -73,7 +81,17 @@ void invalid_numeric_options_are_rejected() {
 
 void accepted_link_types_must_not_be_empty() {
     SnifferOptions options;
+    options.interfaces.push_back(SnifferInterfaceOptions{});
     options.accepted_link_types.clear();
+    const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
+    assert(error.has_value());
+    assert(error->code == SnifferErrorCode::InvalidOptions);
+}
+
+void duplicate_interface_ids_are_rejected() {
+    SnifferOptions options;
+    options.interfaces.push_back(SnifferInterfaceOptions{.id = 7});
+    options.interfaces.push_back(SnifferInterfaceOptions{.id = 7});
     const auto error = validate_sniffer_options(options, SnifferOptionsValidation{.require_interface_name = false});
     assert(error.has_value());
     assert(error->code == SnifferErrorCode::InvalidOptions);
@@ -87,5 +105,6 @@ int main() {
     offline_validation_allows_missing_interface_name();
     invalid_numeric_options_are_rejected();
     accepted_link_types_must_not_be_empty();
+    duplicate_interface_ids_are_rejected();
     return 0;
 }

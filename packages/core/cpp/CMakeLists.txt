@@ -18,6 +18,10 @@ set(CMAKE_REQUIRED_INCLUDES ${PCAP_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${PCAP_LIBRARIES})
 
 check_symbol_exists(pcap_set_tstamp_precision "pcap/pcap.h" PRUFTNET_HAVE_PCAP_SET_TSTAMP_PRECISION)
+check_symbol_exists(pcap_set_tstamp_type "pcap/pcap.h" PRUFTNET_HAVE_PCAP_SET_TSTAMP_TYPE)
+check_symbol_exists(pcap_tstamp_type_name_to_val "pcap/pcap.h" PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_NAME_TO_VAL)
+check_symbol_exists(pcap_set_rfmon "pcap/pcap.h" PRUFTNET_HAVE_PCAP_SET_RFMON)
+check_symbol_exists(pcap_set_datalink "pcap/pcap.h" PRUFTNET_HAVE_PCAP_SET_DATALINK)
 check_symbol_exists(pcap_statustostr "pcap/pcap.h" PRUFTNET_HAVE_PCAP_STATUSTOSTR)
 check_symbol_exists(pcap_datalink_val_to_name "pcap/pcap.h" PRUFTNET_HAVE_PCAP_DATALINK_NAME)
 
@@ -49,6 +53,10 @@ target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
 
 target_compile_definitions(pruftnet_sniffing PRIVATE
     $<$<BOOL:${PRUFTNET_HAVE_PCAP_SET_TSTAMP_PRECISION}>:PRUFTNET_HAVE_PCAP_SET_TSTAMP_PRECISION=1>
+    $<$<BOOL:${PRUFTNET_HAVE_PCAP_SET_TSTAMP_TYPE}>:PRUFTNET_HAVE_PCAP_SET_TSTAMP_TYPE=1>
+    $<$<BOOL:${PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_NAME_TO_VAL}>:PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_NAME_TO_VAL=1>
+    $<$<BOOL:${PRUFTNET_HAVE_PCAP_SET_RFMON}>:PRUFTNET_HAVE_PCAP_SET_RFMON=1>
+    $<$<BOOL:${PRUFTNET_HAVE_PCAP_SET_DATALINK}>:PRUFTNET_HAVE_PCAP_SET_DATALINK=1>
     $<$<BOOL:${PRUFTNET_HAVE_PCAP_STATUSTOSTR}>:PRUFTNET_HAVE_PCAP_STATUSTOSTR=1>
     $<$<BOOL:${PRUFTNET_HAVE_PCAP_DATALINK_NAME}>:PRUFTNET_HAVE_PCAP_DATALINK_NAME=1>
 )
@@ -107,6 +115,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(sniffing_ring_pressure_tests tests/integration/sniffing_ring_pressure_tests.cpp)
     add_test(NAME integration.sniffing_ring_pressure COMMAND sniffing_ring_pressure_tests)
+
+    pruftnet_add_sniffing_test(sniffing_multi_interface_tests tests/integration/sniffing_multi_interface_tests.cpp)
+    add_test(NAME integration.sniffing_multi_interface COMMAND sniffing_multi_interface_tests)
 
     pruftnet_add_sniffing_test(sniffing_live_tests tests/integration/sniffing_live_tests.cpp)
     add_test(NAME integration.sniffing_live COMMAND sniffing_live_tests)

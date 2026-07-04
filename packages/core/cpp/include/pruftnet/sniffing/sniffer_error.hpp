@@ -36,6 +36,7 @@ struct SnifferError {
     SnifferErrorCode code = SnifferErrorCode::None;
     SnifferSeverity severity = SnifferSeverity::Error;
     std::string message;
+    std::uint32_t interface_id = 0;
     std::string interface_name;
     int pcap_status = 0;
     std::string pcap_error;
@@ -55,6 +56,7 @@ SnifferError make_sniffer_error(
     std::string interface_name = {},
     int pcap_status = 0,
     std::string pcap_error = {},
-    bool recoverable = false);
+    bool recoverable = false,
+    std::uint32_t interface_id = 0);
 
 } // namespace pruftnet::sniffing

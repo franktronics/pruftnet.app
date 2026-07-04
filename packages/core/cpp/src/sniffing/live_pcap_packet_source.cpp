@@ -9,6 +9,7 @@ namespace {
 
 SnifferError pcap_configuration_error(
     const std::string& source_name,
+    std::uint32_t interface_id,
     SnifferErrorCode code,
     std::string operation,
     int status,
@@ -26,7 +27,9 @@ SnifferError pcap_configuration_error(
         std::move(operation) + " failed: " + pcap_error,
         source_name,
         status,
-        pcap_error);
+        pcap_error,
+        false,
+        interface_id);
 }
 
 SnifferErrorCode activation_error_code(int status) {
@@ -50,22 +53,24 @@ int resolved_snapshot_length(pcap_t* handle, int fallback) noexcept {
 
 } // namespace
 
-LivePcapPacketSource::LivePcapPacketSource(SnifferOptions options) : options_(std::move(options)) {}
+LivePcapPacketSource::LivePcapPacketSource(SnifferInterfaceOptions options) : options_(std::move(options)) {}
 
 PacketSourceOpenResult LivePcapPacketSource::open() {
     close();
 
     char errbuf[PCAP_ERRBUF_SIZE] = {};
-    pcap_t* raw_handle = pcap_create(options_.interface_name.c_str(), errbuf);
+    pcap_t* raw_handle = pcap_create(options_.name.c_str(), errbuf);
 
     if (raw_handle == nullptr) {
         return make_sniffer_error(
             SnifferErrorCode::PcapCreateFailed,
             SnifferSeverity::Error,
             "Failed to create pcap session.",
-            options_.interface_name,
+            options_.name,
             0,
-            errbuf);
+            errbuf,
+            false,
+            options_.id);
     }
 
     std::unique_ptr<pcap_t, decltype(&pcap_close)> handle(raw_handle, pcap_close);
@@ -76,10 +81,11 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
             SnifferErrorCode::PcapCreateFailed,
             SnifferSeverity::Warning,
             "pcap_create returned a warning.",
-            options_.interface_name,
+            options_.name,
             0,
             errbuf,
-            true)));
+            true,
+            options_.id)));
     }
 
     auto apply = [&](int status, SnifferErrorCode code, const char* operation) -> std::optional<SnifferError> {
@@ -87,7 +93,7 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
             return std::nullopt;
         }
 
-        return pcap_configuration_error(options_.interface_name, code, operation, status, handle.get());
+        return pcap_configuration_error(options_.name, options_.id, code, operation, status, handle.get());
     };
 
     if (auto error = apply(
@@ -128,17 +134,74 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
             SnifferErrorCode::PcapConfigureFailed,
             SnifferSeverity::Warning,
             "Nanosecond timestamps are not supported; falling back to microsecond timestamps.",
-            options_.interface_name,
+            options_.name,
             nano_status,
             pcap_status_to_string(nano_status),
-            true)));
+            true,
+            options_.id)));
     }
 #endif
+
+    if (options_.timestamp_type.has_value()) {
+#if defined(PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_NAME_TO_VAL) && defined(PRUFTNET_HAVE_PCAP_SET_TSTAMP_TYPE)
+        const auto timestamp_type = pcap_tstamp_type_name_to_val(options_.timestamp_type->c_str());
+        if (timestamp_type < 0) {
+            return make_sniffer_error(
+                SnifferErrorCode::PcapConfigureFailed,
+                SnifferSeverity::Error,
+                "Unknown pcap timestamp type.",
+                options_.name,
+                timestamp_type,
+                *options_.timestamp_type,
+                false,
+                options_.id);
+        }
+
+        if (auto error = apply(
+                pcap_set_tstamp_type(handle.get(), timestamp_type),
+                SnifferErrorCode::PcapConfigureFailed,
+                "pcap_set_tstamp_type")) {
+            return *error;
+        }
+#else
+        return make_sniffer_error(
+            SnifferErrorCode::PcapConfigureFailed,
+            SnifferSeverity::Error,
+            "This libpcap build does not support selecting timestamp types.",
+            options_.name,
+            0,
+            *options_.timestamp_type,
+            false,
+            options_.id);
+#endif
+    }
+
+    if (options_.monitor_mode) {
+#if defined(PRUFTNET_HAVE_PCAP_SET_RFMON)
+        if (auto error = apply(
+                pcap_set_rfmon(handle.get(), 1),
+                SnifferErrorCode::PcapConfigureFailed,
+                "pcap_set_rfmon")) {
+            return *error;
+        }
+#else
+        return make_sniffer_error(
+            SnifferErrorCode::PcapConfigureFailed,
+            SnifferSeverity::Error,
+            "This libpcap build does not support monitor mode.",
+            options_.name,
+            0,
+            {},
+            false,
+            options_.id);
+#endif
+    }
 
     const auto activate_status = pcap_activate(handle.get());
     if (activate_status < 0) {
         return pcap_configuration_error(
-            options_.interface_name,
+            options_.name,
+            options_.id,
             activation_error_code(activate_status),
             "pcap_activate",
             activate_status,
@@ -150,22 +213,56 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
             SnifferErrorCode::PcapActivateFailed,
             SnifferSeverity::Warning,
             "pcap_activate returned a warning.",
-            options_.interface_name,
+            options_.name,
             activate_status,
             pcap_status_to_string(activate_status),
-            true)));
+            true,
+            options_.id)));
+    }
+
+    if (options_.requested_link_type.has_value()) {
+#if defined(PRUFTNET_HAVE_PCAP_SET_DATALINK)
+        if (pcap_set_datalink(handle.get(), *options_.requested_link_type) != 0) {
+            return make_sniffer_error(
+                SnifferErrorCode::PcapConfigureFailed,
+                SnifferSeverity::Error,
+                "Failed to set pcap link type.",
+                options_.name,
+                0,
+                pcap_geterr(handle.get()),
+                false,
+                options_.id);
+        }
+#else
+        return make_sniffer_error(
+            SnifferErrorCode::PcapConfigureFailed,
+            SnifferSeverity::Error,
+            "This libpcap build does not support selecting link types.",
+            options_.name,
+            0,
+            {},
+            false,
+            options_.id);
+#endif
     }
 
     if (!options_.bpf_filter.empty()) {
         bpf_program program = {};
-        if (pcap_compile(handle.get(), &program, options_.bpf_filter.c_str(), 1, PCAP_NETMASK_UNKNOWN) != 0) {
+        if (pcap_compile(
+                handle.get(),
+                &program,
+                options_.bpf_filter.c_str(),
+                options_.bpf_optimize ? 1 : 0,
+                PCAP_NETMASK_UNKNOWN) != 0) {
             return make_sniffer_error(
                 SnifferErrorCode::FilterCompileFailed,
                 SnifferSeverity::Error,
                 "Failed to compile BPF filter.",
-                options_.interface_name,
+                options_.name,
                 0,
-                pcap_geterr(handle.get()));
+                pcap_geterr(handle.get()),
+                false,
+                options_.id);
         }
 
         if (pcap_setfilter(handle.get(), &program) != 0) {
@@ -173,9 +270,11 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
                 SnifferErrorCode::FilterApplyFailed,
                 SnifferSeverity::Error,
                 "Failed to apply BPF filter.",
-                options_.interface_name,
+                options_.name,
                 0,
-                pcap_geterr(handle.get()));
+                pcap_geterr(handle.get()),
+                false,
+                options_.id);
             pcap_freecode(&program);
             return error;
         }
@@ -231,9 +330,9 @@ TimestampPrecision LivePcapPacketSource::timestamp_precision() const noexcept {
 }
 
 std::variant<PcapKernelStats, SnifferError> LivePcapPacketSource::read_stats() const {
-    return handle_.read_stats(options_.interface_name);
+    return handle_.read_stats(options_.name);
 }
 
-std::string LivePcapPacketSource::source_name() const { return options_.interface_name; }
+std::string LivePcapPacketSource::source_name() const { return options_.name; }
 
 } // namespace pruftnet::sniffing::internal

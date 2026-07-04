@@ -11,7 +11,8 @@
         "dev:desktop": "pnpm --filter @repo/desktop dev",
         "format": "prettier --write .",
         "lint": "pnpm -r lint",
-        "typecheck": "pnpm -r typecheck"
+        "typecheck": "pnpm -r typecheck",
+        "test:cpp": "cmake --build packages/core/cpp/build && ctest --test-dir packages/core/cpp/build --output-on-failure"
     },
     "keywords": [],
     "author": "Franklin Tenepo",

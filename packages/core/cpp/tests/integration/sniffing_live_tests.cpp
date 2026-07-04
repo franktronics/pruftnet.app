@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <thread>
+#include <utility>
 
 #include "pruftnet/sniffing/network_sniffer.hpp"
 #include "tests/test_config.hpp"
@@ -18,9 +19,11 @@ int main() {
     }
 
     SnifferOptions options;
-    options.interface_name = *interface_name;
-    options.promiscuous = false;
-    options.ring_slots = 4096;
+    SnifferInterfaceOptions interface_options;
+    interface_options.name = *interface_name;
+    interface_options.promiscuous = false;
+    interface_options.ring_slots = 4096;
+    options.interfaces.push_back(std::move(interface_options));
 
     std::atomic<std::uint64_t> packet_count{0};
     std::atomic<std::uint64_t> event_errors{0};

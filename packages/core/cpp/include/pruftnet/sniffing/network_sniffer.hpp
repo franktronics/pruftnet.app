@@ -31,7 +31,7 @@ public:
     std::optional<SnifferError> start();
     void stop() noexcept;
     [[nodiscard]] bool is_running() const noexcept;
-    [[nodiscard]] SnifferStatsSnapshot stats() const noexcept;
+    [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:
     class Impl;
