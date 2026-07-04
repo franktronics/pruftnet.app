@@ -36,6 +36,7 @@ struct SnifferOptions {
     std::vector<SnifferInterfaceOptions> interfaces;
     std::vector<int> accepted_link_types;
     std::chrono::milliseconds stats_poll_interval = std::chrono::milliseconds(1'000);
+    std::size_t max_total_ring_bytes = 0;
 };
 
 } // namespace pruftnet::sniffing

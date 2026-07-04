@@ -1,6 +1,7 @@
 #include "sniffing/sniffer_runtime.hpp"
 
 #include <exception>
+#include <limits>
 #include <new>
 #include <sstream>
 #include <utility>
@@ -33,6 +34,56 @@ void add_interface_stats(SnifferStatsSnapshot& aggregate, const InterfaceStatsSn
     aggregate.max_ring_depth += interface_stats.max_ring_depth;
 }
 
+bool checked_multiply(std::size_t left, std::size_t right, std::size_t& result) noexcept {
+    if (left != 0 && right > std::numeric_limits<std::size_t>::max() / left) {
+        return false;
+    }
+
+    result = left * right;
+    return true;
+}
+
+bool checked_add(std::size_t left, std::size_t right, std::size_t& result) noexcept {
+    if (right > std::numeric_limits<std::size_t>::max() - left) {
+        return false;
+    }
+
+    result = left + right;
+    return true;
+}
+
+std::optional<std::size_t> estimated_ring_bytes(std::size_t capacity, std::size_t max_packet_size) noexcept {
+    std::size_t slot_count = 0;
+    if (!checked_add(capacity, 1, slot_count)) {
+        return std::nullopt;
+    }
+
+    std::size_t packet_storage = 0;
+    if (!checked_multiply(slot_count, max_packet_size, packet_storage)) {
+        return std::nullopt;
+    }
+
+    std::size_t metadata_storage = 0;
+    if (!checked_multiply(slot_count, sizeof(PacketMetadata), metadata_storage)) {
+        return std::nullopt;
+    }
+
+    std::size_t length_storage = 0;
+    if (!checked_multiply(slot_count, sizeof(std::uint32_t), length_storage)) {
+        return std::nullopt;
+    }
+
+    std::size_t total = 0;
+    if (!checked_add(packet_storage, metadata_storage, total)) {
+        return std::nullopt;
+    }
+    if (!checked_add(total, length_storage, total)) {
+        return std::nullopt;
+    }
+
+    return total;
+}
+
 } // namespace
 
 struct SnifferRuntime::InterfaceCaptureContext {
@@ -52,6 +103,7 @@ struct SnifferRuntime::InterfaceCaptureContext {
     std::atomic<bool> capture_thread_running{false};
     std::atomic<bool> ring_full_reported{false};
     int link_type = 0;
+    int snapshot_length = 0;
     std::chrono::steady_clock::time_point next_stats_at{};
 };
 
@@ -236,6 +288,8 @@ std::optional<SnifferError> SnifferRuntime::validate_start_options() const {
 }
 
 std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources() {
+    std::size_t total_ring_bytes = 0;
+
     for (auto& context : interfaces_) {
         auto open_result = context->source->open();
         if (std::holds_alternative<SnifferError>(open_result)) {
@@ -264,8 +318,8 @@ std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources() {
                 context->options.id);
         }
 
-        const auto snapshot_length = context->source->snapshot_length();
-        if (snapshot_length <= 0) {
+        context->snapshot_length = context->source->snapshot_length();
+        if (context->snapshot_length <= 0) {
             return make_sniffer_error(
                 SnifferErrorCode::InvalidOptions,
                 SnifferSeverity::Error,
@@ -277,10 +331,44 @@ std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources() {
                 context->options.id);
         }
 
+        const auto estimated_bytes = estimated_ring_bytes(
+            context->options.ring_slots,
+            static_cast<std::size_t>(context->snapshot_length));
+        if (!estimated_bytes.has_value()) {
+            return make_sniffer_error(
+                SnifferErrorCode::InvalidOptions,
+                SnifferSeverity::Error,
+                "Packet ring memory estimate overflowed.",
+                context->source->source_name(),
+                0,
+                {},
+                false,
+                context->options.id);
+        }
+
+        if (!checked_add(total_ring_bytes, *estimated_bytes, total_ring_bytes)) {
+            return make_sniffer_error(
+                SnifferErrorCode::InvalidOptions,
+                SnifferSeverity::Error,
+                "Total packet ring memory estimate overflowed.");
+        }
+    }
+
+    if (options_.max_total_ring_bytes != 0 && total_ring_bytes > options_.max_total_ring_bytes) {
+        std::ostringstream message;
+        message << "Packet ring memory budget exceeded. Estimated " << total_ring_bytes
+                << " bytes, budget " << options_.max_total_ring_bytes << " bytes.";
+        return make_sniffer_error(
+            SnifferErrorCode::MemoryBudgetExceeded,
+            SnifferSeverity::Error,
+            message.str());
+    }
+
+    for (auto& context : interfaces_) {
         try {
             context->ring = std::make_unique<PacketRing>(
                 context->options.ring_slots,
-                static_cast<std::size_t>(snapshot_length));
+                static_cast<std::size_t>(context->snapshot_length));
         } catch (const std::bad_alloc&) {
             return make_sniffer_error(
                 SnifferErrorCode::AllocationFailed,
@@ -461,7 +549,7 @@ void SnifferRuntime::parser_loop() noexcept {
                     const auto parsed_packet = parser_.parse(raw_packet);
                     context.stats.increment_packets_parsed();
 
-                    packet_callback_(raw_packet, parsed_packet, stats());
+                    packet_callback_(raw_packet, parsed_packet);
                     context.ring->pop();
                     next_interface_index = (index + 1) % interfaces_.size();
                     parsed_any = true;

@@ -31,10 +31,10 @@ int main() {
 
     NetworkSniffer sniffer(
         options,
-        [&](const RawPacketView& raw, const ParsedPacket& parsed, const SnifferStatsSnapshot& stats) {
+        [&](const RawPacketView& raw, const ParsedPacket& parsed) {
             if (raw.bytes.empty() || raw.metadata.captured_len != raw.bytes.size() ||
                 raw.metadata.wire_len < raw.metadata.captured_len || parsed.status != ParseStatus::NotParsed ||
-                stats.packets_seen == 0 || stats.packets_enqueued == 0 || stats.packets_parsed == 0) {
+                raw.metadata.sequence == 0) {
                 invalid_packet.store(true, std::memory_order_relaxed);
             }
 

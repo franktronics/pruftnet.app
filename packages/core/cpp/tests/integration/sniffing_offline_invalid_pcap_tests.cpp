@@ -28,7 +28,7 @@ void pcap_open_failure_is_reported(const std::filesystem::path& path) {
         options,
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(path.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();

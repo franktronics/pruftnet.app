@@ -54,7 +54,7 @@ std::uint64_t run_filter(const std::filesystem::path& fixture, std::string filte
         options,
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto&, const auto&, const auto&) {
+        [&](const auto&, const auto&) {
             ++callback_count;
         },
         [&](const SnifferEvent& event) {
@@ -94,7 +94,7 @@ void invalid_filter_fails_at_start(const std::filesystem::path& fixture) {
         options,
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();

@@ -15,8 +15,7 @@ namespace pruftnet::sniffing {
 
 using PacketCallback = std::function<void(
     const RawPacketView& raw_packet,
-    const ParsedPacket& parsed_packet,
-    const SnifferStatsSnapshot& stats)>;
+    const ParsedPacket& parsed_packet)>;
 
 class NetworkSniffer {
 public:

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -101,7 +102,7 @@ void distinct_interfaces_emit_metadata_and_stats() {
         options,
         two_sources(std::move(first), std::move(second)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto& raw, const auto&, const auto&) {
+        [&](const auto& raw, const auto&) {
             observed.push_back(raw.metadata);
         },
         {});
@@ -169,7 +170,7 @@ void auto_interface_ids_are_assigned_by_order() {
         options,
         two_sources(std::move(first), std::move(second)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto& raw, const auto&, const auto&) {
+        [&](const auto& raw, const auto&) {
             observed_ids.push_back(raw.metadata.interface_id);
         },
         {});
@@ -216,7 +217,7 @@ void auto_source_event_ids_are_rewritten_to_resolved_ids() {
         options,
         two_sources(std::move(first), std::move(second)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
             events.push_back(event);
         });
@@ -248,7 +249,7 @@ void second_interface_packets_wake_parser_while_first_is_idle() {
         options,
         two_sources(std::move(idle), std::move(active)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto& raw, const auto&, const auto&) {
+        [&](const auto& raw, const auto&) {
             if (raw.metadata.interface_id == 40) {
                 active_packet_seen.store(true, std::memory_order_release);
             }
@@ -286,7 +287,7 @@ void start_failure_closes_previously_opened_interfaces() {
         options,
         two_sources(std::move(first), std::move(second)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();
@@ -325,7 +326,7 @@ void ring_pressure_is_isolated_per_interface() {
         options,
         two_sources(std::move(noisy), std::move(quiet)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto&, const auto&, const auto&) {
+        [&](const auto&, const auto&) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         },
         [&](const SnifferEvent& event) {
@@ -353,6 +354,106 @@ void ring_pressure_is_isolated_per_interface() {
     assert(count_events(events, SnifferErrorCode::RingFull, 22) == 0);
 }
 
+void stop_during_multi_interface_pressure_is_safe() {
+    auto first = std::make_unique<FakePacketSource>();
+    first->after_packets_status = PacketSourceDispatchStatus::NoPacketsAvailable;
+    first->no_packets_delay = std::chrono::milliseconds(1);
+    for (std::uint8_t index = 0; index < 100; ++index) {
+        first->packets.push_back(fake_packet(32, 32, index));
+    }
+
+    auto second = std::make_unique<FakePacketSource>();
+    second->after_packets_status = PacketSourceDispatchStatus::NoPacketsAvailable;
+    second->no_packets_delay = std::chrono::milliseconds(1);
+    for (std::uint8_t index = 0; index < 100; ++index) {
+        second->packets.push_back(fake_packet(32, 32, static_cast<std::uint8_t>(100 + index)));
+    }
+
+    SnifferOptions options;
+    options.interfaces.push_back(interface_options(31, 8, 16));
+    options.interfaces.push_back(interface_options(32, 8, 16));
+    options.stats_poll_interval = std::chrono::milliseconds(0);
+
+    std::atomic<std::uint64_t> callbacks{0};
+    SnifferRuntime runtime(
+        options,
+        two_sources(std::move(first), std::move(second)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [&](const auto&, const auto&) {
+            callbacks.fetch_add(1, std::memory_order_relaxed);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        },
+        {});
+
+    assert(!runtime.start().has_value());
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    runtime.stop();
+    assert(!runtime.is_running());
+    assert(callbacks.load(std::memory_order_relaxed) >= 1);
+}
+
+void callback_can_stop_multi_interface_runtime() {
+    auto first = std::make_unique<FakePacketSource>();
+    first->packets.push_back(fake_packet(32));
+
+    auto second = std::make_unique<FakePacketSource>();
+    second->packets.push_back(fake_packet(32));
+
+    SnifferOptions options;
+    options.interfaces.push_back(interface_options(41));
+    options.interfaces.push_back(interface_options(42));
+    options.stats_poll_interval = std::chrono::milliseconds(0);
+
+    SnifferRuntime* runtime_ptr = nullptr;
+    std::atomic<std::uint64_t> callbacks{0};
+    SnifferRuntime runtime(
+        options,
+        two_sources(std::move(first), std::move(second)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [&](const auto&, const auto&) {
+            callbacks.fetch_add(1, std::memory_order_relaxed);
+            runtime_ptr->stop();
+        },
+        {});
+    runtime_ptr = &runtime;
+
+    assert(!runtime.start().has_value());
+    wait_until_stopped(runtime);
+    assert(!runtime.is_running());
+    assert(callbacks.load(std::memory_order_relaxed) >= 1);
+}
+
+void event_callback_throw_does_not_crash_multi_interface_runtime() {
+    auto first = std::make_unique<FakePacketSource>();
+    first->after_packets_status = PacketSourceDispatchStatus::Error;
+    first->dispatch_error_message = "first forced error";
+
+    auto second = std::make_unique<FakePacketSource>();
+    second->after_packets_status = PacketSourceDispatchStatus::NoPacketsAvailable;
+    second->no_packets_delay = std::chrono::milliseconds(1);
+
+    SnifferOptions options;
+    options.interfaces.push_back(interface_options(51));
+    options.interfaces.push_back(interface_options(52));
+    options.stats_poll_interval = std::chrono::milliseconds(0);
+
+    std::atomic<bool> event_seen{false};
+    SnifferRuntime runtime(
+        options,
+        two_sources(std::move(first), std::move(second)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [](const auto&, const auto&) {},
+        [&](const SnifferEvent&) {
+            event_seen.store(true, std::memory_order_relaxed);
+            throw std::runtime_error("event callback failure");
+        });
+
+    assert(!runtime.start().has_value());
+    wait_until_stopped(runtime);
+    assert(event_seen.load(std::memory_order_relaxed));
+    assert(!runtime.is_running());
+}
+
 } // namespace
 
 int main() {
@@ -362,5 +463,8 @@ int main() {
     second_interface_packets_wake_parser_while_first_is_idle();
     start_failure_closes_previously_opened_interfaces();
     ring_pressure_is_isolated_per_interface();
+    stop_during_multi_interface_pressure_is_safe();
+    callback_can_stop_multi_interface_runtime();
+    event_callback_throw_does_not_crash_multi_interface_runtime();
     return 0;
 }

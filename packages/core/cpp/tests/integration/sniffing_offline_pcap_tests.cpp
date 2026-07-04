@@ -62,7 +62,7 @@ int main() {
         options,
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const RawPacketView& raw, const ParsedPacket& parsed, const SnifferStatsSnapshot&) {
+        [&](const RawPacketView& raw, const ParsedPacket& parsed) {
             observed.push_back(ObservedPacket{raw.metadata, parsed.status, raw.bytes.size()});
         },
         [&](const SnifferEvent& event) {

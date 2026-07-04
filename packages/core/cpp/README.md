@@ -46,7 +46,7 @@ options.interfaces.push_back(interface);
 
 pruftnet::sniffing::NetworkSniffer sniffer(
     options,
-    [](const auto& raw, const auto& parsed, const auto& stats) {
+    [](const auto& raw, const auto& parsed) {
         // raw.bytes is valid only during this callback.
     });
 
@@ -75,7 +75,15 @@ Per-interface live options are modeled after Wireshark/dumpcap capture options:
 - `requested_link_type`: optional requested DLT/link-layer type.
 - `timestamp_type`: optional pcap timestamp type name.
 
-Global options currently cover parser/runtime policy: accepted link types and stats polling interval.
+Global options currently cover parser/runtime policy: accepted link types, stats polling interval, and optional total ring-memory budget via `max_total_ring_bytes`.
+
+Capture interface discovery is available through:
+
+```cpp
+#include <pruftnet/sniffing/interface_discovery.hpp>
+```
+
+Use `list_capture_interfaces()` and `read_interface_capabilities()` when building UI or preflight validation. These APIs use libpcap/Npcap as the source of truth for capturable interfaces, supported DLT/link-layer types, timestamp types, and monitor-mode capability.
 
 ## Build
 
@@ -126,20 +134,32 @@ unit.sniffer_options
 integration.sniffing_offline_pcap
 integration.sniffing_offline_bpf
 integration.sniffing_offline_invalid_pcap
+integration.sniffing_offline_multi_pcap
 integration.sniffing_runtime_lifecycle
 integration.sniffing_runtime_errors
 integration.sniffing_ring_pressure
 integration.sniffing_multi_interface
+integration.sniffing_interface_discovery
+integration.sniffing_interface_capabilities_live
 integration.sniffing_live
 ```
 
-The live sniffing integration test is optional because it depends on local interfaces, permissions, and network traffic. It is skipped unless `PRUFTNET_TEST_INTERFACE` is set:
+Live integration tests are optional because they depend on local interfaces, permissions, and network traffic. They are skipped unless `PRUFTNET_TEST_INTERFACE` is set:
 
 ```bash
 PRUFTNET_TEST_INTERFACE=en16 ctest --test-dir packages/core/cpp/build -R integration.sniffing_live
 ```
 
-Without `PRUFTNET_TEST_INTERFACE`, CTest marks `integration.sniffing_live` as skipped.
+Without `PRUFTNET_TEST_INTERFACE`, CTest marks `integration.sniffing_live` and `integration.sniffing_interface_capabilities_live` as skipped.
+
+Optional development targets are disabled by default:
+
+```bash
+cmake -S packages/core/cpp -B packages/core/cpp/build \
+  -DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON \
+  -DPRUFTNET_SNIFFING_BUILD_FUZZERS=ON
+cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark empty_packet_parser_fuzzer
+```
 
 ## Defaults
 
@@ -148,6 +168,7 @@ Without `PRUFTNET_TEST_INTERFACE`, CTest marks `integration.sniffing_live` as sk
 - per-interface pcap read timeout: 10 ms
 - per-interface pcap dispatch batch size: 64 packets
 - per-interface application ring: 65,536 slots
+- total ring-memory budget: disabled by default (`max_total_ring_bytes = 0`)
 - unsupported link type policy: `start()` fails
 - accepted link types: `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, `DLT_LOOP` when available in the local libpcap headers
 
@@ -156,6 +177,8 @@ Without `PRUFTNET_TEST_INTERFACE`, CTest marks `integration.sniffing_live` as sk
 Each capture callback does no parsing. It copies packet bytes into that interface's preallocated ring and returns quickly to reduce kernel drops.
 
 The user packet callback is called from the parser thread, never from the capture thread.
+
+The user packet callback receives only `RawPacketView` and `ParsedPacket`. Full stats remain available through `NetworkSniffer::stats()` outside the packet hot path, avoiding per-packet vector allocation in the parser thread.
 
 Every successful interface-ring push wakes the shared parser thread, so an idle interface cannot delay packets arriving on another interface.
 

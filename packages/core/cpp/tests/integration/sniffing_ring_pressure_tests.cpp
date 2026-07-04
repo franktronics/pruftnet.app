@@ -56,7 +56,7 @@ int main() {
         options,
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto&, const auto&, const auto&) {
+        [&](const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         },

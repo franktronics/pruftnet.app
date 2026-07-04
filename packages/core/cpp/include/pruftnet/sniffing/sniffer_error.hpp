@@ -27,6 +27,7 @@ enum class SnifferErrorCode {
     RingFull,
     DispatchFailed,
     AllocationFailed,
+    MemoryBudgetExceeded,
     ThreadStartFailed,
     StatsReadFailed,
     InternalInvariantViolation,

@@ -49,7 +49,7 @@ void stop_before_start_and_repeated_stop_are_safe() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         EventCallback{});
 
     runtime.stop();
@@ -63,7 +63,7 @@ void double_start_is_rejected() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         EventCallback{});
 
     assert(!runtime.start().has_value());
@@ -80,7 +80,7 @@ void destructor_stops_running_runtime() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         EventCallback{});
 
     assert(!runtime->start().has_value());
@@ -97,7 +97,7 @@ void offline_style_empty_source_stops_at_eof() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto&, const auto&, const auto&) {
+        [&](const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);
         },
         {});
@@ -125,7 +125,7 @@ void callback_can_request_stop_without_deadlock() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const auto&, const auto&, const auto&) {
+        [&](const auto&, const auto&) {
             callbacks.fetch_add(1, std::memory_order_relaxed);
             runtime_ptr->stop();
         },
@@ -157,7 +157,7 @@ void metadata_and_truncation_are_reported() {
         options,
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [&](const RawPacketView& raw, const auto& parsed, const auto&) {
+        [&](const RawPacketView& raw, const auto& parsed) {
             observed.push_back(raw);
             parse_statuses.push_back(parsed.status);
         },

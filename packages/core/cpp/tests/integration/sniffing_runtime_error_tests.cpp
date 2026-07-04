@@ -60,7 +60,7 @@ void null_packet_source_is_rejected() {
         base_options(),
         one_source(nullptr),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();
@@ -94,7 +94,7 @@ void open_failure_is_returned_from_start() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();
@@ -113,7 +113,7 @@ void unsupported_link_type_fails_start() {
         options,
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();
@@ -129,12 +129,35 @@ void invalid_snapshot_length_fails_start() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         {});
 
     const auto error = runtime.start();
     assert(error.has_value());
     assert(error->code == SnifferErrorCode::InvalidOptions);
+}
+
+void ring_memory_budget_failure_closes_open_sources() {
+    auto source = std::make_unique<FakePacketSource>();
+    auto* source_ptr = source.get();
+
+    auto options = base_options();
+    options.max_total_ring_bytes = 1;
+
+    SnifferRuntime runtime(
+        options,
+        one_source(std::move(source)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [](const auto&, const auto&) {},
+        {});
+
+    const auto error = runtime.start();
+    assert(error.has_value());
+    assert(error->code == SnifferErrorCode::MemoryBudgetExceeded);
+    assert(!runtime.is_running());
+    assert(source_ptr->open_calls == 1);
+    assert(source_ptr->close_calls >= 1);
+    assert(!source_ptr->is_open());
 }
 
 void open_warning_is_emitted_from_start() {
@@ -153,7 +176,7 @@ void open_warning_is_emitted_from_start() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
             events.push_back(event);
         });
@@ -174,7 +197,7 @@ void dispatch_error_emits_event_and_updates_stats() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
             events.push_back(event);
         });
@@ -201,7 +224,7 @@ void stats_read_error_emits_warning_event() {
         options,
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         [&](const SnifferEvent& event) {
             events.push_back(event);
         });
@@ -222,7 +245,7 @@ void packet_callback_throw_emits_fatal_event_and_stops() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {
+        [](const auto&, const auto&) {
             throw std::runtime_error("callback failure");
         },
         [&](const SnifferEvent& event) {
@@ -245,7 +268,7 @@ void event_callback_throw_does_not_crash_runtime() {
         base_options(),
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
-        [](const auto&, const auto&, const auto&) {},
+        [](const auto&, const auto&) {},
         [&](const SnifferEvent&) {
             event_seen.store(true, std::memory_order_relaxed);
             throw std::runtime_error("event callback failure");
@@ -265,6 +288,7 @@ int main() {
     open_failure_is_returned_from_start();
     unsupported_link_type_fails_start();
     invalid_snapshot_length_fails_start();
+    ring_memory_budget_failure_closes_open_sources();
     open_warning_is_emitted_from_start();
     dispatch_error_emits_event_and_updates_stats();
     stats_read_error_emits_warning_event();
