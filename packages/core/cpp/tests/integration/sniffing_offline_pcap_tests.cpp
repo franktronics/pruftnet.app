@@ -24,7 +24,10 @@ namespace {
 
 struct ObservedPacket {
     pruftnet::sniffing::PacketMetadata metadata;
-    pruftnet::sniffing::ParseStatus parse_status = pruftnet::sniffing::ParseStatus::Error;
+    pruftnet::sniffing::ParseStatus parse_status = pruftnet::sniffing::ParseStatus::NotParsed;
+    pruftnet::sniffing::ProtocolId top_protocol = pruftnet::sniffing::ProtocolId::Unknown;
+    std::size_t layer_count = 0;
+    std::array<pruftnet::sniffing::ProtocolId, pruftnet::sniffing::kMaxParsedLayers> layers{};
     std::size_t byte_count = 0;
 };
 
@@ -63,7 +66,16 @@ int main() {
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const RawPacketView& raw, const ParsedPacket& parsed) {
-            observed.push_back(ObservedPacket{raw.metadata, parsed.status, raw.bytes.size()});
+            ObservedPacket packet;
+            packet.metadata = raw.metadata;
+            packet.parse_status = parsed.status;
+            packet.top_protocol = parsed.top_protocol;
+            packet.layer_count = parsed.layer_count;
+            for (std::size_t layer_index = 0; layer_index < parsed.layer_count; ++layer_index) {
+                packet.layers[layer_index] = parsed.layers[layer_index].protocol_id;
+            }
+            packet.byte_count = raw.bytes.size();
+            observed.push_back(packet);
         },
         [&](const SnifferEvent& event) {
             events.push_back(event);
@@ -96,7 +108,17 @@ int main() {
         assert(packet.metadata.captured_len == kExpectedLengths[index]);
         assert(packet.metadata.wire_len == kExpectedLengths[index]);
         assert(packet.byte_count == kExpectedLengths[index]);
-        assert(packet.parse_status == ParseStatus::NotParsed);
+        assert(packet.parse_status == ParseStatus::Parsed);
+        assert(packet.layer_count == 3);
+        assert(packet.layers[0] == ProtocolId::Ethernet);
+        assert(packet.layers[1] == ProtocolId::Ipv4);
+        if (index < 5) {
+            assert(packet.top_protocol == ProtocolId::Udp);
+            assert(packet.layers[2] == ProtocolId::Udp);
+        } else {
+            assert(packet.top_protocol == ProtocolId::Tcp);
+            assert(packet.layers[2] == ProtocolId::Tcp);
+        }
         assert((packet.metadata.flags & PacketFlagTruncated) == 0);
         assert(packet.metadata.timestamp_ns >= previous_timestamp);
         previous_timestamp = packet.metadata.timestamp_ns;

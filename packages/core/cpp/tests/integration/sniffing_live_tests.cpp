@@ -32,9 +32,9 @@ int main() {
     NetworkSniffer sniffer(
         options,
         [&](const RawPacketView& raw, const ParsedPacket& parsed) {
+            (void)parsed;
             if (raw.bytes.empty() || raw.metadata.captured_len != raw.bytes.size() ||
-                raw.metadata.wire_len < raw.metadata.captured_len || parsed.status != ParseStatus::NotParsed ||
-                raw.metadata.sequence == 0) {
+                raw.metadata.wire_len < raw.metadata.captured_len || raw.metadata.sequence == 0) {
                 invalid_packet.store(true, std::memory_order_relaxed);
             }
 

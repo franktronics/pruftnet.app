@@ -12,11 +12,11 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> empty parser
+  -> minimal packet parser
   -> user packet callback
 ```
 
-The parser currently returns an empty future-proof `ParsedPacket` with `ParseStatus::NotParsed`. The callback receives both the raw packet view and the parsed result.
+The parser currently handles Ethernet (`DLT_EN10MB`) frames with minimal Ethernet, IPv4, ARP, TCP, and UDP layer detection. Unsupported link types or protocols return `ParseStatus::Unsupported`; malformed or truncated headers return `ParseStatus::Error`. The callback receives both the raw packet view and the parsed result.
 
 `NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared multi-interface capture/ring/parser pipeline against `PacketSource` instances, which lets tests execute the same pipeline with offline `.pcap` fixtures and fake sources.
 
@@ -114,6 +114,8 @@ tests/
 
 Unit tests are deterministic and do not require packet capture permissions.
 
+`unit.packet_parser` validates the bounded packet cursor and the first parser stage: Ethernet, IPv4, TCP, UDP, ARP, unsupported EtherTypes, unsupported link types, and malformed headers.
+
 Integration tests cover both real `.pcap` input and deterministic fake sources. `tests/support/FakePacketSource` is used to exercise lifecycle, runtime error paths, packet metadata, truncation, stats failures, and ring pressure without relying on live interfaces.
 
 Offline integration tests use `.pcap` fixtures and are part of the default CTest run. The initial valid fixture is:
@@ -131,6 +133,7 @@ Current CTest targets:
 ```text
 unit.packet_ring
 unit.sniffer_options
+unit.packet_parser
 integration.sniffing_offline_pcap
 integration.sniffing_offline_bpf
 integration.sniffing_offline_invalid_pcap
@@ -158,7 +161,7 @@ Optional development targets are disabled by default:
 cmake -S packages/core/cpp -B packages/core/cpp/build \
   -DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON \
   -DPRUFTNET_SNIFFING_BUILD_FUZZERS=ON
-cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark empty_packet_parser_fuzzer
+cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark packet_parser_fuzzer
 ```
 
 ## Defaults
@@ -171,6 +174,7 @@ cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark empty_
 - total ring-memory budget: disabled by default (`max_total_ring_bytes = 0`)
 - unsupported link type policy: `start()` fails
 - accepted link types: `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, `DLT_LOOP` when available in the local libpcap headers
+- current parser support: Ethernet/IPv4/ARP/TCP/UDP for `DLT_EN10MB`; other accepted link types pass through as `ParseStatus::Unsupported`
 
 ## Design Notes
 
@@ -179,6 +183,8 @@ Each capture callback does no parsing. It copies packet bytes into that interfac
 The user packet callback is called from the parser thread, never from the capture thread.
 
 The user packet callback receives only `RawPacketView` and `ParsedPacket`. Full stats remain available through `NetworkSniffer::stats()` outside the packet hot path, avoiding per-packet vector allocation in the parser thread.
+
+`ParsedPacket` stores parsed layers in a fixed-size array (`kMaxParsedLayers`) to keep the parser hot path allocation-free for successfully parsed and unsupported packets.
 
 Every successful interface-ring push wakes the shared parser thread, so an idle interface cannot delay packets arriving on another interface.
 

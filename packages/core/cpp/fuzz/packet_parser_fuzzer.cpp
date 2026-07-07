@@ -5,13 +5,16 @@
 #include <span>
 #include <vector>
 
+#include <pcap/pcap.h>
+
 #include "pruftnet/sniffing/packet.hpp"
-#include "sniffing/empty_packet_parser.hpp"
+#include "sniffing/packet_parser.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
     pruftnet::sniffing::PacketMetadata metadata;
     metadata.captured_len = static_cast<std::uint32_t>(size);
     metadata.wire_len = static_cast<std::uint32_t>(size);
+    metadata.link_type = DLT_EN10MB;
 
     pruftnet::sniffing::RawPacketView raw_packet;
     raw_packet.metadata = metadata;
@@ -19,7 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         reinterpret_cast<const std::byte*>(data),
         size);
 
-    pruftnet::sniffing::internal::EmptyPacketParser parser;
+    pruftnet::sniffing::internal::PacketParser parser;
     (void)parser.parse(raw_packet);
     return 0;
 }

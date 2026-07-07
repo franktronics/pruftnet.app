@@ -37,12 +37,13 @@ check_symbol_exists(pcap_tstamp_type_val_to_name "pcap/pcap.h" PRUFTNET_HAVE_PCA
 check_symbol_exists(pcap_tstamp_type_val_to_description "pcap/pcap.h" PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_VAL_TO_DESCRIPTION)
 
 add_library(pruftnet_sniffing STATIC
-    src/sniffing/empty_packet_parser.cpp
     src/sniffing/interface_discovery.cpp
     src/sniffing/internal_stats.cpp
     src/sniffing/link_type.cpp
     src/sniffing/live_pcap_packet_source.cpp
     src/sniffing/network_sniffer.cpp
+    src/sniffing/packet_cursor.cpp
+    src/sniffing/packet_parser.cpp
     src/sniffing/offline_pcap_packet_source.cpp
     src/sniffing/packet_ring.cpp
     src/sniffing/packet_source.cpp
@@ -105,6 +106,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(sniffer_options_tests tests/unit/sniffer_options_tests.cpp)
     add_test(NAME unit.sniffer_options COMMAND sniffer_options_tests)
+
+    pruftnet_add_sniffing_test(packet_parser_tests tests/unit/packet_parser_tests.cpp)
+    add_test(NAME unit.packet_parser COMMAND packet_parser_tests)
 
     pruftnet_add_sniffing_test(sniffing_offline_pcap_tests tests/integration/sniffing_offline_pcap_tests.cpp)
     target_compile_definitions(sniffing_offline_pcap_tests
@@ -169,17 +173,17 @@ if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
 endif()
 
 if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
-    add_executable(empty_packet_parser_fuzzer fuzz/empty_packet_parser_fuzzer.cpp)
-    target_include_directories(empty_packet_parser_fuzzer
+    add_executable(packet_parser_fuzzer fuzz/packet_parser_fuzzer.cpp)
+    target_include_directories(packet_parser_fuzzer
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
-    target_link_libraries(empty_packet_parser_fuzzer PRIVATE pruftnet_sniffing)
+    target_link_libraries(packet_parser_fuzzer PRIVATE pruftnet_sniffing)
 
     if(PRUFTNET_SNIFFING_USE_LIBFUZZER)
-        target_compile_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_compile_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_link_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
     else()
-        target_compile_definitions(empty_packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
+        target_compile_definitions(packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
     endif()
 endif()
