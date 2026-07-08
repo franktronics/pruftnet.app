@@ -14,8 +14,8 @@
 #include "pruftnet/sniffing/sniffer_event.hpp"
 #include "pruftnet/sniffing/sniffer_options.hpp"
 #include "pruftnet/sniffing/sniffer_stats.hpp"
+#include "sniffing/empty_packet_parser.hpp"
 #include "sniffing/internal_stats.hpp"
-#include "sniffing/packet_parser.hpp"
 #include "sniffing/packet_ring.hpp"
 #include "sniffing/packet_source.hpp"
 #include "sniffing/sniffer_options_validation.hpp"
@@ -75,7 +75,7 @@ private:
     mutable std::mutex lifecycle_mutex_;
     mutable std::mutex parser_wait_mutex_;
     std::condition_variable parser_wait_;
-    PacketParser parser_;
+    EmptyPacketParser parser_;
     std::thread parser_thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};

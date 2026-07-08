@@ -5,7 +5,7 @@
 
 namespace pruftnet::sniffing::internal {
 
-class PacketParser {
+class EmptyPacketParser {
 public:
     [[nodiscard]] ParsedPacket parse(const RawPacketView& raw_packet) const;
 };

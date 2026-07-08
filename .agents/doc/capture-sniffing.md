@@ -12,7 +12,7 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> minimal packet parser
+  -> empty parser
   -> packet callback(raw packet, parsed packet)
 ```
 
@@ -25,10 +25,7 @@ Important constraints:
 - `RawPacketView::bytes` is valid only during the callback.
 - Unsupported link types fail at `start()`.
 - Application ring overload drops newest packets per interface and increments per-interface stats.
-- The parser currently handles `DLT_EN10MB` Ethernet frames with minimal Ethernet, IPv4, ARP, TCP, and UDP layer detection.
-- Parser output uses a fixed-size layer array in `ParsedPacket` to avoid per-packet layer allocation.
-- Accepted but not-yet-parsed link types and protocols return `ParseStatus::Unsupported`.
-- Malformed or truncated parsed headers return `ParseStatus::Error`.
+- The parser is intentionally empty for now and returns `ParseStatus::NotParsed`.
 - `PacketMetadata::sequence` is the global runtime arrival order; timestamp order is not guaranteed across interfaces.
 
 Internal architecture:
@@ -48,7 +45,6 @@ Per-interface options intentionally mirror Wireshark/dumpcap: interface name/id,
 Tests are organized under `packages/core/cpp/tests`:
 
 - `unit/` contains deterministic unit tests.
-- `unit.packet_parser` validates the bounded packet cursor and the first parser stage.
 - `integration/sniffing_offline_pcap_tests.cpp` runs the pipeline against fixtures and is enabled by default.
 - `integration/sniffing_offline_bpf_tests.cpp` validates BPF filtering against the TCP/UDP fixture.
 - `integration/sniffing_offline_invalid_pcap_tests.cpp` validates malformed and missing pcap failures.

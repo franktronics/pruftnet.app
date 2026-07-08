@@ -168,7 +168,7 @@ void metadata_and_truncation_are_reported() {
     wait_until_stopped(runtime);
     assert(observed.size() == 1);
     assert(parse_statuses.size() == 1);
-    assert(parse_statuses[0] == ParseStatus::Unsupported);
+    assert(parse_statuses[0] == ParseStatus::NotParsed);
     assert(observed[0].metadata.sequence == 1);
     assert(observed[0].metadata.interface_id == 99);
     assert(observed[0].metadata.captured_len == 16);
