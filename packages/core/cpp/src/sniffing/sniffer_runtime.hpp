@@ -38,6 +38,7 @@ public:
     [[nodiscard]] std::optional<SnifferError> start();
     void stop() noexcept;
     [[nodiscard]] bool is_running() const noexcept;
+    [[nodiscard]] std::optional<CaptureId> capture_id() const;
     [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:
@@ -46,11 +47,15 @@ private:
     static void packet_source_callback(void* user_data, const pcap_pkthdr& header, const unsigned char* bytes) noexcept;
 
     [[nodiscard]] std::optional<SnifferError> validate_start_options() const;
-    [[nodiscard]] std::optional<SnifferError> open_and_prepare_sources();
+    [[nodiscard]] std::optional<SnifferError> open_and_prepare_sources(std::vector<SnifferEvent>& startup_events);
     void close_sources() noexcept;
     void request_stop() noexcept;
     void join_threads() noexcept;
+    [[nodiscard]] bool has_joinable_threads() const noexcept;
     void mark_unstarted_captures_done() noexcept;
+    [[nodiscard]] bool wait_for_start_gate() noexcept;
+    void release_start_gate(bool success) noexcept;
+    void notify_parser() noexcept;
     void capture_loop(InterfaceCaptureContext& context) noexcept;
     void parser_loop() noexcept;
     void handle_packet(InterfaceCaptureContext& context, const pcap_pkthdr& header, const unsigned char* bytes) noexcept;
@@ -73,14 +78,22 @@ private:
     PacketCallback packet_callback_;
     EventCallback event_callback_;
     mutable std::mutex lifecycle_mutex_;
-    mutable std::mutex parser_wait_mutex_;
-    std::condition_variable parser_wait_;
+    mutable std::mutex capture_id_mutex_;
+    std::mutex start_gate_mutex_;
+    std::condition_variable lifecycle_condition_;
+    std::condition_variable start_gate_condition_;
     EmptyPacketParser parser_;
     std::thread parser_thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};
     std::atomic<bool> parser_thread_running_{false};
-    std::atomic<std::uint64_t> next_sequence_{1};
+    std::optional<CaptureId> capture_id_;
+    CaptureId active_capture_id_;
+    bool start_gate_released_ = false;
+    bool start_gate_success_ = false;
+    bool stopping_ = false;
+    std::atomic<PacketId> next_packet_id_{1};
+    std::atomic<std::uint64_t> parser_wakeup_generation_{0};
 };
 
 } // namespace pruftnet::sniffing::internal

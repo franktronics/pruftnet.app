@@ -28,6 +28,7 @@ enum class SnifferErrorCode {
     DispatchFailed,
     AllocationFailed,
     MemoryBudgetExceeded,
+    CaptureIdentityUnavailable,
     ThreadStartFailed,
     StatsReadFailed,
     InternalInvariantViolation,

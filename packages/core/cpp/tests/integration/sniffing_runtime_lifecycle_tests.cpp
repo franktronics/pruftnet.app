@@ -19,6 +19,7 @@
 namespace {
 
 using pruftnet::sniffing::PacketFlagTruncated;
+using pruftnet::sniffing::PacketKey;
 using pruftnet::sniffing::EventCallback;
 using pruftnet::sniffing::ParseStatus;
 using pruftnet::sniffing::RawPacketView;
@@ -169,13 +170,103 @@ void metadata_and_truncation_are_reported() {
     assert(observed.size() == 1);
     assert(parse_statuses.size() == 1);
     assert(parse_statuses[0] == ParseStatus::NotParsed);
-    assert(observed[0].metadata.sequence == 1);
+    assert(!observed[0].metadata.key.capture_id.is_nil());
+    assert(observed[0].metadata.key.packet_id == 1);
     assert(observed[0].metadata.interface_id == 99);
     assert(observed[0].metadata.captured_len == 16);
     assert(observed[0].metadata.wire_len == 32);
     assert(observed[0].metadata.link_type == DLT_EN10MB);
     assert((observed[0].metadata.flags & PacketFlagTruncated) != 0);
     assert(observed[0].metadata.timestamp_ns == 2'000'500'000ULL);
+}
+
+void capture_identity_changes_between_starts_and_packet_ids_restart() {
+    auto source = std::make_unique<FakePacketSource>();
+    source->packets.push_back(fake_packet(16));
+
+    std::vector<PacketKey> keys;
+    SnifferRuntime runtime(
+        base_options(),
+        one_source(std::move(source)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [&](const RawPacketView& raw, const auto&) {
+            keys.push_back(raw.metadata.key);
+        },
+        {});
+
+    assert(!runtime.capture_id().has_value());
+    assert(!runtime.start().has_value());
+    const auto first_capture_id = runtime.capture_id();
+    assert(first_capture_id.has_value());
+    const auto first_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    while (runtime.is_running() && std::chrono::steady_clock::now() < first_deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    assert(!runtime.is_running());
+
+    assert(!runtime.start().has_value());
+    const auto second_capture_id = runtime.capture_id();
+    assert(second_capture_id.has_value());
+    wait_until_stopped(runtime);
+    runtime.stop();
+
+    assert(first_capture_id != second_capture_id);
+    assert(keys.size() == 2);
+    assert(keys[0].capture_id == *first_capture_id);
+    assert(keys[1].capture_id == *second_capture_id);
+    assert(keys[0].packet_id == 1);
+    assert(keys[1].packet_id == 1);
+}
+
+void capture_identity_is_safe_from_open_warning_callback() {
+    auto source = std::make_unique<FakePacketSource>();
+    source->packets.push_back(fake_packet(16));
+    source->open_warnings.push_back(pruftnet::sniffing::SnifferEvent{});
+
+    SnifferRuntime* runtime_ptr = nullptr;
+    bool warning_received = false;
+    SnifferRuntime runtime(
+        base_options(),
+        one_source(std::move(source)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [](const auto&, const auto&) {},
+        [&](const auto&) {
+            warning_received = true;
+            assert(runtime_ptr->capture_id().has_value());
+            runtime_ptr->stop();
+        });
+    runtime_ptr = &runtime;
+
+    assert(!runtime.start().has_value());
+    assert(warning_received);
+    assert(runtime.capture_id().has_value());
+    assert(!runtime.is_running());
+}
+
+void rejected_observations_leave_packet_id_gaps() {
+    auto source = std::make_unique<FakePacketSource>();
+    auto rejected = fake_packet(16);
+    rejected.null_payload = true;
+    source->packets.push_back(std::move(rejected));
+    source->packets.push_back(fake_packet(16));
+
+    std::vector<PacketKey> keys;
+    SnifferRuntime runtime(
+        base_options(),
+        one_source(std::move(source)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [&](const RawPacketView& raw, const auto&) {
+            keys.push_back(raw.metadata.key);
+        },
+        {});
+
+    assert(!runtime.start().has_value());
+    wait_until_stopped(runtime);
+    assert(keys.size() == 1);
+    assert(keys[0].packet_id == 2);
+    const auto stats = runtime.stats();
+    assert(stats.packets_seen == 2);
+    assert(stats.packets_enqueued == 1);
 }
 
 } // namespace
@@ -187,5 +278,8 @@ int main() {
     offline_style_empty_source_stops_at_eof();
     callback_can_request_stop_without_deadlock();
     metadata_and_truncation_are_reported();
+    capture_identity_changes_between_starts_and_packet_ids_restart();
+    capture_identity_is_safe_from_open_warning_callback();
+    rejected_observations_leave_packet_id_gaps();
     return 0;
 }

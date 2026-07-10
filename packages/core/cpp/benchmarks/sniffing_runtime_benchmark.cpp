@@ -30,7 +30,7 @@ void benchmark_packet_ring() {
     std::uint64_t pushed = 0;
     const auto start = clock_type::now();
     while (pushed < kIterations) {
-        metadata.sequence = pushed + 1;
+        metadata.key.packet_id = pushed + 1;
         if (ring.try_push(metadata, bytes)) {
             ++pushed;
         }

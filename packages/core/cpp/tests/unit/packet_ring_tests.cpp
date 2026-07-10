@@ -23,12 +23,12 @@ void push_pop_preserves_order_and_bytes() {
     PacketRing ring(2, 8);
 
     PacketMetadata first;
-    first.sequence = 1;
+    first.key.packet_id = 1;
     first.captured_len = 4;
     auto first_bytes = bytes(1);
 
     PacketMetadata second;
-    second.sequence = 2;
+    second.key.packet_id = 2;
     second.captured_len = 4;
     auto second_bytes = bytes(9);
 
@@ -38,14 +38,14 @@ void push_pop_preserves_order_and_bytes() {
 
     auto first_view = ring.peek();
     assert(first_view.has_value());
-    assert(first_view->metadata.sequence == 1);
+    assert(first_view->metadata.key.packet_id == 1);
     assert(first_view->bytes.size() == 4);
     assert(first_view->bytes[0] == std::byte(1));
     ring.pop();
 
     auto second_view = ring.peek();
     assert(second_view.has_value());
-    assert(second_view->metadata.sequence == 2);
+    assert(second_view->metadata.key.packet_id == 2);
     assert(second_view->bytes[0] == std::byte(9));
     ring.pop();
 
@@ -54,13 +54,23 @@ void push_pop_preserves_order_and_bytes() {
 
 void full_ring_rejects_newest() {
     PacketRing ring(1, 8);
-    PacketMetadata metadata;
-    metadata.sequence = 1;
+    PacketMetadata first;
+    first.key.packet_id = 1;
+    PacketMetadata dropped;
+    dropped.key.packet_id = 2;
+    PacketMetadata next;
+    next.key.packet_id = 3;
     auto payload = bytes(1);
 
-    assert(ring.try_push(metadata, payload));
-    assert(!ring.try_push(metadata, payload));
+    assert(ring.try_push(first, payload));
+    assert(!ring.try_push(dropped, payload));
     assert(ring.depth() == 1);
+    ring.pop();
+
+    assert(ring.try_push(next, payload));
+    const auto view = ring.peek();
+    assert(view.has_value());
+    assert(view->metadata.key.packet_id == 3);
 }
 
 void packet_larger_than_slot_is_rejected() {

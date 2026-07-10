@@ -54,6 +54,8 @@ std::string to_string(SnifferErrorCode code) {
         return "AllocationFailed";
     case SnifferErrorCode::MemoryBudgetExceeded:
         return "MemoryBudgetExceeded";
+    case SnifferErrorCode::CaptureIdentityUnavailable:
+        return "CaptureIdentityUnavailable";
     case SnifferErrorCode::ThreadStartFailed:
         return "ThreadStartFailed";
     case SnifferErrorCode::StatsReadFailed:

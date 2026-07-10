@@ -30,6 +30,7 @@ public:
     std::optional<SnifferError> start();
     void stop() noexcept;
     [[nodiscard]] bool is_running() const noexcept;
+    [[nodiscard]] std::optional<CaptureId> capture_id() const;
     [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:

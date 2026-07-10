@@ -121,7 +121,7 @@ void distinct_interfaces_emit_metadata_and_stats() {
         } else {
             assert(false);
         }
-        sequences.push_back(metadata.sequence);
+        sequences.push_back(metadata.key.packet_id);
     }
 
     std::sort(sequences.begin(), sequences.end());

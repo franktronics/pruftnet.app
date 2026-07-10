@@ -40,6 +40,8 @@ public:
 
     bool is_running() const noexcept { return runtime_->is_running(); }
 
+    std::optional<CaptureId> capture_id() const { return runtime_->capture_id(); }
+
     SnifferStatsSnapshot stats() const { return runtime_->stats(); }
 
 private:
@@ -66,6 +68,8 @@ std::optional<SnifferError> NetworkSniffer::start() { return impl_->start(); }
 void NetworkSniffer::stop() noexcept { impl_->stop(); }
 
 bool NetworkSniffer::is_running() const noexcept { return impl_->is_running(); }
+
+std::optional<CaptureId> NetworkSniffer::capture_id() const { return impl_->capture_id(); }
 
 SnifferStatsSnapshot NetworkSniffer::stats() const { return impl_->stats(); }
 

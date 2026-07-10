@@ -8,6 +8,7 @@
 #include <variant>
 
 #include "sniffing/link_type.hpp"
+#include "sniffing/packet_identity.hpp"
 
 namespace pruftnet::sniffing::internal {
 namespace {
@@ -143,25 +144,65 @@ SnifferRuntime::~SnifferRuntime() { stop(); }
 std::optional<SnifferError> SnifferRuntime::start() {
     std::unique_lock lock(lifecycle_mutex_);
 
-    if (running_.load(std::memory_order_acquire)) {
+    if (running_.load(std::memory_order_acquire) || stopping_) {
         return make_sniffer_error(
             SnifferErrorCode::InvalidOptions,
             SnifferSeverity::Error,
-            "SnifferRuntime is already running.");
+            "SnifferRuntime is already running or stopping.");
+    }
+
+    if (has_joinable_threads()) {
+        stopping_ = true;
+        lock.unlock();
+        join_threads();
+        lock.lock();
+        close_sources();
+        stopping_ = false;
+        lifecycle_condition_.notify_all();
+        if (running_.load(std::memory_order_acquire)) {
+            return make_sniffer_error(
+                SnifferErrorCode::InvalidOptions,
+                SnifferSeverity::Error,
+                "SnifferRuntime was restarted concurrently.");
+        }
     }
 
     if (auto error = validate_start_options()) {
         return error;
     }
 
-    if (auto error = open_and_prepare_sources()) {
+    std::vector<SnifferEvent> startup_events;
+    if (auto error = open_and_prepare_sources(startup_events)) {
         close_sources();
+        lock.unlock();
+        for (const auto& event : startup_events) {
+            emit_event(event);
+        }
         return error;
+    }
+
+    const auto next_capture_id = make_capture_id();
+    if (!next_capture_id.has_value()) {
+        close_sources();
+        lock.unlock();
+        for (const auto& event : startup_events) {
+            emit_event(event);
+        }
+        return make_sniffer_error(
+            SnifferErrorCode::CaptureIdentityUnavailable,
+            SnifferSeverity::Fatal,
+            "The operating system could not generate a capture identifier.");
     }
 
     stop_requested_.store(false, std::memory_order_release);
     parser_thread_running_.store(false, std::memory_order_release);
-    next_sequence_.store(1, std::memory_order_release);
+    active_capture_id_ = *next_capture_id;
+    next_packet_id_.store(1, std::memory_order_release);
+    {
+        const std::lock_guard gate_lock(start_gate_mutex_);
+        start_gate_released_ = false;
+        start_gate_success_ = false;
+    }
 
     const auto next_stats_at = std::chrono::steady_clock::now() + options_.stats_poll_interval;
     for (auto& context : interfaces_) {
@@ -180,41 +221,86 @@ std::optional<SnifferError> SnifferRuntime::start() {
             context->capture_thread = std::thread(&SnifferRuntime::capture_loop, this, std::ref(*context));
         }
     } catch (const std::exception& error) {
+        release_start_gate(false);
         request_stop();
         mark_unstarted_captures_done();
+        stopping_ = true;
         lock.unlock();
         join_threads();
+        lock.lock();
         close_sources();
+        stopping_ = false;
+        lifecycle_condition_.notify_all();
+        lock.unlock();
+        for (const auto& event : startup_events) {
+            emit_event(event);
+        }
         return make_sniffer_error(
             SnifferErrorCode::ThreadStartFailed,
             SnifferSeverity::Fatal,
             std::string("Failed to start sniffer threads: ") + error.what());
     }
 
+    {
+        const std::lock_guard capture_lock(capture_id_mutex_);
+        capture_id_ = next_capture_id;
+    }
+    release_start_gate(true);
+    lock.unlock();
+    for (const auto& event : startup_events) {
+        emit_event(event);
+    }
+
     return std::nullopt;
 }
 
 void SnifferRuntime::stop() noexcept {
-    request_stop();
-
+    std::unique_lock lock(lifecycle_mutex_);
     const auto current_thread = std::this_thread::get_id();
-    if (parser_thread_.joinable() && parser_thread_.get_id() == current_thread) {
-        return;
-    }
+    const auto called_from_runtime_thread = [&] {
+        if (parser_thread_.joinable() && parser_thread_.get_id() == current_thread) {
+            return true;
+        }
+        for (const auto& context : interfaces_) {
+            if (context->capture_thread.joinable() && context->capture_thread.get_id() == current_thread) {
+                return true;
+            }
+        }
+        return false;
+    }();
 
-    for (const auto& context : interfaces_) {
-        if (context->capture_thread.joinable() && context->capture_thread.get_id() == current_thread) {
+    if (stopping_) {
+        if (called_from_runtime_thread) {
             return;
         }
+        lifecycle_condition_.wait(lock, [this] {
+            return !stopping_;
+        });
     }
 
+    request_stop();
+
+    if (called_from_runtime_thread) {
+        return;
+    }
+    stopping_ = true;
+    lock.unlock();
     join_threads();
+    lock.lock();
     close_sources();
+    stopping_ = false;
+    lifecycle_condition_.notify_all();
 }
 
 bool SnifferRuntime::is_running() const noexcept { return running_.load(std::memory_order_acquire); }
 
+std::optional<CaptureId> SnifferRuntime::capture_id() const {
+    const std::lock_guard lock(capture_id_mutex_);
+    return capture_id_;
+}
+
 SnifferStatsSnapshot SnifferRuntime::stats() const {
+    const std::lock_guard lock(lifecycle_mutex_);
     SnifferStatsSnapshot snapshot;
     snapshot.interfaces.reserve(interfaces_.size());
     for (const auto& context : interfaces_) {
@@ -287,7 +373,7 @@ std::optional<SnifferError> SnifferRuntime::validate_start_options() const {
     return std::nullopt;
 }
 
-std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources() {
+std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources(std::vector<SnifferEvent>& startup_events) {
     std::size_t total_ring_bytes = 0;
 
     for (auto& context : interfaces_) {
@@ -298,7 +384,7 @@ std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources() {
 
         auto success = std::get<PacketSourceOpenSuccess>(std::move(open_result));
         for (const auto& warning : success.warnings) {
-            emit_event(with_interface_context(warning, *context));
+            startup_events.push_back(with_interface_context(warning, *context));
         }
 
         context->link_type = context->source->link_type();
@@ -416,12 +502,10 @@ void SnifferRuntime::request_stop() noexcept {
         }
     }
 
-    parser_wait_.notify_all();
+    notify_parser();
 }
 
 void SnifferRuntime::join_threads() noexcept {
-    std::lock_guard lock(lifecycle_mutex_);
-
     for (auto& context : interfaces_) {
         if (context->capture_thread.joinable()) {
             context->capture_thread.join();
@@ -445,6 +529,40 @@ void SnifferRuntime::join_threads() noexcept {
     }
 }
 
+bool SnifferRuntime::has_joinable_threads() const noexcept {
+    if (parser_thread_.joinable()) {
+        return true;
+    }
+    for (const auto& context : interfaces_) {
+        if (context->capture_thread.joinable()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SnifferRuntime::wait_for_start_gate() noexcept {
+    std::unique_lock lock(start_gate_mutex_);
+    start_gate_condition_.wait(lock, [this] {
+        return start_gate_released_;
+    });
+    return start_gate_success_;
+}
+
+void SnifferRuntime::release_start_gate(bool success) noexcept {
+    {
+        const std::lock_guard lock(start_gate_mutex_);
+        start_gate_success_ = success;
+        start_gate_released_ = true;
+    }
+    start_gate_condition_.notify_all();
+}
+
+void SnifferRuntime::notify_parser() noexcept {
+    parser_wakeup_generation_.fetch_add(1, std::memory_order_release);
+    parser_wakeup_generation_.notify_all();
+}
+
 void SnifferRuntime::mark_unstarted_captures_done() noexcept {
     for (auto& context : interfaces_) {
         if (!context->capture_thread.joinable()) {
@@ -455,13 +573,19 @@ void SnifferRuntime::mark_unstarted_captures_done() noexcept {
         }
     }
 
-    parser_wait_.notify_all();
+    notify_parser();
 }
 
 void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
     context.capture_thread_running.store(true, std::memory_order_release);
 
     try {
+        if (!wait_for_start_gate()) {
+            context.capture_done.store(true, std::memory_order_release);
+            context.capture_thread_running.store(false, std::memory_order_release);
+            notify_parser();
+            return;
+        }
         while (!stop_requested_.load(std::memory_order_acquire)) {
             context.stats.increment_pcap_dispatch_calls();
             const auto result = context.source->dispatch(
@@ -523,13 +647,18 @@ void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
         context.ring->notify_all();
     }
 
-    parser_wait_.notify_all();
+    notify_parser();
 }
 
 void SnifferRuntime::parser_loop() noexcept {
     parser_thread_running_.store(true, std::memory_order_release);
 
     try {
+        if (!wait_for_start_gate()) {
+            parser_thread_running_.store(false, std::memory_order_release);
+            running_.store(false, std::memory_order_release);
+            return;
+        }
         std::size_t next_interface_index = 0;
         while (!all_capture_done() || any_ring_has_packets()) {
             bool parsed_any = false;
@@ -561,10 +690,10 @@ void SnifferRuntime::parser_loop() noexcept {
                 continue;
             }
 
-            std::unique_lock wait_lock(parser_wait_mutex_);
-            parser_wait_.wait(wait_lock, [this] {
-                return all_capture_done() || any_ring_has_packets();
-            });
+            const auto generation = parser_wakeup_generation_.load(std::memory_order_acquire);
+            if (!all_capture_done() && !any_ring_has_packets()) {
+                parser_wakeup_generation_.wait(generation, std::memory_order_acquire);
+            }
         }
     } catch (const std::exception& error) {
         emit_error(make_sniffer_error(
@@ -590,6 +719,10 @@ void SnifferRuntime::handle_packet(
     const unsigned char* bytes) noexcept {
     context.stats.increment_packets_seen();
 
+    PacketMetadata metadata;
+    metadata.key.capture_id = active_capture_id_;
+    metadata.key.packet_id = next_packet_id_.fetch_add(1, std::memory_order_relaxed);
+
     if (bytes == nullptr && header.caplen > 0) {
         emit_error(make_sniffer_error(
             SnifferErrorCode::DispatchFailed,
@@ -603,8 +736,6 @@ void SnifferRuntime::handle_packet(
         return;
     }
 
-    PacketMetadata metadata;
-    metadata.sequence = next_sequence_.fetch_add(1, std::memory_order_relaxed);
     metadata.timestamp_ns = packet_timestamp_ns(header, context.source->timestamp_precision());
     metadata.interface_id = context.options.id;
     metadata.captured_len = header.caplen;
@@ -638,7 +769,7 @@ void SnifferRuntime::handle_packet(
 
     context.stats.increment_packets_enqueued();
     context.stats.observe_ring_depth(context.ring->depth());
-    parser_wait_.notify_one();
+    notify_parser();
 }
 
 void SnifferRuntime::update_kernel_stats_if_due(InterfaceCaptureContext& context) noexcept {

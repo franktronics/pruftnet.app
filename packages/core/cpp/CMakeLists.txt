@@ -37,12 +37,14 @@ check_symbol_exists(pcap_tstamp_type_val_to_name "pcap/pcap.h" PRUFTNET_HAVE_PCA
 check_symbol_exists(pcap_tstamp_type_val_to_description "pcap/pcap.h" PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_VAL_TO_DESCRIPTION)
 
 add_library(pruftnet_sniffing STATIC
+    src/parsing/packet_view.cpp
     src/sniffing/empty_packet_parser.cpp
     src/sniffing/interface_discovery.cpp
     src/sniffing/internal_stats.cpp
     src/sniffing/link_type.cpp
     src/sniffing/live_pcap_packet_source.cpp
     src/sniffing/network_sniffer.cpp
+    src/sniffing/packet_identity.cpp
     src/sniffing/offline_pcap_packet_source.cpp
     src/sniffing/packet_ring.cpp
     src/sniffing/packet_source.cpp
@@ -61,6 +63,9 @@ target_include_directories(pruftnet_sniffing
 )
 
 target_link_libraries(pruftnet_sniffing PUBLIC PCAP::PCAP)
+if(WIN32)
+    target_link_libraries(pruftnet_sniffing PRIVATE bcrypt)
+endif()
 target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
 
 target_compile_definitions(pruftnet_sniffing PRIVATE
@@ -98,10 +103,18 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
                 "${CMAKE_CURRENT_SOURCE_DIR}/src"
         )
         target_link_libraries(${target} PRIVATE pruftnet_sniffing)
+        if(MSVC)
+            target_compile_options(${target} PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(${target} PRIVATE -UNDEBUG)
+        endif()
     endfunction()
 
     pruftnet_add_sniffing_test(packet_ring_tests tests/unit/packet_ring_tests.cpp)
     add_test(NAME unit.packet_ring COMMAND packet_ring_tests)
+
+    pruftnet_add_sniffing_test(packet_view_tests tests/unit/packet_view_tests.cpp)
+    add_test(NAME unit.packet_view COMMAND packet_view_tests)
 
     pruftnet_add_sniffing_test(sniffer_options_tests tests/unit/sniffer_options_tests.cpp)
     add_test(NAME unit.sniffer_options COMMAND sniffer_options_tests)
@@ -159,6 +172,21 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 endif()
 
 if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
+    include(FetchContent)
+
+    set(FLATBUFFERS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(FLATBUFFERS_BUILD_FLATLIB OFF CACHE BOOL "" FORCE)
+    set(FLATBUFFERS_BUILD_GRPCTEST OFF CACHE BOOL "" FORCE)
+    set(FLATBUFFERS_BUILD_SHAREDLIB OFF CACHE BOOL "" FORCE)
+    set(FLATBUFFERS_INSTALL OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        flatbuffers
+        GIT_REPOSITORY https://github.com/google/flatbuffers.git
+        GIT_TAG v25.9.23
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(flatbuffers)
+
     add_executable(sniffing_runtime_benchmark benchmarks/sniffing_runtime_benchmark.cpp)
     target_include_directories(sniffing_runtime_benchmark
         PRIVATE
@@ -166,6 +194,39 @@ if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries(sniffing_runtime_benchmark PRIVATE pruftnet_sniffing)
+
+    set(PACKET_CODEC_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/packet_codec")
+    set(PACKET_CODEC_GENERATED_HEADER "${PACKET_CODEC_GENERATED_DIR}/packet_codec_generated.h")
+    add_custom_command(
+        OUTPUT "${PACKET_CODEC_GENERATED_HEADER}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${PACKET_CODEC_GENERATED_DIR}"
+        COMMAND "$<TARGET_FILE:flatc>" --cpp -o "${PACKET_CODEC_GENERATED_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/packet_codec/packet_codec.fbs"
+        DEPENDS
+            flatc
+            "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/packet_codec/packet_codec.fbs"
+        VERBATIM
+    )
+
+    add_executable(packet_codec_benchmark
+        benchmarks/packet_codec/custom_packet_codec.cpp
+        benchmarks/packet_codec/flatbuffers_packet_codec.cpp
+        benchmarks/packet_codec/packet_codec_benchmark.cpp
+        benchmarks/packet_codec/packet_codec_model.cpp
+        "${PACKET_CODEC_GENERATED_HEADER}"
+    )
+    target_include_directories(packet_codec_benchmark
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${PACKET_CODEC_GENERATED_DIR}"
+            "${flatbuffers_SOURCE_DIR}/include"
+    )
+    target_compile_features(packet_codec_benchmark PRIVATE cxx_std_20)
+    if(MSVC)
+        target_compile_options(packet_codec_benchmark PRIVATE /W4)
+    else()
+        target_compile_options(packet_codec_benchmark PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()
 
 if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
@@ -176,10 +237,28 @@ if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
     )
     target_link_libraries(empty_packet_parser_fuzzer PRIVATE pruftnet_sniffing)
 
+    add_executable(packet_view_fuzzer fuzz/packet_view_fuzzer.cpp)
+    target_link_libraries(packet_view_fuzzer PRIVATE pruftnet_sniffing)
+
     if(PRUFTNET_SNIFFING_USE_LIBFUZZER)
+        include(CheckCXXSourceCompiles)
+        set(CMAKE_REQUIRED_FLAGS_SAVED "${CMAKE_REQUIRED_FLAGS}")
+        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fsanitize=fuzzer,address")
+        check_cxx_source_compiles(
+            "#include <cstddef>\n#include <cstdint>\nextern \"C\" int LLVMFuzzerTestOneInput(const std::uint8_t*, std::size_t) { return 0; }"
+            PRUFTNET_HAVE_LIBFUZZER
+        )
+        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS_SAVED}")
+        if(NOT PRUFTNET_HAVE_LIBFUZZER)
+            message(FATAL_ERROR "PRUFTNET_SNIFFING_USE_LIBFUZZER requires a compiler and linker with -fsanitize=fuzzer,address support")
+        endif()
+
         target_compile_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
         target_link_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_compile_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_link_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
     else()
         target_compile_definitions(empty_packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
+        target_compile_definitions(packet_view_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
     endif()
 endif()

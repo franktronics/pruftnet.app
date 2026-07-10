@@ -1,0 +1,116 @@
+namespace Pruftnet.Benchmark;
+
+enum MessageKind : ubyte {
+  None = 0,
+  Summary = 1,
+  Detail = 2
+}
+
+enum ValueTag : ubyte {
+  None = 0,
+  Unsigned = 1,
+  Address = 2,
+  Bytes = 3
+}
+
+enum DataSourceKind : ubyte {
+  Captured = 0,
+  Reassembled = 1
+}
+
+struct SummaryRecord {
+  packet_id: ulong;
+  timestamp_ns: ulong;
+  interface_id: uint;
+  captured_length: uint;
+  wire_length: uint;
+  flags: uint;
+  protocol_offset: uint;
+  column_offset: uint;
+  protocol_count: ushort;
+  column_count: ushort;
+  parse_condition: ubyte;
+  reserved_byte: ubyte;
+  reserved_short: ushort;
+}
+
+struct ColumnValue {
+  field_id: uint;
+  value_tag: ValueTag;
+  flags: ubyte;
+  reserved: ushort;
+  value_low: ulong;
+  value_high: ulong;
+}
+
+struct FieldNode {
+  value_low: ulong;
+  value_high: ulong;
+  field_id: uint;
+  parent_index: uint;
+  data_source_id: uint;
+  offset: uint;
+  length: uint;
+  flags: uint;
+  value_tag: ValueTag;
+  reserved_byte: ubyte;
+  reserved_short: ushort;
+  reserved_uint: uint;
+}
+
+struct DataSourceRecord {
+  id: uint;
+  name_offset: uint;
+  name_length: uint;
+  data_offset: uint;
+  data_length: uint;
+  contributor_offset: uint;
+  contributor_count: uint;
+  kind: DataSourceKind;
+  reserved_byte: ubyte;
+  reserved_short: ushort;
+}
+
+struct Contributor {
+  packet_id: ulong;
+  source_offset: uint;
+  length: uint;
+  destination_offset: uint;
+  reserved: uint;
+}
+
+table SummaryBatch {
+  capture_id_high: ulong;
+  capture_id_low: ulong;
+  registry_generation: uint;
+  packets: [SummaryRecord];
+  protocol_ids: [uint];
+  columns: [ColumnValue];
+}
+
+table SelectedPacketView {
+  capture_id_high: ulong;
+  capture_id_low: ulong;
+  packet_id: ulong;
+  timestamp_ns: ulong;
+  registry_generation: uint;
+  interface_id: uint;
+  captured_length: uint;
+  wire_length: uint;
+  flags: uint;
+  nodes: [FieldNode];
+  data_sources: [DataSourceRecord];
+  contributors: [Contributor];
+  name_bytes: [ubyte];
+  data_bytes: [ubyte];
+}
+
+table BenchmarkEnvelope {
+  format_version: ushort = 1;
+  kind: MessageKind;
+  summary: SummaryBatch;
+  detail: SelectedPacketView;
+}
+
+root_type BenchmarkEnvelope;
+file_identifier "PCBM";

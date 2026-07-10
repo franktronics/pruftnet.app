@@ -17,6 +17,7 @@ build
 out
 release
 packages/core/cpp/build
+packages/core/cpp/build-*
 *.tsbuildinfo
 
 # Environment

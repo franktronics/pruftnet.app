@@ -26,7 +26,10 @@ Important constraints:
 - Unsupported link types fail at `start()`.
 - Application ring overload drops newest packets per interface and increments per-interface stats.
 - The parser is intentionally empty for now and returns `ParseStatus::NotParsed`.
-- `PacketMetadata::sequence` is the global runtime arrival order; timestamp order is not guaranteed across interfaces.
+- `PacketMetadata::key` combines a per-start random `CaptureId` with a gap-tolerant `PacketId` observation sequence; timestamp order is not guaranteed across interfaces.
+- Capture threads wait behind a startup gate until all runtime threads exist and the new capture ID is committed; failed starts cannot publish packets under an unsuccessful ID.
+- Start, stop, restart, source replacement, ring replacement, and stats snapshots are serialized by the runtime lifecycle mutex. Startup warnings are delivered only after that mutex is released so callbacks may safely stop the runtime.
+- Parser wakeups use a C++20 atomic generation counter. A ring push or capture completion cannot be lost between predicate evaluation and sleep.
 
 Internal architecture:
 
@@ -36,6 +39,7 @@ Internal architecture:
 - `SnifferRuntime` owns the shared multi-interface capture/ring/parser lifecycle.
 - `interface_discovery.hpp` provides libpcap/Npcap-based capture interface listing and capabilities discovery.
 - `PacketSource` abstracts packet input.
+- `parsing::PacketView` provides bounded endian-safe reads and zero-copy child views while distinguishing capture truncation, reported-length violations, parent-boundary violations, and offset overflow.
 - `LivePcapPacketSource` uses `pcap_create` / `pcap_activate` for real interfaces.
 - `OfflinePcapPacketSource` uses `pcap_open_offline` for deterministic `.pcap` integration tests.
 - `tests/support/FakePacketSource` exercises runtime lifecycle and error paths without libpcap live input.
@@ -45,6 +49,7 @@ Per-interface options intentionally mirror Wireshark/dumpcap: interface name/id,
 Tests are organized under `packages/core/cpp/tests`:
 
 - `unit/` contains deterministic unit tests.
+- `unit/packet_view_tests.cpp` validates endian reads, zero-copy child views, overflow, truncation, reported lengths, and parent boundaries.
 - `integration/sniffing_offline_pcap_tests.cpp` runs the pipeline against fixtures and is enabled by default.
 - `integration/sniffing_offline_bpf_tests.cpp` validates BPF filtering against the TCP/UDP fixture.
 - `integration/sniffing_offline_invalid_pcap_tests.cpp` validates malformed and missing pcap failures.
@@ -56,6 +61,7 @@ Tests are organized under `packages/core/cpp/tests`:
 - `integration/sniffing_interface_discovery_tests.cpp` validates pcap interface discovery.
 - `integration/sniffing_interface_capabilities_live_tests.cpp` is optional and skipped unless `PRUFTNET_TEST_INTERFACE` is set.
 - `integration/sniffing_live_tests.cpp` is optional and skipped unless `PRUFTNET_TEST_INTERFACE` is set.
+- `fuzz/packet_view_fuzzer.cpp` exercises arbitrary reads and child-view construction across untrusted length combinations.
 - `fixtures/ethernet_ipv4_tcp_udp.pcap` currently contains 10 synthetic Ethernet/IPv4 TCP/UDP packets.
 - `fixtures/invalid.pcap` is intentionally malformed.
 

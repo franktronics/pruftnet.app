@@ -24,6 +24,7 @@ struct FakePacket {
     std::uint32_t wire_length = 0;
     long timestamp_seconds = 1;
     long timestamp_subseconds = 0;
+    bool null_payload = false;
 };
 
 inline std::vector<std::byte> fake_packet_bytes(std::size_t length, std::uint8_t seed = 1) {
@@ -116,7 +117,10 @@ public:
             header.len = static_cast<bpf_u_int32>(packet.wire_length);
 
             if (callback != nullptr) {
-                callback(user_data, header, reinterpret_cast<const unsigned char*>(packet.bytes.data()));
+                callback(
+                    user_data,
+                    header,
+                    packet.null_payload ? nullptr : reinterpret_cast<const unsigned char*>(packet.bytes.data()));
             }
 
             ++emitted;

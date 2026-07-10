@@ -90,7 +90,8 @@ int main() {
     std::uint64_t previous_timestamp = 0;
     for (std::size_t index = 0; index < observed.size(); ++index) {
         const auto& packet = observed[index];
-        assert(packet.metadata.sequence == index + 1);
+        assert(packet.metadata.key.capture_id == observed.front().metadata.key.capture_id);
+        assert(packet.metadata.key.packet_id == index + 1);
         assert(packet.metadata.interface_id == 7);
         assert(packet.metadata.link_type == DLT_EN10MB);
         assert(packet.metadata.captured_len == kExpectedLengths[index]);

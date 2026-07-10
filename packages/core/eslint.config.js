@@ -8,7 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig([
-    globalIgnores(['dist']),
+    globalIgnores(['dist', 'cpp/build/**', 'cpp/build-*/**', 'cpp/.mini-test/build/**']),
     {
         files: ['**/*.ts'],
         extends: [js.configs.recommended, tseslint.configs.recommended],
