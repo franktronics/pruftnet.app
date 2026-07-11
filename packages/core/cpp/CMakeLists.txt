@@ -101,10 +101,10 @@ add_custom_target(packet_tree_ts_codegen
 
 add_library(pruftnet_sniffing STATIC
     src/parsing/packet_tree_codec.cpp
+    src/parsing/packet_parser.cpp
     src/parsing/packet_view.cpp
     src/parsing/parsed_tree.cpp
     src/parsing/registry.cpp
-    src/sniffing/empty_packet_parser.cpp
     src/sniffing/interface_discovery.cpp
     src/sniffing/internal_stats.cpp
     src/sniffing/link_type.cpp
@@ -206,6 +206,12 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
     )
     add_test(NAME unit.packet_tree_codec COMMAND packet_tree_codec_tests)
 
+    pruftnet_add_sniffing_test(packet_parser_tests tests/unit/packet_parser_tests.cpp)
+    add_test(NAME unit.packet_parser COMMAND packet_parser_tests)
+
+    pruftnet_add_sniffing_test(packet_parser_allocation_tests tests/unit/packet_parser_allocation_tests.cpp)
+    add_test(NAME unit.packet_parser_allocations COMMAND packet_parser_allocation_tests)
+
     add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
     target_include_directories(packet_tree_fixture_writer
         PRIVATE
@@ -213,6 +219,14 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries(packet_tree_fixture_writer PRIVATE pruftnet_sniffing)
+
+    add_executable(parser_packet_tree_fixture_writer tests/parser_packet_tree_fixture_writer.cpp)
+    target_include_directories(parser_packet_tree_fixture_writer
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+    target_link_libraries(parser_packet_tree_fixture_writer PRIVATE pruftnet_sniffing)
 
     pruftnet_add_sniffing_test(sniffer_options_tests tests/unit/sniffer_options_tests.cpp)
     add_test(NAME unit.sniffer_options COMMAND sniffer_options_tests)
@@ -282,6 +296,14 @@ if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
     target_include_directories(packet_tree_benchmark PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(packet_tree_benchmark PRIVATE pruftnet_sniffing)
 
+    add_executable(packet_parser_benchmark benchmarks/packet_parser_benchmark.cpp)
+    target_include_directories(packet_parser_benchmark
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+    target_link_libraries(packet_parser_benchmark PRIVATE pruftnet_sniffing)
+
     set(PACKET_CODEC_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/packet_codec")
     set(PACKET_CODEC_GENERATED_HEADER "${PACKET_CODEC_GENERATED_DIR}/packet_codec_generated.h")
     add_custom_command(
@@ -317,12 +339,12 @@ if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
 endif()
 
 if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
-    add_executable(empty_packet_parser_fuzzer fuzz/empty_packet_parser_fuzzer.cpp)
-    target_include_directories(empty_packet_parser_fuzzer
+    add_executable(packet_parser_fuzzer fuzz/packet_parser_fuzzer.cpp)
+    target_include_directories(packet_parser_fuzzer
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
-    target_link_libraries(empty_packet_parser_fuzzer PRIVATE pruftnet_sniffing)
+    target_link_libraries(packet_parser_fuzzer PRIVATE pruftnet_sniffing)
 
     add_executable(packet_view_fuzzer fuzz/packet_view_fuzzer.cpp)
     target_link_libraries(packet_view_fuzzer PRIVATE pruftnet_sniffing)
@@ -338,6 +360,10 @@ if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
     target_link_libraries(packet_tree_codec_fuzzer PRIVATE pruftnet_sniffing)
 
     if(PRUFTNET_SNIFFING_USE_LIBFUZZER)
+        if(MSVC)
+            message(FATAL_ERROR
+                "PRUFTNET_SNIFFING_USE_LIBFUZZER currently requires a Clang or GCC-style toolchain")
+        endif()
         include(CheckCXXSourceCompiles)
         set(CMAKE_REQUIRED_FLAGS_SAVED "${CMAKE_REQUIRED_FLAGS}")
         set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fsanitize=fuzzer,address")
@@ -350,8 +376,8 @@ if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
             message(FATAL_ERROR "PRUFTNET_SNIFFING_USE_LIBFUZZER requires a compiler and linker with -fsanitize=fuzzer,address support")
         endif()
 
-        target_compile_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(empty_packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_compile_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+        target_link_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
         target_compile_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
         target_link_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
         target_compile_options(registry_fuzzer PRIVATE -fsanitize=fuzzer,address)
@@ -361,7 +387,7 @@ if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
         target_compile_options(packet_tree_codec_fuzzer PRIVATE -fsanitize=fuzzer,address)
         target_link_options(packet_tree_codec_fuzzer PRIVATE -fsanitize=fuzzer,address)
     else()
-        target_compile_definitions(empty_packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
+        target_compile_definitions(packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
         target_compile_definitions(packet_view_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
         target_compile_definitions(registry_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
         target_compile_definitions(parsed_tree_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)

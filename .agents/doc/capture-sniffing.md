@@ -12,7 +12,7 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> empty parser
+  -> bounded Ethernet / IPv4 / UDP parser
   -> packet callback(raw packet, parsed packet)
 ```
 
@@ -25,7 +25,8 @@ Important constraints:
 - `RawPacketView::bytes` is valid only during the callback.
 - Unsupported link types fail at `start()`.
 - Application ring overload drops newest packets per interface and increments per-interface stats.
-- The parser is intentionally empty for now and returns `ParseStatus::NotParsed`.
+- The parser emits an owning `ParsedPacketTree`. Unsupported link types and protocol payloads remain visible as unknown bytes instead of stopping capture.
+- Parser arenas are recycled after the callback returns. Copying `ParsedPacket` during the callback creates independent retained storage.
 - `PacketMetadata::key` combines a per-start random `CaptureId` with a gap-tolerant `PacketId` observation sequence; timestamp order is not guaranteed across interfaces.
 - Capture threads wait behind a startup gate until all runtime threads exist and the new capture ID is committed; failed starts cannot publish packets under an unsuccessful ID.
 - Start, stop, restart, source replacement, ring replacement, and stats snapshots are serialized by the runtime lifecycle mutex. Startup warnings are delivered only after that mutex is released so callbacks may safely stop the runtime.

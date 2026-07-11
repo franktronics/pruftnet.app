@@ -1,22 +1,9 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include "pruftnet/parsing/parsed_tree.hpp"
 
 namespace pruftnet::sniffing {
 
-enum class ParseStatus {
-    NotParsed,
-    Parsed,
-    Unsupported,
-    Error,
-};
-
-struct ParsedPacket {
-    ParseStatus status = ParseStatus::NotParsed;
-    std::uint32_t top_protocol_id = 0;
-    std::uint32_t flags = 0;
-    std::string error_message;
-};
+using ParsedPacket = parsing::ParsedPacketTree;
 
 } // namespace pruftnet::sniffing

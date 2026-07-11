@@ -86,10 +86,10 @@ std::optional<std::size_t> estimated_ring_bytes(std::size_t capacity, std::size_
     return total;
 }
 
-parsing::RegistrySnapshot make_runtime_registry() {
+parsing::RegistrySnapshotPtr make_runtime_registry() {
     auto result = parsing::make_core_registry();
     if (auto* registry = std::get_if<parsing::RegistrySnapshot>(&result)) {
-        return std::move(*registry);
+        return std::make_shared<const parsing::RegistrySnapshot>(std::move(*registry));
     }
     throw std::logic_error("Failed to bootstrap the built-in parser registry.");
 }
@@ -128,7 +128,8 @@ SnifferRuntime::SnifferRuntime(
       packet_source_count_(packet_sources.size()),
       validation_(validation),
       packet_callback_(std::move(packet_callback)),
-      event_callback_(std::move(event_callback)) {
+      event_callback_(std::move(event_callback)),
+      parser_(registry_) {
     interfaces_.reserve(options_.interfaces.size());
     for (std::size_t index = 0; index < options_.interfaces.size(); ++index) {
         auto interface_options = options_.interfaces[index];
@@ -309,7 +310,7 @@ std::optional<CaptureId> SnifferRuntime::capture_id() const {
     return capture_id_;
 }
 
-parsing::RegistryRevision SnifferRuntime::registry_revision() const noexcept { return registry_.revision(); }
+parsing::RegistryRevision SnifferRuntime::registry_revision() const noexcept { return registry_->revision(); }
 
 SnifferStatsSnapshot SnifferRuntime::stats() const {
     const std::lock_guard lock(lifecycle_mutex_);
@@ -687,10 +688,11 @@ void SnifferRuntime::parser_loop() noexcept {
                     raw_packet.metadata = queued->metadata;
                     raw_packet.bytes = queued->bytes;
 
-                    const auto parsed_packet = parser_.parse(raw_packet);
+                    auto parsed_packet = parser_.parse(raw_packet);
                     context.stats.increment_packets_parsed();
 
                     packet_callback_(raw_packet, parsed_packet);
+                    parser_.recycle(std::move(parsed_packet));
                     context.ring->pop();
                     next_interface_index = (index + 1) % interfaces_.size();
                     parsed_any = true;

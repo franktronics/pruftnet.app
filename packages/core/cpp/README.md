@@ -12,11 +12,11 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> empty parser
+  -> bounded Ethernet / IPv4 / UDP parser
   -> user packet callback
 ```
 
-The parser currently returns an empty future-proof `ParsedPacket` with `ParseStatus::NotParsed`. The callback receives both the raw packet view and the parsed result.
+The parser returns an owning, registry-revisioned `ParsedPacketTree`. Ethernet frames dispatch into IPv4 and UDP when supported; unknown link types, EtherTypes, IP protocols, fragments, trailers, and padding remain represented as bounded byte nodes.
 
 `NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared multi-interface capture/ring/parser pipeline against `PacketSource` instances, which lets tests execute the same pipeline with offline `.pcap` fixtures and fake sources.
 
@@ -163,7 +163,7 @@ Optional development targets are disabled by default:
 cmake -S packages/core/cpp -B packages/core/cpp/build \
   -DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON \
   -DPRUFTNET_SNIFFING_BUILD_FUZZERS=ON
-cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark empty_packet_parser_fuzzer packet_view_fuzzer
+cmake --build packages/core/cpp/build --target sniffing_runtime_benchmark packet_parser_benchmark packet_parser_fuzzer packet_view_fuzzer
 ```
 
 ## Defaults
@@ -183,17 +183,17 @@ Each capture callback does no parsing. It copies packet bytes into that interfac
 
 The user packet callback is called from the parser thread, never from the capture thread.
 
-The user packet callback receives only `RawPacketView` and `ParsedPacket`. Full stats remain available through `NetworkSniffer::stats()` outside the packet hot path, avoiding per-packet vector allocation in the parser thread.
+The user packet callback receives only `RawPacketView` and `ParsedPacket`. Both references expire when the callback returns. Copy `ParsedPacket` during the callback when retention is required; the copy owns independent arenas. Full stats remain available through `NetworkSniffer::stats()` outside the packet hot path.
 
 Every successful interface-ring push wakes the shared parser thread, so an idle interface cannot delay packets arriving on another interface.
 
-`RawPacketView::bytes` is valid only during the callback. This avoids an extra ownership layer and keeps the hot path predictable.
+`RawPacketView::bytes` is valid only during the callback. Parsed packet arenas are recycled after the callback, yielding zero parser allocations per packet after warm-up when the callback does not retain a copy.
 
 When an interface application ring is full, the newest packet for that interface is dropped and `app_ring_drops` is incremented for that interface. Capture threads never block on parser throughput or on other interfaces.
 
 Packet identity is defined by `PacketMetadata::key`. Its `packet_id` is a global runtime observation sequence within the capture and may contain gaps when an observed packet is dropped before retention. It is not a dense array index. Timestamp ordering across interfaces is not guaranteed because pcap timestamp sources can differ by interface and OS.
 
-Future parser code will use `pruftnet::parsing::PacketView` for bounded reads; the current `EmptyPacketParser` does not consume it yet. A view tracks captured, reported, and parent-contained lengths separately, supports zero-copy child views, and reports capture truncation, reported-length violations, parent-boundary violations, and offset overflow as distinct non-throwing results.
+`PacketParser` uses `pruftnet::parsing::PacketView` for every protocol read. A view tracks captured, reported, and parent-contained lengths separately, supports zero-copy child views, and reports capture truncation, reported-length violations, parent-boundary violations, and offset overflow as distinct non-throwing results.
 
 `PacketView`, its child views, and spans returned by `read_bytes()` are non-owning. The captured packet or derived data-source storage must outlive all of them.
 

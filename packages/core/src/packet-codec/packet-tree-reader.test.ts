@@ -13,12 +13,8 @@ interface Fixture {
     revision: bigint
 }
 
-function fixtureWriter(): string {
-    const configured = process.env.PRUFTNET_PACKET_TREE_FIXTURE_WRITER
-    const executable =
-        process.platform === 'win32'
-            ? 'packet_tree_fixture_writer.exe'
-            : 'packet_tree_fixture_writer'
+function fixtureWriter(name: string, configured?: string): string {
+    const executable = process.platform === 'win32' ? `${name}.exe` : name
     const candidates = [
         configured,
         join('cpp', 'build', executable),
@@ -33,10 +29,15 @@ function fixtureWriter(): string {
     return writer
 }
 
-function makeFixture(): Fixture {
+function makeFixture(name = 'packet_tree_fixture_writer', configured?: string): Fixture {
     const directory = mkdtempSync(join(tmpdir(), 'pruftnet-packet-tree-'))
     const path = join(directory, 'fixture.bin')
-    const output = execFileSync(fixtureWriter(), [path], {
+    const selectedWriter =
+        configured ??
+        (name === 'packet_tree_fixture_writer'
+            ? process.env.PRUFTNET_PACKET_TREE_FIXTURE_WRITER
+            : undefined)
+    const output = execFileSync(fixtureWriter(name, selectedWriter), [path], {
         cwd: new URL('../..', import.meta.url),
         encoding: 'utf8',
     })
@@ -84,6 +85,27 @@ function expectError(code: PacketTreeReadError['code'], callback: () => unknown)
 }
 
 const fixture = makeFixture()
+const parserFixture = makeFixture(
+    'parser_packet_tree_fixture_writer',
+    process.env.PRUFTNET_PARSER_PACKET_TREE_FIXTURE_WRITER,
+)
+
+function parserFieldValueTags(): ReadonlyMap<number, number> {
+    const tags = new Map<number, number>()
+    tags.set(1, PacketTreeValueTag.none)
+    tags.set(2, PacketTreeValueTag.bytes)
+    tags.set(3, PacketTreeValueTag.generatedText)
+    for (const id of [4, 5, 6, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 26, 27, 28, 29]) {
+        tags.set(id, PacketTreeValueTag.unsigned)
+    }
+    for (const id of [7, 11, 25]) {
+        tags.set(id, PacketTreeValueTag.none)
+    }
+    for (const id of [8, 9, 22, 23, 24, 30]) {
+        tags.set(id, PacketTreeValueTag.bytes)
+    }
+    return tags
+}
 
 test('reads the C++ fixture lazily with checksum parity', () => {
     expect(fixture.revision).toBe(13_891_723_788_706_789_614n)
@@ -106,6 +128,46 @@ test('reads the C++ fixture lazily with checksum parity', () => {
     expect(reader.nodeText(4)).toBe('synthetic')
     expect(reader.contributor(1).packetId).toBe(43n)
     expect(reader.checksum()).toBe(fixture.checksum)
+})
+
+test('round-trips a real Ethernet IPv4 UDP parser tree from C++', () => {
+    expect(parserFixture.revision).toBe(11_806_794_915_628_381_611n)
+    const reader = PacketTreeReader.open(parserFixture.bytes, {
+        expectedRegistryRevision: parserFixture.revision,
+        fieldValueTags: parserFieldValueTags(),
+    })
+    expect(reader.nodeCount()).toBe(27)
+    expect(reader.node(0)).toMatchObject({
+        fieldId: 1,
+        parentIndex: 0xffff_ffff,
+        offset: 0,
+        length: 47,
+    })
+    expect(reader.node(4)).toMatchObject({ fieldId: 7, parentIndex: 0, offset: 0, length: 47 })
+    expect(reader.node(7)).toMatchObject({ fieldId: 10, parentIndex: 4, offset: 12, length: 2 })
+    expect(reader.node(7).valueLow).toBe(0x0800n)
+    expect(reader.node(8)).toMatchObject({ fieldId: 11, parentIndex: 4, offset: 14, length: 33 })
+    expect(reader.node(12).valueLow).toBe(33n)
+    expect(reader.node(17).valueLow).toBe(17n)
+    expect(reader.node(21)).toMatchObject({ fieldId: 25, parentIndex: 8, offset: 34, length: 13 })
+    expect(reader.node(22).valueLow).toBe(40_001n)
+    expect(reader.node(23).valueLow).toBe(5_001n)
+    expect(reader.node(24).valueLow).toBe(13n)
+    expect(reader.node(26)).toMatchObject({
+        fieldId: 30,
+        parentIndex: 21,
+        offset: 42,
+        length: 5,
+        flags: 2,
+        valueOffset: 0,
+        valueLength: 0,
+    })
+    const udpPayloadIndex = Array.from({ length: reader.nodeCount() }, (_, index) => index).find(
+        (index) => reader.node(index).fieldId === 30,
+    )
+    expect(udpPayloadIndex).toBeDefined()
+    expect([...reader.nodeBytes(udpPayloadIndex!)]).toEqual([104, 101, 108, 108, 111])
+    expect(reader.checksum()).toBe(parserFixture.checksum)
 })
 
 test('preserves a non-zero Uint8Array offset without copying', () => {

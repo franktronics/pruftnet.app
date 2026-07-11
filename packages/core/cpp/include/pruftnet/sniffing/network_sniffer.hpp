@@ -14,9 +14,9 @@
 
 namespace pruftnet::sniffing {
 
-using PacketCallback = std::function<void(
-    const RawPacketView& raw_packet,
-    const ParsedPacket& parsed_packet)>;
+// Both references expire when the callback returns. ParsedPacket owns its arenas,
+// so callers that need retention may copy or move a copy into their own storage.
+using PacketCallback = std::function<void(const RawPacketView& raw_packet, const ParsedPacket& parsed_packet)>;
 
 class NetworkSniffer {
 public:

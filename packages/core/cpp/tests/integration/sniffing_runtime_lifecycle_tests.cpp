@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -21,7 +22,8 @@ namespace {
 using pruftnet::sniffing::PacketFlagTruncated;
 using pruftnet::sniffing::PacketKey;
 using pruftnet::sniffing::EventCallback;
-using pruftnet::sniffing::ParseStatus;
+using pruftnet::parsing::ParseCondition;
+using pruftnet::sniffing::PacketMetadata;
 using pruftnet::sniffing::RawPacketView;
 using pruftnet::sniffing::SnifferOptions;
 using pruftnet::sniffing::internal::PacketSourceDispatchStatus;
@@ -153,15 +155,18 @@ void metadata_and_truncation_are_reported() {
     auto options = base_options();
     options.interfaces[0].id = 99;
 
-    std::vector<RawPacketView> observed;
-    std::vector<ParseStatus> parse_statuses;
+    std::vector<PacketMetadata> observed;
+    std::vector<ParseCondition> parse_conditions;
+    std::optional<pruftnet::sniffing::ParsedPacket> retained;
     SnifferRuntime runtime(
         options,
         one_source(std::move(source)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const RawPacketView& raw, const auto& parsed) {
-            observed.push_back(raw);
-            parse_statuses.push_back(parsed.status);
+            observed.push_back(raw.metadata);
+            parse_conditions.push_back(parsed.condition());
+            assert(parsed.packet_key() == raw.metadata.key);
+            retained = parsed;
         },
         {});
 
@@ -169,16 +174,19 @@ void metadata_and_truncation_are_reported() {
 
     wait_until_stopped(runtime);
     assert(observed.size() == 1);
-    assert(parse_statuses.size() == 1);
-    assert(parse_statuses[0] == ParseStatus::NotParsed);
-    assert(!observed[0].metadata.key.capture_id.is_nil());
-    assert(observed[0].metadata.key.packet_id == 1);
-    assert(observed[0].metadata.interface_id == 99);
-    assert(observed[0].metadata.captured_len == 16);
-    assert(observed[0].metadata.wire_len == 32);
-    assert(observed[0].metadata.link_type == DLT_EN10MB);
-    assert((observed[0].metadata.flags & PacketFlagTruncated) != 0);
-    assert(observed[0].metadata.timestamp_ns == 2'000'500'000ULL);
+    assert(parse_conditions.size() == 1);
+    assert(parse_conditions[0] == ParseCondition::Partial);
+    assert(!observed[0].key.capture_id.is_nil());
+    assert(observed[0].key.packet_id == 1);
+    assert(observed[0].interface_id == 99);
+    assert(observed[0].captured_len == 16);
+    assert(observed[0].wire_len == 32);
+    assert(observed[0].link_type == DLT_EN10MB);
+    assert((observed[0].flags & PacketFlagTruncated) != 0);
+    assert(observed[0].timestamp_ns == 2'000'500'000ULL);
+    assert(retained.has_value());
+    assert(retained->packet_key() == observed[0].key);
+    assert(retained->source_bytes(retained->data_sources().front()).size() == observed[0].captured_len);
 }
 
 void capture_identity_changes_between_starts_and_packet_ids_restart() {

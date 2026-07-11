@@ -1,5 +1,9 @@
 # Parser Phase 3 Plan: Ethernet II to IPv4 to UDP
 
+Status: implemented and validated on 2026-07-11.
+
+Implementation result: 21 CTest cases and 9 Vitest cases pass; standalone parser/codec fuzz smoke tests and focused ASan/UBSan parser/codec runs pass. The 47-byte Release fixture sustains approximately 1.43 million parses/s and 673,000 parse + encode + verify + traversal operations/s, with zero parser allocations after warm-up on the recycled runtime path.
+
 ## Goal
 
 Replace the placeholder parser with the first production vertical slice: captured Ethernet II frames produce bounded `ParsedPacketTree` values, dispatch into IPv4 and UDP when supported, preserve unknown payloads, and remain safe for every captured/reported-length combination.
@@ -36,7 +40,7 @@ Keep IDs runtime-assigned and compare keys or fixture-owned IDs in tests. Update
 ### Boundary Semantics
 
 - Add the captured bytes as data source zero. Root and field ranges refer only to captured bytes; reported lengths are represented as scalar metadata.
-- Distinguish capture truncation from malformed declarations. A read inside the reported/contained range but outside captured bytes is `Truncated`. A protocol length outside its parent-reported boundary or smaller than its mandatory header is `Malformed`.
+- Distinguish capture truncation from malformed declarations. A read inside the reported/contained range but outside captured bytes is `Partial`. A protocol length outside its parent-reported boundary or smaller than its mandatory header is `Malformed`.
 - Preserve all bytes not claimed by a supported child protocol under an unknown/payload node. Unsupported link types, IEEE 802.3 frames, unknown EtherTypes, unknown IPv4 protocols, VLAN-tagged frames, and fragmented IPv4 datagrams remain inspectable instead of being discarded.
 - Do not descend into UDP when either IPv4 `MF` is set or the fragment offset is nonzero. Reassembly is a later phase.
 - Descend into IPv4 only for Ethernet EtherType `0x0800`, and into UDP only for IPv4 protocol 17.

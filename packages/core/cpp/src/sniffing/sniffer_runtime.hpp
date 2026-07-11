@@ -15,7 +15,7 @@
 #include "pruftnet/sniffing/sniffer_event.hpp"
 #include "pruftnet/sniffing/sniffer_options.hpp"
 #include "pruftnet/sniffing/sniffer_stats.hpp"
-#include "sniffing/empty_packet_parser.hpp"
+#include "parsing/packet_parser.hpp"
 #include "sniffing/internal_stats.hpp"
 #include "sniffing/packet_ring.hpp"
 #include "sniffing/packet_source.hpp"
@@ -73,7 +73,7 @@ private:
         SnifferError error,
         const InterfaceCaptureContext& context) const;
 
-    parsing::RegistrySnapshot registry_;
+    parsing::RegistrySnapshotPtr registry_;
     SnifferOptions options_;
     std::vector<std::unique_ptr<InterfaceCaptureContext>> interfaces_;
     std::size_t packet_source_count_ = 0;
@@ -85,7 +85,7 @@ private:
     std::mutex start_gate_mutex_;
     std::condition_variable lifecycle_condition_;
     std::condition_variable start_gate_condition_;
-    EmptyPacketParser parser_;
+    parsing::internal::PacketParser parser_;
     std::thread parser_thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};

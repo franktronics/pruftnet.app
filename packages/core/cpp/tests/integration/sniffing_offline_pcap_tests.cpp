@@ -24,7 +24,9 @@ namespace {
 
 struct ObservedPacket {
     pruftnet::sniffing::PacketMetadata metadata;
-    pruftnet::sniffing::ParseStatus parse_status = pruftnet::sniffing::ParseStatus::Error;
+    pruftnet::parsing::ParseCondition parse_condition = pruftnet::parsing::ParseCondition::Malformed;
+    pruftnet::parsing::RegistryRevision registry_revision;
+    std::size_t node_count = 0;
     std::size_t byte_count = 0;
 };
 
@@ -63,7 +65,9 @@ int main() {
         pruftnet::tests::one_source(std::make_unique<OfflinePcapPacketSource>(fixture.string(), interface_options)),
         SnifferOptionsValidation{.require_interface_name = false},
         [&](const RawPacketView& raw, const ParsedPacket& parsed) {
-            observed.push_back(ObservedPacket{raw.metadata, parsed.status, raw.bytes.size()});
+            observed.push_back(ObservedPacket{raw.metadata, parsed.condition(), parsed.registry_revision(),
+                                              parsed.nodes().size(), raw.bytes.size()});
+            assert(parsed.packet_key() == raw.metadata.key);
         },
         [&](const SnifferEvent& event) {
             events.push_back(event);
@@ -97,7 +101,9 @@ int main() {
         assert(packet.metadata.captured_len == kExpectedLengths[index]);
         assert(packet.metadata.wire_len == kExpectedLengths[index]);
         assert(packet.byte_count == kExpectedLengths[index]);
-        assert(packet.parse_status == ParseStatus::NotParsed);
+        assert(packet.parse_condition == pruftnet::parsing::ParseCondition::Complete);
+        assert(packet.registry_revision == runtime.registry_revision());
+        assert(packet.node_count > 4);
         assert((packet.metadata.flags & PacketFlagTruncated) == 0);
         assert(packet.metadata.timestamp_ns >= previous_timestamp);
         previous_timestamp = packet.metadata.timestamp_ns;

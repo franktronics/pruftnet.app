@@ -33,7 +33,8 @@ int main() {
         options,
         [&](const RawPacketView& raw, const ParsedPacket& parsed) {
             if (raw.bytes.empty() || raw.metadata.captured_len != raw.bytes.size() ||
-                raw.metadata.wire_len < raw.metadata.captured_len || parsed.status != ParseStatus::NotParsed ||
+                raw.metadata.wire_len < raw.metadata.captured_len || parsed.packet_key() != raw.metadata.key ||
+                parsed.nodes().empty() || parsed.data_sources().size() != 1 ||
                 raw.metadata.key.capture_id.is_nil() || raw.metadata.key.packet_id == 0) {
                 invalid_packet.store(true, std::memory_order_relaxed);
             }

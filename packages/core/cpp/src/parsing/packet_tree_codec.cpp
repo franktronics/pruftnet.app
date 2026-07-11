@@ -244,11 +244,29 @@ PacketTreeCodecResult<std::monostate> validate_semantics(std::span<const std::by
         const auto* source = tree->data_sources()->Get(node->data_source_id());
         const bool generated_zero_range =
             (node->flags() & ParsedNodeFlagGenerated) != 0 && node->offset() == 0 && node->length() == 0;
+        const bool source_backed = (node->flags() & ParsedNodeFlagSourceBacked) != 0;
+        constexpr auto known_flags = ParsedNodeFlagGenerated | ParsedNodeFlagSourceBacked;
+        if ((node->flags() & ~known_flags) != 0 || (source_backed && node->value_tag() != Wire::ValueTag_Bytes)) {
+            return codec_error(PacketTreeCodecErrorCode::InvalidValue, index);
+        }
         if (!generated_zero_range && !valid_range(node->offset(), node->length(), source->source_length())) {
             return codec_error(PacketTreeCodecErrorCode::InvalidRange, index);
         }
+        if (index != 0 && !generated_zero_range) {
+            const auto* parent = tree->nodes()->Get(node->parent_index());
+            const auto child_end = static_cast<std::uint64_t>(node->offset()) + node->length();
+            const auto parent_end = static_cast<std::uint64_t>(parent->offset()) + parent->length();
+            if (parent->data_source_id() == node->data_source_id() &&
+                (node->offset() < parent->offset() || child_end > parent_end)) {
+                return codec_error(PacketTreeCodecErrorCode::InvalidRange, index);
+            }
+        }
         if (node->value_tag() == Wire::ValueTag_Bytes) {
-            if (!valid_range(node->value_offset(), node->value_length(), value_size)) {
+            if (source_backed) {
+                if (node->value_offset() != 0 || node->value_length() != 0) {
+                    return codec_error(PacketTreeCodecErrorCode::InvalidValue, index);
+                }
+            } else if (!valid_range(node->value_offset(), node->value_length(), value_size)) {
                 return codec_error(PacketTreeCodecErrorCode::InvalidValue, index);
             }
         } else if (node->value_tag() == Wire::ValueTag_String || node->value_tag() == Wire::ValueTag_GeneratedText) {

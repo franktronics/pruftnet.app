@@ -15,6 +15,7 @@ namespace pruftnet::parsing {
 
 using DataSourceId = std::uint32_t;
 inline constexpr std::uint32_t kNoParentIndex = UINT32_MAX;
+inline constexpr std::size_t kParsedTreeEncodedOverhead = 512;
 
 enum class ParseCondition : std::uint8_t {
     Complete,
@@ -41,6 +42,7 @@ enum class ParsedValueTag : std::uint8_t {
 enum ParsedNodeFlag : std::uint32_t {
     ParsedNodeFlagNone = 0,
     ParsedNodeFlagGenerated = 1U << 0U,
+    ParsedNodeFlagSourceBacked = 1U << 1U,
 };
 
 struct ParsedFieldNode {
@@ -147,6 +149,8 @@ private:
 class ParsedPacketTreeBuilder {
 public:
     ParsedPacketTreeBuilder(RegistrySnapshotPtr registry, sniffing::PacketKey packet_key, ParseBudget budget = {});
+    ParsedPacketTreeBuilder(RegistrySnapshotPtr registry, sniffing::PacketKey packet_key, ParsedPacketTree storage,
+                            ParseBudget budget = {});
 
     [[nodiscard]] TreeResult<DataSourceId> add_data_source(std::string_view name, std::span<const std::byte> bytes,
                                                            DataSourceKind kind,
@@ -171,6 +175,9 @@ public:
                                                       DataSourceId data_source_id, std::size_t offset,
                                                       std::size_t length, std::span<const std::byte> value,
                                                       std::uint32_t flags = ParsedNodeFlagNone);
+    [[nodiscard]] TreeResult<std::uint32_t> add_source_bytes(FieldId field_id, std::uint32_t parent_index,
+                                                             DataSourceId data_source_id, std::size_t offset,
+                                                             std::size_t length);
     [[nodiscard]] TreeResult<std::uint32_t> add_string(FieldId field_id, std::uint32_t parent_index,
                                                        DataSourceId data_source_id, std::size_t offset,
                                                        std::size_t length, std::string_view value,

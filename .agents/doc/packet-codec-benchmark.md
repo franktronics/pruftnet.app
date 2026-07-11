@@ -153,3 +153,16 @@ The custom prototype remains a benchmark reference only. Reconsider it only if a
 The first production packet-tree schema retains the Phase 0 layout decision: vectors of fixed structs plus scalar byte arenas, generated C++ verification, and no object-API unpacking. The deterministic synthetic tree contains five nodes, repeated fields, two data sources, two complete packet contributors, and three arenas.
 
 On the Phase 0 Apple M1 Pro environment, a clean Release loop performing reusable FlatBuffers encode, generated verification, semantic validation, and full checksum traversal sustained approximately 2.03 million trees/s for a 624-byte message. C++ and TypeScript traversal checksums match. This synthetic result is a regression guard only; the real Ethernet -> IPv4 -> UDP slice must be benchmarked again.
+
+## Phase 3 Parser Revalidation
+
+The first real fixture is a 47-byte Ethernet II / IPv4 / UDP frame with a five-byte payload. The parser materializes 27 field nodes and stores packet-backed byte fields as source references rather than duplicating them in the value arena. The parser and encoder recycle capacities between iterations.
+
+On the same Apple M1 Pro environment in a clean Release build:
+
+- Parse only: approximately 1.43 million packets/s.
+- Parse + FlatBuffers encode + verify + full traversal: approximately 673,000 packets/s.
+- Parser allocations after warm-up: 0 allocations and 0 allocated bytes per packet.
+- Codec-only synthetic tree recheck: approximately 2.83 million encode + verify + traversal operations/s for 624 bytes, with no Phase 2 regression.
+
+These figures establish the Phase 4 regression baseline. They are synthetic single-frame measurements, not a 10 Gbit/s claim; mixed-size captures and summary-only parsing remain required before throughput capacity is finalized.

@@ -59,7 +59,7 @@ Every summary and selected packet view carries an `AnalysisRevision`. A detail r
 
 ## Registry Snapshots
 
-Protocol and field definitions use stable text keys, such as `ip` and `ip.src`. A frozen `RegistrySnapshot` compiles those keys to dense unsigned 32-bit runtime IDs.
+Protocol and field definitions use stable text keys, such as `ipv4` and `ipv4.source`. A frozen `RegistrySnapshot` compiles those keys to dense unsigned 32-bit runtime IDs.
 
 ```text
 RegistrySnapshot
@@ -76,7 +76,15 @@ Rules:
 - The first implementation freezes the registry for the lifetime of a capture.
 - Future plugin reload creates a new generation instead of mutating an existing snapshot.
 
-Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. The initial bootstrap contains only root/frame, unknown bytes, and diagnostics; real protocol fields are deferred to the first vertical parser slice.
+Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 3 appends deterministic frame, Ethernet, IPv4, and UDP descriptors; the current golden core revision is `11806794915628381611`.
+
+## First Protocol Slice
+
+`PacketParser` handles Ethernet type/length classification, Ethernet II IPv4 dispatch, IPv4 header and option boundaries, fragmentation fallback, and UDP declared lengths. Unsupported link types, IEEE 802.3 payloads, unknown EtherTypes and IP protocols, fragments, padding, and trailers are retained as source-backed unknown byte nodes.
+
+Captured and reported lengths remain distinct. Capture truncation produces `ParseCondition::Partial`; impossible protocol declarations and reserved IPv4 flags produce `Malformed`; budget exhaustion returns a finalized prefix with `ResourceLimit`. Packet-controlled bytes do not throw from the parser.
+
+Packet-backed byte nodes carry `ParsedNodeFlagSourceBacked` and reference their data-source range instead of duplicating payloads in the value arena. Builder, C++ verifier, and TypeScript reader all enforce source bounds and same-source parent containment. The parser thread recycles tree capacities after each callback, so the warmed-up non-retaining runtime path performs zero parser allocations per packet. A callback may copy the owning tree before return when retention is required.
 
 ## Summary Contract
 

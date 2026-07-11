@@ -1,5 +1,6 @@
 #include "pruftnet/parsing/registry.hpp"
 
+#include <array>
 #include <cstddef>
 #include <limits>
 #include <new>
@@ -220,33 +221,73 @@ RegistryResult<RegistrySnapshot> RegistryBuilder::freeze() {
 
 RegistryResult<RegistrySnapshot> make_core_registry() {
     RegistryBuilder builder;
-    const auto root_result = builder.register_protocol("root", "Root");
-    if (const auto* failure = std::get_if<RegistryError>(&root_result)) {
-        return *failure;
-    }
-    const auto unknown_result = builder.register_protocol("unknown", "Unknown");
-    if (const auto* failure = std::get_if<RegistryError>(&unknown_result)) {
-        return *failure;
-    }
-    const auto diagnostics_result = builder.register_protocol("diagnostics", "Diagnostics");
-    if (const auto* failure = std::get_if<RegistryError>(&diagnostics_result)) {
-        return *failure;
+
+    struct ProtocolDefinition {
+        std::string_view key;
+        std::string_view display_name;
+    };
+    constexpr std::array protocols{
+        ProtocolDefinition{"root", "Root"},
+        ProtocolDefinition{"unknown", "Unknown"},
+        ProtocolDefinition{"diagnostics", "Diagnostics"},
+        ProtocolDefinition{"eth", "Ethernet"},
+        ProtocolDefinition{"ipv4", "Internet Protocol Version 4"},
+        ProtocolDefinition{"udp", "User Datagram Protocol"},
+    };
+    std::array<ProtocolId, protocols.size()> protocol_ids{};
+    for (std::size_t index = 0; index < protocols.size(); ++index) {
+        auto result =
+            builder.register_protocol(std::string(protocols[index].key), std::string(protocols[index].display_name));
+        if (const auto* failure = std::get_if<RegistryError>(&result)) {
+            return *failure;
+        }
+        protocol_ids[index] = std::get<ProtocolId>(result);
     }
 
-    const auto frame =
-        builder.register_field(std::get<ProtocolId>(root_result), "root.frame", "Frame", FieldValueType::Protocol);
-    const auto data = builder.register_field(std::get<ProtocolId>(unknown_result), "unknown.data", "Unknown data",
-                                             FieldValueType::Bytes);
-    const auto diagnostic = builder.register_field(std::get<ProtocolId>(diagnostics_result), "diagnostics.message",
-                                                   "Diagnostic", FieldValueType::GeneratedText);
-    if (const auto* failure = std::get_if<RegistryError>(&frame)) {
-        return *failure;
-    }
-    if (const auto* failure = std::get_if<RegistryError>(&data)) {
-        return *failure;
-    }
-    if (const auto* failure = std::get_if<RegistryError>(&diagnostic)) {
-        return *failure;
+    struct FieldDefinition {
+        std::size_t protocol_index;
+        std::string_view key;
+        std::string_view display_name;
+        FieldValueType value_type;
+    };
+    constexpr std::array fields{
+        FieldDefinition{0, "root.frame", "Frame", FieldValueType::Protocol},
+        FieldDefinition{1, "unknown.data", "Unknown data", FieldValueType::Bytes},
+        FieldDefinition{2, "diagnostics.message", "Diagnostic", FieldValueType::GeneratedText},
+        FieldDefinition{0, "root.captured_length", "Captured length", FieldValueType::Unsigned},
+        FieldDefinition{0, "root.reported_length", "Reported length", FieldValueType::Unsigned},
+        FieldDefinition{0, "root.link_type", "Link type", FieldValueType::Unsigned},
+        FieldDefinition{3, "eth.frame", "Ethernet frame", FieldValueType::Protocol},
+        FieldDefinition{3, "eth.destination", "Destination", FieldValueType::Bytes},
+        FieldDefinition{3, "eth.source", "Source", FieldValueType::Bytes},
+        FieldDefinition{3, "eth.type", "Type/Length", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.packet", "Internet Protocol Version 4", FieldValueType::Protocol},
+        FieldDefinition{4, "ipv4.version", "Version", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.header_length", "Header length", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.dscp_ecn", "DSCP/ECN", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.total_length", "Total length", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.identification", "Identification", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.flags", "Flags", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.fragment_offset", "Fragment offset", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.ttl", "Time to live", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.protocol", "Protocol", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.checksum", "Header checksum", FieldValueType::Unsigned},
+        FieldDefinition{4, "ipv4.source", "Source", FieldValueType::Bytes},
+        FieldDefinition{4, "ipv4.destination", "Destination", FieldValueType::Bytes},
+        FieldDefinition{4, "ipv4.options", "Options", FieldValueType::Bytes},
+        FieldDefinition{5, "udp.datagram", "User Datagram Protocol", FieldValueType::Protocol},
+        FieldDefinition{5, "udp.source_port", "Source port", FieldValueType::Unsigned},
+        FieldDefinition{5, "udp.destination_port", "Destination port", FieldValueType::Unsigned},
+        FieldDefinition{5, "udp.length", "Length", FieldValueType::Unsigned},
+        FieldDefinition{5, "udp.checksum", "Checksum", FieldValueType::Unsigned},
+        FieldDefinition{5, "udp.payload", "Payload", FieldValueType::Bytes},
+    };
+    for (const auto& field : fields) {
+        auto result = builder.register_field(protocol_ids[field.protocol_index], std::string(field.key),
+                                             std::string(field.display_name), field.value_type);
+        if (const auto* failure = std::get_if<RegistryError>(&result)) {
+            return *failure;
+        }
     }
     return builder.freeze();
 }

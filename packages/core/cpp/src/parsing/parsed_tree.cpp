@@ -82,6 +82,11 @@ std::span<const std::byte> ParsedPacketTree::node_bytes(const ParsedFieldNode& n
     if (node.value_tag != ParsedValueTag::Bytes) {
         return {};
     }
+    if ((node.flags & ParsedNodeFlagSourceBacked) != 0 && node.data_source_id < data_sources_.size()) {
+        const auto& source = data_sources_[node.data_source_id];
+        return safe_slice<std::byte>(source_arena_, static_cast<std::size_t>(source.source_offset) + node.offset,
+                                     node.length);
+    }
     return safe_slice<std::byte>(value_arena_, node.value_offset, node.value_length);
 }
 
@@ -98,12 +103,23 @@ std::string_view ParsedPacketTree::node_text(const ParsedFieldNode& node) const 
 
 ParsedPacketTreeBuilder::ParsedPacketTreeBuilder(RegistrySnapshotPtr registry, sniffing::PacketKey packet_key,
                                                  ParseBudget budget)
-    : registry_(std::move(registry)), budget_(budget) {
+    : ParsedPacketTreeBuilder(std::move(registry), packet_key, ParsedPacketTree{}, budget) {}
+
+ParsedPacketTreeBuilder::ParsedPacketTreeBuilder(RegistrySnapshotPtr registry, sniffing::PacketKey packet_key,
+                                                 ParsedPacketTree storage, ParseBudget budget)
+    : registry_(std::move(registry)), budget_(budget), tree_(std::move(storage)) {
     if (!registry_) {
         throw std::invalid_argument("ParsedPacketTreeBuilder requires a registry snapshot.");
     }
+    tree_.nodes_.clear();
+    tree_.data_sources_.clear();
+    tree_.contributors_.clear();
+    tree_.string_arena_.clear();
+    tree_.value_arena_.clear();
+    tree_.source_arena_.clear();
     tree_.packet_key_ = packet_key;
     tree_.registry_revision_ = registry_->revision();
+    tree_.condition_ = ParseCondition::Complete;
 }
 
 TreeResult<DataSourceId> ParsedPacketTreeBuilder::add_data_source(std::string_view name,
@@ -241,6 +257,13 @@ TreeResult<std::uint32_t> ParsedPacketTreeBuilder::add_bytes(FieldId field_id, s
                     length, 0, 0, value, {}, flags);
 }
 
+TreeResult<std::uint32_t> ParsedPacketTreeBuilder::add_source_bytes(FieldId field_id, std::uint32_t parent_index,
+                                                                    DataSourceId data_source_id, std::size_t offset,
+                                                                    std::size_t length) {
+    return add_node(field_id, FieldValueType::Bytes, ParsedValueTag::Bytes, parent_index, data_source_id, offset,
+                    length, 0, 0, {}, {}, ParsedNodeFlagSourceBacked);
+}
+
 TreeResult<std::uint32_t> ParsedPacketTreeBuilder::add_string(FieldId field_id, std::uint32_t parent_index,
                                                               DataSourceId data_source_id, std::size_t offset,
                                                               std::size_t length, std::string_view value,
@@ -352,6 +375,11 @@ TreeResult<std::uint32_t> ParsedPacketTreeBuilder::validate_node(FieldId field_i
     if (field->get().value_type != expected_type) {
         return TreeBuildError{TreeBuildErrorCode::ValueTypeMismatch};
     }
+    constexpr auto known_flags = ParsedNodeFlagGenerated | ParsedNodeFlagSourceBacked;
+    if ((flags & ~known_flags) != 0 ||
+        ((flags & ParsedNodeFlagSourceBacked) != 0 && (expected_type != FieldValueType::Bytes || value_bytes != 0))) {
+        return TreeBuildError{TreeBuildErrorCode::ValueTypeMismatch};
+    }
     if (tree_.nodes_.empty()) {
         if (parent_index != kNoParentIndex || expected_type != FieldValueType::Protocol) {
             return TreeBuildError{TreeBuildErrorCode::InvalidRoot};
@@ -372,6 +400,16 @@ TreeResult<std::uint32_t> ParsedPacketTreeBuilder::validate_node(FieldId field_i
     if (!generated_zero_range && range_end > tree_.data_sources_[data_source_id].source_length) {
         return TreeBuildError{TreeBuildErrorCode::InvalidRange, range_end,
                               tree_.data_sources_[data_source_id].source_length};
+    }
+    if (!tree_.nodes_.empty() && !generated_zero_range) {
+        const auto& parent = tree_.nodes_[parent_index];
+        if (parent.data_source_id == data_source_id) {
+            const auto parent_end = static_cast<std::uint64_t>(parent.offset) + parent.length;
+            if (offset < parent.offset || range_end > parent_end) {
+                return TreeBuildError{TreeBuildErrorCode::InvalidRange, range_end,
+                                      static_cast<std::size_t>(parent_end)};
+            }
+        }
     }
     if (tree_.nodes_.size() >= budget_.max_nodes) {
         return budget_error(TreeBuildErrorCode::MaxNodes, tree_.nodes_.size() + 1, budget_.max_nodes);
@@ -414,8 +452,7 @@ TreeBuildError ParsedPacketTreeBuilder::budget_error(TreeBuildErrorCode code, st
 }
 
 std::size_t ParsedPacketTreeBuilder::encoded_bytes() const noexcept {
-    constexpr std::size_t envelope_overhead = 512;
-    std::size_t total = envelope_overhead;
+    std::size_t total = kParsedTreeEncodedOverhead;
     const auto add_product = [&](std::size_t count, std::size_t width) {
         if (count != 0 && width > std::numeric_limits<std::size_t>::max() / count) {
             total = std::numeric_limits<std::size_t>::max();

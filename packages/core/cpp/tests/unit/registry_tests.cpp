@@ -103,17 +103,19 @@ void freeze_and_lookup_errors_are_explicit() {
     assert(error(snapshot.field("missing")).code == RegistryErrorCode::UnknownField);
 }
 
-void bootstrap_registry_is_minimal() {
+void bootstrap_registry_has_stable_parser_descriptors() {
     const auto core_result = make_core_registry();
     assert(std::holds_alternative<RegistrySnapshot>(core_result));
     const auto& core = std::get<RegistrySnapshot>(core_result);
-    assert(core.protocols().size() == 3);
-    assert(core.fields().size() == 3);
+    assert(core.protocols().size() == 6);
+    assert(core.fields().size() == 30);
     assert(value(core.protocol("root")).get().display_name == "Root");
     assert(value(core.field("root.frame")).get().value_type == FieldValueType::Protocol);
     assert(value(core.field("unknown.data")).get().value_type == FieldValueType::Bytes);
     assert(value(core.field("diagnostics.message")).get().value_type == FieldValueType::GeneratedText);
-    assert(error(core.protocol("ethernet")).code == RegistryErrorCode::UnknownProtocol);
+    assert(value(core.protocol("eth")).get().display_name == "Ethernet");
+    assert(value(core.field("ipv4.total_length")).get().value_type == FieldValueType::Unsigned);
+    assert(value(core.field("udp.payload")).get().value_type == FieldValueType::Bytes);
 }
 
 } // namespace
@@ -122,6 +124,6 @@ int main() {
     ids_and_revision_are_deterministic();
     registration_rejects_invalid_and_duplicate_keys();
     freeze_and_lookup_errors_are_explicit();
-    bootstrap_registry_is_minimal();
+    bootstrap_registry_has_stable_parser_descriptors();
     return 0;
 }

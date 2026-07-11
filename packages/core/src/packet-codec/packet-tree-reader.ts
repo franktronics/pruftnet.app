@@ -14,6 +14,8 @@ const FILE_IDENTIFIER = [0x50, 0x52, 0x54, 0x32] as const
 const FORMAT_VERSION = 1
 const NO_PARENT = 0xffff_ffff
 const GENERATED_NODE_FLAG = 1
+const SOURCE_BACKED_NODE_FLAG = 2
+const KNOWN_NODE_FLAGS = GENERATED_NODE_FLAG | SOURCE_BACKED_NODE_FLAG
 const EMPTY_BYTES = new Uint8Array()
 const utf8 = new TextDecoder('utf-8', { fatal: true })
 
@@ -584,6 +586,11 @@ export class PacketTreeReader {
         if (node.valueTag() !== ValueTag.Bytes) {
             return EMPTY_BYTES
         }
+        if ((node.flags() & SOURCE_BACKED_NODE_FLAG) !== 0) {
+            const source = this.sourceAt(node.dataSourceId())
+            const start = source.sourceOffset() + node.offset()
+            return this.sourceData.subarray(start, start + node.length())
+        }
         return this.valueBytes.subarray(node.valueOffset(), node.valueOffset() + node.valueLength())
     }
 
@@ -787,6 +794,18 @@ export class PacketTreeReader {
             const source = this.sourceAt(node.dataSourceId)
             const generatedZeroRange =
                 (node.flags & GENERATED_NODE_FLAG) !== 0 && node.offset === 0 && node.length === 0
+            const sourceBacked = (node.flags & SOURCE_BACKED_NODE_FLAG) !== 0
+            if (
+                (node.flags & ~KNOWN_NODE_FLAGS) !== 0 ||
+                (sourceBacked && node.valueTag !== ValueTag.Bytes)
+            ) {
+                throw new PacketTreeReadError(
+                    'invalid-field-value',
+                    'Node flags are invalid',
+                    0,
+                    index,
+                )
+            }
             if (
                 !generatedZeroRange &&
                 !validRange(node.offset, node.length, source.sourceLength())
@@ -798,8 +817,34 @@ export class PacketTreeReader {
                     index,
                 )
             }
+            if (index !== 0 && !generatedZeroRange) {
+                const parent = this.node(node.parentIndex)
+                if (
+                    parent.dataSourceId === node.dataSourceId &&
+                    (node.offset < parent.offset ||
+                        node.offset + node.length > parent.offset + parent.length)
+                ) {
+                    throw new PacketTreeReadError(
+                        'invalid-range',
+                        'Node range escapes its parent range',
+                        0,
+                        index,
+                    )
+                }
+            }
             if (node.valueTag === ValueTag.Bytes) {
-                if (!validRange(node.valueOffset, node.valueLength, this.valueBytes.byteLength)) {
+                if (sourceBacked && (node.valueOffset !== 0 || node.valueLength !== 0)) {
+                    throw new PacketTreeReadError(
+                        'invalid-field-value',
+                        'Source-backed bytes contain arena data',
+                        0,
+                        index,
+                    )
+                }
+                if (
+                    !sourceBacked &&
+                    !validRange(node.valueOffset, node.valueLength, this.valueBytes.byteLength)
+                ) {
                     throw new PacketTreeReadError(
                         'invalid-field-value',
                         'Node byte range is invalid',
