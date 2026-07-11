@@ -100,6 +100,14 @@ add_custom_target(packet_tree_ts_codegen
 )
 
 add_library(pruftnet_sniffing STATIC
+    src/parsing/dissector_catalog.cpp
+    src/parsing/dissector_context.cpp
+    src/parsing/dissectors/ethernet_dissector.cpp
+    src/parsing/dissectors/frame_dissector.cpp
+    src/parsing/dissectors/ipv4_dissector.cpp
+    src/parsing/dissectors/tcp_dissector.cpp
+    src/parsing/dissectors/udp_dissector.cpp
+    src/parsing/dissectors/vlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp
     src/parsing/packet_parser.cpp
     src/parsing/packet_view.cpp
@@ -136,6 +144,12 @@ if(WIN32)
     target_link_libraries(pruftnet_sniffing PRIVATE bcrypt)
 endif()
 target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT PRUFTNET_IPO_SUPPORTED OUTPUT PRUFTNET_IPO_ERROR LANGUAGES CXX)
+if(PRUFTNET_IPO_SUPPORTED)
+    set_property(TARGET pruftnet_sniffing PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+endif()
 
 target_compile_definitions(pruftnet_sniffing PRIVATE
     $<$<BOOL:${PRUFTNET_HAVE_PCAP_SET_TSTAMP_PRECISION}>:PRUFTNET_HAVE_PCAP_SET_TSTAMP_PRECISION=1>
@@ -211,6 +225,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(packet_parser_allocation_tests tests/unit/packet_parser_allocation_tests.cpp)
     add_test(NAME unit.packet_parser_allocations COMMAND packet_parser_allocation_tests)
+
+    pruftnet_add_sniffing_test(dissector_catalog_tests tests/unit/dissector_catalog_tests.cpp)
+    add_test(NAME unit.dissector_catalog COMMAND dissector_catalog_tests)
 
     add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
     target_include_directories(packet_tree_fixture_writer
@@ -303,6 +320,9 @@ if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries(packet_parser_benchmark PRIVATE pruftnet_sniffing)
+    if(PRUFTNET_IPO_SUPPORTED)
+        set_property(TARGET packet_parser_benchmark PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+    endif()
 
     set(PACKET_CODEC_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/packet_codec")
     set(PACKET_CODEC_GENERATED_HEADER "${PACKET_CODEC_GENERATED_DIR}/packet_codec_generated.h")

@@ -233,6 +233,8 @@ RegistryResult<RegistrySnapshot> make_core_registry() {
         ProtocolDefinition{"eth", "Ethernet"},
         ProtocolDefinition{"ipv4", "Internet Protocol Version 4"},
         ProtocolDefinition{"udp", "User Datagram Protocol"},
+        ProtocolDefinition{"vlan", "IEEE 802.1Q Virtual LAN"},
+        ProtocolDefinition{"tcp", "Transmission Control Protocol"},
     };
     std::array<ProtocolId, protocols.size()> protocol_ids{};
     for (std::size_t index = 0; index < protocols.size(); ++index) {
@@ -281,6 +283,24 @@ RegistryResult<RegistrySnapshot> make_core_registry() {
         FieldDefinition{5, "udp.length", "Length", FieldValueType::Unsigned},
         FieldDefinition{5, "udp.checksum", "Checksum", FieldValueType::Unsigned},
         FieldDefinition{5, "udp.payload", "Payload", FieldValueType::Bytes},
+        FieldDefinition{6, "vlan.tag", "IEEE 802.1Q tag", FieldValueType::Protocol},
+        FieldDefinition{6, "vlan.priority", "Priority code point", FieldValueType::Unsigned},
+        FieldDefinition{6, "vlan.dei", "Drop eligible indicator", FieldValueType::Unsigned},
+        FieldDefinition{6, "vlan.id", "VLAN identifier", FieldValueType::Unsigned},
+        FieldDefinition{6, "vlan.type", "Encapsulated type", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.segment", "Transmission Control Protocol", FieldValueType::Protocol},
+        FieldDefinition{7, "tcp.source_port", "Source port", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.destination_port", "Destination port", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.sequence_number", "Sequence number", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.acknowledgment_number", "Acknowledgment number", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.header_length", "Header length", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.reserved", "Reserved bits", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.flags", "Flags", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.window", "Window size", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.checksum", "Checksum", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.urgent_pointer", "Urgent pointer", FieldValueType::Unsigned},
+        FieldDefinition{7, "tcp.options", "Options", FieldValueType::Bytes},
+        FieldDefinition{7, "tcp.payload", "Payload", FieldValueType::Bytes},
     };
     for (const auto& field : fields) {
         auto result = builder.register_field(protocol_ids[field.protocol_index], std::string(field.key),

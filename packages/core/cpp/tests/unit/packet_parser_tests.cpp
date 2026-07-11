@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "parsing/packet_parser.hpp"
 #include "pruftnet/parsing/registry.hpp"
@@ -212,6 +213,112 @@ void ipv4_padding_and_resource_limits_preserve_bounded_prefixes() {
     assert(source_tree.source_bytes(source_tree.data_sources().front()).size() == bytes.size());
 }
 
+std::vector<std::byte> vlan_udp_packet(bool nested) {
+    auto bytes = pruftnet::tests::ethernet_ipv4_udp_packet();
+    bytes[12] = std::byte{0x81};
+    bytes[13] = std::byte{0x00};
+    const std::array outer_tag{std::byte{0xa0}, std::byte{0x2a}, nested ? std::byte{0x88} : std::byte{0x08},
+                               nested ? std::byte{0xa8} : std::byte{0x00}};
+    bytes.insert(bytes.begin() + 14, outer_tag.begin(), outer_tag.end());
+    if (nested) {
+        const std::array inner_tag{std::byte{0x30}, std::byte{0x07}, std::byte{0x08}, std::byte{0x00}};
+        bytes.insert(bytes.begin() + 18, inner_tag.begin(), inner_tag.end());
+    }
+    return bytes;
+}
+
+std::vector<std::byte> tcp_packet(std::span<const std::byte> payload = {}) {
+    std::vector<std::byte> bytes(14 + 20 + 24 + payload.size(), std::byte{0});
+    bytes[12] = std::byte{0x08};
+    bytes[13] = std::byte{0x00};
+    bytes[14] = std::byte{0x45};
+    const auto ip_length = static_cast<std::uint16_t>(20 + 24 + payload.size());
+    bytes[16] = static_cast<std::byte>(ip_length >> 8U);
+    bytes[17] = static_cast<std::byte>(ip_length & 0xffU);
+    bytes[22] = std::byte{64};
+    bytes[23] = std::byte{6};
+    bytes[26] = std::byte{192};
+    bytes[29] = std::byte{1};
+    bytes[30] = std::byte{198};
+    bytes[33] = std::byte{2};
+    bytes[34] = std::byte{0x30};
+    bytes[35] = std::byte{0x39};
+    bytes[36] = std::byte{0x01};
+    bytes[37] = std::byte{0xbb};
+    bytes[38] = std::byte{0x01};
+    bytes[42] = std::byte{0x02};
+    bytes[46] = std::byte{0x60};
+    bytes[47] = std::byte{0x12};
+    bytes[48] = std::byte{0x20};
+    bytes[49] = std::byte{0x00};
+    bytes[50] = std::byte{0xab};
+    bytes[51] = std::byte{0xcd};
+    bytes[54] = std::byte{1};
+    bytes[55] = std::byte{1};
+    bytes[56] = std::byte{0};
+    bytes[57] = std::byte{0};
+    std::copy(payload.begin(), payload.end(), bytes.begin() + 58);
+    return bytes;
+}
+
+void vlan_dispatches_recursively_without_parent_dependencies() {
+    const auto registry = core_registry();
+    PacketParser parser(registry);
+    const auto single = vlan_udp_packet(false);
+    const auto single_tree = parser.parse(pruftnet::tests::raw_packet_view(single, single.size()));
+    assert(single_tree.condition() == ParseCondition::Complete);
+    assert(node_count(single_tree, *registry, "vlan.tag") == 1);
+    assert(node(single_tree, *registry, "vlan.priority").value_low == 5);
+    assert(node(single_tree, *registry, "vlan.id").value_low == 42);
+    assert(node_count(single_tree, *registry, "udp.datagram") == 1);
+
+    const auto nested = vlan_udp_packet(true);
+    const auto nested_tree = parser.parse(pruftnet::tests::raw_packet_view(nested, nested.size()));
+    assert(nested_tree.condition() == ParseCondition::Complete);
+    assert(node_count(nested_tree, *registry, "vlan.tag") == 2);
+    assert(node_count(nested_tree, *registry, "udp.datagram") == 1);
+
+    ParseBudget calls;
+    calls.max_dissector_calls = 3;
+    PacketParser limited(registry, calls);
+    const auto limited_tree = limited.parse(pruftnet::tests::raw_packet_view(nested, nested.size()));
+    assert(limited_tree.condition() == ParseCondition::ResourceLimit);
+    assert(node_count(limited_tree, *registry, "unknown.data") == 0);
+}
+
+void tcp_parses_headers_options_payload_and_boundaries() {
+    constexpr std::array payload{std::byte{'d'}, std::byte{'a'}, std::byte{'t'}, std::byte{'a'}};
+    const auto bytes = tcp_packet(payload);
+    const auto registry = core_registry();
+    PacketParser parser(registry);
+    const auto tree = parser.parse(pruftnet::tests::raw_packet_view(bytes, bytes.size()));
+    assert(tree.condition() == ParseCondition::Complete);
+    assert(node(tree, *registry, "tcp.source_port").value_low == 12'345);
+    assert(node(tree, *registry, "tcp.destination_port").value_low == 443);
+    assert(node(tree, *registry, "tcp.header_length").value_low == 24);
+    assert(node(tree, *registry, "tcp.flags").value_low == 0x12);
+    assert(node(tree, *registry, "tcp.options").length == 4);
+    const auto parsed_payload = tree.node_bytes(node(tree, *registry, "tcp.payload"));
+    assert(std::equal(parsed_payload.begin(), parsed_payload.end(), payload.begin(), payload.end()));
+
+    auto ns = bytes;
+    ns[46] = std::byte{0x61};
+    const auto ns_tree = parser.parse(pruftnet::tests::raw_packet_view(ns, ns.size()));
+    assert(node(ns_tree, *registry, "tcp.flags").value_low == 0x112);
+    assert(node(ns_tree, *registry, "tcp.reserved").value_low == 0);
+
+    for (std::size_t captured = 0; captured < bytes.size(); ++captured) {
+        const auto truncated = std::span<const std::byte>(bytes.data(), captured);
+        assert(parser.parse(pruftnet::tests::raw_packet_view(truncated, bytes.size(), 1,
+                                                             pruftnet::sniffing::PacketFlagTruncated))
+                   .condition() == ParseCondition::Partial);
+    }
+    auto invalid = bytes;
+    invalid[46] = std::byte{0x40};
+    assert(parser.parse(pruftnet::tests::raw_packet_view(invalid, invalid.size())).condition() ==
+           ParseCondition::Malformed);
+}
+
 } // namespace
 
 int main() {
@@ -220,4 +327,6 @@ int main() {
     malformed_protocol_lengths_stop_descent();
     unsupported_and_fragmented_payloads_remain_visible();
     ipv4_padding_and_resource_limits_preserve_bounded_prefixes();
+    vlan_dispatches_recursively_without_parent_dependencies();
+    tcp_parses_headers_options_payload_and_boundaries();
 }

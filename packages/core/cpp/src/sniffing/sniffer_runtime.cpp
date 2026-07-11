@@ -124,12 +124,13 @@ SnifferRuntime::SnifferRuntime(
     PacketCallback packet_callback,
     EventCallback event_callback)
     : registry_(make_runtime_registry()),
+      catalog_(parsing::internal::make_core_dissector_catalog(registry_)),
       options_(std::move(options)),
       packet_source_count_(packet_sources.size()),
       validation_(validation),
       packet_callback_(std::move(packet_callback)),
       event_callback_(std::move(event_callback)),
-      parser_(registry_) {
+      parser_(catalog_) {
     interfaces_.reserve(options_.interfaces.size());
     for (std::size_t index = 0; index < options_.interfaces.size(); ++index) {
         auto interface_options = options_.interfaces[index];

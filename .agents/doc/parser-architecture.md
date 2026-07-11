@@ -76,11 +76,13 @@ Rules:
 - The first implementation freezes the registry for the lifetime of a capture.
 - Future plugin reload creates a new generation instead of mutating an existing snapshot.
 
-Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 3 appends deterministic frame, Ethernet, IPv4, and UDP descriptors; the current golden core revision is `11806794915628381611`.
+Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 4 appends deterministic VLAN and TCP descriptors without renumbering the Phase 3 fields; the current golden core revision is `12677541342633269453`.
 
 ## First Protocol Slice
 
-`PacketParser` handles Ethernet type/length classification, Ethernet II IPv4 dispatch, IPv4 header and option boundaries, fragmentation fallback, and UDP declared lengths. Unsupported link types, IEEE 802.3 payloads, unknown EtherTypes and IP protocols, fragments, padding, and trailers are retained as source-backed unknown byte nodes.
+`PacketParser` now owns only packet-session setup, source clipping, root creation, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, and IPv4 protocol selectors through function-pointer handles with immutable resolved field IDs. Frame, Ethernet, VLAN, IPv4, UDP, and TCP parsing live in separate modules. Parent dissectors know selector tables, not child implementations.
+
+Ethernet handles type/length classification; VLAN handles recursive IEEE 802.1Q/802.1ad tags; IPv4 handles header and option boundaries plus fragmentation fallback; UDP and TCP enforce their declared header boundaries. Unsupported link types, IEEE 802.3 payloads, unknown EtherTypes and IP protocols, fragments, padding, and trailers remain source-backed unknown byte nodes.
 
 Captured and reported lengths remain distinct. Capture truncation produces `ParseCondition::Partial`; impossible protocol declarations and reserved IPv4 flags produce `Malformed`; budget exhaustion returns a finalized prefix with `ResourceLimit`. Packet-controlled bytes do not throw from the parser.
 
@@ -159,13 +161,13 @@ The frontend renders and navigates these references. It never searches for fragm
 
 ## Link-Type Extensibility
 
-Root protocol selection uses an extensible `u32 DLT -> dissector` registry. The currently accepted Ethernet, Linux cooked, RAW, NULL, and LOOP link types are the initial registrations, not a closed parser enum.
+Root protocol selection uses an extensible `u32 DLT -> dissector` table. Ethernet is the first parser registration. Capture may accept additional link types, but their bytes remain unknown until matching dissector modules are registered.
 
 An unregistered link type produces a partial `UnsupportedLinkType` result while preserving packet metadata and bytes. Adding another link type must not require changes to higher-layer dissectors.
 
 ## Resource Bounds
 
-All parser stages must have explicit limits for nesting, dissector calls, fields, diagnostics, strings, reassembly bytes, fragments, flow state, output batches, and client queues. Hitting a limit produces a partial `ResourceLimit` result and metrics instead of terminating the capture.
+All parser stages must have explicit limits for nesting, dissector calls, fields, diagnostics, strings, reassembly bytes, fragments, flow state, output batches, and client queues. Hitting a limit produces a finalized `ResourceLimit` prefix instead of terminating the capture. Phase 4 centrally enforces `max_dissector_calls` and dispatch depth before invoking a child handle.
 
 The Phase 2 `ParseBudget` defaults are 65,536 nodes, depth 256, 64 data sources, 4,096 contributors, 1 MiB of UTF-8 strings, 16 MiB of value bytes, 64 MiB of source bytes, and a 128 MiB encoded message. Builders check limits and integer conversions before mutation. Budget rejection leaves a structurally valid partial tree.
 

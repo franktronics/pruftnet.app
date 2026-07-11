@@ -12,11 +12,12 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> bounded Ethernet / IPv4 / UDP parser
+  -> immutable dissector catalog
+  -> bounded Ethernet / VLAN / IPv4 / UDP / TCP dissectors
   -> user packet callback
 ```
 
-The parser returns an owning, registry-revisioned `ParsedPacketTree`. Ethernet frames dispatch into IPv4 and UDP when supported; unknown link types, EtherTypes, IP protocols, fragments, trailers, and padding remain represented as bounded byte nodes.
+The parser returns an owning, registry-revisioned `ParsedPacketTree`. Separate dissector modules dispatch through immutable numeric DLT, EtherType, and IPv4 protocol tables. Unknown selectors, fragments, trailers, and padding remain represented as bounded byte nodes.
 
 `NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared multi-interface capture/ring/parser pipeline against `PacketSource` instances, which lets tests execute the same pipeline with offline `.pcap` fixtures and fake sources.
 
@@ -194,6 +195,8 @@ When an interface application ring is full, the newest packet for that interface
 Packet identity is defined by `PacketMetadata::key`. Its `packet_id` is a global runtime observation sequence within the capture and may contain gaps when an observed packet is dropped before retention. It is not a dense array index. Timestamp ordering across interfaces is not guaranteed because pcap timestamp sources can differ by interface and OS.
 
 `PacketParser` uses `pruftnet::parsing::PacketView` for every protocol read. A view tracks captured, reported, and parent-contained lengths separately, supports zero-copy child views, and reports capture truncation, reported-length violations, parent-boundary violations, and offset overflow as distinct non-throwing results.
+
+`PacketParser` does not contain protocol implementations. `DissectorCatalog` owns immutable function-pointer handles and resolved field IDs; `DissectorContext` centralizes tree operations, unknown fallback, parse-condition precedence, call limits, and depth limits. Built-in protocol implementations live under `src/parsing/dissectors/`.
 
 `PacketView`, its child views, and spans returned by `read_bytes()` are non-owning. The captured packet or derived data-source storage must outlive all of them.
 

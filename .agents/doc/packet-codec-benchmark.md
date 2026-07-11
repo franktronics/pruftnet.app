@@ -166,3 +166,16 @@ On the same Apple M1 Pro environment in a clean Release build:
 - Codec-only synthetic tree recheck: approximately 2.83 million encode + verify + traversal operations/s for 624 bytes, with no Phase 2 regression.
 
 These figures establish the Phase 4 regression baseline. They are synthetic single-frame measurements, not a 10 Gbit/s claim; mixed-size captures and summary-only parsing remain required before throughput capacity is finalized.
+
+## Phase 4 Dissector Revalidation
+
+Phase 4 routes the unchanged 47-byte fixture through four immutable function-pointer handles: frame, Ethernet, IPv4, and UDP. Initial non-LTO measurements exposed the expected cross-translation-unit dispatch cost and triggered the performance gate. Release interprocedural optimization is now enabled when supported so the modular architecture does not require sacrificing hot-path throughput.
+
+On the same Apple M1 Pro environment in a clean Release build with IPO:
+
+- Parse only: approximately 1.64 million packets/s.
+- Parse + FlatBuffers encode + verify + full traversal: approximately 752,000 packets/s.
+- Parser allocations after warm-up: 0 allocations and 0 allocated bytes per packet.
+- The Phase 3 fixture still materializes exactly 27 nodes; registry-only additions change the registry revision but not its node layout.
+
+These figures clear the Phase 4 5% regression gate. VLAN and TCP correctness are covered by parser and integration tests; a statistically representative mixed-protocol benchmark remains necessary before capacity planning.

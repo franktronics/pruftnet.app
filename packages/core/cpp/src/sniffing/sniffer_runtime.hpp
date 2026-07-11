@@ -74,6 +74,7 @@ private:
         const InterfaceCaptureContext& context) const;
 
     parsing::RegistrySnapshotPtr registry_;
+    parsing::internal::DissectorCatalogPtr catalog_;
     SnifferOptions options_;
     std::vector<std::unique_ptr<InterfaceCaptureContext>> interfaces_;
     std::size_t packet_source_count_ = 0;
