@@ -40,6 +40,8 @@ Internal architecture:
 - `interface_discovery.hpp` provides libpcap/Npcap-based capture interface listing and capabilities discovery.
 - `PacketSource` abstracts packet input.
 - `parsing::PacketView` provides bounded endian-safe reads and zero-copy child views while distinguishing capture truncation, reported-length violations, parent-boundary violations, and offset overflow.
+- `parsing::RegistrySnapshot` is bootstrapped before runtime capture starts; its immutable revision is exposed by `NetworkSniffer::registry_revision()`.
+- `parsing::ParsedPacketTreeBuilder` owns contiguous nodes and bounded arenas; `parsing::PacketTreeEncoder` emits the verified `PRT2` FlatBuffers format.
 - `LivePcapPacketSource` uses `pcap_create` / `pcap_activate` for real interfaces.
 - `OfflinePcapPacketSource` uses `pcap_open_offline` for deterministic `.pcap` integration tests.
 - `tests/support/FakePacketSource` exercises runtime lifecycle and error paths without libpcap live input.

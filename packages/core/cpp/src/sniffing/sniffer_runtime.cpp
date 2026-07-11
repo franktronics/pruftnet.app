@@ -4,6 +4,7 @@
 #include <limits>
 #include <new>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -85,6 +86,14 @@ std::optional<std::size_t> estimated_ring_bytes(std::size_t capacity, std::size_
     return total;
 }
 
+parsing::RegistrySnapshot make_runtime_registry() {
+    auto result = parsing::make_core_registry();
+    if (auto* registry = std::get_if<parsing::RegistrySnapshot>(&result)) {
+        return std::move(*registry);
+    }
+    throw std::logic_error("Failed to bootstrap the built-in parser registry.");
+}
+
 } // namespace
 
 struct SnifferRuntime::InterfaceCaptureContext {
@@ -114,7 +123,8 @@ SnifferRuntime::SnifferRuntime(
     SnifferOptionsValidation validation,
     PacketCallback packet_callback,
     EventCallback event_callback)
-    : options_(std::move(options)),
+    : registry_(make_runtime_registry()),
+      options_(std::move(options)),
       packet_source_count_(packet_sources.size()),
       validation_(validation),
       packet_callback_(std::move(packet_callback)),
@@ -298,6 +308,8 @@ std::optional<CaptureId> SnifferRuntime::capture_id() const {
     const std::lock_guard lock(capture_id_mutex_);
     return capture_id_;
 }
+
+parsing::RegistryRevision SnifferRuntime::registry_revision() const noexcept { return registry_.revision(); }
 
 SnifferStatsSnapshot SnifferRuntime::stats() const {
     const std::lock_guard lock(lifecycle_mutex_);

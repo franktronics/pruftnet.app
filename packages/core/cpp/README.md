@@ -197,6 +197,23 @@ Future parser code will use `pruftnet::parsing::PacketView` for bounded reads; t
 
 `PacketView`, its child views, and spans returned by `read_bytes()` are non-owning. The captured packet or derived data-source storage must outlive all of them.
 
+## Parser Registry and Packet Trees
+
+`pruftnet::parsing::RegistryBuilder` compiles stable protocol and field keys into dense IDs, then freezes an immutable `RegistrySnapshot` with a deterministic revision. `NetworkSniffer::registry_revision()` exposes the built-in snapshot revision used by the runtime.
+
+`ParsedPacketTreeBuilder` stores fixed nodes, data sources, complete packet contributors, and string/value/source arenas under `ParseBudget`. Budget failures set `ResourceLimit` without corrupting the partial tree. Source zero is the captured frame; later sources are derived.
+
+`PacketTreeEncoder` writes the versioned `PRT2` FlatBuffers schema with reusable storage. `verify_packet_tree()` applies generated structural verification plus semantic registry, index, range, UTF-8, and budget validation before returning a borrowed `VerifiedPacketTreeView`.
+
+Generate the TypeScript accessors and run the C++/TypeScript checksum fixture with:
+
+```sh
+pnpm --filter @repo/core codegen:packet-tree
+pnpm --filter @repo/core test
+```
+
+The TypeScript suite runs under Vitest's Node environment. A separate Vitest browser project will be added only when Web Worker integration enters scope.
+
 The packet ring slot size is derived from each active packet source snapshot length. Live capture uses the configured per-interface `snaplen`; offline capture uses the snapshot length recorded in the fixture.
 
 If file writing is added later, multi-interface captures should use pcapng rather than classic pcap, matching Wireshark/dumpcap behavior.

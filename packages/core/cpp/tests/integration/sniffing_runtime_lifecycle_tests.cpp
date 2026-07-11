@@ -56,6 +56,7 @@ void stop_before_start_and_repeated_stop_are_safe() {
     runtime.stop();
     runtime.stop();
     assert(!runtime.is_running());
+    assert(runtime.registry_revision().is_valid());
 }
 
 void double_start_is_rejected() {

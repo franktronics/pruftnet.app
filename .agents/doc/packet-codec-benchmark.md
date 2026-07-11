@@ -147,3 +147,9 @@ Rationale:
 - The custom codec's detail-encode advantage does not justify maintaining a second hand-written wire protocol for an on-demand path.
 
 The custom prototype remains a benchmark reference only. Reconsider it only if a later real-browser or full-parser profile shows a sustained FlatBuffers regression above 20% in an end-to-end bottleneck, not from an isolated microbenchmark.
+
+## Phase 2 Production Revalidation
+
+The first production packet-tree schema retains the Phase 0 layout decision: vectors of fixed structs plus scalar byte arenas, generated C++ verification, and no object-API unpacking. The deterministic synthetic tree contains five nodes, repeated fields, two data sources, two complete packet contributors, and three arenas.
+
+On the Phase 0 Apple M1 Pro environment, a clean Release loop performing reusable FlatBuffers encode, generated verification, semantic validation, and full checksum traversal sustained approximately 2.03 million trees/s for a 624-byte message. C++ and TypeScript traversal checksums match. This synthetic result is a regression guard only; the real Ethernet -> IPv4 -> UDP slice must be benchmarked again.

@@ -63,22 +63,20 @@ Protocol and field definitions use stable text keys, such as `ip` and `ip.src`. 
 
 ```text
 RegistrySnapshot
-  wire_schema_version
-  registry_generation
-  registry_hash
+  registry_revision
   protocols[]
   fields[]
-  enum_tables[]
-  diagnostic_definitions[]
 ```
 
 Rules:
 
 - Runtime ID zero is reserved as invalid.
-- A batch carries the registry generation once; occurrences carry only dense IDs.
+- A message carries the registry revision once; occurrences carry only dense IDs.
 - Runtime IDs are not durable without the matching registry snapshot.
 - The first implementation freezes the registry for the lifetime of a capture.
 - Future plugin reload creates a new generation instead of mutating an existing snapshot.
+
+Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. The initial bootstrap contains only root/frame, unknown bytes, and diagnostics; real protocol fields are deferred to the first vertical parser slice.
 
 ## Summary Contract
 
@@ -137,6 +135,8 @@ Offsets are relative to the declared data source, never implicitly relative to t
 
 Repeated fields are represented by repeated ordered occurrences. They must not be collapsed into a `field_id -> value` map.
 
+Phase 2 stores nodes, data sources, contributors, strings, values, and source bytes in contiguous vectors and shared arenas. `ParsedFieldNode`, `ParsedDataSource`, and `ParsedContributor` are trivially copyable; field occurrences never own labels or strings. Source zero is the only `Captured` source. Every later source is `Derived`, and contributors retain complete `PacketKey` values.
+
 ## Packet References
 
 Relationships between captured packets are typed rather than embedded only in display labels:
@@ -158,3 +158,13 @@ An unregistered link type produces a partial `UnsupportedLinkType` result while 
 ## Resource Bounds
 
 All parser stages must have explicit limits for nesting, dissector calls, fields, diagnostics, strings, reassembly bytes, fragments, flow state, output batches, and client queues. Hitting a limit produces a partial `ResourceLimit` result and metrics instead of terminating the capture.
+
+The Phase 2 `ParseBudget` defaults are 65,536 nodes, depth 256, 64 data sources, 4,096 contributors, 1 MiB of UTF-8 strings, 16 MiB of value bytes, 64 MiB of source bytes, and a 128 MiB encoded message. Builders check limits and integer conversions before mutation. Budget rejection leaves a structurally valid partial tree.
+
+## Packet Tree Wire Format
+
+The production packet-tree schema is `packages/core/cpp/schemas/packet_tree.fbs`, file identifier `PRT2`, format version 1. It carries one `PacketKey`, registry revision, parse condition, vectors of fixed structs, and separate string/value/source arenas.
+
+The C++ trust boundary runs the generated FlatBuffers verifier, then validates version, kind, revision, enums, registry field IDs, parent ordering, depth, source IDs, contributors, UTF-8, arena slices, and all configured budgets. `VerifiedPacketTreeView` borrows the encoded buffer and traverses it without unpacking a tree.
+
+The TypeScript trust boundary performs bounded FlatBuffers table/vector validation before invoking generated accessors. `PacketTreeReader` accepts `ArrayBuffer` or exclusively owned `Uint8Array`, preserves nonzero byte offsets, validates the same semantic indexes and budgets, and exposes lazy indexed access plus zero-copy byte slices. `SharedArrayBuffer` is rejected. The input buffer must outlive the reader and all returned byte views, and ownership must not mutate it after verification. Worker transfers provide this exclusive-ownership boundary without a copy.

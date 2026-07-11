@@ -8,3 +8,4 @@
 - Prefer derived state over synchronized duplicate state when possible.
 - Keep React components mostly presentational when data can be normalized before rendering.
 - Comments should explain non-obvious decisions, not restate the code.
+- Use Vitest for TypeScript unit and integration tests. Keep pure backend/binary tests in the Node environment and add separate browser projects only when browser or Web Worker behavior is part of the contract.

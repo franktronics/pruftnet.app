@@ -42,6 +42,8 @@ public:
 
     std::optional<CaptureId> capture_id() const { return runtime_->capture_id(); }
 
+    parsing::RegistryRevision registry_revision() const noexcept { return runtime_->registry_revision(); }
+
     SnifferStatsSnapshot stats() const { return runtime_->stats(); }
 
 private:
@@ -70,6 +72,8 @@ void NetworkSniffer::stop() noexcept { impl_->stop(); }
 bool NetworkSniffer::is_running() const noexcept { return impl_->is_running(); }
 
 std::optional<CaptureId> NetworkSniffer::capture_id() const { return impl_->capture_id(); }
+
+parsing::RegistryRevision NetworkSniffer::registry_revision() const noexcept { return impl_->registry_revision(); }
 
 SnifferStatsSnapshot NetworkSniffer::stats() const { return impl_->stats(); }
 

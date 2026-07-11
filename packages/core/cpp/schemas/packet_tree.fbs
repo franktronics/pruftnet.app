@@ -1,0 +1,94 @@
+namespace Pruftnet.Wire;
+
+enum MessageKind : ubyte {
+  None = 0,
+  PacketTree = 1
+}
+
+enum ParseCondition : ubyte {
+  Complete = 0,
+  Partial = 1,
+  Malformed = 2,
+  ResourceLimit = 3
+}
+
+enum DataSourceKind : ubyte {
+  Captured = 0,
+  Derived = 1
+}
+
+enum ValueTag : ubyte {
+  None = 0,
+  Unsigned = 1,
+  Signed = 2,
+  Boolean = 3,
+  Bytes = 4,
+  String = 5,
+  GeneratedText = 6
+}
+
+struct PacketKey {
+  capture_id_high: ulong;
+  capture_id_low: ulong;
+  packet_id: ulong;
+}
+
+struct FieldNode {
+  value_low: ulong;
+  value_high: ulong;
+  field_id: uint;
+  parent_index: uint;
+  data_source_id: uint;
+  offset: uint;
+  length: uint;
+  flags: uint;
+  value_offset: uint;
+  value_length: uint;
+  value_tag: ValueTag;
+  reserved_byte: ubyte;
+  reserved_short: ushort;
+}
+
+struct DataSourceRecord {
+  id: uint;
+  name_offset: uint;
+  name_length: uint;
+  source_offset: uint;
+  source_length: uint;
+  contributor_offset: uint;
+  contributor_count: uint;
+  kind: DataSourceKind;
+  reserved_byte: ubyte;
+  reserved_short: ushort;
+}
+
+struct ContributorRecord {
+  capture_id_high: ulong;
+  capture_id_low: ulong;
+  packet_id: ulong;
+  source_offset: uint;
+  source_length: uint;
+  destination_offset: uint;
+  destination_length: uint;
+}
+
+table PacketTreePayload {
+  registry_revision: ulong;
+  packet_key: PacketKey;
+  condition: ParseCondition;
+  nodes: [FieldNode];
+  data_sources: [DataSourceRecord];
+  contributors: [ContributorRecord];
+  string_arena: [ubyte];
+  value_arena: [ubyte];
+  source_arena: [ubyte];
+}
+
+table PacketTreeEnvelope {
+  format_version: ushort = 1;
+  kind: MessageKind;
+  packet_tree: PacketTreePayload;
+}
+
+root_type PacketTreeEnvelope;
+file_identifier "PRT2";

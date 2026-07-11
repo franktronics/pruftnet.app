@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+#include "pruftnet/parsing/registry.hpp"
 #include "pruftnet/sniffing/network_sniffer.hpp"
 #include "pruftnet/sniffing/sniffer_error.hpp"
 #include "pruftnet/sniffing/sniffer_event.hpp"
@@ -39,6 +40,7 @@ public:
     void stop() noexcept;
     [[nodiscard]] bool is_running() const noexcept;
     [[nodiscard]] std::optional<CaptureId> capture_id() const;
+    [[nodiscard]] parsing::RegistryRevision registry_revision() const noexcept;
     [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:
@@ -71,6 +73,7 @@ private:
         SnifferError error,
         const InterfaceCaptureContext& context) const;
 
+    parsing::RegistrySnapshot registry_;
     SnifferOptions options_;
     std::vector<std::unique_ptr<InterfaceCaptureContext>> interfaces_;
     std::size_t packet_source_count_ = 0;

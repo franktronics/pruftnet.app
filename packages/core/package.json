@@ -7,14 +7,17 @@
         ".": "./src/index.ts"
     },
     "scripts": {
+        "codegen:packet-tree": "cmake --build cpp/build --target packet_tree_ts_codegen",
         "lint": "eslint .",
+        "test": "cmake --build cpp/build --target packet_tree_fixture_writer && vitest run",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "@effect/platform-node": "catalog:",
         "@effect/rpc": "catalog:",
         "@repo/shared": "workspace:*",
-        "effect": "catalog:"
+        "effect": "catalog:",
+        "flatbuffers": "25.9.23"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",
@@ -22,7 +25,8 @@
         "eslint": "catalog:",
         "globals": "catalog:",
         "typescript": "catalog:",
-        "typescript-eslint": "catalog:"
+        "typescript-eslint": "catalog:",
+        "vitest": "^4.1.10"
     },
     "imports": {
         "#/*": "./src/*"

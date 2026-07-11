@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 
+#include "pruftnet/parsing/registry.hpp"
 #include "pruftnet/sniffing/packet.hpp"
 #include "pruftnet/sniffing/parsed_packet.hpp"
 #include "pruftnet/sniffing/sniffer_error.hpp"
@@ -31,6 +32,7 @@ public:
     void stop() noexcept;
     [[nodiscard]] bool is_running() const noexcept;
     [[nodiscard]] std::optional<CaptureId> capture_id() const;
+    [[nodiscard]] parsing::RegistryRevision registry_revision() const noexcept;
     [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:
