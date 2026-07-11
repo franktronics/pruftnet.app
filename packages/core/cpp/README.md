@@ -13,11 +13,11 @@ SnifferRuntime
   -> one bounded SPSC packet ring per interface
   -> single parser thread
   -> immutable dissector catalog
-  -> bounded Ethernet / VLAN / IPv4 / UDP / TCP dissectors
+  -> bounded Ethernet / VLAN / ARP / IPv4 / IPv6 / UDP / TCP / ICMP dissectors
   -> user packet callback
 ```
 
-The parser returns an owning, registry-revisioned `ParsedPacketTree`. Separate dissector modules dispatch through immutable numeric DLT, EtherType, and IPv4 protocol tables. Unknown selectors, fragments, trailers, and padding remain represented as bounded byte nodes.
+The parser returns an owning, registry-revisioned `ParsedPacketTree`. Separate dissector modules dispatch through immutable numeric DLT, EtherType, and family-qualified IP protocol tables. IPv6 extensions and Neighbor Discovery options are bounded by the central parser budgets. Unknown selectors, non-atomic fragments, encrypted payloads, trailers, and padding remain represented as bounded byte nodes.
 
 `NetworkSniffer` is the public live-capture wrapper. Internally, `SnifferRuntime` runs the shared multi-interface capture/ring/parser pipeline against `PacketSource` instances, which lets tests execute the same pipeline with offline `.pcap` fixtures and fake sources.
 

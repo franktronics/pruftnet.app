@@ -9,7 +9,11 @@
 
 #include "parsing/dissectors/ethernet_dissector.hpp"
 #include "parsing/dissectors/frame_dissector.hpp"
+#include "parsing/dissectors/arp_dissector.hpp"
+#include "parsing/dissectors/icmpv4_dissector.hpp"
+#include "parsing/dissectors/icmpv6_dissector.hpp"
 #include "parsing/dissectors/ipv4_dissector.hpp"
+#include "parsing/dissectors/ipv6_dissector.hpp"
 #include "parsing/dissectors/tcp_dissector.hpp"
 #include "parsing/dissectors/udp_dissector.hpp"
 #include "parsing/dissectors/vlan_dissector.hpp"
@@ -67,7 +71,9 @@ DissectorCatalog::DissectorCatalog(RegistrySnapshotPtr registry) : registry_(std
         resolve_field(*registry_, "udp.destination_port"), resolve_field(*registry_, "udp.length"),
         resolve_field(*registry_, "udp.checksum"), resolve_field(*registry_, "udp.payload"),
     });
-    bind_ipv4_protocol(17, add_handle(dissect_udp, udp));
+    const auto udp_handle = add_handle(dissect_udp, udp);
+    bind_ip_protocol(IpFamily::V4, 17, udp_handle);
+    bind_ip_protocol(IpFamily::V6, 17, udp_handle);
 
     const auto vlan = state(VlanDissectorState{
         resolve_field(*registry_, "vlan.tag"), resolve_field(*registry_, "vlan.priority"),
@@ -87,7 +93,62 @@ DissectorCatalog::DissectorCatalog(RegistrySnapshotPtr registry) : registry_(std
         resolve_field(*registry_, "tcp.urgent_pointer"), resolve_field(*registry_, "tcp.options"),
         resolve_field(*registry_, "tcp.payload"),
     });
-    bind_ipv4_protocol(6, add_handle(dissect_tcp, tcp));
+    const auto tcp_handle = add_handle(dissect_tcp, tcp);
+    bind_ip_protocol(IpFamily::V4, 6, tcp_handle);
+    bind_ip_protocol(IpFamily::V6, 6, tcp_handle);
+
+    const auto arp = state(ArpDissectorState{
+        resolve_field(*registry_, "arp.packet"), resolve_field(*registry_, "arp.hardware_type"),
+        resolve_field(*registry_, "arp.protocol_type"), resolve_field(*registry_, "arp.hardware_length"),
+        resolve_field(*registry_, "arp.protocol_length"), resolve_field(*registry_, "arp.operation"),
+        resolve_field(*registry_, "arp.sender_hardware"), resolve_field(*registry_, "arp.sender_protocol"),
+        resolve_field(*registry_, "arp.target_hardware"), resolve_field(*registry_, "arp.target_protocol"),
+    });
+    bind_ethertype(0x0806, add_handle(dissect_arp, arp));
+
+    const auto ipv6 = state(Ipv6DissectorState{
+        resolve_field(*registry_, "ipv6.packet"), resolve_field(*registry_, "ipv6.version"),
+        resolve_field(*registry_, "ipv6.traffic_class"), resolve_field(*registry_, "ipv6.flow_label"),
+        resolve_field(*registry_, "ipv6.payload_length"), resolve_field(*registry_, "ipv6.next_header"),
+        resolve_field(*registry_, "ipv6.hop_limit"), resolve_field(*registry_, "ipv6.source"),
+        resolve_field(*registry_, "ipv6.destination"), resolve_field(*registry_, "ipv6.extension"),
+        resolve_field(*registry_, "ipv6.extension_next_header"), resolve_field(*registry_, "ipv6.extension_length"),
+        resolve_field(*registry_, "ipv6.extension_type"), resolve_field(*registry_, "ipv6.extension_data"),
+        resolve_field(*registry_, "ipv6.fragment_offset_encoded"), resolve_field(*registry_, "ipv6.fragment_offset"),
+        resolve_field(*registry_, "ipv6.fragment_reserved"), resolve_field(*registry_, "ipv6.fragment_more"),
+        resolve_field(*registry_, "ipv6.fragment_identification"),
+    });
+    bind_ethertype(0x86dd, add_handle(dissect_ipv6, ipv6));
+
+    const auto icmpv4 = state(Icmpv4DissectorState{
+        resolve_field(*registry_, "icmp.message"), resolve_field(*registry_, "icmp.type"),
+        resolve_field(*registry_, "icmp.code"), resolve_field(*registry_, "icmp.checksum"),
+        resolve_field(*registry_, "icmp.identifier"), resolve_field(*registry_, "icmp.sequence"),
+        resolve_field(*registry_, "icmp.gateway"), resolve_field(*registry_, "icmp.pointer"),
+        resolve_field(*registry_, "icmp.mtu"), resolve_field(*registry_, "icmp.body"),
+        resolve_field(*registry_, "icmp.quoted"),
+    });
+    bind_ip_protocol(IpFamily::V4, 1, add_handle(dissect_icmpv4, icmpv4));
+
+    const auto icmpv6 = state(Icmpv6DissectorState{
+        resolve_field(*registry_, "icmpv6.message"), resolve_field(*registry_, "icmpv6.type"),
+        resolve_field(*registry_, "icmpv6.code"), resolve_field(*registry_, "icmpv6.checksum"),
+        resolve_field(*registry_, "icmpv6.informational"), resolve_field(*registry_, "icmpv6.identifier"),
+        resolve_field(*registry_, "icmpv6.sequence"), resolve_field(*registry_, "icmpv6.mtu"),
+        resolve_field(*registry_, "icmpv6.pointer"), resolve_field(*registry_, "icmpv6.target"),
+        resolve_field(*registry_, "icmpv6.destination"),
+        resolve_field(*registry_, "icmpv6.flags"), resolve_field(*registry_, "icmpv6.current_hop_limit"),
+        resolve_field(*registry_, "icmpv6.router_lifetime"), resolve_field(*registry_, "icmpv6.reachable_time"),
+        resolve_field(*registry_, "icmpv6.retrans_timer"), resolve_field(*registry_, "icmpv6.body"),
+        resolve_field(*registry_, "icmpv6.quoted"), resolve_field(*registry_, "icmpv6.option"),
+        resolve_field(*registry_, "icmpv6.option_type"), resolve_field(*registry_, "icmpv6.option_length"),
+        resolve_field(*registry_, "icmpv6.option_body"), resolve_field(*registry_, "icmpv6.redirected_packet"),
+        resolve_field(*registry_, "icmpv6.link_layer_address"),
+        resolve_field(*registry_, "icmpv6.prefix_length"), resolve_field(*registry_, "icmpv6.prefix_flags"),
+        resolve_field(*registry_, "icmpv6.valid_lifetime"), resolve_field(*registry_, "icmpv6.preferred_lifetime"),
+        resolve_field(*registry_, "icmpv6.prefix"),
+    });
+    bind_ip_protocol(IpFamily::V6, 58, add_handle(dissect_icmpv6, icmpv6));
 }
 
 std::uint16_t DissectorCatalog::add_handle(DissectorFunction function, std::shared_ptr<const void> state_owner) {
@@ -115,11 +176,12 @@ void DissectorCatalog::bind_ethertype(std::uint16_t selector, std::uint16_t hand
     ethertype_[selector] = handle_index;
 }
 
-void DissectorCatalog::bind_ipv4_protocol(std::uint8_t selector, std::uint16_t handle_index) {
-    if (ipv4_protocol_[selector] != 0) {
-        throw std::logic_error("Duplicate IPv4 protocol dissector registration.");
+void DissectorCatalog::bind_ip_protocol(IpFamily family, std::uint8_t selector, std::uint16_t handle_index) {
+    auto& table = family == IpFamily::V4 ? ipv4_protocol_ : ipv6_next_header_;
+    if (table[selector] != 0) {
+        throw std::logic_error("Duplicate IP protocol dissector registration.");
     }
-    ipv4_protocol_[selector] = handle_index;
+    table[selector] = handle_index;
 }
 
 DissectorHandle DissectorCatalog::handle(std::uint16_t index) const noexcept {
@@ -140,8 +202,8 @@ DissectorHandle DissectorCatalog::dlt(std::uint32_t value) const noexcept {
 
 DissectorHandle DissectorCatalog::ethertype(std::uint16_t value) const noexcept { return handle(ethertype_[value]); }
 
-DissectorHandle DissectorCatalog::ipv4_protocol(std::uint8_t value) const noexcept {
-    return handle(ipv4_protocol_[value]);
+DissectorHandle DissectorCatalog::ip_protocol(IpFamily family, std::uint8_t value) const noexcept {
+    return handle(family == IpFamily::V4 ? ipv4_protocol_[value] : ipv6_next_header_[value]);
 }
 
 DissectorCatalogPtr make_core_dissector_catalog(RegistrySnapshotPtr registry) {

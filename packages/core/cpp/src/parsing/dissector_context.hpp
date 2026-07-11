@@ -71,14 +71,25 @@ public:
         }
         return dispatch(handle, view, parent);
     }
-    [[nodiscard]] DissectionResult dispatch_ipv4_protocol(std::uint8_t selector, const PacketView& view,
-                                                          std::uint32_t parent) {
-        const auto handle = catalog_.ipv4_protocol(selector);
+    [[nodiscard]] DissectionResult dispatch_ip_protocol(IpFamily family, std::uint8_t selector,
+                                                        const PacketView& view, std::uint32_t parent) {
+        const auto handle = catalog_.ip_protocol(family, selector);
         if (!handle) {
             (void)add_unknown(parent, view, 0, view.reported_length());
             return {view.reported_length()};
         }
         return dispatch(handle, view, parent);
+    }
+    [[nodiscard]] bool consume_dissector_call() {
+        if (stopped_) {
+            return false;
+        }
+        if (call_count_ >= budget_.max_dissector_calls) {
+            mark_resource_limit();
+            return false;
+        }
+        ++call_count_;
+        return true;
     }
     [[nodiscard]] ParsedPacketTree finalize();
 

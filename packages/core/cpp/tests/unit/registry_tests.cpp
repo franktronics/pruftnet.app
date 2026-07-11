@@ -107,8 +107,8 @@ void bootstrap_registry_has_stable_parser_descriptors() {
     const auto core_result = make_core_registry();
     assert(std::holds_alternative<RegistrySnapshot>(core_result));
     const auto& core = std::get<RegistrySnapshot>(core_result);
-    assert(core.protocols().size() == 8);
-    assert(core.fields().size() == 48);
+    assert(core.protocols().size() == 12);
+    assert(core.fields().size() == 117);
     assert(value(core.protocol("root")).get().display_name == "Root");
     assert(value(core.field("root.frame")).get().value_type == FieldValueType::Protocol);
     assert(value(core.field("unknown.data")).get().value_type == FieldValueType::Bytes);
@@ -118,6 +118,9 @@ void bootstrap_registry_has_stable_parser_descriptors() {
     assert(value(core.field("udp.payload")).get().value_type == FieldValueType::Bytes);
     assert(value(core.field("vlan.id")).get().value_type == FieldValueType::Unsigned);
     assert(value(core.field("tcp.payload")).get().value_type == FieldValueType::Bytes);
+    assert(value(core.field("arp.sender_hardware")).get().value_type == FieldValueType::Bytes);
+    assert(value(core.field("ipv6.flow_label")).get().value_type == FieldValueType::Unsigned);
+    assert(value(core.field("icmpv6.option")).get().value_type == FieldValueType::Protocol);
 }
 
 } // namespace

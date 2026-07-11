@@ -76,13 +76,13 @@ Rules:
 - The first implementation freezes the registry for the lifetime of a capture.
 - Future plugin reload creates a new generation instead of mutating an existing snapshot.
 
-Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 4 appends deterministic VLAN and TCP descriptors without renumbering the Phase 3 fields; the current golden core revision is `12677541342633269453`.
+Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 5 appends deterministic ARP, IPv6, ICMPv4, ICMPv6, and Neighbor Discovery descriptors without renumbering fields 1 through 48; the current golden core revision is `16961375687554593336`.
 
 ## First Protocol Slice
 
-`PacketParser` now owns only packet-session setup, source clipping, root creation, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, and IPv4 protocol selectors through function-pointer handles with immutable resolved field IDs. Frame, Ethernet, VLAN, IPv4, UDP, and TCP parsing live in separate modules. Parent dissectors know selector tables, not child implementations.
+`PacketParser` now owns only packet-session setup, source clipping, root creation, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, and family-qualified IP protocol selectors through function-pointer handles with immutable resolved field IDs. Frame, Ethernet, VLAN, ARP, IPv4, IPv6, UDP, TCP, ICMPv4, and ICMPv6 parsing live in separate modules. Parent dissectors know selector tables, not child implementations.
 
-Ethernet handles type/length classification; VLAN handles recursive IEEE 802.1Q/802.1ad tags; IPv4 handles header and option boundaries plus fragmentation fallback; UDP and TCP enforce their declared header boundaries. Unsupported link types, IEEE 802.3 payloads, unknown EtherTypes and IP protocols, fragments, padding, and trailers remain source-backed unknown byte nodes.
+Ethernet handles type/length classification; VLAN handles recursive IEEE 802.1Q/802.1ad tags; ARP follows variable wire address lengths; IPv4 and IPv6 enforce declared datagram boundaries; IPv6 traverses a bounded extension chain; UDP, TCP, ICMPv4, ICMPv6, and Neighbor Discovery enforce their own body boundaries. Fragment payloads remain unknown unless an IPv6 atomic fragment can continue safely. Unsupported selectors, encrypted payloads, padding, trailers, quoted packets, and unknown options remain source-backed byte nodes.
 
 Captured and reported lengths remain distinct. Capture truncation produces `ParseCondition::Partial`; impossible protocol declarations and reserved IPv4 flags produce `Malformed`; budget exhaustion returns a finalized prefix with `ResourceLimit`. Packet-controlled bytes do not throw from the parser.
 

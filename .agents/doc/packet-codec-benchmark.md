@@ -179,3 +179,16 @@ On the same Apple M1 Pro environment in a clean Release build with IPO:
 - The Phase 3 fixture still materializes exactly 27 nodes; registry-only additions change the registry revision but not its node layout.
 
 These figures clear the Phase 4 5% regression gate. VLAN and TCP correctness are covered by parser and integration tests; a statistically representative mixed-protocol benchmark remains necessary before capacity planning.
+
+## Phase 5 Dual-Stack Revalidation
+
+Phase 5 keeps the unchanged 47-byte IPv4/UDP fixture as the compatibility and regression reference, then adds a mixed parse-only corpus containing ARP, IPv6/UDP, two chained IPv6 option headers, and an ICMPv6 Router Advertisement with an MTU option.
+
+On the same Apple M1 Pro Release environment with IPO:
+
+- Existing IPv4/UDP parse only: approximately 1.67 million packets/s.
+- Existing IPv4/UDP parse + encode + verify + traversal: approximately 751,000 operations/s.
+- Mixed Phase 5 parse only: approximately 1.65 million packets/s.
+- Parser allocations after warm-up: 0 allocations and 0 allocated bytes per packet.
+
+The existing hot path improves slightly relative to Phase 4 and clears the 5% regression gate. The mixed result is a deterministic parser regression guard, not a representative production traffic distribution or a 10 Gbit/s capacity claim.

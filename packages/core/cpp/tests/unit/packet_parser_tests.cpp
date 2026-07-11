@@ -128,8 +128,8 @@ void unsupported_and_fragmented_payloads_remain_visible() {
     PacketParser parser(registry);
 
     auto unknown = pruftnet::tests::ethernet_ipv4_udp_packet();
-    unknown[12] = std::byte{0x86};
-    unknown[13] = std::byte{0xdd};
+    unknown[12] = std::byte{0x88};
+    unknown[13] = std::byte{0xb5};
     const auto unknown_tree = parser.parse(pruftnet::tests::raw_packet_view(unknown, unknown.size()));
     assert(unknown_tree.condition() == ParseCondition::Complete);
     assert(node(unknown_tree, *registry, "unknown.data").length == unknown.size() - 14);

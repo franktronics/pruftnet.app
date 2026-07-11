@@ -12,6 +12,8 @@
 
 namespace pruftnet::parsing::internal {
 
+enum class IpFamily : std::uint8_t { V4, V6 };
+
 class DissectorCatalog {
 public:
     explicit DissectorCatalog(RegistrySnapshotPtr registry);
@@ -24,13 +26,13 @@ public:
     [[nodiscard]] DissectorHandle root() const noexcept;
     [[nodiscard]] DissectorHandle dlt(std::uint32_t value) const noexcept;
     [[nodiscard]] DissectorHandle ethertype(std::uint16_t value) const noexcept;
-    [[nodiscard]] DissectorHandle ipv4_protocol(std::uint8_t value) const noexcept;
+    [[nodiscard]] DissectorHandle ip_protocol(IpFamily family, std::uint8_t value) const noexcept;
 
 private:
     [[nodiscard]] std::uint16_t add_handle(DissectorFunction function, std::shared_ptr<const void> state);
     void bind_dlt(std::uint32_t selector, std::uint16_t handle);
     void bind_ethertype(std::uint16_t selector, std::uint16_t handle);
-    void bind_ipv4_protocol(std::uint8_t selector, std::uint16_t handle);
+    void bind_ip_protocol(IpFamily family, std::uint8_t selector, std::uint16_t handle);
     [[nodiscard]] DissectorHandle handle(std::uint16_t index) const noexcept;
 
     RegistrySnapshotPtr registry_;
@@ -41,6 +43,7 @@ private:
     std::vector<std::pair<std::uint32_t, std::uint16_t>> dlt_;
     std::array<std::uint16_t, 65'536> ethertype_{};
     std::array<std::uint16_t, 256> ipv4_protocol_{};
+    std::array<std::uint16_t, 256> ipv6_next_header_{};
 };
 
 using DissectorCatalogPtr = std::shared_ptr<const DissectorCatalog>;

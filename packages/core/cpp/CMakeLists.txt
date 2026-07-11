@@ -102,9 +102,13 @@ add_custom_target(packet_tree_ts_codegen
 add_library(pruftnet_sniffing STATIC
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
+    src/parsing/dissectors/arp_dissector.cpp
     src/parsing/dissectors/ethernet_dissector.cpp
     src/parsing/dissectors/frame_dissector.cpp
+    src/parsing/dissectors/icmpv4_dissector.cpp
+    src/parsing/dissectors/icmpv6_dissector.cpp
     src/parsing/dissectors/ipv4_dissector.cpp
+    src/parsing/dissectors/ipv6_dissector.cpp
     src/parsing/dissectors/tcp_dissector.cpp
     src/parsing/dissectors/udp_dissector.cpp
     src/parsing/dissectors/vlan_dissector.cpp
@@ -228,6 +232,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(dissector_catalog_tests tests/unit/dissector_catalog_tests.cpp)
     add_test(NAME unit.dissector_catalog COMMAND dissector_catalog_tests)
+
+    pruftnet_add_sniffing_test(phase5_dissector_tests tests/unit/phase5_dissector_tests.cpp)
+    add_test(NAME unit.phase5_dissectors COMMAND phase5_dissector_tests)
 
     add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
     target_include_directories(packet_tree_fixture_writer

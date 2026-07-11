@@ -25,10 +25,14 @@ void core_catalog_has_typed_dispatch_paths() {
     assert(catalog->ethertype(0x0800));
     assert(catalog->ethertype(0x8100));
     assert(catalog->ethertype(0x88a8));
-    assert(!catalog->ethertype(0x86dd));
-    assert(catalog->ipv4_protocol(6));
-    assert(catalog->ipv4_protocol(17));
-    assert(!catalog->ipv4_protocol(1));
+    assert(catalog->ethertype(0x0806));
+    assert(catalog->ethertype(0x86dd));
+    assert(catalog->ip_protocol(IpFamily::V4, 6));
+    assert(catalog->ip_protocol(IpFamily::V6, 17));
+    assert(catalog->ip_protocol(IpFamily::V4, 1));
+    assert(!catalog->ip_protocol(IpFamily::V6, 1));
+    assert(catalog->ip_protocol(IpFamily::V6, 58));
+    assert(!catalog->ip_protocol(IpFamily::V4, 58));
 }
 
 void catalog_rejects_incompatible_registries_before_capture() {

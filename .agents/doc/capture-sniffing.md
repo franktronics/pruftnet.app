@@ -12,7 +12,8 @@ SnifferRuntime
   -> one capture thread per interface
   -> one bounded SPSC packet ring per interface
   -> single parser thread
-  -> bounded Ethernet / IPv4 / UDP parser
+  -> immutable bounded dissector catalog
+  -> Ethernet / VLAN / ARP / IPv4 / IPv6 / TCP / UDP / ICMP
   -> packet callback(raw packet, parsed packet)
 ```
 
@@ -42,6 +43,7 @@ Internal architecture:
 - `PacketSource` abstracts packet input.
 - `parsing::PacketView` provides bounded endian-safe reads and zero-copy child views while distinguishing capture truncation, reported-length violations, parent-boundary violations, and offset overflow.
 - `parsing::RegistrySnapshot` is bootstrapped before runtime capture starts; its immutable revision is exposed by `NetworkSniffer::registry_revision()`.
+- `parsing::internal::DissectorCatalog` provides immutable DLT, EtherType, and family-qualified IP selector tables. IPv6 extension and Neighbor Discovery traversal consume the same central call/depth budgets as ordinary child dispatch.
 - `parsing::ParsedPacketTreeBuilder` owns contiguous nodes and bounded arenas; `parsing::PacketTreeEncoder` emits the verified `PRT2` FlatBuffers format.
 - `LivePcapPacketSource` uses `pcap_create` / `pcap_activate` for real interfaces.
 - `OfflinePcapPacketSource` uses `pcap_open_offline` for deterministic `.pcap` integration tests.
@@ -53,6 +55,7 @@ Tests are organized under `packages/core/cpp/tests`:
 
 - `unit/` contains deterministic unit tests.
 - `unit/packet_view_tests.cpp` validates endian reads, zero-copy child views, overflow, truncation, reported lengths, and parent boundaries.
+- `unit/phase5_dissector_tests.cpp` validates ARP, IPv6 extensions and fragments, family-isolated IP dispatch, ICMPv4, ICMPv6, and Neighbor Discovery options.
 - `integration/sniffing_offline_pcap_tests.cpp` runs the pipeline against fixtures and is enabled by default.
 - `integration/sniffing_offline_bpf_tests.cpp` validates BPF filtering against the TCP/UDP fixture.
 - `integration/sniffing_offline_invalid_pcap_tests.cpp` validates malformed and missing pcap failures.

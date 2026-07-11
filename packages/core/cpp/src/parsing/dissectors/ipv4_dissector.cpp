@@ -84,7 +84,7 @@ DissectionResult dissect_ipv4(DissectorContext& context, const void* opaque, con
         (void)context.add_unknown(*ip_node, payload, 0, payload_length);
         return {*total_length};
     }
-    (void)context.dispatch_ipv4_protocol(*protocol, payload, *ip_node);
+    (void)context.dispatch_ip_protocol(IpFamily::V4, *protocol, payload, *ip_node);
     return {*total_length};
 }
 
