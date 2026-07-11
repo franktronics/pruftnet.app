@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 
 #include "pruftnet/parsing/registry.hpp"
 #include "pruftnet/sniffing/packet.hpp"
@@ -14,30 +15,40 @@
 
 namespace pruftnet::sniffing {
 
-// Both references expire when the callback returns. ParsedPacket owns its arenas,
-// so callers that need retention may copy or move a copy into their own storage.
-using PacketCallback = std::function<void(const RawPacketView& raw_packet, const ParsedPacket& parsed_packet)>;
+// Both references expire when the callback returns. ParsedPacket owns its
+// arenas, so callers that need retention may copy or move a copy into their own
+// storage.
+using PacketCallback = std::function<void(const RawPacketView &raw_packet,
+                                          const ParsedPacket &parsed_packet)>;
 
 class NetworkSniffer {
 public:
-    NetworkSniffer(SnifferOptions options, PacketCallback packet_callback, EventCallback event_callback = {});
-    ~NetworkSniffer();
+  NetworkSniffer(SnifferOptions options, PacketCallback packet_callback,
+                 EventCallback event_callback = {});
+  [[nodiscard]] static NetworkSniffer
+  offline(std::string path, SnifferOptions options,
+          PacketCallback packet_callback, EventCallback event_callback = {});
+  ~NetworkSniffer();
 
-    NetworkSniffer(const NetworkSniffer&) = delete;
-    NetworkSniffer& operator=(const NetworkSniffer&) = delete;
-    NetworkSniffer(NetworkSniffer&&) noexcept;
-    NetworkSniffer& operator=(NetworkSniffer&&) noexcept;
+  NetworkSniffer(const NetworkSniffer &) = delete;
+  NetworkSniffer &operator=(const NetworkSniffer &) = delete;
+  NetworkSniffer(NetworkSniffer &&) noexcept;
+  NetworkSniffer &operator=(NetworkSniffer &&) noexcept;
 
-    std::optional<SnifferError> start();
-    void stop() noexcept;
-    [[nodiscard]] bool is_running() const noexcept;
-    [[nodiscard]] std::optional<CaptureId> capture_id() const;
-    [[nodiscard]] parsing::RegistryRevision registry_revision() const noexcept;
-    [[nodiscard]] SnifferStatsSnapshot stats() const;
+  std::optional<SnifferError> start();
+  void stop() noexcept;
+  [[nodiscard]] bool is_running() const noexcept;
+  [[nodiscard]] std::optional<CaptureId> capture_id() const;
+  [[nodiscard]] parsing::RegistryRevision registry_revision() const noexcept;
+  [[nodiscard]] parsing::RegistrySnapshotPtr registry_snapshot() const noexcept;
+  [[nodiscard]] SnifferStatsSnapshot stats() const;
 
 private:
-    class Impl;
-    std::unique_ptr<Impl> impl_;
+  struct OfflineTag {};
+  NetworkSniffer(OfflineTag, std::string path, SnifferOptions options,
+                 PacketCallback packet_callback, EventCallback event_callback);
+  class Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 } // namespace pruftnet::sniffing

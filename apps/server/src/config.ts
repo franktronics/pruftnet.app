@@ -26,10 +26,15 @@ function readPort() {
 
 export function loadServerConfig(overrides: Partial<ServerConfig> = {}): ServerConfig {
     const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development'
+    const host = overrides.host ?? process.env.HOST ?? '127.0.0.1'
+    if (host !== 'localhost' && host !== '::1' && !host.startsWith('127.')) {
+        throw new Error(
+            'Remote server binding is disabled until capture API authentication is implemented.',
+        )
+    }
 
     return {
         mode,
-        host: process.env.HOST ?? (mode === 'production' ? '127.0.0.1' : '0.0.0.0'),
         port: readPort(),
         frontendRootPath:
             process.env.FRONTEND_ROOT_PATH ?? resolve(workspaceRoot, 'packages/front'),
@@ -39,5 +44,6 @@ export function loadServerConfig(overrides: Partial<ServerConfig> = {}): ServerC
         frontendDistPath:
             process.env.FRONTEND_DIST_PATH ?? resolve(workspaceRoot, 'packages/front/dist'),
         ...overrides,
+        host,
     }
 }

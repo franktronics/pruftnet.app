@@ -2,7 +2,7 @@ import type { IncomingMessage, Server as NodeServer, ServerResponse } from 'node
 import { createServer } from 'node:http'
 
 import { Effect, Scope } from 'effect'
-import { makeAppRpcNodeHandler } from '@repo/core'
+import { makeAppNodeHandlers } from '@repo/core'
 
 import type { ServerConfig } from './config'
 import { serveStaticFrontend } from './http/static-files'
@@ -60,13 +60,10 @@ export function startServer(
                 : (request: IncomingMessage, response: ServerResponse) => {
                       void serveStaticFrontend(request, response, config.frontendDistPath)
                   }
-            const rpcHandler = yield* makeAppRpcNodeHandler
+            const handlers = yield* makeAppNodeHandlers
 
             const server = createServer((request, response) => {
-                const url = new URL(
-                    request.url ?? '/',
-                    `http://${request.headers.host ?? 'localhost'}`,
-                )
+                const url = new URL(request.url ?? '/', 'http://localhost')
 
                 if (url.pathname === '/health') {
                     sendHealth(response)
@@ -74,7 +71,12 @@ export function startServer(
                 }
 
                 if (url.pathname === '/rpc') {
-                    rpcHandler(request, response)
+                    handlers.rpc(request, response)
+                    return
+                }
+
+                if (url.pathname.startsWith('/capture/')) {
+                    handlers.packetDetail(request, response)
                     return
                 }
 

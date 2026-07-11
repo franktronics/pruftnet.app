@@ -117,6 +117,7 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/packet_view.cpp
     src/parsing/parsed_tree.cpp
     src/parsing/registry.cpp
+    src/replay/replay_store.cpp
     src/sniffing/interface_discovery.cpp
     src/sniffing/internal_stats.cpp
     src/sniffing/link_type.cpp
@@ -148,6 +149,10 @@ if(WIN32)
     target_link_libraries(pruftnet_sniffing PRIVATE bcrypt)
 endif()
 target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
+
+add_executable(pruftnet_replay_worker tools/replay_worker.cpp)
+target_include_directories(pruftnet_replay_worker PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(pruftnet_replay_worker PRIVATE pruftnet_sniffing)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT PRUFTNET_IPO_SUPPORTED OUTPUT PRUFTNET_IPO_ERROR LANGUAGES CXX)
@@ -236,6 +241,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
     pruftnet_add_sniffing_test(phase5_dissector_tests tests/unit/phase5_dissector_tests.cpp)
     add_test(NAME unit.phase5_dissectors COMMAND phase5_dissector_tests)
 
+    pruftnet_add_sniffing_test(replay_store_tests tests/unit/replay_store_tests.cpp)
+    add_test(NAME unit.replay_store COMMAND replay_store_tests)
+
     add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
     target_include_directories(packet_tree_fixture_writer
         PRIVATE
@@ -261,6 +269,11 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
             PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
     )
     add_test(NAME integration.sniffing_offline_pcap COMMAND sniffing_offline_pcap_tests)
+
+    pruftnet_add_sniffing_test(replay_pipeline_tests tests/integration/replay_pipeline_tests.cpp)
+    target_include_directories(replay_pipeline_tests PRIVATE "${PACKET_TREE_GENERATED_DIR}" "${flatbuffers_SOURCE_DIR}/include")
+    target_compile_definitions(replay_pipeline_tests PRIVATE PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
+    add_test(NAME integration.replay_pipeline COMMAND replay_pipeline_tests)
 
     pruftnet_add_sniffing_test(sniffing_offline_bpf_tests tests/integration/sniffing_offline_bpf_tests.cpp)
     target_compile_definitions(sniffing_offline_bpf_tests
