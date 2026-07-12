@@ -1,4 +1,9 @@
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
+import {
+    createRootRoute,
+    createRoute,
+    createRouter,
+    lazyRouteComponent,
+} from '@tanstack/react-router'
 
 import { HomePage } from './home/home-page'
 import { SettingsPage } from './settings/settings-page'
@@ -20,7 +25,13 @@ const settingsRoute = createRoute({
     component: SettingsPage,
 })
 
-const routeTree = rootRoute.addChildren([homeRoute, settingsRoute])
+const captureRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/capture/$captureId',
+    component: lazyRouteComponent(() => import('./capture/capture-page'), 'CapturePage'),
+})
+
+const routeTree = rootRoute.addChildren([homeRoute, settingsRoute, captureRoute])
 
 export const router = createRouter({ routeTree })
 

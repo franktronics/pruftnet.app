@@ -1,13 +1,12 @@
 import { RouterProvider } from '@tanstack/react-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { ThemeProvider } from './theme/theme-provider'
 import { router } from './pages/router'
 import './styles/main.css'
 import { syncDocumentWindowControlsOverlayClass } from './config/window-controls-overlay'
-
-const queryClient = new QueryClient()
+import { queryClient } from './config/query-client'
 
 export function App() {
     useEffect(() => {

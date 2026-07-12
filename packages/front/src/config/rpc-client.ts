@@ -10,6 +10,10 @@ function getRpcUrl() {
     return window.pruftnet?.rpcUrl ?? new URL('/rpc', window.location.origin).toString()
 }
 
+export function getRpcEndpoint() {
+    return new URL(getRpcUrl())
+}
+
 export const RpcClientLive = RpcClient.layerProtocolHttp({ url: getRpcUrl() }).pipe(
     Layer.provide(RpcSerialization.layerNdjson),
     Layer.provide(FetchHttpClient.layer),

@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { Settings, House } from 'lucide-react'
+import { Settings, Files } from 'lucide-react'
 import type { ComponentProps } from 'react'
 
 import { Button, Separator } from '@repo/ui/atoms'
@@ -25,9 +25,9 @@ import { cn } from '@repo/utils'
 
 const mainNavigation = [
     {
-        title: 'Home',
+        title: 'Captures',
         to: '/',
-        icon: House,
+        icon: Files,
     },
 ] as const
 
@@ -48,15 +48,21 @@ export function DashboardLayout() {
         select: (state) => state.location.pathname,
     })
     const isDesktop = typeof window !== 'undefined' && Boolean(window.pruftnet)
+    const isCapture = pathname.startsWith('/capture/')
 
     return (
         <SidebarProvider className={isDesktop ? 'flex-col' : undefined}>
             {isDesktop && <DesktopTitleBar />}
             <div className="flex min-h-0 flex-1">
                 <AppSidebar pathname={pathname} isDesktop={isDesktop} />
-                <SidebarInset>
+                <SidebarInset className="min-h-0 overflow-hidden">
                     {!isDesktop && <WebHeader />}
-                    <main className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                    <main
+                        className={cn(
+                            'flex min-h-0 flex-1 flex-col',
+                            isCapture ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
+                        )}
+                    >
                         <Outlet />
                     </main>
                 </SidebarInset>

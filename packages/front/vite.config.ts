@@ -1,11 +1,14 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 const workspaceRoot = resolve(__dirname, '../..')
 
 export default defineConfig({
+    test: {
+        environment: 'node',
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
         dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
