@@ -119,6 +119,7 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/packet_view.cpp
     src/parsing/parsed_tree.cpp
     src/parsing/registry.cpp
+    src/parsing/summary_extractor.cpp
     src/replay/replay_store.cpp
     src/sniffing/interface_discovery.cpp
     src/sniffing/internal_stats.cpp
@@ -245,6 +246,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(replay_store_tests tests/unit/replay_store_tests.cpp)
     add_test(NAME unit.replay_store COMMAND replay_store_tests)
+
+    pruftnet_add_sniffing_test(summary_extractor_tests tests/unit/summary_extractor_tests.cpp)
+    add_test(NAME unit.summary_extractor COMMAND summary_extractor_tests)
 
     add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
     target_include_directories(packet_tree_fixture_writer

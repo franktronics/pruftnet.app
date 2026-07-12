@@ -6,7 +6,10 @@ import {
     CaptureSource,
     DecimalString,
     PacketSummaryBatch,
+    PacketSummaryColumn,
+    ReplayCaptureSource,
     ReadPacketSummariesRequest,
+    StartCaptureRequest,
 } from './schema'
 
 const captureId = '0123456789abcdef0123456789abcdef'
@@ -62,6 +65,14 @@ describe('capture schemas', () => {
         }
     })
 
+    test('constructs a start request with a schema-backed replay source', () => {
+        const request = new StartCaptureRequest({
+            source: new ReplayCaptureSource({ fileId: 'demo' }),
+        })
+
+        expect(request.source).toMatchObject({ _tag: 'Replay', fileId: 'demo' })
+    })
+
     test('enforces packet summary batch request limits', () => {
         for (const limit of [1, 1024]) {
             expect(decode(ReadPacketSummariesRequest, { captureId, limit })).toMatchObject({
@@ -73,6 +84,13 @@ describe('capture schemas', () => {
         for (const limit of [0, 1025, 1.5, '10']) {
             expectRejected(ReadPacketSummariesRequest, { captureId, limit })
         }
+    })
+
+    test('bounds packet summary column values', () => {
+        expect(
+            decode(PacketSummaryColumn, { key: 'info', value: 'x'.repeat(256) }).value,
+        ).toHaveLength(256)
+        expectRejected(PacketSummaryColumn, { key: 'info', value: 'x'.repeat(257) })
     })
 })
 

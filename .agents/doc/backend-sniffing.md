@@ -59,7 +59,7 @@ Summaries are read in bounded batches of at most 1,024 entries. A request suppli
 - whether replay is complete;
 - packet summaries in delivery order.
 
-The cursor represents journal delivery order, not cross-interface timestamp order. The initial summary columns contain the deepest parsed protocol. Source, destination, length, and info extraction remain to be added before the packet table is feature-complete.
+The cursor represents journal delivery order, not cross-interface timestamp order. Shared C++ parser logic resolves registry field IDs once and emits bounded source, destination, protocol, length, and protocol-aware info columns. The frontend does not reconstruct these columns by loading every packet detail.
 
 ## Selected Packet Route
 
@@ -110,7 +110,7 @@ The TypeScript suite covers schema precision, RPC limits, worker lifecycle and t
 
 - Shared-memory packet batches for live throughput.
 - Product file picker/upload and file-ID registration.
-- Complete summary columns and display filters.
+- Display filters and configurable summary columns.
 - Selected-packet metadata envelope.
 - Multi-session capture.
 - Persistent capture history and pcapng output.

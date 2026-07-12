@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "pruftnet/parsing/parsed_tree.hpp"
+#include "pruftnet/parsing/summary_extractor.hpp"
 #include "pruftnet/sniffing/packet.hpp"
 #include "pruftnet/sniffing/sniffer_event.hpp"
 
@@ -69,12 +70,16 @@ struct PacketSummary {
   parsing::ParseCondition condition = parsing::ParseCondition::Malformed;
   parsing::RegistryRevision registry_revision;
   std::vector<parsing::ProtocolId> protocol_path;
+  std::string source;
+  std::string destination;
   std::string protocol;
+  std::string length;
+  std::string info;
 };
 
 PacketSummary extract_summary(const sniffing::RawPacketView &raw,
                               const parsing::ParsedPacketTree &tree,
-                              const parsing::RegistrySnapshot &registry);
+                               const parsing::SummaryExtractor &extractor);
 
 struct SummaryRead {
   std::vector<PacketSummary> entries;

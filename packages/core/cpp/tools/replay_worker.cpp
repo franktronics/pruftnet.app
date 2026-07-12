@@ -350,8 +350,9 @@ private:
                   return;
                 }
                 const auto registry = registry_;
-                if (!registry || !journal_.append(replay::extract_summary(
-                                     raw, parsed, *registry)))
+                if (!registry || !summary_extractor_ ||
+                    !journal_.append(replay::extract_summary(
+                        raw, parsed, *summary_extractor_)))
                   ++callback_failures_;
               } catch (...) {
                 ++callback_failures_;
@@ -364,6 +365,8 @@ private:
                 state_ = State::Failed;
             }));
     registry_ = sniffer_->registry_snapshot();
+    summary_extractor_ =
+        std::make_unique<parsing::SummaryExtractor>(*registry_);
     started_ns_ = wall_time_ns();
     if (const auto error = sniffer_->start()) {
       state_ = State::Failed;
@@ -402,8 +405,10 @@ private:
       out << decimal(read.entries.back().cursor);
     else
       out << "null";
+    const auto state = state_name();
+    const auto capture_complete = state == "completed" || state == "stopped" || state == "failed";
     out << ",\"gapBeforeFirst\":" << boolean(read.cursor_evicted)
-        << ",\"captureComplete\":" << boolean(state_name() == "completed")
+        << ",\"captureComplete\":" << boolean(capture_complete)
         << ",\"summaries\":[";
     for (std::size_t i = 0; i < read.entries.size(); ++i) {
       const auto &e = read.entries[i];
@@ -429,7 +434,15 @@ private:
           out << ',';
         out << e.protocol_path[path_index].value;
       }
-      out << "],\"protocol\":" << json_string(e.protocol) << '}';
+      out << "],\"columns\":["
+          << "{\"key\":\"source\",\"value\":" << json_string(e.source)
+          << "},{\"key\":\"destination\",\"value\":"
+          << json_string(e.destination)
+          << "},{\"key\":\"protocol\",\"value\":"
+          << json_string(e.protocol)
+          << "},{\"key\":\"length\",\"value\":" << json_string(e.length)
+          << "},{\"key\":\"info\",\"value\":" << json_string(e.info)
+          << "}]}";
     }
     out << "]}";
     return out.str();
@@ -666,6 +679,7 @@ private:
   replay::EventJournal events_;
   std::unique_ptr<sniffing::NetworkSniffer> sniffer_;
   parsing::RegistrySnapshotPtr registry_;
+  std::unique_ptr<parsing::SummaryExtractor> summary_extractor_;
   std::atomic<std::uint64_t> callback_failures_{0};
   std::atomic<std::uint64_t> started_ns_{0};
   std::atomic<std::uint64_t> stopped_ns_{0};

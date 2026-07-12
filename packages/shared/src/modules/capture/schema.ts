@@ -88,7 +88,7 @@ export class CaptureInterfaceCapabilities extends Schema.Class<CaptureInterfaceC
 
 export class PacketSummaryColumn extends Schema.Class<PacketSummaryColumn>('PacketSummaryColumn')({
     key: Schema.Literal('source', 'destination', 'protocol', 'length', 'info'),
-    value: Schema.String,
+    value: Schema.String.pipe(Schema.maxLength(256)),
 }) {}
 
 export class PacketSummary extends Schema.Class<PacketSummary>('PacketSummary')({
@@ -195,6 +195,7 @@ export class CaptureStats extends Schema.Class<CaptureStats>('CaptureStats')({
     retainedPackets: DecimalString,
     retainedBytes: DecimalString,
     retentionEvictions: DecimalString,
+    retentionRejected: DecimalString,
     ipcDrops: DecimalString,
     parserThreadRunning: Schema.Boolean,
 }) {}

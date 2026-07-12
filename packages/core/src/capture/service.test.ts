@@ -89,7 +89,13 @@ describe('Capture', () => {
                             captureFlags: 0,
                             parseCondition: 'complete',
                             protocolPath: [1],
-                            protocol: 'TCP',
+                            columns: [
+                                { key: 'source', value: '192.0.2.1' },
+                                { key: 'destination', value: '198.51.100.2' },
+                                { key: 'protocol', value: 'TCP' },
+                                { key: 'length', value: '64' },
+                                { key: 'info', value: '12345 -> 80' },
+                            ],
                             analysisRevision: '2',
                         },
                     ],
@@ -119,6 +125,13 @@ describe('Capture', () => {
             packetId: '18446744073709551615',
         })
         expect(batch.summaries[0]?.timestampNs).toBe('9007199254740993')
+        expect(batch.summaries[0]?.columns).toEqual([
+            { key: 'source', value: '192.0.2.1' },
+            { key: 'destination', value: '198.51.100.2' },
+            { key: 'protocol', value: 'TCP' },
+            { key: 'length', value: '64' },
+            { key: 'info', value: '12345 -> 80' },
+        ])
     })
 
     test('rejects malformed worker output at the service boundary', async () => {
@@ -184,7 +197,7 @@ describe('Capture', () => {
                                       captureFlags: 0,
                                       parseCondition: 'complete',
                                       protocolPath: [1],
-                                      protocol: 'frame',
+                                      columns: [],
                                       analysisRevision: '1',
                                   },
                               ],

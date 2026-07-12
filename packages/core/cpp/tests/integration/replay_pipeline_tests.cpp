@@ -17,6 +17,7 @@ int main() {
   replay::SummaryJournal journal(32);
   replay::EventJournal events(32);
   parsing::RegistrySnapshotPtr registry;
+  std::unique_ptr<parsing::SummaryExtractor> extractor;
 
   const auto run_replay = [&] {
     sniffing::SnifferOptions options;
@@ -29,13 +30,15 @@ int main() {
             const parsing::ParsedPacketTree &parsed) noexcept {
           assert(store.insert(raw));
           assert(registry);
-          assert(
-              journal.append(replay::extract_summary(raw, parsed, *registry)));
+          assert(extractor);
+          assert(journal.append(
+              replay::extract_summary(raw, parsed, *extractor)));
         },
         [&](const sniffing::SnifferEvent &event) noexcept {
           assert(events.append(event));
         });
     registry = sniffer.registry_snapshot();
+    extractor = std::make_unique<parsing::SummaryExtractor>(*registry);
     assert(registry && !sniffer.start());
     const auto deadline =
         std::chrono::steady_clock::now() + tests::kOfflineSniffingTimeout;
@@ -48,7 +51,18 @@ int main() {
 
   const auto summaries = journal.read(0, 32);
   assert(summaries.entries.size() == tests::kOfflineExpectedPacketCount);
-  assert(summaries.entries.front().protocol != "unknown");
+  assert(summaries.entries.front().source == "192.0.2.10");
+  assert(summaries.entries.front().destination == "198.51.100.20");
+  assert(summaries.entries.front().protocol == "UDP");
+  assert(summaries.entries.front().length == "60");
+  assert(summaries.entries.front().info == "40001 -> 5001 Len=26");
+  for (const auto &summary : summaries.entries) {
+    assert(summary.source.size() <= parsing::kPacketSummaryColumnMaxBytes);
+    assert(summary.destination.size() <= parsing::kPacketSummaryColumnMaxBytes);
+    assert(summary.protocol.size() <= parsing::kPacketSummaryColumnMaxBytes);
+    assert(summary.length == std::to_string(summary.metadata.wire_len));
+    assert(summary.info.size() <= parsing::kPacketSummaryColumnMaxBytes);
+  }
   const auto lookup = store.get(summaries.entries.front().metadata.key);
   assert(lookup.status == replay::PacketLookup::Found);
   parsing::internal::PacketParser parser(registry);

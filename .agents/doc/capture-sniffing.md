@@ -45,6 +45,7 @@ Internal architecture:
 - `parsing::RegistrySnapshot` is bootstrapped before runtime capture starts; its immutable revision is exposed by `NetworkSniffer::registry_revision()`.
 - `parsing::internal::DissectorCatalog` provides immutable DLT, EtherType, and family-qualified IP selector tables. IPv6 extension and Neighbor Discovery traversal consume the same central call/depth budgets as ordinary child dispatch.
 - `parsing::ParsedPacketTreeBuilder` owns contiguous nodes and bounded arenas; `parsing::PacketTreeEncoder` emits the verified `PRT2` FlatBuffers format.
+- `parsing::SummaryExtractor` resolves field IDs once per registry and derives bounded source, destination, protocol, length, and info columns for replay and future live capture.
 - `LivePcapPacketSource` uses `pcap_create` / `pcap_activate` for real interfaces.
 - `OfflinePcapPacketSource` uses `pcap_open_offline` for deterministic `.pcap` integration tests.
 - `tests/support/FakePacketSource` exercises runtime lifecycle and error paths without libpcap live input.

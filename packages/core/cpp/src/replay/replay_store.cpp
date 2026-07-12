@@ -1,7 +1,6 @@
 #include "pruftnet/replay/replay_store.hpp"
 
 #include <algorithm>
-#include <functional>
 
 namespace pruftnet::replay {
 namespace {
@@ -104,30 +103,13 @@ RetentionStats RawPacketStore::stats() const noexcept {
 }
 
 PacketSummary extract_summary(const sniffing::RawPacketView &raw,
-                              const parsing::ParsedPacketTree &tree,
-                              const parsing::RegistrySnapshot &registry) {
-  PacketSummary result{
-      0,  raw.metadata, tree.condition(), tree.registry_revision(),
-      {}, "unknown"};
-  for (const auto &node : tree.nodes()) {
-    const auto descriptor = registry.field(node.field_id);
-    if (const auto *field =
-            std::get_if<std::reference_wrapper<const parsing::FieldDescriptor>>(
-                &descriptor);
-        field && field->get().value_type == parsing::FieldValueType::Protocol) {
-      const auto protocol = registry.protocol(field->get().protocol_id);
-      if (const auto *value = std::get_if<
-              std::reference_wrapper<const parsing::ProtocolDescriptor>>(
-              &protocol)) {
-        if (result.protocol_path.empty() ||
-            result.protocol_path.back() != value->get().id) {
-          result.protocol_path.push_back(value->get().id);
-        }
-        result.protocol = value->get().key;
-      }
-    }
-  }
-  return result;
+                               const parsing::ParsedPacketTree &tree,
+                               const parsing::SummaryExtractor &extractor) {
+  auto fields = extractor.extract(raw, tree);
+  return {0, raw.metadata, tree.condition(), tree.registry_revision(),
+          std::move(fields.protocol_path), std::move(fields.source),
+          std::move(fields.destination), std::move(fields.protocol),
+          std::move(fields.length), std::move(fields.info)};
 }
 
 SummaryJournal::SummaryJournal(std::size_t capacity) : capacity_(capacity) {}

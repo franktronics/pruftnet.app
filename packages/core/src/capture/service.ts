@@ -67,7 +67,7 @@ const RawSummary = Schema.Struct({
     captureFlags: Schema.NonNegativeInt,
     parseCondition: Schema.Literal('complete', 'partial', 'malformed', 'resourceLimit'),
     protocolPath: Schema.Array(Schema.Number.pipe(Schema.int(), Schema.positive())),
-    protocol: Schema.String,
+    columns: Schema.Array(PacketSummaryColumn),
     analysisRevision: Decimal,
 })
 const SummariesResponse = Schema.Struct({
@@ -109,6 +109,7 @@ const StatsResponse = Schema.Struct({
     retainedPackets: Decimal,
     retainedBytes: Decimal,
     retentionEvictions: Decimal,
+    retentionRejected: Decimal,
     ipcDrops: Decimal,
     parserThreadRunning: Schema.Boolean,
 })
@@ -374,12 +375,7 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                                             captureFlags: item.captureFlags,
                                             parseCondition: item.parseCondition,
                                             protocolPath: item.protocolPath,
-                                            columns: [
-                                                new PacketSummaryColumn({
-                                                    key: 'protocol',
-                                                    value: item.protocol,
-                                                }),
-                                            ],
+                                            columns: item.columns,
                                             analysisRevision: item.analysisRevision,
                                         }),
                                 ),

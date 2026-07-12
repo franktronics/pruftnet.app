@@ -40,6 +40,13 @@ test.runIf(existsSync(workerPath))(
 
         expect(result.session.state).toBe('completed')
         expect(result.summaries.summaries).toHaveLength(10)
+        expect(result.summaries.summaries[0]?.columns).toEqual([
+            { key: 'source', value: '192.0.2.10' },
+            { key: 'destination', value: '198.51.100.20' },
+            { key: 'protocol', value: 'UDP' },
+            { key: 'length', value: '60' },
+            expect.objectContaining({ key: 'info' }),
+        ])
         expect(new TextDecoder().decode(result.detail.slice(4, 8))).toBe('PRT2')
         expect(result.stats.packetsParsed).toBe('10')
     },
