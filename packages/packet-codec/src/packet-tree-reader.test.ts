@@ -17,10 +17,10 @@ function fixtureWriter(name: string, configured?: string): string {
     const executable = process.platform === 'win32' ? `${name}.exe` : name
     const candidates = [
         configured,
-        join('cpp', 'build', executable),
-        join('cpp', 'build', 'Debug', executable),
-        join('cpp', 'build', 'Release', executable),
-        join('cpp', 'build', 'RelWithDebInfo', executable),
+        join('..', 'core', 'cpp', 'build', executable),
+        join('..', 'core', 'cpp', 'build', 'Debug', executable),
+        join('..', 'core', 'cpp', 'build', 'Release', executable),
+        join('..', 'core', 'cpp', 'build', 'RelWithDebInfo', executable),
     ]
     const writer = candidates.find((candidate) => candidate !== undefined && existsSync(candidate))
     if (writer === undefined) {
@@ -38,7 +38,7 @@ function makeFixture(name = 'packet_tree_fixture_writer', configured?: string): 
             ? process.env.PRUFTNET_PACKET_TREE_FIXTURE_WRITER
             : undefined)
     const output = execFileSync(fixtureWriter(name, selectedWriter), [path], {
-        cwd: new URL('../..', import.meta.url),
+        cwd: new URL('../../core', import.meta.url),
         encoding: 'utf8',
     })
     const values = new Map(

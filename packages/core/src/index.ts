@@ -5,4 +5,4 @@ import { makeAppNodeHandlers, makeAppRpcNodeHandler } from './rpc-http'
 export { AppRpcGroup, makeAppNodeHandlers, makeAppRpcNodeHandler }
 export { AppLayer }
 export * from './capture'
-export * from './packet-codec/packet-tree-reader'
+export * from '@repo/packet-codec'

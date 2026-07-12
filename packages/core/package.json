@@ -15,9 +15,9 @@
     "dependencies": {
         "@effect/platform-node": "catalog:",
         "@effect/rpc": "catalog:",
+        "@repo/packet-codec": "workspace:*",
         "@repo/shared": "workspace:*",
-        "effect": "catalog:",
-        "flatbuffers": "25.9.23"
+        "effect": "catalog:"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",

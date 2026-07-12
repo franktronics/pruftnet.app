@@ -1,0 +1,36 @@
+{
+    "name": "@repo/packet-codec",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "codegen": "pnpm --filter @repo/core exec cmake --build cpp/build --target packet_tree_ts_codegen",
+        "prepare": "pnpm build",
+        "lint": "eslint .",
+        "test": "pnpm --filter @repo/core exec cmake --build cpp/build --target packet_tree_fixture_writer parser_packet_tree_fixture_writer && vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "flatbuffers": "25.9.23"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "globals": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
+        "vitest": "^4.1.10"
+    }
+}

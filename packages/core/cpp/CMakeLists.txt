@@ -88,10 +88,12 @@ add_custom_command(
 )
 
 add_custom_target(packet_tree_ts_codegen
+    COMMAND "${CMAKE_COMMAND}" -E remove_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../packet-codec/src/generated"
     COMMAND "${CMAKE_COMMAND}" -E make_directory
-            "${CMAKE_CURRENT_SOURCE_DIR}/../src/packet-codec/generated"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../packet-codec/src/generated"
     COMMAND "${PRUFTNET_FLATC_COMMAND}" --ts --ts-flat-files
-            -o "${CMAKE_CURRENT_SOURCE_DIR}/../src/packet-codec/generated"
+            -o "${CMAKE_CURRENT_SOURCE_DIR}/../../packet-codec/src/generated"
             "${CMAKE_CURRENT_SOURCE_DIR}/schemas/packet_tree.fbs"
     DEPENDS
         ${PRUFTNET_FLATC_DEPENDS}
