@@ -6,13 +6,12 @@
 @source "../../../ui/src/**/*.{ts,tsx}";
 
 :root {
-  --desktop-titlebar-height: 48px;
-  --desktop-titlebar-collapsed-brand-width: 9.5rem;
+  --desktop-titlebar-height: 40px;
   --desktop-titlebar-controls-right: 0.75rem;
 }
 
 .wco {
-  --desktop-titlebar-height: env(titlebar-area-height, 48px);
+  --desktop-titlebar-height: env(titlebar-area-height, 40px);
   --desktop-titlebar-controls-right: calc(
     100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 0.75rem
   );
@@ -37,7 +36,7 @@
 }
 
 .desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-sidebar-boundary {
-  width: var(--sidebar-width-icon);
+  width: 0;
   background-color: transparent;
   border-right-color: transparent;
 }
@@ -68,20 +67,7 @@
 }
 
 .desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-brand {
-  max-width: calc(var(--desktop-titlebar-collapsed-brand-width) - 3.75rem);
-}
-
-.desktop-titlebar:not([data-desktop-platform="darwin"])[data-sidebar-state="collapsed"]
-  .desktop-titlebar-sidebar-boundary {
-  width: var(--desktop-titlebar-collapsed-brand-width);
-  background-color: var(--sidebar);
-  border-right-color: var(--border);
-}
-
-[data-desktop-platform="darwin"]
-  .desktop-titlebar[data-sidebar-state="collapsed"]
-  .desktop-titlebar-sidebar-boundary {
-  width: 8.5rem;
+  opacity: 0;
 }
 
 [data-desktop-platform="darwin"]
@@ -92,7 +78,17 @@
 
 .desktop-titlebar:not([data-desktop-platform="darwin"])[data-sidebar-state="collapsed"]
   .desktop-titlebar-trigger {
-  left: calc(var(--desktop-titlebar-collapsed-brand-width) - 2rem);
+  left: 0.75rem;
+}
+
+.desktop-titlebar[data-sidebar-state="collapsed"] #desktop-titlebar-capture-controls {
+  padding-left: 3rem;
+}
+
+[data-desktop-platform="darwin"]
+  .desktop-titlebar[data-sidebar-state="collapsed"]
+  #desktop-titlebar-capture-controls {
+  padding-left: 8rem;
 }
 
 [data-desktop-platform="darwin"] .desktop-titlebar-brand,

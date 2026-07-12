@@ -149,7 +149,7 @@ export function CaptureControlBar({
             className={
                 isDesktop
                     ? 'flex min-w-0 flex-1 items-center gap-2'
-                    : 'bg-background flex h-12 shrink-0 items-center gap-2 border-b px-3'
+                    : 'bg-background flex h-10 shrink-0 items-center gap-2 border-b px-3'
             }
         >
             <InterfaceSelector
@@ -210,7 +210,7 @@ export function CaptureControlBar({
                     : null
                 : lifecycleControls}
             {isDesktop && followControl ? (
-                <div className="bg-background flex h-12 shrink-0 items-center border-b px-3">
+                <div className="bg-background flex h-10 shrink-0 items-center border-b px-3">
                     {followControl}
                 </div>
             ) : null}

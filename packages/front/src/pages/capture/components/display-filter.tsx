@@ -9,7 +9,7 @@ export function DisplayFilter({
     onChange: (value: string) => void
 }) {
     return (
-        <div className="bg-background flex h-11 shrink-0 items-center gap-3 border-b px-3">
+        <div className="bg-background flex h-10 shrink-0 items-center gap-2.5 border-b px-3">
             <Search className="text-muted-foreground size-4" />
             <Input
                 value={value}

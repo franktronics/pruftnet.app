@@ -1,7 +1,7 @@
 import type { PacketSummary, RegistrySnapshot } from '@repo/shared/capture'
 import type { PacketDetailView } from './packet-detail'
 
-export const PACKET_ROW_HEIGHT = 38
+export const PACKET_ROW_HEIGHT = 34
 export const BYTE_ROW_WIDTH = 16
 export const NO_PARENT = 0xffff_ffff
 

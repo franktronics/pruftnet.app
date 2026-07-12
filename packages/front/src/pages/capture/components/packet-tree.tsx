@@ -1,11 +1,12 @@
 import type { RegistrySnapshot } from '@repo/shared/capture'
-import { ChevronRight } from 'lucide-react'
+import { Check, ChevronRight, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { fieldLabel, NO_PARENT, visibleTreeRows } from '../model/packet-view'
 import type { PacketDetailView } from '../model/packet-detail'
 import { PanelShell } from './panel-shell'
 import type { PacketDetailState } from '../hooks/use-packet-detail'
+import { copyText } from '../model/copy-text'
 
 export function PacketTree({
     detail,
@@ -21,7 +22,10 @@ export function PacketTree({
     detailState?: PacketDetailState
 }) {
     const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set([0]))
+    const [copyFeedback, setCopyFeedback] = useState<{ index: number; copied: boolean }>()
     const treeRef = useRef<HTMLDivElement>(null)
+    const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+    useEffect(() => () => clearTimeout(feedbackTimer.current), [])
     useEffect(() => {
         if (selected === undefined) return
         treeRef.current
@@ -70,6 +74,12 @@ export function PacketTree({
         }
         if (key === 'Enter' || key === ' ') toggle(row.index)
     }
+    async function handleCopy(index: number, value: string) {
+        const copied = await copyText(value)
+        setCopyFeedback({ index, copied })
+        clearTimeout(feedbackTimer.current)
+        feedbackTimer.current = setTimeout(() => setCopyFeedback(undefined), 1_500)
+    }
     return (
         <PanelShell title="Structure" meta={`${packetDetail.nodes.length} fields`}>
             <div
@@ -84,6 +94,18 @@ export function PacketTree({
                 }
                 className="focus-visible:ring-ring h-full overflow-auto py-1 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                 onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
+                        const selectedIndex = selected
+                        const value =
+                            selectedIndex === undefined
+                                ? undefined
+                                : packetDetail.nodes[selectedIndex]?.value
+                        if (value && selectedIndex !== undefined) {
+                            event.preventDefault()
+                            void handleCopy(selectedIndex, value)
+                        }
+                        return
+                    }
                     if (
                         ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Enter', ' '].includes(
                             event.key,
@@ -110,7 +132,7 @@ export function PacketTree({
                             aria-selected={selected === row.index}
                             onClick={() => onSelect(row.index)}
                             onDoubleClick={() => row.hasChildren && toggle(row.index)}
-                            className={`flex h-8 cursor-default items-center gap-1 pr-2 text-sm ${selected === row.index ? 'bg-accent shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/40'}`}
+                            className={`group/tree-row flex h-8 cursor-default items-center gap-1 pr-2 text-[13px] ${selected === row.index ? 'bg-accent shadow-[inset_2px_0_0_var(--primary)]' : 'hover:bg-muted/50'}`}
                             style={{ paddingLeft: row.depth * 14 + 6 }}
                         >
                             <button
@@ -130,14 +152,33 @@ export function PacketTree({
                                 {fieldLabel(registry, node.fieldId)}
                             </span>
                             {value && (
-                                <span className="text-muted-foreground ml-auto max-w-[48%] truncate font-mono text-xs">
-                                    {value}
-                                </span>
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto flex max-w-[52%] min-w-0 items-center gap-1 rounded-sm px-1 font-mono text-xs outline-none focus-visible:ring-1 focus-visible:[&_svg]:opacity-60"
+                                    aria-label={`Copy ${fieldLabel(registry, node.fieldId)} value`}
+                                    title="Copy value"
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        void handleCopy(row.index, value)
+                                    }}
+                                    onDoubleClick={(event) => event.stopPropagation()}
+                                    onKeyDown={(event) => event.stopPropagation()}
+                                >
+                                    <span className="truncate">{value}</span>
+                                    {copyFeedback?.index === row.index && copyFeedback.copied ? (
+                                        <Check className="text-primary size-3 shrink-0" />
+                                    ) : (
+                                        <Copy className="size-3 shrink-0 opacity-0 transition-opacity group-hover/tree-row:opacity-60 group-focus-visible/tree-row:opacity-60" />
+                                    )}
+                                </button>
                             )}
                         </div>
                     )
                 })}
             </div>
+            <span className="sr-only" aria-live="polite">
+                {copyFeedback ? (copyFeedback.copied ? 'Value copied' : 'Copy failed') : ''}
+            </span>
         </PanelShell>
     )
 }

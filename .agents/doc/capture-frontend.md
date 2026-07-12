@@ -12,6 +12,8 @@ The control bar uses a searchable Command popover for explicit multi-interface s
 
 In Electron, interface selection, settings, Start/Stop, and capture state are portaled into a dedicated non-draggable titlebar slot. Follow tail remains in the workspace because it controls presentation rather than capture lifecycle. Server/browser mode renders both groups in the normal workspace toolbar. This uses one control implementation rather than duplicating desktop and browser state.
 
+The application sidebar uses off-canvas collapse on desktop. Closing it removes the complete sidebar instead of retaining an icon rail. The titlebar or web-header trigger and `Cmd/Ctrl+B` remain available to reopen it. Electron titlebar offsets preserve native controls on macOS, Windows, and Linux.
+
 ## Workspace
 
 The desktop layout is a nested resizable workspace:
@@ -56,7 +58,7 @@ React never parses or verifies PRT2 on the UI thread. Detail cache keys contain 
 
 ## Tree And Bytes
 
-The tree is reconstructed from ordered `parentIndex` records and preserves repeated fields. Registry descriptors provide labels. Tree rows expose typed values and source-relative ranges with accessible disclosure navigation.
+The tree is reconstructed from ordered `parentIndex` records and preserves repeated fields. Registry descriptors provide labels. Tree rows expose typed values and source-relative ranges with accessible disclosure navigation. A field value can be copied directly without changing row selection; `Cmd/Ctrl+C` copies the selected field value. Clipboard failures use a synchronous browser fallback and an accessible status announcement.
 
 Opening a packet detail does not select a tree node or byte range. Selecting a source-backed tree node chooses its data source and highlights the exact byte range; selecting a byte then chooses the deepest matching node. Derived sources are supported by the model even though current stateless parsing normally exposes only source zero.
 
@@ -64,7 +66,7 @@ The byte pane virtualizes 16-byte rows, renders synchronized hex and ASCII, and 
 
 ## Statistics
 
-The statistics pane shows current counters and health only. It does not build historical graphs.
+The statistics pane stores at most 120 adjacent one-second snapshots in frontend memory. It shows packet-seen/parsed rates and maximum interface-ring pressure as two-minute sparklines. History is capture-local and is neither sent to nor persisted by the backend.
 
 - packets seen, enqueued, parsed, and retained;
 - calculated packet rate from adjacent snapshots;
@@ -74,6 +76,8 @@ The statistics pane shows current counters and health only. It does not build hi
 - per-interface thread and ring state.
 
 All counters remain decimal strings or `bigint`; they are never coerced to JavaScript numbers.
+
+Rate deltas remain `bigint`. Only bounded chart coordinates are converted to numbers, with values above the safe integer range clamped for visualization. Chart animation stops with the capture and honors the operating system reduced-motion preference.
 
 ## Package Boundaries
 
