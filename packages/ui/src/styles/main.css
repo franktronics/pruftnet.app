@@ -121,6 +121,26 @@
   * {
     @apply border-border outline-ring/50;
     }
+  :where(*) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    }
+  :where(*)::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    }
+  :where(*)::-webkit-scrollbar-track,
+  :where(*)::-webkit-scrollbar-corner {
+    background: transparent;
+    }
+  :where(*)::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    transition: background-color 150ms ease;
+    }
+  :where(*)::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+    }
   body {
     @apply bg-background text-foreground;
     }

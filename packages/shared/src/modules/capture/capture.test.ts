@@ -49,15 +49,31 @@ describe('capture schemas', () => {
             _tag: 'Replay',
             fileId: 'capture.pcap',
         })
-        expect(decode(CaptureSource, { _tag: 'Live', interfaces: ['en0', 'lo0'] })).toMatchObject({
+        const live = {
             _tag: 'Live',
-            interfaces: ['en0', 'lo0'],
-        })
+            interfaces: [
+                {
+                    name: 'en0',
+                    promiscuous: true,
+                    monitorMode: false,
+                    linkType: null,
+                    timestampType: null,
+                },
+            ],
+            bpfFilter: 'tcp',
+            snaplen: 65_535,
+            pcapBufferSizeBytes: 8 * 1024 * 1024,
+            readTimeoutMs: 10,
+            dispatchBatchSize: 64,
+            ringSlots: 1024,
+            maxTotalRingBytes: 128 * 1024 * 1024,
+        }
+        expect(decode(CaptureSource, live)).toMatchObject(live)
 
         for (const malformed of [
             { _tag: 'Replay', fileId: '' },
             { _tag: 'Live', interfaces: [] },
-            { _tag: 'Live', interfaces: [''] },
+            { ...live, interfaces: [{ ...live.interfaces[0], name: '' }] },
             { _tag: 'Unknown', fileId: 'capture.pcap' },
             { fileId: 'capture.pcap' },
         ]) {

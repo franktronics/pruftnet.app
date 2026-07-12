@@ -1,4 +1,4 @@
-import { CaptureRpcs, CaptureSourceUnsupported } from '@repo/shared/capture'
+import { CaptureRpcs } from '@repo/shared/capture'
 import { Effect } from 'effect'
 
 import { Capture } from './service'
@@ -8,15 +8,12 @@ export const CaptureHandlers = CaptureRpcs.toLayer(
         const capture = yield* Capture
         return {
             ListCaptureInterfaces: capture.listInterfaces,
-            GetCaptureInterfaceCapabilities: ({ name }) => capture.capabilities(name),
+            GetCaptureInterfaceCapabilities: ({ name, monitorMode }) =>
+                capture.capabilities(name, monitorMode),
             StartCapture: ({ source }) =>
                 source._tag === 'Replay'
                     ? capture.startReplay(source.fileId)
-                    : Effect.fail(
-                          new CaptureSourceUnsupported({
-                              title: 'Live capture is not supported yet',
-                          }),
-                      ),
+                    : capture.startLive(source),
             StopCapture: ({ captureId }) => capture.stop(captureId),
             GetCaptureSession: ({ captureId }) => capture.session(captureId),
             ReadPacketSummaries: ({ captureId, afterCursor, limit }) =>

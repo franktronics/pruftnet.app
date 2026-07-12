@@ -1,27 +1,20 @@
-import { useNavigate, useParams } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useParams } from '@tanstack/react-router'
+import { useDeferredValue, useState } from 'react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/molecules'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@repo/ui/organisms'
 
 import { CaptureStatsPanel } from './components/capture-stats'
-import { captureKeys } from './api/capture-queries'
+import { CaptureControlBar } from './components/capture-control-bar'
+import { DisplayFilter } from './components/display-filter'
 import { PacketBytes } from './components/packet-bytes'
 import { PacketTable } from './components/packet-table'
 import { PacketTree } from './components/packet-tree'
-import { ReplayToolbar } from './components/replay-toolbar'
-import {
-    useCaptureEvents,
-    useCaptureRegistry,
-    useCaptureSession,
-    useCaptureStats,
-    useStartReplayCapture,
-    useStopCapture,
-} from './hooks/use-capture'
+import { useCaptureRegistry, useCaptureSession, useCaptureStats } from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
+import { BasicErrorAlert } from '../../components/error-renderer'
 
 export function CapturePage() {
     const { captureId } = useParams({ from: '/capture/$captureId' })
@@ -29,18 +22,15 @@ export function CapturePage() {
 }
 
 function CaptureWorkspace({ captureId }: { captureId: string }) {
-    const navigate = useNavigate()
-    const queryClient = useQueryClient()
     const session = useCaptureSession(captureId)
     const stats = useCaptureStats(captureId, session.data?.state)
     const summaries = usePacketSummaries(captureId)
     const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
-    const stop = useStopCapture(captureId)
-    const restart = useStartReplayCapture()
-    const events = useCaptureEvents(captureId, session.data?.state)
     const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
     const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
     const [following, setFollowing] = useState(true)
+    const [displayFilter, setDisplayFilter] = useState('')
+    const deferredDisplayFilter = useDeferredValue(displayFilter.trim().toLowerCase())
     const detail = usePacketDetail(
         captureId,
         selected?.summary.key.packetId,
@@ -53,35 +43,43 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         detail.data,
         detail.error,
     )
-    const eventWarning = events.data?.events.findLast(
-        (event) =>
-            event.severity === 'warning' ||
-            event.severity === 'error' ||
-            event.severity === 'fatal',
-    )
+    const visibleRows = deferredDisplayFilter
+        ? summaries.rows.filter(
+              (row) =>
+                  row.kind === 'gap' ||
+                  row.summary.columns.some((column) =>
+                      column.value.toLowerCase().includes(deferredDisplayFilter),
+                  ),
+          )
+        : summaries.rows
+    const emptyMessage = summaries.isPending
+        ? 'Waiting for packet summaries...'
+        : session.data?.state === 'running' || session.data?.state === 'starting'
+          ? 'Waiting for packets...'
+          : 'No packets were captured.'
 
-    async function handleRestart() {
-        if (session.data?.source._tag !== 'Replay') return
-        try {
-            const next = await restart.mutateAsync(session.data.source.fileId)
-            queryClient.setQueryData(captureKeys.session(next.captureId), next)
-            queryClient.removeQueries({ queryKey: [...captureKeys.all, captureId] })
-            await navigate({ to: '/capture/$captureId', params: { captureId: next.captureId } })
-        } catch {
-            /* Mutation state renders the failure. */
-        }
+    if (session.isPending) {
+        return (
+            <div className="bg-background grid h-full place-items-center" role="status">
+                <p className="text-muted-foreground text-sm">Loading capture session...</p>
+            </div>
+        )
     }
+    if (session.error) {
+        return (
+            <div className="bg-background h-full p-6">
+                <BasicErrorAlert error={session.error} onRetry={() => void session.refetch()} />
+            </div>
+        )
+    }
+
     function handleSelect(row: Extract<SummaryRow, { kind: 'packet' }>) {
         setSelected(row)
         setFollowing(false)
     }
     const selectedKey = selected ? packetKey(selected.summary) : undefined
     const selectedNode =
-        selectedKey && nodeSelection?.packet === selectedKey
-            ? nodeSelection.index
-            : detail.data
-              ? 0
-              : undefined
+        selectedKey && nodeSelection?.packet === selectedKey ? nodeSelection.index : undefined
     const selectNode = (index: number) =>
         selectedKey && setNodeSelection({ packet: selectedKey, index })
     const range =
@@ -97,36 +95,25 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
             className="bg-border flex h-full min-h-0 flex-col overflow-hidden"
             data-capture-id={captureId}
         >
-            <ReplayToolbar
-                captureId={captureId}
-                state={session.data?.state}
+            <CaptureControlBar
+                session={session.data}
                 following={following}
                 onFollowingChange={setFollowing}
-                onStop={() => stop.mutate()}
-                onRestart={() => void handleRestart()}
-                stopping={stop.isPending}
-                restarting={restart.isPending}
-                error={restart.error ?? session.error}
-                warning={
-                    events.data?.gap
-                        ? 'Some capture events are no longer retained.'
-                        : events.error
-                          ? 'Capture events are unavailable.'
-                          : eventWarning?.message
-                }
             />
+            <DisplayFilter value={displayFilter} onChange={setDisplayFilter} />
             <div className="hidden min-h-0 flex-1 md:block">
                 <ResizablePanelGroup orientation="vertical">
                     <ResizablePanel defaultSize="58%" minSize="30%">
                         <ResizablePanelGroup orientation="horizontal">
                             <ResizablePanel defaultSize="74%" minSize="45%">
                                 <PacketTable
-                                    rows={summaries.rows}
+                                    rows={visibleRows}
                                     originTimestampNs={summaries.originTimestampNs}
                                     selectedKey={selectedKey}
                                     onSelect={handleSelect}
                                     following={following}
                                     onPauseFollowing={() => setFollowing(false)}
+                                    emptyMessage={emptyMessage}
                                 />
                             </ResizablePanel>
                             <ResizableHandle />
@@ -164,12 +151,13 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
             <div className="flex min-h-0 flex-1 flex-col md:hidden">
                 <div className="min-h-0 flex-[3]">
                     <PacketTable
-                        rows={summaries.rows}
+                        rows={visibleRows}
                         originTimestampNs={summaries.originTimestampNs}
                         selectedKey={selectedKey}
                         onSelect={handleSelect}
                         following={following}
                         onPauseFollowing={() => setFollowing(false)}
+                        emptyMessage={emptyMessage}
                     />
                 </div>
                 <Tabs

@@ -153,9 +153,9 @@ if(WIN32)
 endif()
 target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
 
-add_executable(pruftnet_replay_worker tools/replay_worker.cpp)
-target_include_directories(pruftnet_replay_worker PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(pruftnet_replay_worker PRIVATE pruftnet_sniffing)
+add_executable(pruftnet_capture_worker tools/capture_worker.cpp)
+target_include_directories(pruftnet_capture_worker PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(pruftnet_capture_worker PRIVATE pruftnet_sniffing)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT PRUFTNET_IPO_SUPPORTED OUTPUT PRUFTNET_IPO_ERROR LANGUAGES CXX)

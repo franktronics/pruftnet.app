@@ -1,6 +1,6 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { Settings, Files } from 'lucide-react'
-import type { ComponentProps } from 'react'
+import { useState, type ComponentProps } from 'react'
 
 import { Button, Separator } from '@repo/ui/atoms'
 import {
@@ -22,6 +22,7 @@ import {
 import pruftnetIcon from '../assets/pruftnet-icon.png'
 import { ThemeToggle } from '../theme/theme-toggle'
 import { cn } from '@repo/utils'
+import { DesktopTitlebarTarget } from '../components/desktop-titlebar-context'
 
 const mainNavigation = [
     {
@@ -48,30 +49,37 @@ export function DashboardLayout() {
         select: (state) => state.location.pathname,
     })
     const isDesktop = typeof window !== 'undefined' && Boolean(window.pruftnet)
-    const isCapture = pathname.startsWith('/capture/')
+    const isCaptureWorkspace = pathname === '/' || pathname.startsWith('/capture/')
+    const [titlebarTarget, setTitlebarTarget] = useState<HTMLDivElement | null>(null)
 
     return (
         <SidebarProvider className={isDesktop ? 'flex-col' : undefined}>
-            {isDesktop && <DesktopTitleBar />}
-            <div className="flex min-h-0 flex-1">
-                <AppSidebar pathname={pathname} isDesktop={isDesktop} />
-                <SidebarInset className="min-h-0 overflow-hidden">
-                    {!isDesktop && <WebHeader />}
-                    <main
-                        className={cn(
-                            'flex min-h-0 flex-1 flex-col',
-                            isCapture ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
-                        )}
-                    >
-                        <Outlet />
-                    </main>
-                </SidebarInset>
-            </div>
+            <DesktopTitlebarTarget.Provider value={titlebarTarget}>
+                {isDesktop && <DesktopTitleBar captureControlsRef={setTitlebarTarget} />}
+                <div className="flex min-h-0 flex-1">
+                    <AppSidebar pathname={pathname} isDesktop={isDesktop} />
+                    <SidebarInset className="min-h-0 overflow-hidden">
+                        {!isDesktop && <WebHeader />}
+                        <main
+                            className={cn(
+                                'flex min-h-0 flex-1 flex-col',
+                                isCaptureWorkspace ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
+                            )}
+                        >
+                            <Outlet />
+                        </main>
+                    </SidebarInset>
+                </div>
+            </DesktopTitlebarTarget.Provider>
         </SidebarProvider>
     )
 }
 
-function DesktopTitleBar() {
+function DesktopTitleBar({
+    captureControlsRef,
+}: {
+    captureControlsRef: (element: HTMLDivElement | null) => void
+}) {
     const { state } = useSidebar()
     const desktopPlatform = typeof window === 'undefined' ? undefined : window.pruftnet?.platform
 
@@ -98,7 +106,11 @@ function DesktopTitleBar() {
                 className="desktop-titlebar-trigger no-drag-region absolute z-10 active:translate-y-0"
             />
 
-            <div className="min-w-0 flex-1" />
+            <div
+                ref={captureControlsRef}
+                id="desktop-titlebar-capture-controls"
+                className="flex min-w-0 flex-1 items-center px-3"
+            />
             <div className="desktop-titlebar-actions no-drag-region flex items-center gap-1 px-3">
                 <SettingsButton />
                 <ThemeToggle />

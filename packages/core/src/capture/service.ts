@@ -8,6 +8,8 @@ import {
     PacketSummary,
     PacketSummaryBatch,
     PacketSummaryColumn,
+    LiveCaptureFailed,
+    LiveCaptureSource,
     ReplayCaptureSource,
     RegistrySnapshot,
     CaptureRpcError,
@@ -23,7 +25,7 @@ import {
 } from '@repo/shared/capture'
 import { Context, Effect, Either, Layer, Schema } from 'effect'
 
-import { ReplayWorker, ReplayWorkerError } from './replay-worker'
+import { CaptureWorker, CaptureWorkerError } from './replay-worker'
 
 const Decimal = Schema.String.pipe(Schema.pattern(/^(0|[1-9][0-9]*)$/))
 const SessionResponse = Schema.Struct({
@@ -37,6 +39,13 @@ const SessionResponse = Schema.Struct({
     startedAtNs: Decimal,
     stoppedAtNs: Schema.NullOr(Decimal),
     failure: Schema.NullOr(Schema.String),
+})
+const HelloResponse = Schema.Struct({
+    v: Schema.Literal(1),
+    id: Schema.String,
+    ok: Schema.Literal(true),
+    protocolVersion: Schema.Literal(1),
+    features: Schema.Array(Schema.String),
 })
 const InterfacesResponse = Schema.Struct({
     v: Schema.Literal(1),
@@ -136,6 +145,7 @@ const FailureResponse = Schema.Struct({
     id: Schema.String,
     ok: Schema.Literal(false),
     error: Schema.String,
+    message: Schema.optional(Schema.String),
     captureHigh: Schema.optional(Decimal),
     captureLow: Schema.optional(Decimal),
 })
@@ -145,7 +155,7 @@ const captureId = (high: string, low: string) =>
 
 type CaptureError = Schema.Schema.Type<typeof CaptureRpcError>
 
-const rpcError = (error: ReplayWorkerError): CaptureError =>
+const rpcError = (error: CaptureWorkerError): CaptureError =>
     error.reason === 'spawn' || error.reason === 'write'
         ? new CaptureWorkerUnavailable({
               title: 'Capture worker unavailable',
@@ -162,7 +172,9 @@ export interface CaptureService {
     readonly listInterfaces: () => Effect.Effect<ReadonlyArray<CaptureInterface>, CaptureError>
     readonly capabilities: (
         name: string,
+        monitorMode: boolean,
     ) => Effect.Effect<CaptureInterfaceCapabilities, CaptureError>
+    readonly startLive: (source: LiveCaptureSource) => Effect.Effect<CaptureSession, CaptureError>
     readonly startReplay: (fileId: string) => Effect.Effect<CaptureSession, CaptureError>
     readonly stop: (capture: string) => Effect.Effect<CaptureSession, CaptureError>
     readonly session: (capture: string) => Effect.Effect<CaptureSession, CaptureError>
@@ -185,7 +197,7 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
     static readonly layer = Layer.effect(
         Capture,
         Effect.gen(function* () {
-            const worker = yield* ReplayWorker
+            const worker = yield* CaptureWorker
             const lifecycle = yield* Effect.makeSemaphore(1)
             const decode = <A, I, R>(schema: Schema.Schema<A, I, R>, value: unknown) =>
                 Schema.decodeUnknown(schema)(value).pipe(
@@ -199,6 +211,7 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                 )
             const workerFailure = (
                 error: Schema.Schema.Type<typeof FailureResponse>,
+                live = false,
             ): CaptureError => {
                 switch (error.error) {
                     case 'unknown_path_token':
@@ -217,7 +230,35 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                         return new PacketEvicted({ title: 'Packet was evicted' })
                     case 'not_found':
                         return new PacketNotFound({ title: 'Packet not found' })
+                    case 'InvalidOptions':
+                    case 'MemoryBudgetExceeded':
+                        return new CaptureOptionsInvalid({
+                            title: 'Invalid live capture options',
+                            message: error.message,
+                        })
+                    case 'PermissionDenied':
+                        return new LiveCaptureFailed({
+                            title: 'Capture permission denied',
+                            message: error.message,
+                            whatToDo:
+                                'Grant packet-capture permission to the capture worker, then try again.',
+                            retryable: true,
+                        })
+                    case 'DeviceNotFound':
+                        return new LiveCaptureFailed({
+                            title: 'Capture interface is unavailable',
+                            message: error.message,
+                            whatToDo:
+                                'Refresh the interface list and select an available interface.',
+                            retryable: true,
+                        })
                     default:
+                        if (live)
+                            return new LiveCaptureFailed({
+                                title: 'Live capture could not start',
+                                message: error.message ?? error.error,
+                                retryable: true,
+                            })
                         return new ReplayFailed({
                             title: 'Replay operation failed',
                             message: error.error,
@@ -230,7 +271,8 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
             ) {
                 const value = yield* worker.request(command).pipe(Effect.mapError(rpcError))
                 const failure = Schema.decodeUnknownEither(FailureResponse)(value)
-                if (Either.isRight(failure)) return yield* workerFailure(failure.right)
+                if (Either.isRight(failure))
+                    return yield* workerFailure(failure.right, command.op === 'startLive')
                 return yield* decode(schema, value)
             })
             const toSession = (
@@ -249,7 +291,7 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
             let source: CaptureSession['source'] = new ReplayCaptureSource({ fileId: 'unknown' })
             let activeSession: CaptureSession | undefined
             const sessionCall = Effect.fn('Capture.sessionCall')(function* (
-                op: 'start' | 'stop' | 'status',
+                op: 'start' | 'startLive' | 'stop' | 'status',
                 sessionSource: CaptureSession['source'],
                 extra: Readonly<Record<string, unknown>> = {},
             ) {
@@ -285,12 +327,23 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
             })
             const locked = <A, E>(effect: Effect.Effect<A, E>) => lifecycle.withPermits(1)(effect)
 
+            const hello = yield* call(HelloResponse, { op: 'hello' })
+            if (!hello.features.includes('live')) {
+                return yield* new CaptureWorkerUnavailable({
+                    title: 'Capture worker does not support live capture',
+                })
+            }
+
             return Capture.of({
                 listInterfaces: Effect.fn('Capture.listInterfaces')(function* () {
                     return (yield* call(InterfacesResponse, { op: 'interfaces' })).interfaces
                 }),
-                capabilities: Effect.fn('Capture.capabilities')(function* (name) {
-                    const raw = yield* call(CapabilitiesResponse, { op: 'capabilities', name })
+                capabilities: Effect.fn('Capture.capabilities')(function* (name, monitorMode) {
+                    const raw = yield* call(CapabilitiesResponse, {
+                        op: 'capabilities',
+                        name,
+                        monitorMode,
+                    })
                     return new CaptureInterfaceCapabilities(raw)
                 }),
                 startReplay: Effect.fn('Capture.startReplay')(function* (fileId) {
@@ -303,10 +356,50 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                             ) {
                                 return yield* new CaptureAlreadyRunning({
                                     title: 'A capture is already running',
+                                    activeCaptureId: activeSession.captureId,
                                 })
                             }
                             const nextSource = new ReplayCaptureSource({ fileId })
                             return yield* sessionCall('start', nextSource, { token: fileId })
+                        }),
+                    )
+                }),
+                startLive: Effect.fn('Capture.startLive')(function* (nextSource) {
+                    return yield* locked(
+                        Effect.gen(function* () {
+                            if (
+                                activeSession &&
+                                (activeSession.state === 'starting' ||
+                                    activeSession.state === 'running')
+                            ) {
+                                return yield* new CaptureAlreadyRunning({
+                                    title: 'A capture is already running',
+                                    activeCaptureId: activeSession.captureId,
+                                })
+                            }
+                            const interfaces = Object.fromEntries(
+                                nextSource.interfaces.flatMap((item, index) => [
+                                    [`interface${index}Name`, item.name],
+                                    [`interface${index}Promiscuous`, item.promiscuous],
+                                    [`interface${index}MonitorMode`, item.monitorMode],
+                                    [
+                                        `interface${index}LinkType`,
+                                        item.linkType === null ? 0 : item.linkType + 1,
+                                    ],
+                                    [`interface${index}TimestampType`, item.timestampType ?? ''],
+                                ]),
+                            )
+                            return yield* sessionCall('startLive', nextSource, {
+                                interfaceCount: nextSource.interfaces.length,
+                                bpfFilter: nextSource.bpfFilter,
+                                snaplen: nextSource.snaplen,
+                                pcapBufferSizeBytes: nextSource.pcapBufferSizeBytes,
+                                readTimeoutMs: nextSource.readTimeoutMs,
+                                dispatchBatchSize: nextSource.dispatchBatchSize,
+                                ringSlots: nextSource.ringSlots,
+                                maxTotalRingBytes: nextSource.maxTotalRingBytes,
+                                ...interfaces,
+                            })
                         }),
                     )
                 }),

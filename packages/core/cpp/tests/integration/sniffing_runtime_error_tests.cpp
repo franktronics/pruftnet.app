@@ -155,8 +155,8 @@ void ring_memory_budget_failure_closes_open_sources() {
     assert(error.has_value());
     assert(error->code == SnifferErrorCode::MemoryBudgetExceeded);
     assert(!runtime.is_running());
-    assert(source_ptr->open_calls == 1);
-    assert(source_ptr->close_calls >= 1);
+    assert(source_ptr->open_calls == 0);
+    assert(source_ptr->close_calls == 0);
     assert(!source_ptr->is_open());
 }
 

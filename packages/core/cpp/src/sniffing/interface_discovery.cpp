@@ -105,7 +105,8 @@ std::variant<std::vector<CaptureInterfaceDescriptor>, SnifferError> list_capture
 }
 
 std::variant<CaptureInterfaceCapabilities, SnifferError> read_interface_capabilities(
-    const std::string& interface_name) {
+    const std::string& interface_name,
+    bool monitor_mode) {
     char errbuf[PCAP_ERRBUF_SIZE] = {};
     pcap_t* raw_handle = pcap_create(interface_name.c_str(), errbuf);
     if (raw_handle == nullptr) {
@@ -145,6 +146,48 @@ std::variant<CaptureInterfaceCapabilities, SnifferError> read_interface_capabili
     }
 #endif
 
+    if (monitor_mode) {
+#if defined(PRUFTNET_HAVE_PCAP_SET_RFMON)
+        const auto rfmon_set_status = pcap_set_rfmon(handle.get(), 1);
+        if (rfmon_set_status != 0) {
+            return make_sniffer_error(
+                SnifferErrorCode::PcapConfigureFailed,
+                SnifferSeverity::Error,
+                "Failed to enable monitor mode during capability discovery.",
+                interface_name,
+                rfmon_set_status,
+                pcap_geterr(handle.get()));
+        }
+#else
+        return make_sniffer_error(
+            SnifferErrorCode::PcapConfigureFailed,
+            SnifferSeverity::Error,
+            "This libpcap build does not support monitor mode.",
+            interface_name);
+#endif
+    }
+
+    const auto activate_status = pcap_activate(handle.get());
+    if (activate_status < 0) {
+        return make_sniffer_error(
+            SnifferErrorCode::PcapActivateFailed,
+            SnifferSeverity::Error,
+            "Failed to activate pcap session for interface capability discovery.",
+            interface_name,
+            activate_status,
+            pcap_geterr(handle.get()));
+    }
+    if (activate_status > 0) {
+        capabilities.warnings.push_back(warning_event(
+            SnifferErrorCode::PcapActivateFailed,
+            "pcap_activate returned a warning during capability discovery.",
+            interface_name,
+            activate_status,
+            internal::pcap_status_to_string(activate_status)));
+    }
+
+    const auto default_link_type = pcap_datalink(handle.get());
+
 #if defined(PRUFTNET_HAVE_PCAP_LIST_DATALINKS) && defined(PRUFTNET_HAVE_PCAP_FREE_DATALINKS)
     int* link_types = nullptr;
     const auto link_type_count = pcap_list_datalinks(handle.get(), &link_types);
@@ -156,7 +199,7 @@ std::variant<CaptureInterfaceCapabilities, SnifferError> read_interface_capabili
             descriptor.value = link_types[index];
             descriptor.name = datalink_name(descriptor.value);
             descriptor.description = datalink_description(descriptor.value);
-            descriptor.is_default = index == 0;
+            descriptor.is_default = descriptor.value == default_link_type;
             capabilities.link_types.push_back(std::move(descriptor));
         }
     } else {

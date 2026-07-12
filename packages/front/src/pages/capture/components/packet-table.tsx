@@ -19,6 +19,7 @@ export function PacketTable({
     following,
     onPauseFollowing,
     originTimestampNs,
+    emptyMessage,
 }: {
     rows: readonly SummaryRow[]
     selectedKey?: string
@@ -26,6 +27,7 @@ export function PacketTable({
     following: boolean
     onPauseFollowing: () => void
     originTimestampNs?: string
+    emptyMessage?: string
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const virtualizer = useVirtualizer({
@@ -93,7 +95,7 @@ export function PacketTable({
             >
                 <div
                     role="row"
-                    className={`bg-muted text-muted-foreground sticky top-0 z-10 grid h-7 min-w-max items-center border-b px-2 text-[10px] font-semibold tracking-wide uppercase ${grid}`}
+                    className={`bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 min-w-max items-center border-b px-2 text-xs font-semibold tracking-wide uppercase ${grid}`}
                 >
                     <span role="columnheader">No.</span>
                     <span role="columnheader">Time</span>
@@ -108,6 +110,14 @@ export function PacketTable({
                     </span>
                 </div>
                 <div className="relative min-w-max" style={{ height: virtualizer.getTotalSize() }}>
+                    {rows.length === 0 && emptyMessage ? (
+                        <div
+                            className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
+                            role="status"
+                        >
+                            {emptyMessage}
+                        </div>
+                    ) : null}
                     {virtualizer.getVirtualItems().map((item) => {
                         const row = rows[item.index]
                         if (!row) return null
@@ -133,7 +143,7 @@ export function PacketTable({
                                 role="row"
                                 aria-selected={selected}
                                 onClick={() => onSelect(row)}
-                                className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b px-2 font-mono text-[11px] tabular-nums ${grid} ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
+                                className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b px-2 font-mono text-xs tabular-nums ${grid} ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
                                 style={{
                                     height: item.size,
                                     transform: `translateY(${item.start}px)`,

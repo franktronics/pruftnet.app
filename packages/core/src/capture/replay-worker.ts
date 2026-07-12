@@ -104,13 +104,13 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                 child.on('exit', (code, signal) => {
                     terminal ??= new ReplayWorkerError({
                         reason: 'exit',
-                        message: `Replay worker exited (code ${String(code)}, signal ${String(signal)})${stderr ? `: ${stderr}` : ''}`,
+                        message: `Capture worker exited (code ${String(code)}, signal ${String(signal)})${stderr ? `: ${stderr}` : ''}`,
                     })
                 })
                 child.on('error', (error) => {
                     terminal ??= new ReplayWorkerError({
                         reason: 'spawn',
-                        message: `Replay worker error: ${error.message}`,
+                        message: `Capture worker error: ${error.message}`,
                     })
                 })
                 child.stdout.setEncoding('utf8')
@@ -129,7 +129,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                             if (Buffer.byteLength(line) > MAX_COMMAND_BYTES) {
                                 return yield* new ReplayWorkerError({
                                     reason: 'protocol',
-                                    message: 'Replay worker command exceeds the maximum line size',
+                                    message: 'Capture worker command exceeds the maximum line size',
                                 })
                             }
                             yield* Effect.async<void, ReplayWorkerError>((resume) => {
@@ -169,7 +169,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                                         new ReplayWorkerError({
                                                             reason: 'response_limit',
                                                             message:
-                                                                'Replay worker response exceeds the maximum line size',
+                                                                'Capture worker response exceeds the maximum line size',
                                                         }),
                                                     ),
                                                 ),
@@ -189,7 +189,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                                         new ReplayWorkerError({
                                                             reason: 'timeout',
                                                             message:
-                                                                'Replay worker response timed out',
+                                                                'Capture worker response timed out',
                                                         }),
                                                     ),
                                                 ),
@@ -202,7 +202,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                         terminate(
                                             new ReplayWorkerError({
                                                 reason: 'protocol',
-                                                message: 'Replay worker request was interrupted',
+                                                message: 'Capture worker request was interrupted',
                                             }),
                                         )
                                     })
@@ -214,7 +214,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                     terminate(
                                         new ReplayWorkerError({
                                             reason: 'protocol',
-                                            message: `Replay worker returned invalid JSON: ${String(cause)}`,
+                                            message: `Capture worker returned invalid JSON: ${String(cause)}`,
                                         }),
                                     ),
                             })
@@ -225,7 +225,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                     terminate(
                                         new ReplayWorkerError({
                                             reason: 'protocol',
-                                            message: `Replay worker returned an invalid envelope: ${String(cause)}`,
+                                            message: `Capture worker returned an invalid envelope: ${String(cause)}`,
                                         }),
                                     ),
                                 ),
@@ -234,7 +234,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                                 return yield* terminate(
                                     new ReplayWorkerError({
                                         reason: 'protocol',
-                                        message: `Replay worker response ID ${envelope.id} does not match request ID ${id}`,
+                                        message: `Capture worker response ID ${envelope.id} does not match request ID ${id}`,
                                     }),
                                 )
                             }
@@ -247,3 +247,6 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
         )
     }
 }
+
+export { ReplayWorker as CaptureWorker, ReplayWorkerError as CaptureWorkerError }
+export type CaptureWorkerOptions = ReplayWorkerOptions

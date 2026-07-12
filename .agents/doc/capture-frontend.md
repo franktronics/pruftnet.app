@@ -1,14 +1,16 @@
 # Capture Frontend
 
-The first capture workspace is driven by deterministic replay. It uses the real C++ parser and backend contracts, but it does not expose capture-file import or live interface controls yet.
+The capture workspace supports local live capture through the real libpcap/Npcap worker. Deterministic replay remains available as a development tool; user capture-file import is deferred.
 
 ## Entry And Routing
 
 `/capture/$captureId` owns the full-height packet inspection workspace.
 
-Home displays `Start replay` only in development when `VITE_REPLAY_FILE_ID` is configured. The value is an opaque ID resolved by the backend `PRUFTNET_REPLAY_FILES` allowlist. The UI never accepts or displays a filesystem path.
+The home route is the idle capture workspace, not a separate setup page. The control bar, display filter, packet table, statistics, packet tree, and bytes pane are mounted before capture starts and keep the same geometry after navigation to a running capture.
 
-The previous single-interface selector based on `node:os` has been removed from the capture entry flow. A multi-interface selector will be designed with live capture, using C++ capture descriptors and capabilities as its source of truth and OS addresses only as optional enrichment.
+The control bar uses a searchable Command popover for explicit multi-interface selection. The adjacent settings button opens a modal containing BPF capture filter, per-interface promiscuous/monitor/DLT/timestamp options, and bounded snapshot/kernel-buffer/ring settings. Selection is never inferred from `node:os` data. Replay has no entry point in the product UI; it remains backend test infrastructure until capture-file import is implemented.
+
+In Electron, interface selection, settings, Start/Stop, and capture state are portaled into a dedicated non-draggable titlebar slot. Follow tail remains in the workspace because it controls presentation rather than capture lifecycle. Server/browser mode renders both groups in the normal workspace toolbar. This uses one control implementation rather than duplicating desktop and browser state.
 
 ## Workspace
 
@@ -22,7 +24,7 @@ packet tree  | bytes
 
 Narrow viewports keep the packet table primary and expose Statistics, Structure, and Bytes through tabs.
 
-The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests.
+The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests. The display-filter field currently performs deferred, case-insensitive matching against summary columns; protocol-expression parsing is deferred.
 
 ## Summary State
 
@@ -56,7 +58,7 @@ React never parses or verifies PRT2 on the UI thread. Detail cache keys contain 
 
 The tree is reconstructed from ordered `parentIndex` records and preserves repeated fields. Registry descriptors provide labels. Tree rows expose typed values and source-relative ranges with accessible disclosure navigation.
 
-Selecting a source-backed tree node chooses its data source and highlights the exact byte range. Selecting a byte chooses the deepest matching node. Derived sources are supported by the model even though current stateless parsing normally exposes only source zero.
+Opening a packet detail does not select a tree node or byte range. Selecting a source-backed tree node chooses its data source and highlights the exact byte range; selecting a byte then chooses the deepest matching node. Derived sources are supported by the model even though current stateless parsing normally exposes only source zero.
 
 The byte pane virtualizes 16-byte rows, renders synchronized hex and ASCII, and uses one keyboard focus surface rather than one tab stop per byte.
 
@@ -79,12 +81,11 @@ All counters remain decimal strings or `bigint`; they are never coerced to JavaS
 
 Capture-specific components, hooks, models, and query policies stay under `packages/front/src/pages/capture`. Generic UI primitives remain in `packages/ui`.
 
-## Deferred Live Work
+## Deferred Work
 
-- capture interface multi-selection;
 - joining libpcap descriptors with OS address/MAC data;
-- promiscuous and monitor mode;
-- BPF, snaplen, DLT, and timestamp controls;
-- shared-memory live packet batches;
+- explicit DLT and timestamp selection in the frontend;
+- shared-memory packet batches and persistent pcapng output for sustained high-rate capture;
+- packaged privilege installation and helper signing on Linux, macOS, and Windows;
 - remote authentication and authorization;
 - user capture-file import and history.

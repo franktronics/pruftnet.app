@@ -62,6 +62,7 @@ public:
     int open_calls = 0;
     int close_calls = 0;
     int interrupt_calls = 0;
+    mutable int read_stats_calls = 0;
 
     pruftnet::sniffing::internal::PacketSourceOpenResult open() override {
         ++open_calls;
@@ -159,6 +160,7 @@ public:
 
     [[nodiscard]] std::variant<pruftnet::sniffing::internal::PcapKernelStats, pruftnet::sniffing::SnifferError>
     read_stats() const override {
+        ++read_stats_calls;
         if (stats_error) {
             return pruftnet::sniffing::make_sniffer_error(
                 pruftnet::sniffing::SnifferErrorCode::StatsReadFailed,

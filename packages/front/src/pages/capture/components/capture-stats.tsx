@@ -22,7 +22,7 @@ export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; stat
         return (
             <PanelShell title="Statistics">
                 <div className="text-muted-foreground grid h-full place-items-center text-xs">
-                    Waiting for counters
+                    {state ? 'Waiting for counters' : 'Capture is idle'}
                 </div>
             </PanelShell>
         )
@@ -60,7 +60,7 @@ export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; stat
                 <dl className="grid grid-cols-2 gap-x-4">
                     {items.map(([label, value]) => (
                         <div key={label} className="border-b py-2">
-                            <dt className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                            <dt className="text-muted-foreground text-xs tracking-wide uppercase">
                                 {label}
                             </dt>
                             <dd className="mt-0.5 font-mono text-sm tabular-nums">{value}</dd>
@@ -74,12 +74,12 @@ export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; stat
                                 {item.interfaceName || `Interface ${item.interfaceId}`}
                             </h3>
                             <span
-                                className={`text-[10px] ${item.captureThreadRunning ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+                                className={`text-xs ${item.captureThreadRunning ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
                             >
                                 {item.captureThreadRunning ? 'running' : 'stopped'}
                             </span>
                         </div>
-                        <dl className="text-muted-foreground mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                        <dl className="text-muted-foreground mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                             <div>
                                 Ring{' '}
                                 <span className="text-foreground font-mono">

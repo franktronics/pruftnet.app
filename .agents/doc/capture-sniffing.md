@@ -74,6 +74,6 @@ Tests are organized under `packages/core/cpp/tests`:
 
 Default accepted link types are `DLT_EN10MB`, `DLT_LINUX_SLL`, `DLT_LINUX_SLL2`, `DLT_RAW`, `DLT_NULL`, and `DLT_LOOP` when available in local libpcap headers.
 
-The first Node/server integration now uses `pruftnet_replay_worker` as a separate C++ process for deterministic offline replay. It provides bounded raw retention, cursor-based summary and event journals, stats, registry descriptors, and selected PRT2 detail. See `backend-sniffing.md` for its Effect RPC and HTTP contracts.
+The Node/server integration uses `pruftnet_capture_worker` as a separate C++ process for live capture and deterministic offline replay. It provides bounded raw retention, cursor-based summary and event journals, stats, registry descriptors, and selected PRT2 detail. See `backend-sniffing.md` for its Effect RPC and HTTP contracts.
 
 The replay milestone uses bounded NDJSON control messages and a private base64 detail response. Production live integration must replace packet data transfer with shared-memory batches rather than converting packet data into JS objects.

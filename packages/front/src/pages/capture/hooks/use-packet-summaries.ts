@@ -109,5 +109,5 @@ export function usePacketSummaries(captureId: string) {
         refetchInterval: (current) => (current.state.data?.complete ? false : 500),
         staleTime: 0,
     })
-    return { ...(query.data ?? emptySummaryState), error: query.error }
+    return { ...(query.data ?? emptySummaryState), error: query.error, isPending: query.isPending }
 }

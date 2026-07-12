@@ -7,7 +7,7 @@ import { expect, test } from 'vitest'
 import { ReplayWorker } from './replay-worker'
 import { Capture } from './service'
 
-const workerPath = resolve(process.cwd(), 'cpp/build/pruftnet_replay_worker')
+const workerPath = resolve(process.cwd(), 'cpp/build/pruftnet_capture_worker')
 const fixturePath = resolve(process.cwd(), 'cpp/tests/fixtures/ethernet_ipv4_tcp_udp.pcap')
 
 test.runIf(existsSync(workerPath))(

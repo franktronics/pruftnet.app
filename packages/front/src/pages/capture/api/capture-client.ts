@@ -1,5 +1,5 @@
 import { RpcClient } from '@effect/rpc'
-import { CaptureRpcs, ReplayCaptureSource } from '@repo/shared/capture'
+import { CaptureRpcs, type LiveCaptureSource, ReplayCaptureSource } from '@repo/shared/capture'
 import { Effect } from 'effect'
 
 import { RpcClientLive } from '../../../config/rpc-client'
@@ -18,9 +18,13 @@ async function call<A>(
 }
 
 export const captureClient = {
+    interfaces: () => call((client) => client.ListCaptureInterfaces()),
+    capabilities: (name: string, monitorMode: boolean) =>
+        call((client) => client.GetCaptureInterfaceCapabilities({ name, monitorMode })),
     session: (captureId: string) => call((client) => client.GetCaptureSession({ captureId })),
-    start: (fileId: string) =>
+    startReplay: (fileId: string) =>
         call((client) => client.StartCapture({ source: new ReplayCaptureSource({ fileId }) })),
+    startLive: (source: LiveCaptureSource) => call((client) => client.StartCapture({ source })),
     stop: (captureId: string) => call((client) => client.StopCapture({ captureId })),
     stats: (captureId: string) => call((client) => client.GetCaptureStats({ captureId })),
     summaries: (captureId: string, afterCursor?: string) =>

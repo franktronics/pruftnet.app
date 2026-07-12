@@ -3,7 +3,10 @@ import { BasicErrorFields } from '../../utils/error-model'
 
 export class CaptureAlreadyRunning extends Schema.TaggedError<CaptureAlreadyRunning>()(
     'CaptureAlreadyRunning',
-    BasicErrorFields,
+    {
+        ...BasicErrorFields,
+        activeCaptureId: Schema.optional(Schema.String.pipe(Schema.pattern(/^[0-9a-f]{32}$/))),
+    },
 ) {}
 export class CaptureNotFound extends Schema.TaggedError<CaptureNotFound>()(
     'CaptureNotFound',
@@ -41,6 +44,10 @@ export class ReplayFailed extends Schema.TaggedError<ReplayFailed>()(
     'ReplayFailed',
     BasicErrorFields,
 ) {}
+export class LiveCaptureFailed extends Schema.TaggedError<LiveCaptureFailed>()(
+    'LiveCaptureFailed',
+    BasicErrorFields,
+) {}
 
 export const CaptureRpcError = Schema.Union(
     CaptureAlreadyRunning,
@@ -53,4 +60,5 @@ export const CaptureRpcError = Schema.Union(
     PacketEvicted,
     RegistryUnavailable,
     ReplayFailed,
+    LiveCaptureFailed,
 )

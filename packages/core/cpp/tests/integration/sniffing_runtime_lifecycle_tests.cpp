@@ -94,6 +94,7 @@ void destructor_stops_running_runtime() {
 
 void offline_style_empty_source_stops_at_eof() {
     auto source = std::make_unique<FakePacketSource>();
+    auto* source_ptr = source.get();
     source->after_packets_status = PacketSourceDispatchStatus::EndOfInput;
 
     std::atomic<std::uint64_t> callbacks{0};
@@ -115,6 +116,7 @@ void offline_style_empty_source_stops_at_eof() {
     assert(stats.packets_seen == 0);
     assert(stats.packets_enqueued == 0);
     assert(stats.packets_parsed == 0);
+    assert(source_ptr->read_stats_calls == 1);
 }
 
 void callback_can_request_stop_without_deadlock() {

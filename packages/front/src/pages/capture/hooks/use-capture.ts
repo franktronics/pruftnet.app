@@ -1,16 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import type { CaptureEvent, CaptureEventBatch } from '@repo/shared/capture'
+import type { CaptureEvent, CaptureEventBatch, LiveCaptureSource } from '@repo/shared/capture'
 
 import { captureClient } from '../api/capture-client'
 import {
     captureKeys,
+    captureInterfacesOptions,
     captureSessionOptions,
     captureStatsOptions,
     registryOptions,
 } from '../api/capture-queries'
 
 export const useCaptureSession = (captureId: string) => useQuery(captureSessionOptions(captureId))
+export const useCaptureInterfaces = () => useQuery(captureInterfacesOptions())
 const isTerminal = (state: string | undefined) =>
     state === 'stopped' || state === 'completed' || state === 'failed'
 export function useCaptureStats(captureId: string, state?: string) {
@@ -28,7 +30,13 @@ export const useCaptureRegistry = (revision: string | undefined) =>
     useQuery({ ...registryOptions(revision ?? ''), enabled: Boolean(revision) })
 
 export function useStartReplayCapture() {
-    return useMutation({ mutationFn: captureClient.start })
+    return useMutation({ mutationFn: captureClient.startReplay })
+}
+
+export function useStartLiveCapture() {
+    return useMutation({
+        mutationFn: (source: LiveCaptureSource) => captureClient.startLive(source),
+    })
 }
 
 export function useStopCapture(captureId: string) {

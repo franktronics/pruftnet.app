@@ -9,7 +9,7 @@
     "scripts": {
         "codegen:packet-tree": "cmake --build cpp/build --target packet_tree_ts_codegen",
         "lint": "eslint .",
-        "test": "cmake --build cpp/build --target packet_tree_fixture_writer parser_packet_tree_fixture_writer pruftnet_replay_worker && vitest run",
+        "test": "cmake --build cpp/build --target packet_tree_fixture_writer parser_packet_tree_fixture_writer pruftnet_capture_worker && vitest run",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {

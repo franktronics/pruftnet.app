@@ -1,5 +1,6 @@
 import { Cause, Effect, Layer } from 'effect'
 import { describe, expect, test } from 'vitest'
+import { LiveCaptureInterface, LiveCaptureSource } from '@repo/shared/capture'
 
 import { ReplayWorker } from './replay-worker'
 import { Capture } from './service'
@@ -11,11 +12,22 @@ const provideCapture = <A, E>(effect: Effect.Effect<A, E, Capture>, response: un
             Effect.provide(
                 Layer.succeed(
                     ReplayWorker,
-                    ReplayWorker.of({ request: () => Effect.succeed(response) }),
+                    ReplayWorker.of({
+                        request: (command) =>
+                            Effect.succeed(command.op === 'hello' ? helloResponse : response),
+                    }),
                 ),
             ),
         ),
     )
+
+const helloResponse = {
+    v: 1,
+    id: 'hello',
+    ok: true,
+    protocolVersion: 1,
+    features: ['live', 'replay', 'packetDetail'],
+} as const
 
 describe('Capture', () => {
     test('converts capture halves to canonical hex and preserves u64 decimal strings', async () => {
@@ -48,6 +60,7 @@ describe('Capture', () => {
         let command: Readonly<Record<string, unknown>> | undefined
         const worker = ReplayWorker.of({
             request: (value) => {
+                if (value.op === 'hello') return Effect.succeed(helloResponse)
                 command = value
                 if (value.op === 'start') {
                     return Effect.succeed({
@@ -158,50 +171,52 @@ describe('Capture', () => {
         const worker = ReplayWorker.of({
             request: (command) =>
                 Effect.succeed(
-                    command.op === 'start'
-                        ? {
-                              v: 1,
-                              id: '1',
-                              ok: true,
-                              captureHigh: '0',
-                              captureLow: '1',
-                              state: 'completed',
-                              registryRevision: '1',
-                              startedAtNs: '1',
-                              stoppedAtNs: '2',
-                              failure: null,
-                          }
-                        : {
-                              v: 1,
-                              id: '2',
-                              ok: true,
-                              captureHigh: '0',
-                              captureLow: '1',
-                              firstCursor: '1',
-                              lastCursor: '1',
-                              oldestAvailableCursor: '1',
-                              newestAvailableCursor: '1',
-                              gapBeforeFirst: false,
-                              captureComplete: true,
-                              summaries: [
-                                  {
-                                      cursor: '1',
-                                      captureHigh: '0',
-                                      captureLow: '2',
-                                      packetId: '1',
-                                      timestampNs: '1',
-                                      interfaceId: 0,
-                                      capturedLength: 1,
-                                      wireLength: 1,
-                                      linkType: 1,
-                                      captureFlags: 0,
-                                      parseCondition: 'complete',
-                                      protocolPath: [1],
-                                      columns: [],
-                                      analysisRevision: '1',
-                                  },
-                              ],
-                          },
+                    command.op === 'hello'
+                        ? helloResponse
+                        : command.op === 'start'
+                          ? {
+                                v: 1,
+                                id: '1',
+                                ok: true,
+                                captureHigh: '0',
+                                captureLow: '1',
+                                state: 'completed',
+                                registryRevision: '1',
+                                startedAtNs: '1',
+                                stoppedAtNs: '2',
+                                failure: null,
+                            }
+                          : {
+                                v: 1,
+                                id: '2',
+                                ok: true,
+                                captureHigh: '0',
+                                captureLow: '1',
+                                firstCursor: '1',
+                                lastCursor: '1',
+                                oldestAvailableCursor: '1',
+                                newestAvailableCursor: '1',
+                                gapBeforeFirst: false,
+                                captureComplete: true,
+                                summaries: [
+                                    {
+                                        cursor: '1',
+                                        captureHigh: '0',
+                                        captureLow: '2',
+                                        packetId: '1',
+                                        timestampNs: '1',
+                                        interfaceId: 0,
+                                        capturedLength: 1,
+                                        wireLength: 1,
+                                        linkType: 1,
+                                        captureFlags: 0,
+                                        parseCondition: 'complete',
+                                        protocolPath: [1],
+                                        columns: [],
+                                        analysisRevision: '1',
+                                    },
+                                ],
+                            },
                 ),
         })
         const exit = await Effect.runPromiseExit(
@@ -221,29 +236,31 @@ describe('Capture', () => {
     test('serializes concurrent starts and sends only one start command', async () => {
         let starts = 0
         const worker = ReplayWorker.of({
-            request: () =>
-                Effect.async((resume) => {
-                    starts++
-                    const timer = setTimeout(
-                        () =>
-                            resume(
-                                Effect.succeed({
-                                    v: 1,
-                                    id: String(starts),
-                                    ok: true,
-                                    captureHigh: '0',
-                                    captureLow: '1',
-                                    state: 'running',
-                                    registryRevision: '1',
-                                    startedAtNs: '1',
-                                    stoppedAtNs: null,
-                                    failure: null,
-                                }),
-                            ),
-                        10,
-                    )
-                    return Effect.sync(() => clearTimeout(timer))
-                }),
+            request: (command) =>
+                command.op === 'hello'
+                    ? Effect.succeed(helloResponse)
+                    : Effect.async((resume) => {
+                          starts++
+                          const timer = setTimeout(
+                              () =>
+                                  resume(
+                                      Effect.succeed({
+                                          v: 1,
+                                          id: String(starts),
+                                          ok: true,
+                                          captureHigh: '0',
+                                          captureLow: '1',
+                                          state: 'running',
+                                          registryRevision: '1',
+                                          startedAtNs: '1',
+                                          stoppedAtNs: null,
+                                          failure: null,
+                                      }),
+                                  ),
+                              10,
+                          )
+                          return Effect.sync(() => clearTimeout(timer))
+                      }),
         })
         const exits = await Effect.runPromise(
             Effect.gen(function* () {
@@ -264,5 +281,67 @@ describe('Capture', () => {
         expect(exits.filter((exit) => exit._tag === 'Success')).toHaveLength(1)
         const failure = exits.find((exit) => exit._tag === 'Failure')
         expect(failure && Cause.pretty(failure.cause)).toContain('CaptureAlreadyRunning')
+    })
+
+    test('serializes bounded live options for the native worker', async () => {
+        let sent: Readonly<Record<string, unknown>> | undefined
+        const worker = ReplayWorker.of({
+            request: (command) => {
+                if (command.op === 'hello') return Effect.succeed(helloResponse)
+                sent = command
+                return Effect.succeed({
+                    v: 1,
+                    id: '1',
+                    ok: true,
+                    captureHigh: '0',
+                    captureLow: '9',
+                    state: 'running',
+                    registryRevision: '1',
+                    startedAtNs: '1',
+                    stoppedAtNs: null,
+                    failure: null,
+                })
+            },
+        })
+        const source = new LiveCaptureSource({
+            interfaces: [
+                new LiveCaptureInterface({
+                    name: 'en0',
+                    promiscuous: true,
+                    monitorMode: false,
+                    linkType: null,
+                    timestampType: null,
+                }),
+            ],
+            bpfFilter: 'tcp port 443',
+            snaplen: 65_535,
+            pcapBufferSizeBytes: 8 * 1024 * 1024,
+            readTimeoutMs: 10,
+            dispatchBatchSize: 64,
+            ringSlots: 1024,
+            maxTotalRingBytes: 128 * 1024 * 1024,
+        })
+
+        const session = await Effect.runPromise(
+            Effect.gen(function* () {
+                return yield* (yield* Capture).startLive(source)
+            }).pipe(
+                Effect.provide(Capture.layer),
+                Effect.provide(Layer.succeed(ReplayWorker, worker)),
+            ),
+        )
+
+        expect(session.source).toEqual(source)
+        expect(sent).toMatchObject({
+            op: 'startLive',
+            interfaceCount: 1,
+            interface0Name: 'en0',
+            interface0Promiscuous: true,
+            interface0MonitorMode: false,
+            interface0LinkType: 0,
+            interface0TimestampType: '',
+            bpfFilter: 'tcp port 443',
+            snaplen: 65_535,
+        })
     })
 })

@@ -12,8 +12,25 @@ export class ReplayCaptureSource extends Schema.TaggedClass<ReplayCaptureSource>
     fileId: Schema.NonEmptyString,
 }) {}
 
+export class LiveCaptureInterface extends Schema.Class<LiveCaptureInterface>(
+    'LiveCaptureInterface',
+)({
+    name: Schema.NonEmptyString,
+    promiscuous: Schema.Boolean,
+    monitorMode: Schema.Boolean,
+    linkType: Schema.NullOr(Schema.Int),
+    timestampType: Schema.NullOr(Schema.NonEmptyString),
+}) {}
+
 export class LiveCaptureSource extends Schema.TaggedClass<LiveCaptureSource>()('Live', {
-    interfaces: Schema.NonEmptyArray(Schema.NonEmptyString),
+    interfaces: Schema.NonEmptyArray(LiveCaptureInterface),
+    bpfFilter: Schema.String.pipe(Schema.maxLength(4096)),
+    snaplen: Schema.Number.pipe(Schema.int(), Schema.between(64, 262_144)),
+    pcapBufferSizeBytes: Schema.Number.pipe(Schema.int(), Schema.between(1_048_576, 536_870_912)),
+    readTimeoutMs: Schema.Number.pipe(Schema.int(), Schema.between(0, 10_000)),
+    dispatchBatchSize: Schema.Number.pipe(Schema.int(), Schema.between(1, 4096)),
+    ringSlots: Schema.Number.pipe(Schema.int(), Schema.between(64, 262_144)),
+    maxTotalRingBytes: Schema.Number.pipe(Schema.int(), Schema.between(1_048_576, 1_073_741_824)),
 }) {}
 
 export const CaptureSource = Schema.Union(ReplayCaptureSource, LiveCaptureSource)
@@ -50,6 +67,7 @@ export class CaptureInterfaceRequest extends Schema.Class<CaptureInterfaceReques
     'CaptureInterfaceRequest',
 )({
     name: Schema.NonEmptyString,
+    monitorMode: Schema.Boolean,
 }) {}
 
 export class CaptureInterface extends Schema.Class<CaptureInterface>('CaptureInterface')({
@@ -66,6 +84,7 @@ export class CaptureLinkType extends Schema.Class<CaptureLinkType>('CaptureLinkT
     name: Schema.String,
     description: Schema.String,
     isDefault: Schema.Boolean,
+    parserSupported: Schema.Boolean,
 }) {}
 
 export class CaptureTimestampType extends Schema.Class<CaptureTimestampType>(

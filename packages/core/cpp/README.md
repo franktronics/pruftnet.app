@@ -80,7 +80,7 @@ Per-interface live options are modeled after Wireshark/dumpcap capture options:
 - `requested_link_type`: optional requested DLT/link-layer type.
 - `timestamp_type`: optional pcap timestamp type name.
 
-Global options currently cover parser/runtime policy: accepted link types, stats polling interval, and optional total ring-memory budget via `max_total_ring_bytes`.
+Global options currently cover parser/runtime policy: accepted link types, stats polling interval, and optional total ring-memory budget via `max_total_ring_bytes`. Native validation also enforces the public `kMax*` limits declared in `sniffer_options.hpp`, unique interface IDs and names, and an overflow-safe ring-memory estimate before opening capture sources.
 
 Capture interface discovery is available through:
 
@@ -88,7 +88,7 @@ Capture interface discovery is available through:
 #include <pruftnet/sniffing/interface_discovery.hpp>
 ```
 
-Use `list_capture_interfaces()` and `read_interface_capabilities()` when building UI or preflight validation. These APIs use libpcap/Npcap as the source of truth for capturable interfaces, supported DLT/link-layer types, timestamp types, and monitor-mode capability.
+Use `list_capture_interfaces()` and `read_interface_capabilities(name, monitor_mode)` when building UI or preflight validation. Capability discovery activates the handle, applies monitor-mode intent before activation, and uses libpcap/Npcap as the source of truth for the actual default DLT, supported DLT/link-layer types, timestamp types, and monitor-mode capability.
 
 ## Build
 

@@ -20,7 +20,7 @@ export function PacketBytes({
     detailState?: PacketDetailState
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
-    const [activeByte, setActiveByte] = useState(0)
+    const [activeByte, setActiveByte] = useState<number>()
     const source =
         detail?.sources.find((candidate) => candidate.id === (range?.sourceId ?? 0)) ??
         detail?.sources.find((candidate) => candidate.id === 0) ??
@@ -35,7 +35,7 @@ export function PacketBytes({
         overscan: 16,
     })
     useEffect(() => {
-        setActiveByte(0)
+        setActiveByte(undefined)
         scrollRef.current?.scrollTo({ top: 0 })
         virtualizer.scrollToIndex(0)
     }, [sourceId, virtualizer])
@@ -61,10 +61,14 @@ export function PacketBytes({
                       : 0
         if (!delta && event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
-        select(delta ? Math.max(0, Math.min(bytes.length - 1, activeByte + delta)) : activeByte)
+        const current = activeByte ?? 0
+        select(delta ? Math.max(0, Math.min(bytes.length - 1, current + delta)) : current)
     }
     function byteProps(index: number) {
-        return { onClick: () => select(index), 'aria-selected': index === activeByte }
+        return {
+            onClick: () => select(index),
+            'aria-selected': activeByte !== undefined && index === activeByte,
+        }
     }
     const emptyMessage =
         detailState?.kind === 'loading'
@@ -100,11 +104,12 @@ export function PacketBytes({
             ) : (
                 <div
                     ref={scrollRef}
-                    className="focus-visible:ring-ring h-full overflow-auto font-mono text-[11px] leading-6 tabular-nums focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                    className="focus-visible:ring-ring h-full overflow-auto font-mono text-xs leading-6 tabular-nums focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                     role="grid"
                     tabIndex={0}
                     aria-label="Packet bytes"
                     aria-activedescendant={
+                        activeByte !== undefined &&
                         virtualizer
                             .getVirtualItems()
                             .some(

@@ -1,23 +1,24 @@
 # Backend Sniffing
 
-The first backend sniffing slice provides deterministic offline replay through the real C++ capture and parser pipeline. Both Electron and server mode consume the same services from `packages/core`.
+The backend supports local live capture and deterministic offline replay through the same C++ capture and parser pipeline. Both Electron and server mode consume the same services from `packages/core`.
 
 ## Architecture
 
 ```text
 Effect RPC / binary packet route
   -> Capture service
-  -> supervised pruftnet_replay_worker process
-  -> OfflinePcapPacketSource
+  -> supervised pruftnet_capture_worker process
+  -> LivePcapPacketSource or OfflinePcapPacketSource
   -> NetworkSniffer parser callback
+  -> bounded non-blocking worker queue
   -> bounded raw store + summary/event journals
 ```
 
-The worker remains a separate process. The current replay protocol uses bounded newline-delimited JSON for low-rate control and summary data. Selected packet trees are PRT2 FlatBuffers. The worker currently base64-encodes PRT2 on the private process boundary; the public HTTP route decodes it and returns binary bytes. Production live capture must replace packet data transfer with the planned shared-memory batching path.
+The worker remains a separate process and advertises its protocol features through a startup handshake. Bounded newline-delimited JSON carries low-rate control, summaries, events, and stats. The native parser callback uses `try_lock` to enqueue copied packet data and summaries into a queue bounded to 4,096 packets and 64 MiB; a worker consumer owns retention and journal writes. Saturation drops new entries and increments `ipcDrops` instead of blocking the parser. Selected packet trees are PRT2 FlatBuffers. The worker base64-encodes PRT2 only on the private process boundary; the public HTTP route decodes it and returns binary bytes.
 
 ## Configuration
 
-`PRUFTNET_REPLAY_WORKER_PATH` selects the worker executable. The development default is `packages/core/cpp/build/pruftnet_replay_worker` relative to the process working directory.
+`PRUFTNET_CAPTURE_WORKER_PATH` selects the worker executable. Without an override, development walks upward from the process working directory and finds `packages/core/cpp/build/pruftnet_capture_worker`; Windows multi-config `Debug` and `Release` directories are also supported. This keeps filtered server and desktop scripts independent of their application-specific working directories.
 
 `PRUFTNET_REPLAY_FILES` is a JSON object mapping opaque local file IDs to trusted pcap paths:
 
@@ -43,7 +44,7 @@ The shared contract is exported from `@repo/shared/capture` and merged into `App
 - `GetCaptureStats`
 - `ReadCaptureEvents`
 
-`StartCapture` accepts tagged `Replay` and `Live` sources. `Live` currently returns `CaptureSourceUnsupported` so the frontend contract does not need to change when live capture is enabled.
+`StartCapture` accepts tagged `Replay` and `Live` sources. Live requests contain non-empty per-interface options plus bounded BPF, snapshot, pcap-buffer, read-timeout, dispatch-batch, ring-slot, and total-ring-memory settings. The server and native engine both validate resource limits.
 
 Only one capture is active per backend process. Capture-bound operations carry and verify the complete 128-bit capture identity in TypeScript and C++. A stale client cannot stop or read a replacement capture.
 
@@ -77,7 +78,7 @@ The current response does not yet include packet metadata in a selected-packet F
 
 ## Retention And Loss
 
-The replay worker currently retains at most 4,096 packets, 64 MiB of packet payload bytes, 8,192 summaries, and a bounded event journal. A new capture clears all previous session stores and resets delivery cursors.
+The capture worker retains at most 4,096 packets, 64 MiB of packet payload bytes, 8,192 summaries, and a bounded event journal. A new capture clears all previous session stores and resets delivery cursors.
 
 Raw bytes are copied before the C++ parser callback returns. Selected detail reparses retained bytes on demand rather than retaining every parsed tree.
 
@@ -92,7 +93,7 @@ Loss remains separated into:
 
 Exact bounded tombstones distinguish an evicted retained packet from a sparse, rejected, or never-observed packet ID. Once an old tombstone ages out, lookup conservatively returns unknown rather than falsely claiming eviction.
 
-The replay callback currently uses short blocking critical sections to avoid timing-dependent loss during deterministic replay. This policy must not be reused unchanged for high-volume live capture; live integration requires a bounded producer queue or shared-memory handoff outside the parser callback.
+The live parser callback never waits for retention readers. A bounded worker queue separates parsing from stores, with explicit loss accounting. Shared memory and persistent pcapng remain future work for sustained high-rate or long-running captures.
 
 ## Process And Security
 

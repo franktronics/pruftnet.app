@@ -42,6 +42,7 @@ struct CaptureInterfaceCapabilities {
 [[nodiscard]] std::variant<std::vector<CaptureInterfaceDescriptor>, SnifferError> list_capture_interfaces();
 
 [[nodiscard]] std::variant<CaptureInterfaceCapabilities, SnifferError> read_interface_capabilities(
-    const std::string& interface_name);
+    const std::string& interface_name,
+    bool monitor_mode = false);
 
 } // namespace pruftnet::sniffing

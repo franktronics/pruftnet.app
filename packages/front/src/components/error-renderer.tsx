@@ -50,13 +50,7 @@ export function BasicErrorAlert({ error, className, onRetry }: BasicErrorAlertPr
                 </AlertDescription>
             ) : null}
             {canRetry ? (
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={onRetry}
-                    className="h-7 w-fit px-2 text-xs"
-                >
+                <Button type="button" variant="outline" onClick={onRetry} className="w-fit">
                     <RotateCw className="size-3" />
                     Retry
                 </Button>

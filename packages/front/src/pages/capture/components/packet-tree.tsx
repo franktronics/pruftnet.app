@@ -110,7 +110,7 @@ export function PacketTree({
                             aria-selected={selected === row.index}
                             onClick={() => onSelect(row.index)}
                             onDoubleClick={() => row.hasChildren && toggle(row.index)}
-                            className={`flex h-7 cursor-default items-center gap-1 pr-2 text-xs ${selected === row.index ? 'bg-accent shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/40'}`}
+                            className={`flex h-8 cursor-default items-center gap-1 pr-2 text-sm ${selected === row.index ? 'bg-accent shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/40'}`}
                             style={{ paddingLeft: row.depth * 14 + 6 }}
                         >
                             <button
@@ -130,7 +130,7 @@ export function PacketTree({
                                 {fieldLabel(registry, node.fieldId)}
                             </span>
                             {value && (
-                                <span className="text-muted-foreground ml-auto max-w-[48%] truncate font-mono text-[10px]">
+                                <span className="text-muted-foreground ml-auto max-w-[48%] truncate font-mono text-xs">
                                     {value}
                                 </span>
                             )}

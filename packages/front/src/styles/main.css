@@ -80,6 +80,12 @@
 
 [data-desktop-platform="darwin"]
   .desktop-titlebar[data-sidebar-state="collapsed"]
+  .desktop-titlebar-sidebar-boundary {
+  width: 8.5rem;
+}
+
+[data-desktop-platform="darwin"]
+  .desktop-titlebar[data-sidebar-state="collapsed"]
   .desktop-titlebar-trigger {
   left: 88px;
 }

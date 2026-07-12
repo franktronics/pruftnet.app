@@ -653,7 +653,7 @@ void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
             context.options.id));
     }
 
-    update_kernel_stats_if_due(context);
+    update_kernel_stats(context);
     context.capture_done.store(true, std::memory_order_release);
     context.capture_thread_running.store(false, std::memory_order_release);
 
@@ -798,6 +798,10 @@ void SnifferRuntime::update_kernel_stats_if_due(InterfaceCaptureContext& context
     }
 
     context.next_stats_at = now + options_.stats_poll_interval;
+    update_kernel_stats(context);
+}
+
+void SnifferRuntime::update_kernel_stats(InterfaceCaptureContext& context) noexcept {
     auto result = context.source->read_stats();
     if (std::holds_alternative<PcapKernelStats>(result)) {
         const auto kernel_stats = std::get<PcapKernelStats>(result);

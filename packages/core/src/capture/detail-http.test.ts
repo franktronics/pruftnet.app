@@ -28,6 +28,7 @@ const resetCancellation = () => {
 const capture = Capture.of({
     listInterfaces: () => Effect.die('unused'),
     capabilities: () => Effect.die('unused'),
+    startLive: () => Effect.die('unused'),
     startReplay: () => Effect.die('unused'),
     stop: () => Effect.die('unused'),
     session: () => Effect.die('unused'),

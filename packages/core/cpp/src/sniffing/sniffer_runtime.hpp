@@ -68,6 +68,7 @@ private:
                      const pcap_pkthdr &header,
                      const unsigned char *bytes) noexcept;
   void update_kernel_stats_if_due(InterfaceCaptureContext &context) noexcept;
+  void update_kernel_stats(InterfaceCaptureContext &context) noexcept;
   [[nodiscard]] bool all_capture_done() const noexcept;
   [[nodiscard]] bool any_ring_has_packets() const noexcept;
   void emit_event(const SnifferEvent &event) const noexcept;

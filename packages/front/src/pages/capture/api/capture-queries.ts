@@ -4,6 +4,9 @@ import { captureClient } from './capture-client'
 
 export const captureKeys = {
     all: ['capture'] as const,
+    interfaces: () => [...captureKeys.all, 'interfaces'] as const,
+    capabilities: (name: string, monitorMode: boolean) =>
+        [...captureKeys.all, 'capabilities', name, monitorMode] as const,
     session: (captureId: string) => [...captureKeys.all, captureId, 'session'] as const,
     stats: (captureId: string) => [...captureKeys.all, captureId, 'stats'] as const,
     events: (captureId: string) => [...captureKeys.all, captureId, 'events'] as const,
@@ -24,6 +27,20 @@ export const captureKeys = {
             registryRevision,
         ] as const,
 }
+
+export const captureInterfacesOptions = () =>
+    queryOptions({
+        queryKey: captureKeys.interfaces(),
+        queryFn: captureClient.interfaces,
+        staleTime: 5_000,
+    })
+
+export const captureCapabilitiesOptions = (name: string, monitorMode: boolean) =>
+    queryOptions({
+        queryKey: captureKeys.capabilities(name, monitorMode),
+        queryFn: () => captureClient.capabilities(name, monitorMode),
+        staleTime: 30_000,
+    })
 
 export const captureSessionOptions = (captureId: string) =>
     queryOptions({

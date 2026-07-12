@@ -44,6 +44,13 @@ export async function createMainWindow(options: MainWindowOptions) {
             height: 48,
         },
         trafficLightPosition: { x: 16, y: 15 },
+        ...(process.platform === 'darwin'
+            ? {
+                  backgroundColor: '#00000000',
+                  vibrancy: 'sidebar' as const,
+                  visualEffectState: 'active' as const,
+              }
+            : {}),
         webPreferences: {
             additionalArguments: [`--pruftnet-rpc-url=${options.rpcUrl}`],
             contextIsolation: true,

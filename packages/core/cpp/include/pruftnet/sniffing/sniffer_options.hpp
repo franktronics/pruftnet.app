@@ -13,6 +13,12 @@ namespace pruftnet::sniffing {
 std::vector<int> default_supported_link_types();
 
 inline constexpr std::uint32_t kAutoInterfaceId = std::numeric_limits<std::uint32_t>::max();
+inline constexpr std::size_t kMaxCaptureInterfaces = 256;
+inline constexpr int kMaxSnapshotLength = 262'144;
+inline constexpr int kMaxPcapBufferSizeBytes = 1'073'741'824;
+inline constexpr int kMaxReadTimeoutMs = 86'400'000;
+inline constexpr int kMaxPcapDispatchBatchSize = 65'536;
+inline constexpr std::size_t kMaxRingSlots = 16'777'216;
 
 struct SnifferInterfaceOptions {
     std::string name;

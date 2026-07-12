@@ -132,7 +132,7 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
     } else {
         warnings.push_back(SnifferEvent::from_error(make_sniffer_error(
             SnifferErrorCode::PcapConfigureFailed,
-            SnifferSeverity::Warning,
+            SnifferSeverity::Info,
             "Nanosecond timestamps are not supported; falling back to microsecond timestamps.",
             options_.name,
             nano_status,
@@ -247,13 +247,28 @@ PacketSourceOpenResult LivePcapPacketSource::open() {
     }
 
     if (!options_.bpf_filter.empty()) {
+        bpf_u_int32 network = 0;
+        bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
+        char lookup_error[PCAP_ERRBUF_SIZE] = {};
+        if (pcap_lookupnet(options_.name.c_str(), &network, &netmask, lookup_error) != 0) {
+            netmask = PCAP_NETMASK_UNKNOWN;
+            warnings.push_back(SnifferEvent::from_error(make_sniffer_error(
+                SnifferErrorCode::PcapConfigureFailed,
+                SnifferSeverity::Warning,
+                "Failed to determine the interface netmask; compiling the BPF filter with an unknown netmask.",
+                options_.name,
+                0,
+                lookup_error,
+                true,
+                options_.id)));
+        }
         bpf_program program = {};
         if (pcap_compile(
                 handle.get(),
                 &program,
                 options_.bpf_filter.c_str(),
                 options_.bpf_optimize ? 1 : 0,
-                PCAP_NETMASK_UNKNOWN) != 0) {
+                netmask) != 0) {
             return make_sniffer_error(
                 SnifferErrorCode::FilterCompileFailed,
                 SnifferSeverity::Error,
