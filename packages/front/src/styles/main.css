@@ -35,6 +35,24 @@
     border-color 200ms ease-linear;
 }
 
+.desktop-titlebar-sidebar-boundary--vibrant {
+  background-color: color-mix(in oklab, var(--sidebar) 82%, transparent);
+}
+
+.desktop-sidebar--vibrant [data-slot="sidebar-inner"] {
+  background-color: color-mix(in oklab, var(--sidebar) 82%, transparent);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .desktop-sidebar--vibrant [data-slot="sidebar-inner"] {
+    backdrop-filter: blur(24px);
+  }
+}
+
+:root[data-desktop-platform="darwin"] body {
+  background-color: transparent;
+}
+
 .desktop-titlebar[data-sidebar-state="collapsed"] .desktop-titlebar-sidebar-boundary {
   width: 0;
   background-color: transparent;

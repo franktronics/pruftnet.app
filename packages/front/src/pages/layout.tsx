@@ -48,6 +48,7 @@ export function DashboardLayout() {
         select: (state) => state.location.pathname,
     })
     const isDesktop = typeof window !== 'undefined' && Boolean(window.pruftnet)
+    const desktopPlatform = isDesktop ? window.pruftnet?.platform : undefined
     const isCaptureWorkspace = pathname === '/' || pathname.startsWith('/capture/')
     const [titlebarTarget, setTitlebarTarget] = useState<HTMLDivElement | null>(null)
 
@@ -56,7 +57,11 @@ export function DashboardLayout() {
             <DesktopTitlebarTarget.Provider value={titlebarTarget}>
                 {isDesktop && <DesktopTitleBar captureControlsRef={setTitlebarTarget} />}
                 <div className="flex min-h-0 flex-1">
-                    <AppSidebar pathname={pathname} isDesktop={isDesktop} />
+                    <AppSidebar
+                        pathname={pathname}
+                        isDesktop={isDesktop}
+                        desktopPlatform={desktopPlatform}
+                    />
                     <SidebarInset className="min-h-0 overflow-hidden">
                         {!isDesktop && <WebHeader />}
                         <main
@@ -84,13 +89,17 @@ function DesktopTitleBar({
 
     return (
         <header
-            className="desktop-titlebar drag-region bg-background/95 relative flex shrink-0 items-center p-0"
+            className={cn(
+                'desktop-titlebar drag-region relative flex shrink-0 items-center p-0',
+                desktopPlatform === 'darwin' ? 'bg-transparent' : 'bg-background/95',
+            )}
             data-desktop-platform={desktopPlatform}
             data-sidebar-state={state}
         >
             <div
                 className={cn(
                     'desktop-titlebar-sidebar-boundary h-full shrink-0 border-r',
+                    desktopPlatform === 'darwin' && 'desktop-titlebar-sidebar-boundary--vibrant',
                     'border-border dark:border-border/50',
                 )}
             />
@@ -150,15 +159,19 @@ function SettingsButton() {
 
 function AppSidebar({
     className,
+    desktopPlatform,
     isDesktop,
     pathname,
     ...props
 }: ComponentProps<typeof Sidebar> & {
     readonly isDesktop: boolean
+    readonly desktopPlatform: string | undefined
     readonly pathname: string
 }) {
     const desktopSidebarClassName =
         '[top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]'
+    const sidebarAppearanceClassName =
+        desktopPlatform === 'darwin' ? 'desktop-sidebar--vibrant' : undefined
 
     return (
         <Sidebar
@@ -166,7 +179,9 @@ function AppSidebar({
             variant="sidebar"
             className={
                 isDesktop
-                    ? [desktopSidebarClassName, className].filter(Boolean).join(' ')
+                    ? [desktopSidebarClassName, sidebarAppearanceClassName, className]
+                          .filter(Boolean)
+                          .join(' ')
                     : className
             }
             {...props}

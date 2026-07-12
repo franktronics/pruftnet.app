@@ -20,6 +20,10 @@ Light and dark themes use neutral canvas, panel, popover, and border layers. Blu
 
 The canonical colors live as Shadcn-compatible CSS variables in `packages/ui/src/styles/main.css`. Components consume semantic variables such as `background`, `muted`, `accent`, `primary`, and `chart-*`; they must not duplicate theme-specific literals.
 
+## Desktop Materials
+
+The app uses the operating system material only where it is native: macOS uses the Electron sidebar vibrancy behind translucent sidebar and title-bar surfaces, and Windows 11 22H2+ uses Mica for the long-lived window backdrop. Windows versions without Mica and Linux use opaque semantic sidebar colors. Do not add a generic CSS backdrop blur to shared UI primitives; platform-specific composition belongs in `packages/front`.
+
 ## Motion And Accessibility
 
 Motion is limited to spatial transitions and live-data charts. Charts disable animation when capture is inactive and when the operating system requests reduced motion. Interactive values expose keyboard behavior, visible focus, and an accessible status message.

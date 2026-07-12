@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,6 +28,12 @@ type MainWindowOptions = {
     readonly rpcUrl: string
 }
 
+function supportsWindowsMica() {
+    const buildNumber = Number(release().split('.')[2])
+
+    return Number.isInteger(buildNumber) && buildNumber >= 22621
+}
+
 export async function createMainWindow(options: MainWindowOptions) {
     const devServerUrl = getDesktopDevServerUrl()
 
@@ -50,6 +57,9 @@ export async function createMainWindow(options: MainWindowOptions) {
                   vibrancy: 'sidebar' as const,
                   visualEffectState: 'active' as const,
               }
+            : {}),
+        ...(process.platform === 'win32' && supportsWindowsMica()
+            ? { backgroundMaterial: 'mica' as const }
             : {}),
         webPreferences: {
             additionalArguments: [`--pruftnet-rpc-url=${options.rpcUrl}`],
