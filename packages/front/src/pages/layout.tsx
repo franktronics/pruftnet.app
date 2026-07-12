@@ -91,16 +91,15 @@ function DesktopTitleBar({
         <header
             className={cn(
                 'desktop-titlebar drag-region relative flex shrink-0 items-center p-0',
-                desktopPlatform === 'darwin' ? 'bg-transparent' : 'bg-background/95',
+                desktopPlatform === 'darwin' ? 'desktop-titlebar--vibrant' : 'bg-background/95',
             )}
             data-desktop-platform={desktopPlatform}
             data-sidebar-state={state}
         >
             <div
                 className={cn(
-                    'desktop-titlebar-sidebar-boundary h-full shrink-0 border-r',
+                    'desktop-titlebar-sidebar-boundary h-full shrink-0',
                     desktopPlatform === 'darwin' && 'desktop-titlebar-sidebar-boundary--vibrant',
-                    'border-border dark:border-border/50',
                 )}
             />
             <div className="desktop-titlebar-brand pointer-events-none absolute z-10 flex items-center gap-2 overflow-hidden">
@@ -169,7 +168,7 @@ function AppSidebar({
     readonly pathname: string
 }) {
     const desktopSidebarClassName =
-        '[top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]'
+        'desktop-sidebar [top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]'
     const sidebarAppearanceClassName =
         desktopPlatform === 'darwin' ? 'desktop-sidebar--vibrant' : undefined
 

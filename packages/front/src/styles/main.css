@@ -8,6 +8,15 @@
 :root {
   --desktop-titlebar-height: 40px;
   --desktop-titlebar-controls-right: 0.75rem;
+  --desktop-sidebar-divider: var(--sidebar-border);
+}
+
+.dark {
+  --desktop-sidebar-divider: color-mix(
+    in oklab,
+    var(--sidebar) 90%,
+    var(--sidebar-foreground)
+  );
 }
 
 .wco {
@@ -20,6 +29,43 @@
 .desktop-titlebar {
   height: var(--desktop-titlebar-height);
   min-height: var(--desktop-titlebar-height);
+}
+
+.desktop-titlebar--vibrant {
+  background: linear-gradient(
+    to right,
+    transparent 0,
+    transparent var(--sidebar-width),
+    var(--background) var(--sidebar-width),
+    var(--background) 100%
+  );
+}
+
+.desktop-titlebar--vibrant[data-sidebar-state="collapsed"] {
+  background: var(--background);
+}
+
+.desktop-titlebar::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-width) - 1px);
+  width: 1px;
+  content: "";
+  pointer-events: none;
+  background-color: var(--desktop-sidebar-divider);
+  transition:
+    left 200ms ease-linear,
+    opacity 200ms ease-linear;
+}
+
+.desktop-titlebar[data-sidebar-state="collapsed"]::after {
+  left: 0;
+  opacity: 0;
+}
+
+.desktop-sidebar {
+  border-right-color: var(--desktop-sidebar-divider);
 }
 
 .desktop-titlebar-actions {
