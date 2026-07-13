@@ -6,5 +6,21 @@ export default tseslint.config(
     { ignores: ['dist', 'src/generated'] },
     eslint.configs.recommended,
     ...tseslint.configs.recommended,
-    { languageOptions: { globals: globals.browser } },
+    {
+        languageOptions: { globals: globals.browser },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['../*'],
+                            message:
+                                'Use the package #alias for imports outside the current directory.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
 )

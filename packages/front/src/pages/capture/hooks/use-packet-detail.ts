@@ -1,10 +1,13 @@
 import type { RegistrySnapshot } from '@repo/shared/capture'
 import { useQuery } from '@tanstack/react-query'
 
-import { getRpcEndpoint } from '../../../config/rpc-client'
-import { captureKeys } from '../api/capture-queries'
-import { retryTransientFailure } from '../../../config/query-client'
-import type { PacketDetailModel, PacketDetailWorkerResponse } from '../model/packet-detail'
+import { getRpcEndpoint } from '#front/config/rpc-client'
+import { captureKeys } from '#front/pages/capture/api/capture-queries'
+import { retryTransientFailure } from '#front/config/query-client'
+import type {
+    PacketDetailModel,
+    PacketDetailWorkerResponse,
+} from '#front/pages/capture/model/packet-detail'
 
 export class PacketDetailHttpError extends Error {
     readonly status: number
@@ -75,9 +78,12 @@ function decodeInWorker(
     signal: AbortSignal,
 ): Promise<PacketDetailModel> {
     return new Promise((resolve, reject) => {
-        const worker = new Worker(new URL('../model/packet-detail.worker.ts', import.meta.url), {
-            type: 'module',
-        })
+        const worker = new Worker(
+            new URL('#front/pages/capture/model/packet-detail.worker.ts', import.meta.url),
+            {
+                type: 'module',
+            },
+        )
         let settled = false
         const finish = (callback: () => void) => {
             if (settled) return

@@ -25,5 +25,8 @@
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
         "vite": "^8.0.16"
+    },
+    "imports": {
+        "#server/*": "./src/*"
     }
 }

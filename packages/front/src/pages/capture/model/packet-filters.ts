@@ -1,6 +1,6 @@
 import type { PacketSummary } from '@repo/shared/capture'
 
-import type { SummaryRow } from '../hooks/use-packet-summaries'
+import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 
 export const parseConditions = ['complete', 'partial', 'malformed', 'resourceLimit'] as const
 export type PacketParseCondition = (typeof parseConditions)[number]

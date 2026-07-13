@@ -8,7 +8,10 @@ import { DisplayFilter } from './display-filter'
 import { PacketBytes } from './packet-bytes'
 import { PacketTable } from './packet-table'
 import { PacketTree } from './packet-tree'
-import { emptyPacketDisplayFilters, type PacketDisplayFilters } from '../model/packet-filters'
+import {
+    emptyPacketDisplayFilters,
+    type PacketDisplayFilters,
+} from '#front/pages/capture/model/packet-filters'
 
 const ignorePacket = () => undefined
 

@@ -18,10 +18,10 @@ import {
     useSidebar,
 } from '@repo/ui/organisms'
 
-import pruftnetIcon from '../assets/pruftnet-icon.png'
-import { ThemeToggle } from '../theme/theme-toggle'
+import pruftnetIcon from '#front/assets/pruftnet-icon.png'
+import { ThemeToggle } from '#front/theme/theme-toggle'
 import { cn } from '@repo/utils'
-import { DesktopTitlebarTarget } from '../components/desktop-titlebar-context'
+import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
 
 const mainNavigation = [
     {

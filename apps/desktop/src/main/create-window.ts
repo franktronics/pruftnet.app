@@ -1,9 +1,14 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, nativeTheme } from 'electron'
 import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config'
+import {
+    getResolvedDesktopTheme,
+    getTitleBarOverlay,
+    syncWindowTitleBarOverlay,
+} from './window-appearance'
 import { protectWindowNavigation } from './window-navigation'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
@@ -45,11 +50,10 @@ export async function createMainWindow(options: MainWindowOptions) {
         title: 'Pruftnet',
         icon: getWindowIconPath(),
         titleBarStyle: 'hidden',
-        titleBarOverlay: {
-            color: '#00000000',
-            symbolColor: '#737373',
-            height: 48,
-        },
+        titleBarOverlay:
+            process.platform === 'darwin'
+                ? true
+                : getTitleBarOverlay(getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors)),
         trafficLightPosition: { x: 16, y: 15 },
         ...(process.platform === 'darwin'
             ? {
@@ -71,6 +75,7 @@ export async function createMainWindow(options: MainWindowOptions) {
     })
 
     protectWindowNavigation(window)
+    syncWindowTitleBarOverlay(window, getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors))
 
     if (devServerUrl) {
         await window.loadURL(devServerUrl)

@@ -2,11 +2,11 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
-import type { ByteRange } from '../model/packet-view'
-import { BYTE_ROW_WIDTH } from '../model/packet-view'
+import type { ByteRange } from '#front/pages/capture/model/packet-view'
+import { BYTE_ROW_WIDTH } from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
-import type { PacketDetailState } from '../hooks/use-packet-detail'
-import type { PacketDetailView } from '../model/packet-detail'
+import type { PacketDetailState } from '#front/pages/capture/hooks/use-packet-detail'
+import type { PacketDetailView } from '#front/pages/capture/model/packet-detail'
 
 export function PacketBytes({
     detail,

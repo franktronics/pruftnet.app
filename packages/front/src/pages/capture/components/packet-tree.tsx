@@ -2,11 +2,11 @@ import type { RegistrySnapshot } from '@repo/shared/capture'
 import { Check, ChevronRight, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { fieldLabel, NO_PARENT, visibleTreeRows } from '../model/packet-view'
-import type { PacketDetailView } from '../model/packet-detail'
+import { fieldLabel, NO_PARENT, visibleTreeRows } from '#front/pages/capture/model/packet-view'
+import type { PacketDetailView } from '#front/pages/capture/model/packet-detail'
 import { PanelShell } from './panel-shell'
-import type { PacketDetailState } from '../hooks/use-packet-detail'
-import { copyText } from '../model/copy-text'
+import type { PacketDetailState } from '#front/pages/capture/hooks/use-packet-detail'
+import { copyText } from '#front/pages/capture/model/copy-text'
 
 export function PacketTree({
     detail,

@@ -1,4 +1,4 @@
-import { IdleCaptureWorkspace } from '../capture/components/idle-capture-workspace'
+import { IdleCaptureWorkspace } from '#front/pages/capture/components/idle-capture-workspace'
 
 export function HomePage() {
     return <IdleCaptureWorkspace />

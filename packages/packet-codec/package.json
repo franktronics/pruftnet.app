@@ -32,5 +32,11 @@
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
         "vitest": "^4.1.10"
+    },
+    "imports": {
+        "#packet-codec/*": {
+            "types": "./src/*",
+            "default": "./dist/*"
+        }
     }
 }

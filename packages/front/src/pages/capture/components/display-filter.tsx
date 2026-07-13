@@ -7,7 +7,10 @@ import {
     type DisplayFilterInterface,
     type DisplayFilterProtocol,
 } from './advanced-display-filters'
-import { countAdvancedPacketFilters, type PacketDisplayFilters } from '../model/packet-filters'
+import {
+    countAdvancedPacketFilters,
+    type PacketDisplayFilters,
+} from '#front/pages/capture/model/packet-filters'
 
 export function DisplayFilter({
     value,

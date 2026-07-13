@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { BasicErrorFields } from '../../utils/error-model'
+import { BasicErrorFields } from '#shared/utils/error-model'
 
 export class CaptureAlreadyRunning extends Schema.TaggedError<CaptureAlreadyRunning>()(
     'CaptureAlreadyRunning',

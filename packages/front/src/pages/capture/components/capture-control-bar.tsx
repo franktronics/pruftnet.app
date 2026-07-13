@@ -29,12 +29,19 @@ import { ChevronDown, Pause, Play, RefreshCw, Settings2, Square } from 'lucide-r
 import { useContext, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-import { BasicErrorAlert } from '../../../components/error-renderer'
-import { DesktopTitlebarTarget } from '../../../components/desktop-titlebar-context'
-import { queryClient } from '../../../config/query-client'
-import { captureCapabilitiesOptions, captureKeys } from '../api/capture-queries'
-import { useCaptureInterfaces, useStartLiveCapture, useStopCapture } from '../hooks/use-capture'
-import { buildLiveCaptureSource, type LiveInterfaceSettings } from '../../home/live-capture-options'
+import { BasicErrorAlert } from '#front/components/error-renderer'
+import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
+import { queryClient } from '#front/config/query-client'
+import { captureCapabilitiesOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
+import {
+    useCaptureInterfaces,
+    useStartLiveCapture,
+    useStopCapture,
+} from '#front/pages/capture/hooks/use-capture'
+import {
+    buildLiveCaptureSource,
+    type LiveInterfaceSettings,
+} from '#front/pages/home/live-capture-options'
 
 const defaultInterfaceSettings: LiveInterfaceSettings = {
     promiscuous: true,

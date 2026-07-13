@@ -24,6 +24,8 @@ The canonical colors live as Shadcn-compatible CSS variables in `packages/ui/src
 
 The app uses the operating system material only where it is native: macOS uses the Electron sidebar vibrancy behind translucent sidebar and title-bar surfaces, and Windows 11 22H2+ uses Mica for the long-lived window backdrop. Windows versions without Mica and Linux use opaque semantic sidebar colors. Do not add a generic CSS backdrop blur to shared UI primitives; platform-specific composition belongs in `packages/front`.
 
+On Linux and Windows, the native window-controls overlay is synchronized with the effective Electron light or dark theme so its controls do not render on a mismatched background.
+
 ## Motion And Accessibility
 
 Motion is limited to spatial transitions and live-data charts. Charts disable animation when capture is inactive and when the operating system requests reduced motion. Interactive values expose keyboard behavior, visible focus, and an accessible status message.

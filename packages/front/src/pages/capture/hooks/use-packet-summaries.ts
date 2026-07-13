@@ -1,8 +1,8 @@
 import type { PacketSummary, PacketSummaryBatch } from '@repo/shared/capture'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { captureClient } from '../api/capture-client'
-import { captureKeys } from '../api/capture-queries'
+import { captureClient } from '#front/pages/capture/api/capture-client'
+import { captureKeys } from '#front/pages/capture/api/capture-queries'
 
 export const MAX_PACKET_SUMMARIES = 50_000
 

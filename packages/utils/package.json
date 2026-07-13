@@ -28,6 +28,6 @@
         "typescript-eslint": "catalog:"
     },
     "imports": {
-        "#/*": "./src/*"
+        "#utils/*": "./src/*"
     }
 }

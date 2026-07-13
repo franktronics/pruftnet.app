@@ -21,7 +21,7 @@ import {
     type PacketDisplayFilters,
 } from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
-import { BasicErrorAlert } from '../../components/error-renderer'
+import { BasicErrorAlert } from '#front/components/error-renderer'
 
 export function CapturePage() {
     const { captureId } = useParams({ from: '/capture/$captureId' })
@@ -202,7 +202,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 </ResizablePanelGroup>
             </div>
             <div className="flex min-h-0 flex-1 flex-col md:hidden">
-                <div className="min-h-0 flex-[3]">
+                <div className="min-h-0 flex-3">
                     <PacketTable
                         rows={visibleRows}
                         originTimestampNs={summaries.originTimestampNs}
@@ -215,7 +215,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 </div>
                 <Tabs
                     defaultValue="structure"
-                    className="bg-background min-h-0 flex-[2] gap-0 border-t"
+                    className="bg-background min-h-0 flex-2 gap-0 border-t"
                 >
                     <TabsList className="h-9 w-full rounded-none border-b bg-transparent p-0">
                         <TabsTrigger value="stats">Stats</TabsTrigger>

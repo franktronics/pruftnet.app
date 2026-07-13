@@ -2,8 +2,8 @@ import { RpcClient } from '@effect/rpc'
 import { CaptureRpcs, type LiveCaptureSource, ReplayCaptureSource } from '@repo/shared/capture'
 import { Effect } from 'effect'
 
-import { RpcClientLive } from '../../../config/rpc-client'
-import { runEffectPromise } from '../../../utils/run-effect-promise'
+import { RpcClientLive } from '#front/config/rpc-client'
+import { runEffectPromise } from '#front/utils/run-effect-promise'
 
 const clientEffect = RpcClient.make(CaptureRpcs).pipe(Effect.provide(RpcClientLive))
 

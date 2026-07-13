@@ -21,5 +21,19 @@ export default defineConfig([
                 tsconfigRootDir,
             },
         },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['../*'],
+                            message:
+                                'Use the package #alias for imports outside the current directory.',
+                        },
+                    ],
+                },
+            ],
+        },
     },
 ])

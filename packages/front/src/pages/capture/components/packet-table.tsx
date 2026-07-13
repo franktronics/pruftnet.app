@@ -1,13 +1,13 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef } from 'react'
 
-import type { SummaryRow } from '../hooks/use-packet-summaries'
+import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 import {
     PACKET_ROW_HEIGHT,
     packetKey,
     relativePacketTime,
     summaryColumn,
-} from '../model/packet-view'
+} from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 
 const grid = 'grid-cols-[64px_82px_minmax(100px,1fr)_minmax(100px,1fr)_86px_70px_minmax(180px,2fr)]'

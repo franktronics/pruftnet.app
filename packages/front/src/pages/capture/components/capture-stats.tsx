@@ -7,8 +7,8 @@ import {
     appendCaptureStatsSample,
     chartNumber,
     type CaptureStatsSample,
-} from '../model/capture-stats-history'
-import { formatCount } from '../model/packet-view'
+} from '#front/pages/capture/model/capture-stats-history'
+import { formatCount } from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 
 const trafficSeries = [

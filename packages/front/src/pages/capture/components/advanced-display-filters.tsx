@@ -20,7 +20,7 @@ import {
     validatePacketDisplayFilters,
     type PacketDisplayFilters,
     type PacketParseCondition,
-} from '../model/packet-filters'
+} from '#front/pages/capture/model/packet-filters'
 
 export interface DisplayFilterProtocol {
     readonly id: number

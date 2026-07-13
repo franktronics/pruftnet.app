@@ -2,14 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import type { CaptureEvent, CaptureEventBatch, LiveCaptureSource } from '@repo/shared/capture'
 
-import { captureClient } from '../api/capture-client'
+import { captureClient } from '#front/pages/capture/api/capture-client'
 import {
     captureKeys,
     captureInterfacesOptions,
     captureSessionOptions,
     captureStatsOptions,
     registryOptions,
-} from '../api/capture-queries'
+} from '#front/pages/capture/api/capture-queries'
 
 export const useCaptureSession = (captureId: string) => useQuery(captureSessionOptions(captureId))
 export const useCaptureInterfaces = () => useQuery(captureInterfacesOptions())

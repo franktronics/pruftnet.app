@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PacketSummary } from '@repo/shared/capture'
 
-import type { SummaryRow } from '../hooks/use-packet-summaries'
+import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 import {
     emptyPacketDisplayFilters,
     filterPacketRows,

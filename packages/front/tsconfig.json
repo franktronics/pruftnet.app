@@ -2,10 +2,7 @@
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-        "types": ["vite/client", "vitest/globals"],
-        "paths": {
-            "#/*": ["./src/*"]
-        }
+        "types": ["vite/client", "vitest/globals"]
     },
     "include": ["src", "vite.config.ts"]
 }

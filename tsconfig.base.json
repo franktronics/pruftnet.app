@@ -4,6 +4,17 @@
         "lib": ["ES2023", "DOM", "DOM.Iterable"],
         "module": "ESNext",
         "moduleResolution": "Bundler",
+        "baseUrl": ".",
+        "ignoreDeprecations": "6.0",
+        "paths": {
+            "#core/*": ["packages/core/src/*"],
+            "#desktop/*": ["apps/desktop/src/*"],
+            "#front/*": ["packages/front/src/*"],
+            "#packet-codec/*": ["packages/packet-codec/src/*"],
+            "#server/*": ["apps/server/src/*"],
+            "#shared/*": ["packages/shared/src/*"],
+            "#utils/*": ["packages/utils/src/*"]
+        },
         "jsx": "react-jsx",
         "strict": true,
         "skipLibCheck": true,
