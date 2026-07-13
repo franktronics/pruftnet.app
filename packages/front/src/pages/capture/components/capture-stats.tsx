@@ -30,7 +30,7 @@ export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; stat
 
     if (!stats)
         return (
-            <PanelShell title="Statistics">
+            <PanelShell title="Statistics" showHeader={false}>
                 <div className="text-muted-foreground grid h-full place-items-center text-xs">
                     {state ? 'Waiting for counters' : 'Capture is idle'}
                 </div>
@@ -86,7 +86,7 @@ export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; stat
     ]
 
     return (
-        <PanelShell title="Statistics" meta={status.meta}>
+        <PanelShell title="Statistics" showHeader={false}>
             <div className="h-full overflow-auto p-3">
                 <PipelineStatus status={status} />
 
@@ -240,10 +240,9 @@ function StatValue({ children }: { children: React.ReactNode }) {
 }
 
 function pipelineStatus(stats: CaptureStats, state: string | undefined, active: boolean) {
-    if (state === 'failed')
-        return { tone: 'error' as const, meta: 'failed', message: 'Capture failed' }
+    if (state === 'failed') return { tone: 'error' as const, message: 'Capture failed' }
     if (active && !stats.parserThreadRunning)
-        return { tone: 'warning' as const, meta: 'attention', message: 'Parser thread stopped' }
+        return { tone: 'warning' as const, message: 'Parser thread stopped' }
 
     const losses = [
         [stats.ipcDrops, 'packets dropped by IPC'],
@@ -256,12 +255,10 @@ function pipelineStatus(stats: CaptureStats, state: string | undefined, active: 
     if (loss)
         return {
             tone: 'warning' as const,
-            meta: 'attention',
             message: `${formatCount(loss[0])} ${loss[1]}`,
         }
-    if (active)
-        return { tone: 'healthy' as const, meta: 'healthy', message: 'Capture pipeline healthy' }
-    return { tone: 'neutral' as const, meta: state ?? 'idle', message: 'Capture is stopped' }
+    if (active) return { tone: 'healthy' as const, message: 'Capture pipeline healthy' }
+    return { tone: 'neutral' as const, message: 'Capture is stopped' }
 }
 
 function useReducedMotion() {

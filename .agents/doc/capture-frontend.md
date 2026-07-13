@@ -26,7 +26,11 @@ packet tree  | bytes
 
 Narrow viewports keep the packet table primary and expose Statistics, Structure, and Bytes through tabs.
 
-The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests. The display-filter field currently performs deferred, case-insensitive matching against summary columns; protocol-expression parsing is deferred.
+The packet, statistics, structure, and bytes panes do not repeat their titles in desktop headers; their
+content, table columns, and mobile tabs provide the context. Packet counts and filter state live in the
+display-filter toolbar.
+
+The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests. The display-filter toolbar performs deferred, case-insensitive text matching and can apply advanced client-side filters to retained summaries: relative time, protocol, interface, wire length, parse status, source, and destination. Advanced filters are edited in a draft modal and only become active after Apply filters; protocol-expression parsing remains deferred.
 
 ## Summary State
 

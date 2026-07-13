@@ -30,6 +30,7 @@ export function PacketTable({
     emptyMessage?: string
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
+    const packetCount = rows.filter((row) => row.kind === 'packet').length
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => scrollRef.current,
@@ -59,10 +60,7 @@ export function PacketTable({
     }
 
     return (
-        <PanelShell
-            title="Packets"
-            meta={`${rows.filter((row) => row.kind === 'packet').length.toLocaleString()} retained`}
-        >
+        <PanelShell title="Packets" showHeader={false}>
             <div
                 ref={scrollRef}
                 className="focus-visible:ring-ring h-full overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
@@ -110,7 +108,7 @@ export function PacketTable({
                     </span>
                 </div>
                 <div className="relative min-w-max" style={{ height: virtualizer.getTotalSize() }}>
-                    {rows.length === 0 && emptyMessage ? (
+                    {packetCount === 0 && emptyMessage ? (
                         <div
                             className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
                             role="status"

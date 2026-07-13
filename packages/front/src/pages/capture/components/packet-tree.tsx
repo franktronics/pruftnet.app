@@ -34,7 +34,7 @@ export function PacketTree({
     }, [selected])
     if (!detail || !registry)
         return (
-            <PanelShell title="Structure">
+            <PanelShell title="Structure" showHeader={false}>
                 <EmptyDetail state={detailState} />
             </PanelShell>
         )
@@ -81,100 +81,111 @@ export function PacketTree({
         feedbackTimer.current = setTimeout(() => setCopyFeedback(undefined), 1_500)
     }
     return (
-        <PanelShell title="Structure" meta={`${packetDetail.nodes.length} fields`}>
-            <div
-                ref={treeRef}
-                role="tree"
-                tabIndex={0}
-                aria-label="Parsed packet structure"
-                aria-activedescendant={
-                    selected !== undefined && rows.some((row) => row.index === selected)
-                        ? `packet-tree-node-${selected}`
-                        : undefined
-                }
-                className="focus-visible:ring-ring h-full overflow-auto py-1 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
-                        const selectedIndex = selected
-                        const value =
-                            selectedIndex === undefined
-                                ? undefined
-                                : packetDetail.nodes[selectedIndex]?.value
-                        if (value && selectedIndex !== undefined) {
-                            event.preventDefault()
-                            void handleCopy(selectedIndex, value)
-                        }
-                        return
+        <PanelShell title="Structure" showHeader={false}>
+            <div className="flex h-full min-h-0 flex-col">
+                <div className="text-muted-foreground flex h-7 shrink-0 items-center justify-end border-b px-3 font-mono text-[11px] tabular-nums">
+                    {packetDetail.nodes.length.toLocaleString()} fields
+                </div>
+                <div
+                    ref={treeRef}
+                    role="tree"
+                    tabIndex={0}
+                    aria-label="Parsed packet structure"
+                    aria-activedescendant={
+                        selected !== undefined && rows.some((row) => row.index === selected)
+                            ? `packet-tree-node-${selected}`
+                            : undefined
                     }
-                    if (
-                        ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Enter', ' '].includes(
-                            event.key,
-                        )
-                    ) {
-                        event.preventDefault()
-                        handleKey(event.key)
-                    }
-                }}
-            >
-                {rows.map((row) => {
-                    const node = packetDetail.nodes[row.index]!
-                    const value = node.value
-                    return (
-                        <div
-                            key={row.index}
-                            id={`packet-tree-node-${row.index}`}
-                            data-node-index={row.index}
-                            role="treeitem"
-                            aria-level={row.depth + 1}
-                            aria-expanded={
-                                row.hasChildren ? visibleExpanded.has(row.index) : undefined
+                    className="focus-visible:ring-ring min-h-0 flex-1 overflow-auto py-1 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                    onKeyDown={(event) => {
+                        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
+                            const selectedIndex = selected
+                            const value =
+                                selectedIndex === undefined
+                                    ? undefined
+                                    : packetDetail.nodes[selectedIndex]?.value
+                            if (value && selectedIndex !== undefined) {
+                                event.preventDefault()
+                                void handleCopy(selectedIndex, value)
                             }
-                            aria-selected={selected === row.index}
-                            onClick={() => onSelect(row.index)}
-                            onDoubleClick={() => row.hasChildren && toggle(row.index)}
-                            className={`group/tree-row flex h-8 cursor-default items-center gap-1 pr-2 text-[13px] ${selected === row.index ? 'bg-accent shadow-[inset_2px_0_0_var(--primary)]' : 'hover:bg-muted/50'}`}
-                            style={{ paddingLeft: row.depth * 14 + 6 }}
-                        >
-                            <button
-                                tabIndex={-1}
-                                aria-hidden="true"
-                                className={`grid size-4 shrink-0 place-items-center ${row.hasChildren ? '' : 'invisible'}`}
-                                onClick={(event) => {
-                                    event.stopPropagation()
-                                    toggle(row.index)
-                                }}
+                            return
+                        }
+                        if (
+                            [
+                                'ArrowDown',
+                                'ArrowUp',
+                                'ArrowRight',
+                                'ArrowLeft',
+                                'Enter',
+                                ' ',
+                            ].includes(event.key)
+                        ) {
+                            event.preventDefault()
+                            handleKey(event.key)
+                        }
+                    }}
+                >
+                    {rows.map((row) => {
+                        const node = packetDetail.nodes[row.index]!
+                        const value = node.value
+                        return (
+                            <div
+                                key={row.index}
+                                id={`packet-tree-node-${row.index}`}
+                                data-node-index={row.index}
+                                role="treeitem"
+                                aria-level={row.depth + 1}
+                                aria-expanded={
+                                    row.hasChildren ? visibleExpanded.has(row.index) : undefined
+                                }
+                                aria-selected={selected === row.index}
+                                onClick={() => onSelect(row.index)}
+                                onDoubleClick={() => row.hasChildren && toggle(row.index)}
+                                className={`group/tree-row flex h-8 cursor-default items-center gap-1 pr-2 text-[13px] ${selected === row.index ? 'bg-accent shadow-[inset_2px_0_0_var(--primary)]' : 'hover:bg-muted/50'}`}
+                                style={{ paddingLeft: row.depth * 14 + 6 }}
                             >
-                                <ChevronRight
-                                    className={`size-3 transition-transform ${visibleExpanded.has(row.index) ? 'rotate-90' : ''}`}
-                                />
-                            </button>
-                            <span className="min-w-0 truncate font-medium">
-                                {fieldLabel(registry, node.fieldId)}
-                            </span>
-                            {value && (
                                 <button
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto flex max-w-[52%] min-w-0 items-center gap-1 rounded-sm px-1 font-mono text-xs outline-none focus-visible:ring-1 focus-visible:[&_svg]:opacity-60"
-                                    aria-label={`Copy ${fieldLabel(registry, node.fieldId)} value`}
-                                    title="Copy value"
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    className={`grid size-4 shrink-0 place-items-center ${row.hasChildren ? '' : 'invisible'}`}
                                     onClick={(event) => {
                                         event.stopPropagation()
-                                        void handleCopy(row.index, value)
+                                        toggle(row.index)
                                     }}
-                                    onDoubleClick={(event) => event.stopPropagation()}
-                                    onKeyDown={(event) => event.stopPropagation()}
                                 >
-                                    <span className="truncate">{value}</span>
-                                    {copyFeedback?.index === row.index && copyFeedback.copied ? (
-                                        <Check className="text-primary size-3 shrink-0" />
-                                    ) : (
-                                        <Copy className="size-3 shrink-0 opacity-0 transition-opacity group-hover/tree-row:opacity-60 group-focus-visible/tree-row:opacity-60" />
-                                    )}
+                                    <ChevronRight
+                                        className={`size-3 transition-transform ${visibleExpanded.has(row.index) ? 'rotate-90' : ''}`}
+                                    />
                                 </button>
-                            )}
-                        </div>
-                    )
-                })}
+                                <span className="min-w-0 truncate font-medium">
+                                    {fieldLabel(registry, node.fieldId)}
+                                </span>
+                                {value && (
+                                    <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto flex max-w-[52%] min-w-0 items-center gap-1 rounded-sm px-1 font-mono text-xs outline-none focus-visible:ring-1 focus-visible:[&_svg]:opacity-60"
+                                        aria-label={`Copy ${fieldLabel(registry, node.fieldId)} value`}
+                                        title="Copy value"
+                                        onClick={(event) => {
+                                            event.stopPropagation()
+                                            void handleCopy(row.index, value)
+                                        }}
+                                        onDoubleClick={(event) => event.stopPropagation()}
+                                        onKeyDown={(event) => event.stopPropagation()}
+                                    >
+                                        <span className="truncate">{value}</span>
+                                        {copyFeedback?.index === row.index &&
+                                        copyFeedback.copied ? (
+                                            <Check className="text-primary size-3 shrink-0" />
+                                        ) : (
+                                            <Copy className="size-3 shrink-0 opacity-0 transition-opacity group-hover/tree-row:opacity-60 group-focus-visible/tree-row:opacity-60" />
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
             <span className="sr-only" aria-live="polite">
                 {copyFeedback ? (copyFeedback.copied ? 'Value copied' : 'Copy failed') : ''}

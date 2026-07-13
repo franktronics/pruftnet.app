@@ -8,15 +8,21 @@ import { DisplayFilter } from './display-filter'
 import { PacketBytes } from './packet-bytes'
 import { PacketTable } from './packet-table'
 import { PacketTree } from './packet-tree'
+import { emptyPacketDisplayFilters, type PacketDisplayFilters } from '../model/packet-filters'
 
 const ignorePacket = () => undefined
 
 export function IdleCaptureWorkspace() {
-    const [displayFilter, setDisplayFilter] = useState('')
+    const [filters, setFilters] = useState<PacketDisplayFilters>(emptyPacketDisplayFilters)
     return (
         <div className="bg-border flex h-full min-h-0 flex-col overflow-hidden">
             <CaptureControlBar />
-            <DisplayFilter value={displayFilter} onChange={setDisplayFilter} />
+            <DisplayFilter
+                value={filters.search}
+                onChange={(search) => setFilters((current) => ({ ...current, search }))}
+                filters={filters}
+                onFiltersChange={setFilters}
+            />
             <div className="hidden min-h-0 flex-1 md:block">
                 <ResizablePanelGroup orientation="vertical">
                     <ResizablePanel defaultSize="58%" minSize="30%">

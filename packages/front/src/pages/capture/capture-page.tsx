@@ -1,5 +1,5 @@
 import { useParams } from '@tanstack/react-router'
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/molecules'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@repo/ui/organisms'
@@ -13,6 +13,13 @@ import { PacketTree } from './components/packet-tree'
 import { useCaptureRegistry, useCaptureSession, useCaptureStats } from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
+import {
+    countAdvancedPacketFilters,
+    emptyPacketDisplayFilters,
+    filterPacketRows,
+    relativeSecondsNumber,
+    type PacketDisplayFilters,
+} from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
 import { BasicErrorAlert } from '../../components/error-renderer'
 
@@ -29,8 +36,8 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
     const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
     const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
     const [following, setFollowing] = useState(true)
-    const [displayFilter, setDisplayFilter] = useState('')
-    const deferredDisplayFilter = useDeferredValue(displayFilter.trim().toLowerCase())
+    const [filters, setFilters] = useState<PacketDisplayFilters>(emptyPacketDisplayFilters)
+    const deferredFilters = useDeferredValue(filters)
     const detail = usePacketDetail(
         captureId,
         selected?.summary.key.packetId,
@@ -43,20 +50,43 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         detail.data,
         detail.error,
     )
-    const visibleRows = deferredDisplayFilter
-        ? summaries.rows.filter(
-              (row) =>
-                  row.kind === 'gap' ||
-                  row.summary.columns.some((column) =>
-                      column.value.toLowerCase().includes(deferredDisplayFilter),
-                  ),
-          )
-        : summaries.rows
+    const visibleRows = useMemo(
+        () => filterPacketRows(summaries.rows, deferredFilters, summaries.originTimestampNs),
+        [deferredFilters, summaries.originTimestampNs, summaries.rows],
+    )
+    const totalPacketCount = useMemo(
+        () => summaries.rows.filter((row) => row.kind === 'packet').length,
+        [summaries.rows],
+    )
+    const visiblePacketCount = useMemo(
+        () => visibleRows.filter((row) => row.kind === 'packet').length,
+        [visibleRows],
+    )
+    const maxTimeSeconds = useMemo(() => {
+        if (!summaries.originTimestampNs) return 0
+        return summaries.rows.reduce((maximum, row) => {
+            if (row.kind === 'gap') return maximum
+            return Math.max(
+                maximum,
+                relativeSecondsNumber(row.summary.timestampNs, summaries.originTimestampNs!),
+            )
+        }, 0)
+    }, [summaries.originTimestampNs, summaries.rows])
+    const displayInterfaces = useMemo(
+        () =>
+            session.data?.source._tag === 'Live'
+                ? session.data.source.interfaces.map((item, id) => ({ id, name: item.name }))
+                : [],
+        [session.data],
+    )
+    const hasActiveFilter = filters.search.trim() !== '' || countAdvancedPacketFilters(filters) > 0
     const emptyMessage = summaries.isPending
         ? 'Waiting for packet summaries...'
-        : session.data?.state === 'running' || session.data?.state === 'starting'
-          ? 'Waiting for packets...'
-          : 'No packets were captured.'
+        : hasActiveFilter && visiblePacketCount === 0
+          ? 'No packets match the current filters.'
+          : session.data?.state === 'running' || session.data?.state === 'starting'
+            ? 'Waiting for packets...'
+            : 'No packets were captured.'
 
     if (session.isPending) {
         return (
@@ -76,6 +106,19 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
     function handleSelect(row: Extract<SummaryRow, { kind: 'packet' }>) {
         setSelected(row)
         setFollowing(false)
+    }
+    function updateFilters(next: PacketDisplayFilters) {
+        setFilters(next)
+        if (
+            selected &&
+            !filterPacketRows(summaries.rows, next, summaries.originTimestampNs).some(
+                (row) =>
+                    row.kind === 'packet' && packetKey(row.summary) === packetKey(selected.summary),
+            )
+        ) {
+            setSelected(undefined)
+            setNodeSelection(undefined)
+        }
     }
     const selectedKey = selected ? packetKey(selected.summary) : undefined
     const selectedNode =
@@ -100,7 +143,17 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 following={following}
                 onFollowingChange={setFollowing}
             />
-            <DisplayFilter value={displayFilter} onChange={setDisplayFilter} />
+            <DisplayFilter
+                value={filters.search}
+                onChange={(search) => updateFilters({ ...filters, search })}
+                filters={filters}
+                onFiltersChange={updateFilters}
+                protocols={registry.data?.protocols ?? []}
+                interfaces={displayInterfaces}
+                maxTimeSeconds={maxTimeSeconds}
+                visibleCount={visiblePacketCount}
+                totalCount={totalPacketCount}
+            />
             <div className="hidden min-h-0 flex-1 md:block">
                 <ResizablePanelGroup orientation="vertical">
                     <ResizablePanel defaultSize="58%" minSize="30%">
