@@ -1,23 +1,41 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { unlink } from 'node:fs/promises'
+import { basename, isAbsolute } from 'node:path'
 
-import { Context, Effect, Layer, Schema } from 'effect'
+import { Context, Effect, Either, Layer, Schema } from 'effect'
 
 const MAX_COMMAND_BYTES = 64 * 1024
-const MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+const MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 const MAX_STDERR_BYTES = 64 * 1024
+const MAX_PENDING_REQUESTS = 1024
 const RESPONSE_TIMEOUT_MS = 10_000
-const EXIT_GRACE_MS = 1_000
+const SHUTDOWN_GRACE_MS = 500
+const EXIT_GRACE_MS = 1_500
 
-const WorkerEnvelope = Schema.Struct({
-    v: Schema.Literal(1),
+const WorkerResponseEnvelope = Schema.Struct({
+    v: Schema.Literal(2),
+    kind: Schema.Literal('response'),
     id: Schema.String,
     ok: Schema.Boolean,
+})
+const WorkerEventEnvelope = Schema.Struct({
+    v: Schema.Literal(2),
+    kind: Schema.Literal('event'),
+    event: Schema.String,
 })
 
 export class ReplayWorkerError extends Schema.TaggedError<ReplayWorkerError>()(
     'ReplayWorkerError',
     {
-        reason: Schema.Literal('spawn', 'write', 'timeout', 'protocol', 'response_limit', 'exit'),
+        reason: Schema.Literal(
+            'spawn',
+            'write',
+            'timeout',
+            'protocol',
+            'response_limit',
+            'capacity',
+            'exit',
+        ),
         message: Schema.String,
     },
 ) {}
@@ -32,29 +50,65 @@ export interface ReplayWorkerOptions {
     ) => ChildProcessWithoutNullStreams
 }
 
-const awaitExit = (child: ChildProcessWithoutNullStreams) =>
+interface PendingResponse {
+    resume?: (effect: Effect.Effect<unknown, ReplayWorkerError>) => void
+    timeout: ReturnType<typeof setTimeout>
+}
+
+function frame(payload: string): Buffer {
+    const body = Buffer.from(payload)
+    const framed = Buffer.allocUnsafe(4 + body.byteLength)
+    framed.writeUInt32LE(body.byteLength, 0)
+    body.copy(framed, 4)
+    return framed
+}
+
+function cleanupUnclaimedDetail(value: unknown) {
+    if (
+        typeof value !== 'object' ||
+        value === null ||
+        !('dataPath' in value) ||
+        typeof value.dataPath !== 'string' ||
+        !isAbsolute(value.dataPath) ||
+        !basename(value.dataPath).startsWith('detail-') ||
+        !basename(value.dataPath).endsWith('.prt2')
+    )
+        return
+    void unlink(value.dataPath).catch(() => undefined)
+}
+
+const gracefulExit = (child: ChildProcessWithoutNullStreams, sequence: number) =>
     Effect.async<void>((resume) => {
         if (child.exitCode !== null || child.signalCode !== null) {
             resume(Effect.void)
             return
         }
-        let forced = false
-        const done = () => {
-            clearTimeout(forceTimer)
-            clearTimeout(boundTimer)
+        let settled = false
+        const finish = () => {
+            if (settled) return
+            settled = true
+            clearTimeout(termTimer)
+            clearTimeout(killTimer)
+            child.off('exit', finish)
             resume(Effect.void)
         }
-        child.once('exit', done)
-        const forceTimer = setTimeout(() => {
-            forced = true
-            child.kill('SIGKILL')
+        child.once('exit', finish)
+        child.stdin.write(
+            frame(JSON.stringify({ v: 2, id: `shutdown-${sequence}`, op: 'shutdown' })),
+            () => undefined,
+        )
+        const termTimer = setTimeout(() => {
+            if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM')
+        }, SHUTDOWN_GRACE_MS)
+        const killTimer = setTimeout(() => {
+            if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+            finish()
         }, EXIT_GRACE_MS)
-        const boundTimer = setTimeout(done, EXIT_GRACE_MS * 2)
         return Effect.sync(() => {
-            child.off('exit', done)
-            clearTimeout(forceTimer)
-            clearTimeout(boundTimer)
-            if (!forced && child.exitCode === null) child.kill('SIGKILL')
+            clearTimeout(termTimer)
+            clearTimeout(killTimer)
+            child.off('exit', finish)
+            if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
         })
     })
 
@@ -70,6 +124,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
         return Layer.scoped(
             ReplayWorker,
             Effect.gen(function* () {
+                let sequence = 0
                 const child = yield* Effect.acquireRelease(
                     Effect.sync(() =>
                         (options.spawn ?? ((executable, args) => spawn(executable, args)))(
@@ -79,168 +134,171 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                             ),
                         ),
                     ),
-                    (process) =>
-                        Effect.gen(function* () {
-                            if (process.exitCode === null && process.signalCode === null)
-                                process.kill('SIGTERM')
-                            yield* awaitExit(process)
-                        }),
+                    (process) => gracefulExit(process, sequence),
                 )
-                const semaphore = yield* Effect.makeSemaphore(1)
-                let sequence = 0
-                let stdout = ''
                 let stderr = ''
+                let stdout = Buffer.alloc(0)
                 let terminal: ReplayWorkerError | undefined
+                const pending = new Map<string, PendingResponse>()
 
-                const terminate = (error: ReplayWorkerError) => {
-                    terminal ??= error
-                    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM')
-                    return terminal
+                const setTerminal = (error: ReplayWorkerError) => {
+                    if (terminal) return terminal
+                    terminal = error
+                    for (const [id, response] of pending) {
+                        clearTimeout(response.timeout)
+                        response.resume?.(Effect.fail(error))
+                        pending.delete(id)
+                    }
+                    return error
                 }
+                const terminate = (error: ReplayWorkerError) => {
+                    const failure = setTerminal(error)
+                    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM')
+                    return failure
+                }
+                const protocolFailure = (message: string) =>
+                    terminate(new ReplayWorkerError({ reason: 'protocol', message }))
+
                 child.stderr.setEncoding('utf8')
                 child.stderr.on('data', (chunk: string) => {
                     stderr = (stderr + chunk).slice(-MAX_STDERR_BYTES)
                 })
                 child.on('exit', (code, signal) => {
-                    terminal ??= new ReplayWorkerError({
-                        reason: 'exit',
-                        message: `Capture worker exited (code ${String(code)}, signal ${String(signal)})${stderr ? `: ${stderr}` : ''}`,
-                    })
+                    setTerminal(
+                        new ReplayWorkerError({
+                            reason: 'exit',
+                            message: `Capture worker exited (code ${String(code)}, signal ${String(signal)})${stderr ? `: ${stderr}` : ''}`,
+                        }),
+                    )
                 })
                 child.on('error', (error) => {
-                    terminal ??= new ReplayWorkerError({
-                        reason: 'spawn',
-                        message: `Capture worker error: ${error.message}`,
-                    })
+                    setTerminal(
+                        new ReplayWorkerError({
+                            reason: 'spawn',
+                            message: `Capture worker error: ${error.message}`,
+                        }),
+                    )
                 })
-                child.stdout.setEncoding('utf8')
-                child.stdout.on('data', (chunk: string) => {
-                    stdout += chunk
+                child.stdin.on('error', (error) => {
+                    terminate(new ReplayWorkerError({ reason: 'write', message: error.message }))
+                })
+                child.stdout.on('data', (chunk: Buffer) => {
+                    if (terminal) return
+                    stdout = Buffer.concat([stdout, chunk])
+                    while (stdout.byteLength >= 4) {
+                        const length = stdout.readUInt32LE(0)
+                        if (length > MAX_RESPONSE_BYTES) {
+                            terminate(
+                                new ReplayWorkerError({
+                                    reason: 'response_limit',
+                                    message:
+                                        'Capture worker frame exceeds the maximum response size',
+                                }),
+                            )
+                            return
+                        }
+                        if (stdout.byteLength < 4 + length) return
+                        const body = stdout.subarray(4, 4 + length)
+                        stdout = stdout.subarray(4 + length)
+                        let parsed: unknown
+                        try {
+                            parsed = JSON.parse(body.toString('utf8')) as unknown
+                        } catch (cause) {
+                            protocolFailure(
+                                `Capture worker returned invalid JSON: ${String(cause)}`,
+                            )
+                            return
+                        }
+                        const event = Schema.decodeUnknownEither(WorkerEventEnvelope)(parsed)
+                        if (Either.isRight(event)) continue
+                        const decoded = Schema.decodeUnknownEither(WorkerResponseEnvelope)(parsed)
+                        if (Either.isLeft(decoded)) {
+                            protocolFailure(
+                                `Capture worker returned an invalid response envelope: ${String(decoded.left)}`,
+                            )
+                            return
+                        }
+                        const response = pending.get(decoded.right.id)
+                        if (!response) {
+                            if (decoded.right.id.startsWith('shutdown-')) continue
+                            protocolFailure(
+                                `Capture worker returned an unknown response ID ${decoded.right.id}`,
+                            )
+                            return
+                        }
+                        pending.delete(decoded.right.id)
+                        clearTimeout(response.timeout)
+                        if (response.resume) response.resume(Effect.succeed(parsed))
+                        else cleanupUnclaimedDetail(parsed)
+                    }
                 })
 
                 const request = Effect.fn('ReplayWorker.request')(function* (
                     command: Readonly<Record<string, unknown>>,
                 ) {
-                    return yield* semaphore.withPermits(1)(
-                        Effect.gen(function* () {
-                            if (terminal) return yield* terminal
-                            const id = String(++sequence)
-                            const line = JSON.stringify({ v: 1, id, ...command }) + '\n'
-                            if (Buffer.byteLength(line) > MAX_COMMAND_BYTES) {
-                                return yield* new ReplayWorkerError({
-                                    reason: 'protocol',
-                                    message: 'Capture worker command exceeds the maximum line size',
-                                })
-                            }
-                            yield* Effect.async<void, ReplayWorkerError>((resume) => {
-                                child.stdin.write(line, (error) =>
-                                    resume(
-                                        error
-                                            ? Effect.fail(
-                                                  terminate(
-                                                      new ReplayWorkerError({
-                                                          reason: 'write',
-                                                          message: error.message,
-                                                      }),
-                                                  ),
-                                              )
-                                            : Effect.void,
-                                    ),
-                                )
-                            })
-                            const responseLine = yield* Effect.async<string, ReplayWorkerError>(
-                                (resume) => {
-                                    let settled = false
-                                    const finish = (
-                                        effect: Effect.Effect<string, ReplayWorkerError>,
-                                    ) => {
-                                        if (settled) return
-                                        settled = true
-                                        clearInterval(poll)
-                                        clearTimeout(timeout)
-                                        resume(effect)
-                                    }
-                                    const poll = setInterval(() => {
-                                        if (terminal) return finish(Effect.fail(terminal))
-                                        if (Buffer.byteLength(stdout) > MAX_RESPONSE_BYTES) {
-                                            return finish(
-                                                Effect.fail(
-                                                    terminate(
-                                                        new ReplayWorkerError({
-                                                            reason: 'response_limit',
-                                                            message:
-                                                                'Capture worker response exceeds the maximum line size',
-                                                        }),
-                                                    ),
-                                                ),
-                                            )
-                                        }
-                                        const newline = stdout.indexOf('\n')
-                                        if (newline < 0) return
-                                        const value = stdout.slice(0, newline)
-                                        stdout = stdout.slice(newline + 1)
-                                        finish(Effect.succeed(value))
-                                    }, 1)
-                                    const timeout = setTimeout(
-                                        () =>
-                                            finish(
-                                                Effect.fail(
-                                                    terminate(
-                                                        new ReplayWorkerError({
-                                                            reason: 'timeout',
-                                                            message:
-                                                                'Capture worker response timed out',
-                                                        }),
-                                                    ),
-                                                ),
-                                            ),
-                                        options.responseTimeoutMs ?? RESPONSE_TIMEOUT_MS,
-                                    )
-                                    return Effect.sync(() => {
-                                        clearInterval(poll)
-                                        clearTimeout(timeout)
-                                        terminate(
-                                            new ReplayWorkerError({
-                                                reason: 'protocol',
-                                                message: 'Capture worker request was interrupted',
-                                            }),
-                                        )
-                                    })
-                                },
+                    if (terminal) return yield* terminal
+                    if (pending.size >= MAX_PENDING_REQUESTS) {
+                        return yield* new ReplayWorkerError({
+                            reason: 'capacity',
+                            message: 'Capture worker request capacity is exhausted',
+                        })
+                    }
+                    const id = String(++sequence)
+                    const payload = JSON.stringify({ v: 2, id, ...command })
+                    if (Buffer.byteLength(payload) > MAX_COMMAND_BYTES) {
+                        return yield* new ReplayWorkerError({
+                            reason: 'protocol',
+                            message: 'Capture worker command exceeds the maximum frame size',
+                        })
+                    }
+                    return yield* Effect.async<unknown, ReplayWorkerError>((resume) => {
+                        let active = true
+                        const timeout = setTimeout(() => {
+                            if (!active) return
+                            active = false
+                            const response = pending.get(id)
+                            if (response) response.resume = undefined
+                            resume(
+                                Effect.fail(
+                                    new ReplayWorkerError({
+                                        reason: 'timeout',
+                                        message: 'Capture worker response timed out',
+                                    }),
+                                ),
                             )
-                            const parsed = yield* Effect.try({
-                                try: () => JSON.parse(responseLine) as unknown,
-                                catch: (cause) =>
+                        }, options.responseTimeoutMs ?? RESPONSE_TIMEOUT_MS)
+                        pending.set(id, {
+                            timeout,
+                            resume: (effect) => {
+                                if (!active) return
+                                active = false
+                                resume(effect)
+                            },
+                        })
+                        child.stdin.write(frame(payload), (error) => {
+                            if (!error || !active) return
+                            active = false
+                            clearTimeout(timeout)
+                            pending.delete(id)
+                            resume(
+                                Effect.fail(
                                     terminate(
                                         new ReplayWorkerError({
-                                            reason: 'protocol',
-                                            message: `Capture worker returned invalid JSON: ${String(cause)}`,
-                                        }),
-                                    ),
-                            })
-                            const envelope = yield* Schema.decodeUnknown(WorkerEnvelope)(
-                                parsed,
-                            ).pipe(
-                                Effect.mapError((cause) =>
-                                    terminate(
-                                        new ReplayWorkerError({
-                                            reason: 'protocol',
-                                            message: `Capture worker returned an invalid envelope: ${String(cause)}`,
+                                            reason: 'write',
+                                            message: error.message,
                                         }),
                                     ),
                                 ),
                             )
-                            if (envelope.id !== id) {
-                                return yield* terminate(
-                                    new ReplayWorkerError({
-                                        reason: 'protocol',
-                                        message: `Capture worker response ID ${envelope.id} does not match request ID ${id}`,
-                                    }),
-                                )
-                            }
-                            return parsed
-                        }),
-                    )
+                        })
+                        return Effect.sync(() => {
+                            if (!active) return
+                            active = false
+                            clearTimeout(timeout)
+                            const response = pending.get(id)
+                            if (response) response.resume = undefined
+                        })
+                    })
                 })
                 return ReplayWorker.of({ request })
             }),

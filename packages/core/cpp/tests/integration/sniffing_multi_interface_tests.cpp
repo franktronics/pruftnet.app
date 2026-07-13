@@ -131,21 +131,21 @@ void distinct_interfaces_emit_metadata_and_stats() {
 
     const auto stats = runtime.stats();
     assert(stats.interfaces.size() == 2);
-    assert(stats.packets_seen == 5);
-    assert(stats.packets_enqueued == 5);
-    assert(stats.packets_parsed == 5);
-    assert(stats.app_ring_drops == 0);
+    assert(stats.packets_observed == 5);
+    assert(stats.capture_queue_accepted == 5);
+    assert(stats.packets_analyzed == 5);
+    assert(stats.capture_queue_full_drops == 0);
 
     const auto* first_stats = find_interface_stats(stats, 10);
     const auto* second_stats = find_interface_stats(stats, 20);
     assert(first_stats != nullptr);
     assert(second_stats != nullptr);
-    assert(first_stats->packets_seen == 3);
-    assert(first_stats->packets_parsed == 3);
-    assert(first_stats->ring_capacity == 16);
-    assert(second_stats->packets_seen == 2);
-    assert(second_stats->packets_parsed == 2);
-    assert(second_stats->ring_capacity == 16);
+    assert(first_stats->packets_observed == 3);
+    assert(first_stats->capture_queue_accepted == 3);
+    assert(first_stats->capture_queue_capacity_packets == 16);
+    assert(second_stats->packets_observed == 2);
+    assert(second_stats->capture_queue_accepted == 2);
+    assert(second_stats->capture_queue_capacity_packets == 16);
 }
 
 void auto_interface_ids_are_assigned_by_order() {
@@ -342,12 +342,12 @@ void ring_pressure_is_isolated_per_interface() {
     const auto* quiet_stats = find_interface_stats(stats, 22);
     assert(noisy_stats != nullptr);
     assert(quiet_stats != nullptr);
-    assert(noisy_stats->packets_seen == 100);
-    assert(noisy_stats->app_ring_drops > 0);
-    assert(noisy_stats->packets_enqueued + noisy_stats->app_ring_drops == noisy_stats->packets_seen);
-    assert(quiet_stats->packets_seen == 4);
-    assert(quiet_stats->app_ring_drops == 0);
-    assert(quiet_stats->packets_parsed == 4);
+    assert(noisy_stats->packets_observed == 100);
+    assert(noisy_stats->capture_queue_full_drops > 0);
+    assert(noisy_stats->capture_queue_accepted + noisy_stats->capture_queue_full_drops == noisy_stats->packets_observed);
+    assert(quiet_stats->packets_observed == 4);
+    assert(quiet_stats->capture_queue_full_drops == 0);
+    assert(quiet_stats->capture_queue_accepted == 4);
 
     std::lock_guard lock(events_mutex);
     assert(count_events(events, SnifferErrorCode::RingFull, 11) == 1);

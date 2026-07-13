@@ -77,10 +77,10 @@ std::uint64_t run_filter(const std::filesystem::path& fixture, std::string filte
     assert(!has_error_event(events));
     assert(callback_count == expected_packets);
     const auto stats = runtime.stats();
-    assert(stats.packets_seen == expected_packets);
-    assert(stats.packets_enqueued == expected_packets);
-    assert(stats.packets_parsed == expected_packets);
-    assert(stats.app_ring_drops == 0);
+    assert(stats.packets_observed == expected_packets);
+    assert(stats.capture_queue_accepted == expected_packets);
+    assert(stats.packets_analyzed == expected_packets);
+    assert(stats.capture_queue_full_drops == 0);
     return callback_count;
 }
 

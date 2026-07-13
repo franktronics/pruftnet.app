@@ -1,7 +1,12 @@
 import { type AddressInfo } from 'node:net'
 import { createServer, request } from 'node:http'
 
-import { PacketEvicted, PacketNotFound } from '@repo/shared/capture'
+import {
+    PacketDataCorrupted,
+    PacketDetailPending,
+    PacketEvicted,
+    PacketNotFound,
+} from '@repo/shared/capture'
 import { Effect, Layer } from 'effect'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -49,6 +54,10 @@ const capture = Capture.of({
                     detailStarted()
                     return Effect.sync(detailCancelled)
                 })
+            case '5':
+                return Effect.fail(new PacketDetailPending({ title: 'Packet detail pending' }))
+            case '6':
+                return Effect.fail(new PacketDataCorrupted({ title: 'Packet data corrupted' }))
             default:
                 return Effect.die('unexpected packet ID')
         }
@@ -93,6 +102,8 @@ describe('makePacketDetailNodeHandler', () => {
         ['malformed packet key', `/capture/${captureId}/packets/01`, 400, 'InvalidPacketKey'],
         ['missing packet', `/capture/${captureId}/packets/2`, 404, 'PacketNotFound'],
         ['evicted packet', `/capture/${captureId}/packets/3`, 410, 'PacketEvicted'],
+        ['pending detail', `/capture/${captureId}/packets/5`, 425, 'PacketDetailPending'],
+        ['corrupt packet', `/capture/${captureId}/packets/6`, 422, 'PacketDataCorrupted'],
     ])('returns the expected response for a %s', async (_name, path, status, error) => {
         const response = await fetch(origin + path)
 

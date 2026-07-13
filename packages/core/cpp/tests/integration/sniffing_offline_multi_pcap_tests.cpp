@@ -88,19 +88,19 @@ int main() {
     assert(callbacks_by_interface[1] == 5);
 
     const auto stats = runtime.stats();
-    assert(stats.packets_seen == 10);
-    assert(stats.packets_enqueued == 10);
-    assert(stats.packets_parsed == 10);
+    assert(stats.packets_observed == 10);
+    assert(stats.capture_queue_accepted == 10);
+    assert(stats.packets_analyzed == 10);
     assert(stats.interfaces.size() == 2);
 
     const auto* udp_stats = find_interface_stats(stats, 101);
     const auto* tcp_stats = find_interface_stats(stats, 202);
     assert(udp_stats != nullptr);
     assert(tcp_stats != nullptr);
-    assert(udp_stats->packets_seen == 5);
-    assert(udp_stats->packets_parsed == 5);
-    assert(tcp_stats->packets_seen == 5);
-    assert(tcp_stats->packets_parsed == 5);
+    assert(udp_stats->packets_observed == 5);
+    assert(udp_stats->capture_queue_accepted == 5);
+    assert(tcp_stats->packets_observed == 5);
+    assert(tcp_stats->capture_queue_accepted == 5);
 
     return 0;
 }

@@ -51,14 +51,14 @@ Registry snapshots are immutable and cached by revision. Session and stats polli
 Selecting a row performs one binary request to:
 
 ```text
-GET /capture/:captureId/packets/:packetId
+GET /capture/:captureId/packets/:packetId?registryRevision=...&analysisRevision=...
 ```
 
 The URL is derived from the RPC endpoint while preserving Electron's random query token. Requests carry TanStack Query's abort signal and obsolete selections are cancelled.
 
 PRT2 verification and model construction run in a dedicated module Web Worker. The response `ArrayBuffer` is transferred to the worker. The worker verifies configured budgets, registry revision, and complete packet identity before returning a compact structured-clone model with exclusively owned data-source buffers.
 
-React never parses or verifies PRT2 on the UI thread. Detail cache keys contain capture ID, packet ID, analysis revision, and registry revision. Packet eviction is rendered distinctly from loading, unavailable transport, and invalid detail.
+React never parses or verifies PRT2 on the UI thread. Detail cache keys contain capture ID, packet ID, analysis revision, and registry revision. Analysis pending, intentional spool eviction, invalid persisted data, and unavailable transport are distinct states. Intentional eviction is not labeled capture loss.
 
 ## Tree And Bytes
 
@@ -70,14 +70,13 @@ The byte pane virtualizes 16-byte rows, renders synchronized hex and ASCII, and 
 
 ## Statistics
 
-The statistics pane stores at most 120 adjacent one-second snapshots in frontend memory. It shows packet-seen/parsed rates and maximum interface-ring pressure as two-minute sparklines. History is capture-local and is neither sent to nor persisted by the backend.
+The statistics pane is a capture ledger, not one aggregate loss number. It stores at most 120 adjacent one-second snapshots and charts observed, persisted, and analyzed rates plus maximum packet-or-byte queue pressure. This is a rolling client-side window: a new sample replaces the oldest sample after the 120-sample limit, so it represents roughly the latest two minutes rather than the complete capture lifetime.
 
-- packets seen, enqueued, parsed, and retained;
-- calculated packet rate from adjacent snapshots;
-- pcap, interface, application-ring, retention-rejection, IPC, and eviction counters;
-- retained bytes;
-- parser state;
-- per-interface thread and ring state.
+The compact dashboard uses sparklines and opens the same ledger component in an expanded statistics dialog. The expanded throughput chart adds time and packet-rate axes, hover values, and monotone curves. Metric help controls stay hidden until their complete field row is hovered or the control receives keyboard focus. Statistics sections use spacing rather than decorative left borders.
+
+The ledger separates capture source, per-interface application queue, persistence, intentional retention, and analysis. Tooltips identify the measurement point, permanence, recovery behavior, and relevant tuning control. A live conservation section compares observed transitions, accepted-to-persisted transitions, and persisted-to-analysis outcomes. `ipcDrops` and the `IPC` label do not exist.
+
+The UI renders intentional spool eviction in a retention tone. Kernel/interface loss, application queue loss, and terminal write loss use failure tones. Analyzer backlog remains healthy while raw packets are committed and retained.
 
 All counters remain decimal strings or `bigint`; they are never coerced to JavaScript numbers.
 
@@ -93,7 +92,7 @@ Capture-specific components, hooks, models, and query policies stay under `packa
 
 - optional OS-specific MAC address enrichment;
 - explicit DLT and timestamp selection in the frontend;
-- shared-memory packet batches and persistent pcapng output for sustained high-rate capture;
 - packaged privilege installation and helper signing on Linux, macOS, and Windows;
+- persistent compact-summary storage beyond the bounded live journal;
 - remote authentication and authorization;
 - user capture-file import and history.

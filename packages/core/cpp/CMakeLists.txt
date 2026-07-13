@@ -102,6 +102,7 @@ add_custom_target(packet_tree_ts_codegen
 )
 
 add_library(pruftnet_sniffing STATIC
+    src/capture/pcapng_spool.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
     src/parsing/dissectors/arp_dissector.cpp
@@ -207,6 +208,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(packet_ring_tests tests/unit/packet_ring_tests.cpp)
     add_test(NAME unit.packet_ring COMMAND packet_ring_tests)
+
+    pruftnet_add_sniffing_test(pcapng_spool_tests tests/unit/pcapng_spool_tests.cpp)
+    add_test(NAME unit.pcapng_spool COMMAND pcapng_spool_tests)
 
     pruftnet_add_sniffing_test(packet_view_tests tests/unit/packet_view_tests.cpp)
     add_test(NAME unit.packet_view COMMAND packet_view_tests)

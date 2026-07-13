@@ -1,11 +1,13 @@
 #pragma once
 
 #include <functional>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
 
 #include "pruftnet/parsing/registry.hpp"
+#include "pruftnet/capture/pcapng_spool.hpp"
 #include "pruftnet/sniffing/packet.hpp"
 #include "pruftnet/sniffing/parsed_packet.hpp"
 #include "pruftnet/sniffing/sniffer_error.hpp"
@@ -42,6 +44,9 @@ public:
   [[nodiscard]] parsing::RegistryRevision registry_revision() const noexcept;
   [[nodiscard]] parsing::RegistrySnapshotPtr registry_snapshot() const noexcept;
   [[nodiscard]] SnifferStatsSnapshot stats() const;
+  [[nodiscard]] capture::PacketSpoolLookup
+  persisted_packet(const PacketKey &key) const;
+  [[nodiscard]] std::vector<std::filesystem::path> spool_paths() const;
 
 private:
   struct OfflineTag {};

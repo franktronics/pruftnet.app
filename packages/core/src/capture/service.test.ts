@@ -22,11 +22,11 @@ const provideCapture = <A, E>(effect: Effect.Effect<A, E, Capture>, response: un
     )
 
 const helloResponse = {
-    v: 1,
+    v: 2,
     id: 'hello',
     ok: true,
-    protocolVersion: 1,
-    features: ['live', 'replay', 'packetDetail'],
+    protocolVersion: 2,
+    features: ['live', 'replay', 'packetDetail', 'framedControl', 'detailFile'],
 } as const
 
 describe('Capture', () => {
@@ -36,7 +36,7 @@ describe('Capture', () => {
                 return yield* (yield* Capture).listInterfaces()
             }),
             {
-                v: 1,
+                v: 2,
                 id: '1',
                 ok: true,
                 interfaces: [
@@ -68,7 +68,7 @@ describe('Capture', () => {
                 return yield* (yield* Capture).startReplay('fixture')
             }),
             {
-                v: 1,
+                v: 2,
                 id: '1',
                 ok: true,
                 captureHigh: '1',
@@ -96,7 +96,7 @@ describe('Capture', () => {
                 command = value
                 if (value.op === 'start') {
                     return Effect.succeed({
-                        v: 1,
+                        v: 2,
                         id: '1',
                         ok: true,
                         captureHigh: '0',
@@ -109,7 +109,7 @@ describe('Capture', () => {
                     })
                 }
                 return Effect.succeed({
-                    v: 1,
+                    v: 2,
                     id: '1',
                     ok: true,
                     captureHigh: '0',
@@ -207,7 +207,7 @@ describe('Capture', () => {
                         ? helloResponse
                         : command.op === 'start'
                           ? {
-                                v: 1,
+                                v: 2,
                                 id: '1',
                                 ok: true,
                                 captureHigh: '0',
@@ -219,7 +219,7 @@ describe('Capture', () => {
                                 failure: null,
                             }
                           : {
-                                v: 1,
+                                v: 2,
                                 id: '2',
                                 ok: true,
                                 captureHigh: '0',
@@ -277,7 +277,7 @@ describe('Capture', () => {
                               () =>
                                   resume(
                                       Effect.succeed({
-                                          v: 1,
+                                          v: 2,
                                           id: String(starts),
                                           ok: true,
                                           captureHigh: '0',
@@ -322,7 +322,7 @@ describe('Capture', () => {
                 if (command.op === 'hello') return Effect.succeed(helloResponse)
                 sent = command
                 return Effect.succeed({
-                    v: 1,
+                    v: 2,
                     id: '1',
                     ok: true,
                     captureHigh: '0',
@@ -351,7 +351,13 @@ describe('Capture', () => {
             readTimeoutMs: 10,
             dispatchBatchSize: 64,
             ringSlots: 1024,
+            captureQueueBytes: 16 * 1024 * 1024,
             maxTotalRingBytes: 128 * 1024 * 1024,
+            spoolMaxTotalBytes: String(8 * 1024 * 1024 * 1024),
+            spoolSegmentBytes: String(512 * 1024 * 1024),
+            spoolMaxSegments: 16,
+            spoolRingMode: false,
+            spoolTemporary: true,
         })
 
         const session = await Effect.runPromise(
@@ -374,6 +380,8 @@ describe('Capture', () => {
             interface0TimestampType: '',
             bpfFilter: 'tcp port 443',
             snaplen: 65_535,
+            ringBytes: 16 * 1024 * 1024,
+            spoolMaxTotalBytes: String(8 * 1024 * 1024 * 1024),
         })
     })
 })

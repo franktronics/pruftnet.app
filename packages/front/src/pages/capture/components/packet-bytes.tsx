@@ -77,13 +77,15 @@ export function PacketBytes({
     const emptyMessage =
         detailState?.kind === 'loading'
             ? 'Loading packet bytes...'
-            : detailState?.kind === 'evicted'
-              ? 'Packet bytes were evicted from retention.'
-              : detailState?.kind === 'invalid'
-                ? 'Packet bytes are invalid.'
-                : detailState?.kind === 'unavailable'
-                  ? 'Packet bytes are unavailable.'
-                  : 'Select a packet to inspect its bytes'
+            : detailState?.kind === 'pending'
+              ? 'Packet bytes are waiting for analysis.'
+              : detailState?.kind === 'evicted'
+                ? 'Packet bytes were evicted from retention.'
+                : detailState?.kind === 'invalid'
+                  ? 'Packet bytes are invalid.'
+                  : detailState?.kind === 'unavailable'
+                    ? 'Packet bytes are unavailable.'
+                    : 'Select a packet to inspect its bytes'
     return (
         <PanelShell title="Bytes" showHeader={false}>
             <div className="flex h-full min-h-0 flex-col">

@@ -36,6 +36,14 @@ export class PacketEvicted extends Schema.TaggedError<PacketEvicted>()(
     'PacketEvicted',
     BasicErrorFields,
 ) {}
+export class PacketDetailPending extends Schema.TaggedError<PacketDetailPending>()(
+    'PacketDetailPending',
+    BasicErrorFields,
+) {}
+export class PacketDataCorrupted extends Schema.TaggedError<PacketDataCorrupted>()(
+    'PacketDataCorrupted',
+    BasicErrorFields,
+) {}
 export class RegistryUnavailable extends Schema.TaggedError<RegistryUnavailable>()(
     'RegistryUnavailable',
     BasicErrorFields,
@@ -58,6 +66,8 @@ export const CaptureRpcError = Schema.Union(
     CaptureWorkerCrashed,
     PacketNotFound,
     PacketEvicted,
+    PacketDetailPending,
+    PacketDataCorrupted,
     RegistryUnavailable,
     ReplayFailed,
     LiveCaptureFailed,

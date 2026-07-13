@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <charconv>
 #include <chrono>
@@ -6,6 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -16,6 +19,12 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
+
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 #include "parsing/packet_parser.hpp"
 #include "pruftnet/parsing/packet_tree_codec.hpp"
@@ -26,12 +35,10 @@
 namespace {
 using namespace pruftnet;
 
-constexpr std::size_t kMaxRequestBytes = 64 * 1024;
-constexpr std::size_t kMaxResponseBytes = 16 * 1024 * 1024;
+constexpr std::uint32_t kMaxRequestBytes = 64 * 1024;
 constexpr std::size_t kMaxSummaryRead = 1024;
 constexpr std::size_t kMaxEventRead = 512;
-constexpr std::size_t kPendingPacketCapacity = 4096;
-constexpr std::size_t kPendingPacketBytes = 64 * 1024 * 1024;
+constexpr std::size_t kMaxPendingDetailRequests = 64;
 
 std::uint64_t wall_time_ns() noexcept {
   return static_cast<std::uint64_t>(
@@ -159,51 +166,51 @@ std::optional<bool> boolean_field(std::string_view json, std::string_view key) {
   return std::nullopt;
 }
 
-std::string base64(std::span<const std::byte> bytes) {
-  static constexpr char chars[] =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  std::string out;
-  out.reserve((bytes.size() + 2) / 3 * 4);
-  for (std::size_t i = 0; i < bytes.size(); i += 3) {
-    const auto remaining = bytes.size() - i;
-    std::uint32_t value = std::to_integer<unsigned char>(bytes[i]) << 16U;
-    if (remaining > 1)
-      value |= std::to_integer<unsigned char>(bytes[i + 1]) << 8U;
-    if (remaining > 2)
-      value |= std::to_integer<unsigned char>(bytes[i + 2]);
-    out += chars[(value >> 18U) & 63U];
-    out += chars[(value >> 12U) & 63U];
-    out += remaining > 1 ? chars[(value >> 6U) & 63U] : '=';
-    out += remaining > 2 ? chars[value & 63U] : '=';
-  }
-  return out;
-}
-
 std::string decimal(std::uint64_t value) {
   return json_string(std::to_string(value));
 }
 
-enum class LineRead { Ok, TooLarge, End };
+enum class FrameRead { Ok, TooLarge, End, Truncated };
 
-LineRead read_bounded_line(std::istream &input, std::string &line) {
-  line.clear();
-  bool too_large = false;
-  char value = 0;
-  while (input.get(value)) {
-    if (value == '\n')
-      return too_large ? LineRead::TooLarge : LineRead::Ok;
-    if (!too_large) {
-      if (line.size() == kMaxRequestBytes) {
-        too_large = true;
-        line.clear();
-      } else {
-        line.push_back(value);
-      }
+FrameRead read_frame(std::istream &input, std::string &payload) {
+  std::array<unsigned char, 4> header{};
+  input.read(reinterpret_cast<char *>(header.data()), header.size());
+  if (input.gcount() == 0)
+    return FrameRead::End;
+  if (input.gcount() != static_cast<std::streamsize>(header.size()))
+    return FrameRead::Truncated;
+  const auto length = std::uint32_t(header[0]) |
+                      (std::uint32_t(header[1]) << 8U) |
+                      (std::uint32_t(header[2]) << 16U) |
+                      (std::uint32_t(header[3]) << 24U);
+  if (length > kMaxRequestBytes) {
+    std::array<char, 4096> discard{};
+    std::uint32_t remaining = length;
+    while (remaining != 0 && input) {
+      const auto chunk = std::min<std::uint32_t>(remaining, discard.size());
+      input.read(discard.data(), chunk);
+      remaining -= static_cast<std::uint32_t>(input.gcount());
     }
+    return remaining == 0 ? FrameRead::TooLarge : FrameRead::Truncated;
   }
-  if (too_large)
-    return LineRead::TooLarge;
-  return line.empty() ? LineRead::End : LineRead::Ok;
+  payload.resize(length);
+  input.read(payload.data(), length);
+  return input.gcount() == static_cast<std::streamsize>(length)
+             ? FrameRead::Ok
+             : FrameRead::Truncated;
+}
+
+void write_frame(std::ostream &output, std::string_view payload) {
+  const auto length = static_cast<std::uint32_t>(payload.size());
+  const std::array header{
+      static_cast<unsigned char>(length & 0xffU),
+      static_cast<unsigned char>((length >> 8U) & 0xffU),
+      static_cast<unsigned char>((length >> 16U) & 0xffU),
+      static_cast<unsigned char>((length >> 24U) & 0xffU),
+  };
+  output.write(reinterpret_cast<const char *>(header.data()), header.size());
+  output.write(payload.data(), static_cast<std::streamsize>(payload.size()));
+  output.flush();
 }
 
 std::string parse_condition(parsing::ParseCondition condition) {
@@ -243,29 +250,27 @@ std::string value_type(parsing::FieldValueType type) {
 class Worker {
 public:
   explicit Worker(std::unordered_map<std::string, std::string> paths)
-      : paths_(std::move(paths)), store_(4096, 64 * 1024 * 1024),
-        journal_(8192), events_(1024) {}
+      : paths_(std::move(paths)), journal_(8192), events_(1024) {}
 
   ~Worker() {
-    if (sniffer_)
-      sniffer_->stop();
-    stop_packet_consumer();
+    if (const auto sniffer = current_sniffer())
+      sniffer->stop();
   }
 
   std::string handle(std::string_view request) {
     const auto id = field(request, "id");
     const auto op = field(request, "op");
     const auto version = number(request, "v");
-    const std::string prefix = "{\"v\":1,\"id\":" +
+    const std::string prefix = "{\"v\":2,\"kind\":\"response\",\"id\":" +
                                json_string(id.value_or("")) + ',';
     if (request.size() < 2 || request.front() != '{' || request.back() != '}' ||
         !id || !op || !version)
       return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
-    if (*version != 1)
+    if (*version != 2)
       return prefix + "\"ok\":false,\"error\":\"unsupported_version\"}";
     if (*op == "hello")
       return prefix +
-             "\"ok\":true,\"protocolVersion\":1,\"features\":[\"live\",\"replay\",\"packetDetail\"]}";
+             "\"ok\":true,\"protocolVersion\":2,\"features\":[\"live\",\"replay\",\"packetDetail\",\"framedControl\",\"detailFile\"]}";
     if (*op == "start") {
       const auto token = field(request, "token");
       if (!token || token->empty())
@@ -275,9 +280,8 @@ public:
     if (*op == "startLive")
       return start_live(prefix, request);
     if (*op == "shutdown") {
-      if (sniffer_)
-        sniffer_->stop();
-      stop_packet_consumer();
+      if (const auto sniffer = current_sniffer())
+        sniffer->stop();
       shutdown_ = true;
       return prefix + "\"ok\":true}";
     }
@@ -324,19 +328,34 @@ public:
 private:
   static std::string boolean(bool value) { return value ? "true" : "false"; }
   enum class State { Stopped, Running, Failed };
-  struct PendingPacket {
-    sniffing::PacketMetadata metadata;
-    std::vector<std::byte> bytes;
-    replay::PacketSummary summary;
-  };
-
+  std::shared_ptr<sniffing::NetworkSniffer> current_sniffer() const {
+    std::lock_guard lock(session_mutex_);
+    return sniffer_;
+  }
+  parsing::RegistrySnapshotPtr current_registry() const {
+    std::lock_guard lock(session_mutex_);
+    return registry_;
+  }
+  void set_sniffer(std::shared_ptr<sniffing::NetworkSniffer> sniffer) {
+    std::lock_guard lock(session_mutex_);
+    sniffer_ = std::move(sniffer);
+  }
+  void set_failure(std::string failure) {
+    std::lock_guard lock(failure_mutex_);
+    fatal_failure_ = std::move(failure);
+  }
+  std::string current_failure() const {
+    std::lock_guard lock(failure_mutex_);
+    return fatal_failure_;
+  }
   std::optional<std::string> validate_capture(const std::string &prefix,
                                               std::string_view request) const {
     const auto high = number(request, "captureHigh");
     const auto low = number(request, "captureLow");
     if (!high || !low)
       return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
-    const auto capture = sniffer_ ? sniffer_->capture_id() : std::nullopt;
+    const auto sniffer = current_sniffer();
+    const auto capture = sniffer ? sniffer->capture_id() : std::nullopt;
     if (!capture || capture->high != *high || capture->low != *low) {
       std::string response = prefix +
                              "\"ok\":false,\"error\":\"stale_capture\"";
@@ -350,38 +369,41 @@ private:
 
   std::string state_name() {
     if (state_.load() == State::Failed) {
-      if (sniffer_)
-        sniffer_->stop();
-      stop_packet_consumer();
+      if (const auto sniffer = current_sniffer())
+        sniffer->stop();
       return "failed";
     }
     if (state_.load() == State::Stopped)
       return "stopped";
-    if (sniffer_ && sniffer_->is_running())
+    const auto sniffer = current_sniffer();
+    if (sniffer && sniffer->is_running())
       return "running";
-    if (sniffer_)
-      sniffer_->stop();
-    stop_packet_consumer();
+    if (sniffer)
+      sniffer->stop();
     if (stopped_ns_.load() == 0)
       stopped_ns_ = wall_time_ns();
     return "completed";
   }
 
   std::string session_json() {
-    const auto capture = sniffer_ ? sniffer_->capture_id() : std::nullopt;
+    const auto sniffer = current_sniffer();
+    const auto registry = current_registry();
+    const auto failure = current_failure();
+    const auto capture = sniffer ? sniffer->capture_id() : std::nullopt;
     std::ostringstream out;
     out << "\"captureHigh\":" << decimal(capture ? capture->high : 0)
         << ",\"captureLow\":" << decimal(capture ? capture->low : 0)
         << ",\"state\":" << json_string(state_name())
         << ",\"registryRevision\":"
-        << decimal(registry_ ? registry_->revision().value : 0)
+        << decimal(registry ? registry->revision().value : 0)
         << ",\"startedAtNs\":" << decimal(started_ns_.load())
         << ",\"stoppedAtNs\":";
     if (stopped_ns_.load() == 0)
       out << "null";
     else
       out << decimal(stopped_ns_.load());
-    out << ",\"failure\":null";
+    out << ",\"failure\":"
+        << (failure.empty() ? "null" : json_string(failure));
     return out.str();
   }
 
@@ -390,115 +412,66 @@ private:
   }
 
   std::string stop(const std::string &prefix) {
-    if (sniffer_)
-      sniffer_->stop();
-    stop_packet_consumer();
+    if (const auto sniffer = current_sniffer())
+      sniffer->stop();
     state_ = State::Stopped;
     stopped_ns_ = wall_time_ns();
     return prefix + "\"ok\":true," + session_json() + "}";
   }
   void reset_capture() {
-    if (sniffer_)
-      sniffer_->stop();
-    stop_packet_consumer();
-    store_.clear();
+    if (const auto sniffer = current_sniffer())
+      sniffer->stop();
     journal_.clear();
     events_.clear();
-    callback_failures_ = 0;
+    {
+      std::lock_guard lock(analyzed_packets_mutex_);
+      analyzed_packets_.clear();
+      analysis_failed_packets_.clear();
+    }
+    analysis_callback_errors_ = 0;
+    set_failure({});
     state_ = State::Stopped;
     stopped_ns_ = 0;
   }
 
   void consume_packet(const sniffing::RawPacketView &raw,
-                      const sniffing::ParsedPacket &parsed) noexcept {
-    try {
-      const auto registry = registry_;
-      if (!registry || !summary_extractor_) {
-        ++callback_failures_;
-        return;
+                      const sniffing::ParsedPacket &parsed) {
+    const auto registry = current_registry();
+    if (!registry || !summary_extractor_ ||
+        !journal_.append(replay::extract_summary(raw, parsed, *summary_extractor_))) {
+      {
+        std::lock_guard lock(analyzed_packets_mutex_);
+        analysis_failed_packets_.insert(raw.metadata.key.packet_id);
       }
-      std::unique_lock<std::mutex> lock(pending_mutex_, std::defer_lock);
-      if (live_capture_)
-        lock.try_lock();
-      else
-        lock.lock();
-      if (!lock.owns_lock() ||
-          pending_packets_.size() >= kPendingPacketCapacity ||
-          raw.bytes.size() > kPendingPacketBytes - pending_bytes_) {
-        ++callback_failures_;
-        return;
-      }
-      PendingPacket pending;
-      pending.metadata = raw.metadata;
-      pending.bytes.assign(raw.bytes.begin(), raw.bytes.end());
-      pending.summary =
-          replay::extract_summary(raw, parsed, *summary_extractor_);
-      pending_bytes_ += pending.bytes.size();
-      pending_packets_.push_back(std::move(pending));
-      lock.unlock();
-      pending_cv_.notify_one();
-    } catch (...) {
-      ++callback_failures_;
+      ++analysis_callback_errors_;
+      throw std::runtime_error("Unable to append analyzed packet summary.");
     }
-  }
-
-  void start_packet_consumer() {
-    {
-      std::lock_guard lock(pending_mutex_);
-      pending_packets_.clear();
-      pending_bytes_ = 0;
-      pending_stop_ = false;
-    }
-    packet_consumer_ = std::thread([this] {
-      while (true) {
-        PendingPacket pending;
-        {
-          std::unique_lock lock(pending_mutex_);
-          pending_cv_.wait(lock, [this] {
-            return pending_stop_ || !pending_packets_.empty();
-          });
-          if (pending_packets_.empty()) {
-            if (pending_stop_)
-              break;
-            continue;
-          }
-          pending = std::move(pending_packets_.front());
-          pending_bytes_ -= pending.bytes.size();
-          pending_packets_.pop_front();
-        }
-        const sniffing::RawPacketView view{pending.metadata, pending.bytes};
-        if (!store_.insert(view) || !journal_.append(std::move(pending.summary)))
-          ++callback_failures_;
-      }
-    });
-  }
-
-  void stop_packet_consumer() noexcept {
-    {
-      std::lock_guard lock(pending_mutex_);
-      pending_stop_ = true;
-    }
-    pending_cv_.notify_all();
-    if (packet_consumer_.joinable())
-      packet_consumer_.join();
+    std::lock_guard lock(analyzed_packets_mutex_);
+    analyzed_packets_.insert(raw.metadata.key.packet_id);
   }
 
   void consume_event(const sniffing::SnifferEvent &event) noexcept {
     if (!events_.append(event))
-      ++callback_failures_;
-    if (event.severity == sniffing::SnifferSeverity::Fatal)
+      ++analysis_callback_errors_;
+    if (event.severity == sniffing::SnifferSeverity::Fatal) {
+      set_failure(sniffing::to_string(event.code) + ": " + event.message);
       state_ = State::Failed;
+    }
   }
 
   std::string start_sniffer(const std::string &prefix) {
-    registry_ = sniffer_->registry_snapshot();
+    const auto sniffer = current_sniffer();
+    const auto registry = sniffer->registry_snapshot();
+    {
+      std::lock_guard lock(session_mutex_);
+      registry_ = registry;
+    }
     summary_extractor_ =
-        std::make_unique<parsing::SummaryExtractor>(*registry_);
-    start_packet_consumer();
+        std::make_unique<parsing::SummaryExtractor>(*registry);
     started_ns_ = wall_time_ns();
-    if (const auto error = sniffer_->start()) {
-      stop_packet_consumer();
+    if (const auto error = sniffer->start()) {
       state_ = State::Failed;
+      set_failure(sniffing::to_string(error->code) + ": " + error->message);
       stopped_ns_ = wall_time_ns();
       return prefix + "\"ok\":false,\"error\":" +
              json_string(sniffing::to_string(error->code)) +
@@ -514,20 +487,19 @@ private:
     if (path == paths_.end())
       return prefix + "\"ok\":false,\"error\":\"unknown_path_token\"}";
     reset_capture();
-    live_capture_ = false;
     sniffing::SnifferOptions options;
     options.interfaces.emplace_back();
     options.interfaces.front().ring_slots = 1024;
     options.interfaces.front().pcap_dispatch_batch_size = 64;
-    sniffer_ = std::make_unique<sniffing::NetworkSniffer>(
+    set_sniffer(std::make_shared<sniffing::NetworkSniffer>(
         sniffing::NetworkSniffer::offline(
             path->second, std::move(options),
-            [this](const auto &raw, const auto &parsed) noexcept {
+            [this](const auto &raw, const auto &parsed) {
               consume_packet(raw, parsed);
             },
             [this](const sniffing::SnifferEvent &event) noexcept {
               consume_event(event);
-            }));
+            })));
     return start_sniffer(prefix);
   }
 
@@ -538,11 +510,19 @@ private:
     const auto read_timeout = number(request, "readTimeoutMs");
     const auto dispatch_batch = number(request, "dispatchBatchSize");
     const auto ring_slots = number(request, "ringSlots");
+    const auto ring_bytes = number(request, "ringBytes");
     const auto max_ring_bytes = number(request, "maxTotalRingBytes");
+    const auto spool_max_bytes = number(request, "spoolMaxTotalBytes");
+    const auto spool_segment_bytes = number(request, "spoolSegmentBytes");
+    const auto spool_max_segments = number(request, "spoolMaxSegments");
+    const auto spool_ring_mode = boolean_field(request, "spoolRingMode");
+    const auto spool_temporary = boolean_field(request, "spoolTemporary");
     const auto bpf_filter = field(request, "bpfFilter");
     if (!interface_count || *interface_count == 0 || *interface_count > 256 ||
         !snaplen || !pcap_buffer || !read_timeout || !dispatch_batch ||
-        !ring_slots || !max_ring_bytes || !bpf_filter ||
+        !ring_slots || !ring_bytes || !max_ring_bytes || !spool_max_bytes ||
+        !spool_segment_bytes || !spool_max_segments || !spool_ring_mode ||
+        !spool_temporary || !bpf_filter ||
         *snaplen > static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
         *pcap_buffer >
             static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
@@ -554,6 +534,11 @@ private:
 
     sniffing::SnifferOptions options;
     options.max_total_ring_bytes = static_cast<std::size_t>(*max_ring_bytes);
+    options.spool_max_total_bytes = *spool_max_bytes;
+    options.spool_segment_bytes = *spool_segment_bytes;
+    options.spool_max_segments = static_cast<std::size_t>(*spool_max_segments);
+    options.spool_ring_mode = *spool_ring_mode;
+    options.spool_temporary = *spool_temporary;
     options.interfaces.reserve(static_cast<std::size_t>(*interface_count));
     for (std::uint64_t index = 0; index < *interface_count; ++index) {
       const auto key = std::to_string(index);
@@ -579,6 +564,7 @@ private:
       interface_options.read_timeout_ms = static_cast<int>(*read_timeout);
       interface_options.pcap_dispatch_batch_size = static_cast<int>(*dispatch_batch);
       interface_options.ring_slots = static_cast<std::size_t>(*ring_slots);
+      interface_options.ring_bytes = static_cast<std::size_t>(*ring_bytes);
       interface_options.bpf_filter = *bpf_filter;
       if (*link_type != 0)
         interface_options.requested_link_type = static_cast<int>(*link_type - 1);
@@ -588,15 +574,14 @@ private:
     }
 
     reset_capture();
-    live_capture_ = true;
-    sniffer_ = std::make_unique<sniffing::NetworkSniffer>(
+    set_sniffer(std::make_shared<sniffing::NetworkSniffer>(
         std::move(options),
-        [this](const auto &raw, const auto &parsed) noexcept {
+        [this](const auto &raw, const auto &parsed) {
           consume_packet(raw, parsed);
         },
         [this](const sniffing::SnifferEvent &event) noexcept {
           consume_event(event);
-        });
+        }));
     return start_sniffer(prefix);
   }
   std::string summaries(const std::string &prefix, std::uint64_t cursor,
@@ -604,7 +589,7 @@ private:
     const auto read = journal_.read(
         cursor, std::min<std::uint64_t>(requested, kMaxSummaryRead));
     std::ostringstream out;
-    const auto capture = sniffer_->capture_id();
+    const auto capture = current_sniffer()->capture_id();
     out << prefix << "\"ok\":true,\"captureHigh\":"
         << decimal(capture->high) << ",\"captureLow\":"
         << decimal(capture->low) << ",\"oldestAvailableCursor\":";
@@ -670,32 +655,70 @@ private:
     return out.str();
   }
   std::string stats(const std::string &prefix) {
-    const auto retained = store_.stats();
+    const auto sniffer = current_sniffer();
     const auto capture =
-        sniffer_ ? sniffer_->stats() : sniffing::SnifferStatsSnapshot{};
-    const auto id = sniffer_ ? sniffer_->capture_id() : std::nullopt;
+        sniffer ? sniffer->stats() : sniffing::SnifferStatsSnapshot{};
+    const auto id = sniffer ? sniffer->capture_id() : std::nullopt;
+    const auto summaries = journal_.read(0, 1);
+    const auto now = std::chrono::steady_clock::now();
+    std::uint64_t write_rate = 0;
+    if (last_stats_at_.time_since_epoch().count() != 0 && capture.spool_bytes_written >= last_stats_bytes_) {
+      const auto elapsed = std::chrono::duration<double>(now - last_stats_at_).count();
+      if (elapsed > 0)
+        write_rate = static_cast<std::uint64_t>((capture.spool_bytes_written - last_stats_bytes_) / elapsed);
+    }
+    last_stats_at_ = now;
+    last_stats_bytes_ = capture.spool_bytes_written;
     std::ostringstream out;
     out << prefix
         << "\"ok\":true,\"captureHigh\":" << decimal(id ? id->high : 0)
         << ",\"captureLow\":" << decimal(id ? id->low : 0)
-        << ",\"packetsSeen\":" << decimal(capture.packets_seen)
-        << ",\"packetsEnqueued\":" << decimal(capture.packets_enqueued)
-        << ",\"packetsParsed\":" << decimal(capture.packets_parsed)
-        << ",\"appRingDrops\":" << decimal(capture.app_ring_drops)
+        << ",\"packetsObserved\":" << decimal(capture.packets_observed)
+        << ",\"captureQueueAccepted\":" << decimal(capture.capture_queue_accepted)
+        << ",\"captureQueueFullDrops\":" << decimal(capture.capture_queue_full_drops)
+        << ",\"captureQueueOversizeDrops\":" << decimal(capture.capture_queue_oversize_drops)
+        << ",\"invalidCallbackDrops\":" << decimal(capture.invalid_callback_drops)
         << ",\"pcapDispatchCalls\":" << decimal(capture.pcap_dispatch_calls)
         << ",\"pcapDispatchErrors\":" << decimal(capture.pcap_dispatch_errors)
-        << ",\"pcapReceived\":" << decimal(capture.pcap_recv)
-        << ",\"pcapDropped\":" << decimal(capture.pcap_drop)
-        << ",\"pcapInterfaceDropped\":" << decimal(capture.pcap_ifdrop)
-        << ",\"ringDepth\":" << decimal(capture.ring_depth)
-        << ",\"ringCapacity\":" << decimal(capture.ring_capacity)
-        << ",\"maxRingDepth\":" << decimal(capture.max_ring_depth)
-        << ",\"parserThreadRunning\":" << boolean(capture.parser_thread_running)
-        << ",\"retainedPackets\":" << decimal(retained.packets)
-        << ",\"retainedBytes\":" << decimal(retained.bytes)
-        << ",\"retentionEvictions\":" << decimal(retained.evictions)
-        << ",\"retentionRejected\":" << decimal(retained.rejected)
-        << ",\"ipcDrops\":" << decimal(callback_failures_.load())
+        << ",\"pcapStatsReadFailures\":" << decimal(capture.pcap_stats_read_failures)
+        << ",\"pcapReceived\":" << decimal(capture.pcap_received)
+        << ",\"pcapKernelDrops\":" << decimal(capture.pcap_kernel_drops)
+        << ",\"pcapInterfaceDrops\":" << decimal(capture.pcap_interface_drops)
+        << ",\"captureQueueDepth\":" << decimal(capture.capture_queue_depth)
+        << ",\"captureQueueCapacityPackets\":" << decimal(capture.capture_queue_capacity_packets)
+        << ",\"captureQueueCapacityBytes\":" << decimal(capture.capture_queue_capacity_bytes)
+        << ",\"captureQueueBytes\":" << decimal(capture.capture_queue_bytes)
+        << ",\"captureQueueMaxDepth\":" << decimal(capture.capture_queue_max_depth)
+        << ",\"captureQueueMaxBytes\":" << decimal(capture.capture_queue_max_bytes)
+        << ",\"packetsPersisted\":" << decimal(capture.packets_persisted)
+        << ",\"spoolBytesWritten\":" << decimal(capture.spool_bytes_written)
+        << ",\"spoolWriteRate\":" << decimal(write_rate)
+        << ",\"spoolSegments\":" << decimal(capture.spool_segments)
+        << ",\"spoolQuotaBytes\":" << decimal(capture.spool_quota_bytes)
+        << ",\"spoolBytesRetained\":" << decimal(capture.spool_bytes_retained)
+        << ",\"spoolEvictedPackets\":" << decimal(capture.spool_evicted_packets)
+        << ",\"spoolEvictedBytes\":" << decimal(capture.spool_evicted_bytes)
+        << ",\"spoolWriteFailures\":" << decimal(capture.spool_write_failures)
+        << ",\"spoolFlushFailures\":" << decimal(capture.spool_flush_failures)
+        << ",\"lastCommittedPacketId\":" << decimal(capture.last_committed_packet_id)
+        << ",\"writerInFlight\":" << decimal(capture.writer_in_flight)
+        << ",\"terminalWriteLosses\":" << decimal(capture.terminal_write_losses)
+        << ",\"packetsAvailableForAnalysis\":" << decimal(capture.packets_available_for_analysis)
+        << ",\"packetsAnalyzed\":" << decimal(capture.packets_analyzed)
+        << ",\"analysisBacklogPackets\":" << decimal(capture.analysis_backlog_packets)
+        << ",\"analysisBacklogBytes\":" << decimal(capture.analysis_backlog_bytes)
+        << ",\"analysisErrors\":" << decimal(capture.analysis_errors + analysis_callback_errors_.load())
+        << ",\"analysisResourceLimits\":" << decimal(capture.analysis_resource_limits)
+        << ",\"summaryCount\":" << decimal(journal_.size())
+        << ",\"summaryOldestCursor\":"
+        << (summaries.oldest_cursor ? decimal(*summaries.oldest_cursor) : "null")
+        << ",\"summaryNewestCursor\":"
+        << (summaries.newest_cursor ? decimal(*summaries.newest_cursor) : "null")
+        << ",\"analysisGapCount\":" << decimal(capture.analysis_gap_count)
+        << ",\"analysisEvictedBeforeAnalysis\":" << decimal(capture.analysis_evicted_before_analysis)
+        << ",\"analysisRejects\":" << decimal(capture.analysis_rejects)
+        << ",\"writerRunning\":" << boolean(capture.writer_thread_running)
+        << ",\"analyzerRunning\":" << boolean(capture.analyzer_running)
         << ",\"interfaces\":[";
     for (std::size_t index = 0; index < capture.interfaces.size(); ++index) {
       const auto &item = capture.interfaces[index];
@@ -704,18 +727,23 @@ private:
       out << "{\"interfaceId\":" << item.interface_id
           << ",\"interfaceName\":" << json_string(item.interface_name)
           << ",\"linkType\":" << item.link_type
-          << ",\"packetsSeen\":" << decimal(item.packets_seen)
-          << ",\"packetsEnqueued\":" << decimal(item.packets_enqueued)
-          << ",\"packetsParsed\":" << decimal(item.packets_parsed)
-          << ",\"appRingDrops\":" << decimal(item.app_ring_drops)
+          << ",\"packetsObserved\":" << decimal(item.packets_observed)
+          << ",\"captureQueueAccepted\":" << decimal(item.capture_queue_accepted)
+          << ",\"captureQueueFullDrops\":" << decimal(item.capture_queue_full_drops)
+          << ",\"captureQueueOversizeDrops\":" << decimal(item.capture_queue_oversize_drops)
+          << ",\"invalidCallbackDrops\":" << decimal(item.invalid_callback_drops)
           << ",\"pcapDispatchCalls\":" << decimal(item.pcap_dispatch_calls)
           << ",\"pcapDispatchErrors\":" << decimal(item.pcap_dispatch_errors)
-          << ",\"pcapReceived\":" << decimal(item.pcap_recv)
-          << ",\"pcapDropped\":" << decimal(item.pcap_drop)
-          << ",\"pcapInterfaceDropped\":" << decimal(item.pcap_ifdrop)
-          << ",\"ringDepth\":" << decimal(item.ring_depth)
-          << ",\"ringCapacity\":" << decimal(item.ring_capacity)
-          << ",\"maxRingDepth\":" << decimal(item.max_ring_depth)
+          << ",\"pcapStatsReadFailures\":" << decimal(item.pcap_stats_read_failures)
+          << ",\"pcapReceived\":" << decimal(item.pcap_received)
+          << ",\"pcapKernelDrops\":" << decimal(item.pcap_kernel_drops)
+          << ",\"pcapInterfaceDrops\":" << decimal(item.pcap_interface_drops)
+          << ",\"captureQueueDepth\":" << decimal(item.capture_queue_depth)
+          << ",\"captureQueueCapacityPackets\":" << decimal(item.capture_queue_capacity_packets)
+          << ",\"captureQueueCapacityBytes\":" << decimal(item.capture_queue_capacity_bytes)
+          << ",\"captureQueueBytes\":" << decimal(item.capture_queue_bytes)
+          << ",\"captureQueueMaxDepth\":" << decimal(item.capture_queue_max_depth)
+          << ",\"captureQueueMaxBytes\":" << decimal(item.capture_queue_max_bytes)
           << ",\"captureThreadRunning\":"
           << boolean(item.capture_thread_running) << '}';
     }
@@ -723,13 +751,14 @@ private:
     return out.str();
   }
   std::string registry(const std::string &prefix) {
-    if (!registry_)
+    const auto registry = current_registry();
+    if (!registry)
       return prefix + "\"ok\":false,\"error\":\"not_started\"}";
     std::ostringstream out;
     out << prefix << "\"ok\":true,\"registryRevision\":"
-        << decimal(registry_->revision().value) << ",\"protocols\":[";
-    for (std::size_t i = 0; i < registry_->protocols().size(); ++i) {
-      const auto &p = registry_->protocols()[i];
+        << decimal(registry->revision().value) << ",\"protocols\":[";
+    for (std::size_t i = 0; i < registry->protocols().size(); ++i) {
+      const auto &p = registry->protocols()[i];
       if (i)
         out << ',';
       out << "{\"id\":" << p.id.value << ",\"key\":" << json_string(p.key)
@@ -737,8 +766,8 @@ private:
           << ",\"visibilityFlags\":" << p.visibility_flags << '}';
     }
     out << "],\"fields\":[";
-    for (std::size_t i = 0; i < registry_->fields().size(); ++i) {
-      const auto &f = registry_->fields()[i];
+    for (std::size_t i = 0; i < registry->fields().size(); ++i) {
+      const auto &f = registry->fields()[i];
       if (i)
         out << ',';
       out << "{\"id\":" << f.id.value
@@ -755,19 +784,38 @@ private:
     const auto high = number(request, "captureHigh");
     const auto low = number(request, "captureLow");
     const auto packet_id = number(request, "packetId");
-    if (!high || !low || !packet_id)
+    const auto registry_revision = number(request, "registryRevision");
+    const auto analysis_revision = number(request, "analysisRevision");
+    if (!high || !low || !packet_id || !registry_revision || !analysis_revision)
       return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
     const sniffing::PacketKey key{{*high, *low}, *packet_id};
     const std::string identity = ",\"captureHigh\":" + decimal(*high) +
                                  ",\"captureLow\":" + decimal(*low);
-    const auto lookup = store_.get(key);
-    if (lookup.status != replay::PacketLookup::Found)
+    const auto sniffer = current_sniffer();
+    const auto registry = current_registry();
+    if (!sniffer)
+      return prefix + "\"ok\":false,\"error\":\"stale_capture\"" + identity + "}";
+    const auto lookup = sniffer->persisted_packet(key);
+    if (lookup.status != capture::PacketSpoolLookupStatus::Found)
       return prefix + "\"ok\":false,\"error\":\"" +
-             (lookup.status == replay::PacketLookup::Evicted ? "evicted"
-                                                              : "not_found") +
+             (lookup.status == capture::PacketSpoolLookupStatus::Evicted
+                  ? "evicted"
+                  : lookup.status == capture::PacketSpoolLookupStatus::Corrupt
+                        ? "corrupt_packet"
+                        : "not_found") +
              "\"" + identity + "}";
+    if (!registry || *registry_revision != registry->revision().value ||
+        *analysis_revision != registry->revision().value)
+      return prefix + "\"ok\":false,\"error\":\"revision_mismatch\"" + identity + "}";
+    {
+      std::lock_guard lock(analyzed_packets_mutex_);
+      if (analysis_failed_packets_.contains(*packet_id))
+        return prefix + "\"ok\":false,\"error\":\"analysis_failed\"" + identity + "}";
+      if (!analyzed_packets_.contains(*packet_id))
+        return prefix + "\"ok\":false,\"error\":\"detail_pending\"" + identity + "}";
+    }
     try {
-      parsing::internal::PacketParser parser(registry_);
+      parsing::internal::PacketParser parser(registry);
       const auto &retained = *lookup.packet;
       const sniffing::RawPacketView view{retained.metadata, retained.bytes};
       auto tree = parser.parse(view);
@@ -777,16 +825,23 @@ private:
       if (!bytes)
         return prefix + "\"ok\":false,\"error\":\"encode_failed\"" +
                identity + "}";
-      constexpr std::size_t kDetailEnvelopeAllowance = 1024;
-      const auto max_encoded_bytes =
-          (kMaxResponseBytes - kDetailEnvelopeAllowance) / 4 * 3;
-      if (bytes->size() > max_encoded_bytes)
-        return prefix +
-               "\"ok\":false,\"error\":\"response_too_large\"" + identity +
-               "}";
+      const auto spool_paths = sniffer->spool_paths();
+      if (spool_paths.empty())
+        return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity + "}";
+      const auto detail_path = spool_paths.front().parent_path() /
+          ("detail-" + std::to_string(*high) + "-" + std::to_string(*low) + "-" +
+           std::to_string(*packet_id) + "-" + std::to_string(detail_sequence_.fetch_add(1) + 1) + ".prt2");
+      std::ofstream output(detail_path, std::ios::binary | std::ios::trunc);
+      output.write(reinterpret_cast<const char*>(bytes->data()),
+                   static_cast<std::streamsize>(bytes->size()));
+      output.close();
+      if (!output)
+        return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity + "}";
       return prefix + "\"ok\":true" + identity +
-             ",\"format\":\"PRT2\",\"data_base64\":" +
-             json_string(base64(*bytes)) + "}";
+             ",\"format\":\"PRT2\",\"dataPath\":" + json_string(detail_path.string()) +
+             ",\"byteLength\":" + decimal(bytes->size()) +
+             ",\"registryRevision\":" + decimal(registry->revision().value) +
+             ",\"analysisRevision\":" + decimal(registry->revision().value) + "}";
     } catch (...) {
       return prefix + "\"ok\":false,\"error\":\"detail_failed\"" +
              identity + "}";
@@ -796,7 +851,7 @@ private:
                      std::uint64_t requested) {
     const auto read =
         events_.read(cursor, std::min<std::uint64_t>(requested, kMaxEventRead));
-    const auto capture = sniffer_->capture_id();
+    const auto capture = current_sniffer()->capture_id();
     std::ostringstream out;
     out << prefix << "\"ok\":true,\"captureHigh\":"
         << decimal(capture->high) << ",\"captureLow\":"
@@ -915,20 +970,21 @@ private:
     return out.str();
   }
   std::unordered_map<std::string, std::string> paths_;
-  replay::RawPacketStore store_;
   replay::SummaryJournal journal_;
   replay::EventJournal events_;
-  std::unique_ptr<sniffing::NetworkSniffer> sniffer_;
+  mutable std::mutex session_mutex_;
+  std::shared_ptr<sniffing::NetworkSniffer> sniffer_;
   parsing::RegistrySnapshotPtr registry_;
   std::unique_ptr<parsing::SummaryExtractor> summary_extractor_;
-  std::mutex pending_mutex_;
-  std::condition_variable pending_cv_;
-  std::deque<PendingPacket> pending_packets_;
-  std::thread packet_consumer_;
-  bool pending_stop_ = true;
-  bool live_capture_ = false;
-  std::size_t pending_bytes_ = 0;
-  std::atomic<std::uint64_t> callback_failures_{0};
+  std::atomic<std::uint64_t> analysis_callback_errors_{0};
+  std::mutex analyzed_packets_mutex_;
+  std::unordered_set<std::uint64_t> analyzed_packets_;
+  std::unordered_set<std::uint64_t> analysis_failed_packets_;
+  std::atomic<std::uint64_t> detail_sequence_{0};
+  std::uint64_t last_stats_bytes_ = 0;
+  std::chrono::steady_clock::time_point last_stats_at_{};
+  mutable std::mutex failure_mutex_;
+  std::string fatal_failure_;
   std::atomic<std::uint64_t> started_ns_{0};
   std::atomic<std::uint64_t> stopped_ns_{0};
   std::atomic<State> state_{State::Stopped};
@@ -937,6 +993,10 @@ private:
 } // namespace
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+  _setmode(_fileno(stdin), _O_BINARY);
+  _setmode(_fileno(stdout), _O_BINARY);
+#endif
   std::unordered_map<std::string, std::string> paths;
   for (int i = 1; i < argc; ++i) {
     std::string_view arg(argv[i]);
@@ -950,18 +1010,67 @@ int main(int argc, char **argv) {
                     mapping.substr(separator + 1));
   }
   Worker worker(std::move(paths));
-  std::string line;
+  std::mutex output_mutex;
+  const auto respond = [&](std::string response) {
+    std::lock_guard lock(output_mutex);
+    write_frame(std::cout, response);
+  };
+  std::mutex detail_mutex;
+  std::condition_variable detail_ready;
+  std::deque<std::string> detail_requests;
+  bool detail_input_closed = false;
+  std::jthread detail_executor([&] {
+    while (true) {
+      std::string request;
+      {
+        std::unique_lock lock(detail_mutex);
+        detail_ready.wait(lock, [&] {
+          return detail_input_closed || !detail_requests.empty();
+        });
+        if (detail_requests.empty()) {
+          if (detail_input_closed)
+            return;
+          continue;
+        }
+        request = std::move(detail_requests.front());
+        detail_requests.pop_front();
+      }
+      respond(worker.handle(request));
+    }
+  });
+  std::string payload;
   while (true) {
-    const auto line_result = read_bounded_line(std::cin, line);
-    if (line_result == LineRead::End)
+    const auto frame_result = read_frame(std::cin, payload);
+    if (frame_result == FrameRead::End || frame_result == FrameRead::Truncated)
       break;
-    if (line_result == LineRead::TooLarge)
-      std::cout << "{\"v\":1,\"ok\":false,\"error\":\"request_too_large\"}\n";
-    else
-      std::cout << worker.handle(line) << '\n';
-    std::cout.flush();
+    if (frame_result == FrameRead::TooLarge)
+      respond("{\"v\":2,\"kind\":\"response\",\"id\":\"\",\"ok\":false,\"error\":\"request_too_large\"}");
+    else if (field(payload, "op") == "detail") {
+      bool queued = false;
+      {
+        std::lock_guard lock(detail_mutex);
+        if (detail_requests.size() < kMaxPendingDetailRequests) {
+          detail_requests.push_back(payload);
+          queued = true;
+        }
+      }
+      if (queued) {
+        detail_ready.notify_one();
+      } else {
+        respond("{\"v\":2,\"kind\":\"response\",\"id\":" +
+                json_string(field(payload, "id").value_or("")) +
+                ",\"ok\":false,\"error\":\"detail_capacity\"}");
+      }
+    } else {
+      respond(worker.handle(payload));
+    }
     if (worker.shutdown())
       break;
   }
+  {
+    std::lock_guard lock(detail_mutex);
+    detail_input_closed = true;
+  }
+  detail_ready.notify_one();
   return 0;
 }

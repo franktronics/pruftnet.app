@@ -8,16 +8,13 @@
 namespace pruftnet::sniffing::internal {
 namespace {
 
-bool ring_estimate_fits(std::size_t slots, std::size_t packet_size, std::size_t& total) noexcept {
+bool ring_estimate_fits(std::size_t slots, std::size_t byte_capacity, std::size_t& total) noexcept {
     if (slots == std::numeric_limits<std::size_t>::max()) {
         return false;
     }
     const auto allocated_slots = slots + 1;
-    if (packet_size > std::numeric_limits<std::size_t>::max() / allocated_slots) {
-        return false;
-    }
-    auto bytes = allocated_slots * packet_size;
-    constexpr auto metadata_bytes = sizeof(PacketMetadata) + sizeof(std::uint32_t);
+    auto bytes = byte_capacity;
+    constexpr auto metadata_bytes = sizeof(PacketMetadata) + sizeof(std::size_t) * 3;
     if (metadata_bytes > std::numeric_limits<std::size_t>::max() / allocated_slots) {
         return false;
     }
@@ -158,10 +155,17 @@ std::optional<SnifferError> validate_sniffer_options(
                 interface_id);
         }
 
+        if (interface.ring_bytes == 0) {
+            return make_sniffer_error(
+                SnifferErrorCode::InvalidOptions, SnifferSeverity::Error,
+                "SnifferInterfaceOptions.ring_bytes must be greater than zero.",
+                interface.name, 0, {}, false, interface_id);
+        }
+
 
         if (!ring_estimate_fits(
                 interface.ring_slots,
-                static_cast<std::size_t>(interface.snaplen),
+                interface.ring_bytes,
                 estimated_ring_total)) {
             return make_sniffer_error(
                 SnifferErrorCode::InvalidOptions,

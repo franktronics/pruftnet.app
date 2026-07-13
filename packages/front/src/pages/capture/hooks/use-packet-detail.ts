@@ -41,6 +41,7 @@ export type PacketDetailState =
     | { readonly kind: 'empty' }
     | { readonly kind: 'loading' }
     | { readonly kind: 'ready'; readonly detail: PacketDetailModel }
+    | { readonly kind: 'pending' }
     | { readonly kind: 'evicted' }
     | { readonly kind: 'unavailable' }
     | { readonly kind: 'invalid' }
@@ -54,7 +55,9 @@ export function packetDetailState(
     if (!packetId) return { kind: 'empty' }
     if (detail) return { kind: 'ready', detail }
     if (pending) return { kind: 'loading' }
+    if (error instanceof PacketDetailHttpError && error.status === 425) return { kind: 'pending' }
     if (error instanceof PacketDetailHttpError && error.status === 410) return { kind: 'evicted' }
+    if (error instanceof PacketDetailHttpError && error.status === 422) return { kind: 'invalid' }
     if (
         error instanceof PacketDetailContentTypeError ||
         error instanceof PacketDetailKeyError ||
@@ -64,9 +67,17 @@ export function packetDetailState(
     return { kind: 'unavailable' }
 }
 
-export function packetDetailUrl(captureId: string, packetId: string, endpoint = getRpcEndpoint()) {
+export function packetDetailUrl(
+    captureId: string,
+    packetId: string,
+    registryRevision?: string,
+    analysisRevision?: string,
+    endpoint = getRpcEndpoint(),
+) {
     const url = new URL(endpoint)
     url.pathname = `/capture/${encodeURIComponent(captureId)}/packets/${encodeURIComponent(packetId)}`
+    if (registryRevision) url.searchParams.set('registryRevision', registryRevision)
+    if (analysisRevision) url.searchParams.set('analysisRevision', analysisRevision)
     return url.toString()
 }
 
@@ -129,7 +140,10 @@ export function usePacketDetail(
         queryFn: async ({ signal }) => {
             if (!packetId || !registry)
                 throw new Error('Packet detail requires a packet and registry')
-            const response = await fetch(packetDetailUrl(captureId, packetId), { signal })
+            const response = await fetch(
+                packetDetailUrl(captureId, packetId, registry.registryRevision, analysisRevision),
+                { signal },
+            )
             if (!response.ok) throw new PacketDetailHttpError(response.status)
             const contentType = response.headers.get('content-type')
             if (

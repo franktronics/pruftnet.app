@@ -71,6 +71,12 @@ public:
   }
 
   SnifferStatsSnapshot stats() const { return runtime_->stats(); }
+  capture::PacketSpoolLookup persisted_packet(const PacketKey& key) const {
+    return runtime_->persisted_packet(key);
+  }
+  std::vector<std::filesystem::path> spool_paths() const {
+    return runtime_->spool_paths();
+  }
 
 private:
   std::unique_ptr<internal::SnifferRuntime> runtime_;
@@ -123,5 +129,14 @@ NetworkSniffer::registry_snapshot() const noexcept {
 }
 
 SnifferStatsSnapshot NetworkSniffer::stats() const { return impl_->stats(); }
+
+capture::PacketSpoolLookup
+NetworkSniffer::persisted_packet(const PacketKey& key) const {
+  return impl_->persisted_packet(key);
+}
+
+std::vector<std::filesystem::path> NetworkSniffer::spool_paths() const {
+  return impl_->spool_paths();
+}
 
 } // namespace pruftnet::sniffing

@@ -105,6 +105,11 @@ ${colorConfig
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip
+const ChartLineChart = RechartsPrimitive.LineChart
+const ChartLine = RechartsPrimitive.Line
+const ChartCartesianGrid = RechartsPrimitive.CartesianGrid
+const ChartXAxis = RechartsPrimitive.XAxis
+const ChartYAxis = RechartsPrimitive.YAxis
 
 function ChartTooltipContent({
     active,
@@ -333,9 +338,14 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
 }
 
 export {
+    ChartCartesianGrid,
     ChartContainer,
+    ChartLine,
+    ChartLineChart,
     ChartTooltip,
     ChartTooltipContent,
+    ChartXAxis,
+    ChartYAxis,
     ChartLegend,
     ChartLegendContent,
     ChartStyle,

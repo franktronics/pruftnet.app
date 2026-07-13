@@ -22,18 +22,23 @@ std::uint64_t packet_timestamp_ns(const pcap_pkthdr& header, TimestampPrecision 
 }
 
 void add_interface_stats(SnifferStatsSnapshot& aggregate, const InterfaceStatsSnapshot& interface_stats) {
-    aggregate.packets_seen += interface_stats.packets_seen;
-    aggregate.packets_enqueued += interface_stats.packets_enqueued;
-    aggregate.packets_parsed += interface_stats.packets_parsed;
-    aggregate.app_ring_drops += interface_stats.app_ring_drops;
+    aggregate.packets_observed += interface_stats.packets_observed;
+    aggregate.capture_queue_accepted += interface_stats.capture_queue_accepted;
+    aggregate.capture_queue_full_drops += interface_stats.capture_queue_full_drops;
+    aggregate.capture_queue_oversize_drops += interface_stats.capture_queue_oversize_drops;
+    aggregate.invalid_callback_drops += interface_stats.invalid_callback_drops;
     aggregate.pcap_dispatch_calls += interface_stats.pcap_dispatch_calls;
     aggregate.pcap_dispatch_errors += interface_stats.pcap_dispatch_errors;
-    aggregate.pcap_recv += interface_stats.pcap_recv;
-    aggregate.pcap_drop += interface_stats.pcap_drop;
-    aggregate.pcap_ifdrop += interface_stats.pcap_ifdrop;
-    aggregate.ring_depth += interface_stats.ring_depth;
-    aggregate.ring_capacity += interface_stats.ring_capacity;
-    aggregate.max_ring_depth += interface_stats.max_ring_depth;
+    aggregate.pcap_stats_read_failures += interface_stats.pcap_stats_read_failures;
+    aggregate.pcap_received += interface_stats.pcap_received;
+    aggregate.pcap_kernel_drops += interface_stats.pcap_kernel_drops;
+    aggregate.pcap_interface_drops += interface_stats.pcap_interface_drops;
+    aggregate.capture_queue_depth += interface_stats.capture_queue_depth;
+    aggregate.capture_queue_capacity_packets += interface_stats.capture_queue_capacity_packets;
+    aggregate.capture_queue_capacity_bytes += interface_stats.capture_queue_capacity_bytes;
+    aggregate.capture_queue_bytes += interface_stats.capture_queue_bytes;
+    aggregate.capture_queue_max_depth += interface_stats.capture_queue_max_depth;
+    aggregate.capture_queue_max_bytes += interface_stats.capture_queue_max_bytes;
 }
 
 bool checked_multiply(std::size_t left, std::size_t right, std::size_t& result) noexcept {
@@ -54,32 +59,20 @@ bool checked_add(std::size_t left, std::size_t right, std::size_t& result) noexc
     return true;
 }
 
-std::optional<std::size_t> estimated_ring_bytes(std::size_t capacity, std::size_t max_packet_size) noexcept {
+std::optional<std::size_t> estimated_ring_bytes(std::size_t capacity, std::size_t byte_capacity) noexcept {
     std::size_t slot_count = 0;
     if (!checked_add(capacity, 1, slot_count)) {
         return std::nullopt;
     }
 
-    std::size_t packet_storage = 0;
-    if (!checked_multiply(slot_count, max_packet_size, packet_storage)) {
-        return std::nullopt;
-    }
-
     std::size_t metadata_storage = 0;
-    if (!checked_multiply(slot_count, sizeof(PacketMetadata), metadata_storage)) {
+    constexpr auto descriptor_bytes = sizeof(PacketMetadata) + sizeof(std::size_t) * 3;
+    if (!checked_multiply(slot_count, descriptor_bytes, metadata_storage)) {
         return std::nullopt;
     }
 
-    std::size_t length_storage = 0;
-    if (!checked_multiply(slot_count, sizeof(std::uint32_t), length_storage)) {
-        return std::nullopt;
-    }
-
-    std::size_t total = 0;
-    if (!checked_add(packet_storage, metadata_storage, total)) {
-        return std::nullopt;
-    }
-    if (!checked_add(total, length_storage, total)) {
+    std::size_t total = byte_capacity;
+    if (!checked_add(total, metadata_storage, total)) {
         return std::nullopt;
     }
 
@@ -92,6 +85,26 @@ parsing::RegistrySnapshotPtr make_runtime_registry() {
         return std::make_shared<const parsing::RegistrySnapshot>(std::move(*registry));
     }
     throw std::logic_error("Failed to bootstrap the built-in parser registry.");
+}
+
+SnifferErrorCode spool_error_code(capture::SpoolFailureReason reason) {
+    switch (reason) {
+    case capture::SpoolFailureReason::DirectoryUnavailable:
+    case capture::SpoolFailureReason::OpenFailed:
+        return SnifferErrorCode::SpoolOpenFailed;
+    case capture::SpoolFailureReason::FlushFailed:
+        return SnifferErrorCode::SpoolFlushFailed;
+    case capture::SpoolFailureReason::FinalizeFailed:
+        return SnifferErrorCode::SpoolFinalizeFailed;
+    case capture::SpoolFailureReason::QuotaExceeded:
+        return SnifferErrorCode::SpoolQuotaExceeded;
+    case capture::SpoolFailureReason::ShortWrite:
+    case capture::SpoolFailureReason::WriteFailed:
+    case capture::SpoolFailureReason::InvalidPacket:
+    case capture::SpoolFailureReason::CorruptData:
+        return SnifferErrorCode::SpoolWriteFailed;
+    }
+    return SnifferErrorCode::SpoolWriteFailed;
 }
 
 } // namespace
@@ -112,6 +125,7 @@ struct SnifferRuntime::InterfaceCaptureContext {
     std::atomic<bool> capture_done{false};
     std::atomic<bool> capture_thread_running{false};
     std::atomic<bool> ring_full_reported{false};
+    std::atomic<bool> oversize_reported{false};
     int link_type = 0;
     int snapshot_length = 0;
     std::chrono::steady_clock::time_point next_stats_at{};
@@ -122,7 +136,8 @@ SnifferRuntime::SnifferRuntime(
     std::vector<std::unique_ptr<PacketSource>> packet_sources,
     SnifferOptionsValidation validation,
     PacketCallback packet_callback,
-    EventCallback event_callback)
+    EventCallback event_callback,
+    capture::SpoolSinkFactory spool_sink_factory)
     : registry_(make_runtime_registry()),
       catalog_(parsing::internal::make_core_dissector_catalog(registry_)),
       options_(std::move(options)),
@@ -130,6 +145,7 @@ SnifferRuntime::SnifferRuntime(
       validation_(validation),
       packet_callback_(std::move(packet_callback)),
       event_callback_(std::move(event_callback)),
+      spool_sink_factory_(std::move(spool_sink_factory)),
       parser_(catalog_) {
     interfaces_.reserve(options_.interfaces.size());
     for (std::size_t index = 0; index < options_.interfaces.size(); ++index) {
@@ -206,8 +222,52 @@ std::optional<SnifferError> SnifferRuntime::start() {
             "The operating system could not generate a capture identifier.");
     }
 
+    capture::PcapngSpoolOptions spool_options;
+    spool_options.directory = options_.spool_directory;
+    spool_options.max_total_bytes = options_.spool_max_total_bytes;
+    spool_options.segment_bytes = options_.spool_segment_bytes;
+    spool_options.max_segments = options_.spool_max_segments;
+    spool_options.ring_mode = options_.spool_ring_mode;
+    spool_options.temporary = options_.spool_temporary;
+    spool_options.flush_interval = options_.spool_flush_interval;
+    spool_options.flush_bytes = options_.spool_flush_bytes;
+    std::vector<capture::SpoolInterface> spool_interfaces;
+    spool_interfaces.reserve(interfaces_.size());
+    for (const auto& context : interfaces_) {
+        spool_interfaces.push_back({
+            context->options.id,
+            context->source ? context->source->source_name() : context->options.name,
+            static_cast<std::uint16_t>(context->link_type),
+            static_cast<std::uint32_t>(context->snapshot_length),
+            static_cast<std::uint8_t>(context->source->timestamp_precision() ==
+                                              TimestampPrecision::Nanoseconds ? 9 : 6),
+        });
+    }
+    auto created_spool = capture::PcapngSpool::create(
+        std::move(spool_options), *next_capture_id, std::move(spool_interfaces),
+        spool_sink_factory_);
+    if (const auto* spool_error = std::get_if<capture::SpoolError>(&created_spool)) {
+        close_sources();
+        return make_sniffer_error(spool_error_code(spool_error->reason),
+                                  SnifferSeverity::Fatal, spool_error->message);
+    }
+    spool_ = std::move(std::get<std::unique_ptr<capture::PcapngSpool>>(created_spool));
+
     stop_requested_.store(false, std::memory_order_release);
-    parser_thread_running_.store(false, std::memory_order_release);
+    writer_thread_running_.store(false, std::memory_order_release);
+    analyzer_running_.store(false, std::memory_order_release);
+    writer_done_.store(false, std::memory_order_release);
+    spool_failed_.store(false, std::memory_order_release);
+    packets_available_for_analysis_.store(0, std::memory_order_release);
+    packets_analyzed_.store(0, std::memory_order_release);
+    analysis_backlog_bytes_.store(0, std::memory_order_release);
+    analysis_errors_.store(0, std::memory_order_release);
+    analysis_resource_limits_.store(0, std::memory_order_release);
+    analysis_gap_count_.store(0, std::memory_order_release);
+    analysis_evicted_before_analysis_.store(0, std::memory_order_release);
+    analysis_rejects_.store(0, std::memory_order_release);
+    writer_in_flight_.store(0, std::memory_order_release);
+    terminal_write_losses_.store(0, std::memory_order_release);
     active_capture_id_ = *next_capture_id;
     next_packet_id_.store(1, std::memory_order_release);
     {
@@ -222,13 +282,15 @@ std::optional<SnifferError> SnifferRuntime::start() {
         context->capture_done.store(false, std::memory_order_release);
         context->capture_thread_running.store(false, std::memory_order_release);
         context->ring_full_reported.store(false, std::memory_order_release);
+        context->oversize_reported.store(false, std::memory_order_release);
         context->next_stats_at = next_stats_at;
     }
 
     running_.store(true, std::memory_order_release);
 
     try {
-        parser_thread_ = std::thread(&SnifferRuntime::parser_loop, this);
+        writer_thread_ = std::thread(&SnifferRuntime::writer_loop, this);
+        analyzer_thread_ = std::thread(&SnifferRuntime::analyzer_loop, this);
         for (auto& context : interfaces_) {
             context->capture_thread = std::thread(&SnifferRuntime::capture_loop, this, std::ref(*context));
         }
@@ -270,7 +332,8 @@ void SnifferRuntime::stop() noexcept {
     std::unique_lock lock(lifecycle_mutex_);
     const auto current_thread = std::this_thread::get_id();
     const auto called_from_runtime_thread = [&] {
-        if (parser_thread_.joinable() && parser_thread_.get_id() == current_thread) {
+        if ((writer_thread_.joinable() && writer_thread_.get_id() == current_thread) ||
+            (analyzer_thread_.joinable() && analyzer_thread_.get_id() == current_thread)) {
             return true;
         }
         for (const auto& context : interfaces_) {
@@ -320,19 +383,63 @@ SnifferStatsSnapshot SnifferRuntime::stats() const {
     for (const auto& context : interfaces_) {
         const auto ring_depth = context->ring ? context->ring->depth() : 0;
         const auto ring_capacity = context->ring ? context->ring->capacity() : 0;
+        const auto ring_bytes = context->ring ? context->ring->bytes() : 0;
+        const auto ring_byte_capacity = context->ring ? context->ring->byte_capacity() : 0;
         auto interface_stats = context->stats.snapshot(
             context->options.id,
             context->source ? context->source->source_name() : context->options.name,
             context->link_type,
             ring_depth,
             ring_capacity,
+            ring_bytes,
+            ring_byte_capacity,
             context->capture_thread_running.load(std::memory_order_relaxed));
         add_interface_stats(snapshot, interface_stats);
         snapshot.interfaces.push_back(std::move(interface_stats));
     }
 
-    snapshot.parser_thread_running = parser_thread_running_.load(std::memory_order_relaxed);
+    if (spool_) {
+        const auto spool_stats = spool_->stats();
+        snapshot.spool_bytes_written = spool_stats.bytes_written;
+        snapshot.spool_bytes_retained = spool_stats.bytes_retained;
+        snapshot.spool_quota_bytes = spool_stats.quota_bytes;
+        snapshot.spool_evicted_packets = spool_stats.evicted_packets;
+        snapshot.spool_evicted_bytes = spool_stats.evicted_bytes;
+        snapshot.spool_write_failures = spool_stats.write_failures;
+        snapshot.spool_flush_failures = spool_stats.flush_failures;
+        snapshot.last_committed_packet_id = spool_stats.last_committed_packet_id;
+        snapshot.spool_segments = spool_stats.segments;
+    }
+    snapshot.packets_available_for_analysis = packets_available_for_analysis_.load(std::memory_order_relaxed);
+    snapshot.packets_persisted = snapshot.packets_available_for_analysis;
+    snapshot.packets_analyzed = packets_analyzed_.load(std::memory_order_relaxed);
+    snapshot.analysis_evicted_before_analysis = analysis_evicted_before_analysis_.load(std::memory_order_relaxed);
+    snapshot.analysis_rejects = analysis_rejects_.load(std::memory_order_relaxed);
+    const auto resolved_analysis = std::min(
+        snapshot.packets_persisted,
+        snapshot.packets_analyzed + snapshot.analysis_evicted_before_analysis +
+            snapshot.analysis_rejects);
+    snapshot.analysis_backlog_packets = snapshot.packets_persisted - resolved_analysis;
+    snapshot.analysis_backlog_bytes = analysis_backlog_bytes_.load(std::memory_order_relaxed);
+    snapshot.analysis_errors = analysis_errors_.load(std::memory_order_relaxed);
+    snapshot.analysis_resource_limits = analysis_resource_limits_.load(std::memory_order_relaxed);
+    snapshot.analysis_gap_count = analysis_gap_count_.load(std::memory_order_relaxed);
+    snapshot.writer_in_flight = writer_in_flight_.load(std::memory_order_relaxed);
+    snapshot.terminal_write_losses = terminal_write_losses_.load(std::memory_order_relaxed);
+    snapshot.writer_thread_running = writer_thread_running_.load(std::memory_order_relaxed);
+    snapshot.analyzer_running = analyzer_running_.load(std::memory_order_relaxed);
     return snapshot;
+}
+
+capture::PacketSpoolLookup
+SnifferRuntime::persisted_packet(const PacketKey& key) const {
+    const std::lock_guard lock(lifecycle_mutex_);
+    return spool_ ? spool_->lookup(key) : capture::PacketSpoolLookup{};
+}
+
+std::vector<std::filesystem::path> SnifferRuntime::spool_paths() const {
+    const std::lock_guard lock(lifecycle_mutex_);
+    return spool_ ? spool_->segment_paths() : std::vector<std::filesystem::path>{};
 }
 
 void SnifferRuntime::packet_source_callback(
@@ -433,7 +540,7 @@ std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources(std::vector
 
         const auto estimated_bytes = estimated_ring_bytes(
             context->options.ring_slots,
-            static_cast<std::size_t>(context->snapshot_length));
+            context->options.ring_bytes);
         if (!estimated_bytes.has_value()) {
             return make_sniffer_error(
                 SnifferErrorCode::InvalidOptions,
@@ -468,6 +575,7 @@ std::optional<SnifferError> SnifferRuntime::open_and_prepare_sources(std::vector
         try {
             context->ring = std::make_unique<PacketRing>(
                 context->options.ring_slots,
+                context->options.ring_bytes,
                 static_cast<std::size_t>(context->snapshot_length));
         } catch (const std::bad_alloc&) {
             return make_sniffer_error(
@@ -516,7 +624,8 @@ void SnifferRuntime::request_stop() noexcept {
         }
     }
 
-    notify_parser();
+    notify_writer();
+    notify_analyzer();
 }
 
 void SnifferRuntime::join_threads() noexcept {
@@ -526,8 +635,13 @@ void SnifferRuntime::join_threads() noexcept {
         }
     }
 
-    if (parser_thread_.joinable()) {
-        parser_thread_.join();
+    notify_writer();
+    if (writer_thread_.joinable()) {
+        writer_thread_.join();
+    }
+    notify_analyzer();
+    if (analyzer_thread_.joinable()) {
+        analyzer_thread_.join();
     }
 
     bool capture_threads_joined = true;
@@ -538,13 +652,13 @@ void SnifferRuntime::join_threads() noexcept {
         }
     }
 
-    if (capture_threads_joined && !parser_thread_.joinable()) {
+    if (capture_threads_joined && !writer_thread_.joinable() && !analyzer_thread_.joinable()) {
         running_.store(false, std::memory_order_release);
     }
 }
 
 bool SnifferRuntime::has_joinable_threads() const noexcept {
-    if (parser_thread_.joinable()) {
+    if (writer_thread_.joinable() || analyzer_thread_.joinable()) {
         return true;
     }
     for (const auto& context : interfaces_) {
@@ -572,9 +686,14 @@ void SnifferRuntime::release_start_gate(bool success) noexcept {
     start_gate_condition_.notify_all();
 }
 
-void SnifferRuntime::notify_parser() noexcept {
-    parser_wakeup_generation_.fetch_add(1, std::memory_order_release);
-    parser_wakeup_generation_.notify_all();
+void SnifferRuntime::notify_writer() noexcept {
+    writer_wakeup_generation_.fetch_add(1, std::memory_order_release);
+    writer_wakeup_generation_.notify_all();
+}
+
+void SnifferRuntime::notify_analyzer() noexcept {
+    analyzer_wakeup_generation_.fetch_add(1, std::memory_order_release);
+    analyzer_wakeup_generation_.notify_all();
 }
 
 void SnifferRuntime::mark_unstarted_captures_done() noexcept {
@@ -587,7 +706,7 @@ void SnifferRuntime::mark_unstarted_captures_done() noexcept {
         }
     }
 
-    notify_parser();
+    notify_writer();
 }
 
 void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
@@ -597,7 +716,7 @@ void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
         if (!wait_for_start_gate()) {
             context.capture_done.store(true, std::memory_order_release);
             context.capture_thread_running.store(false, std::memory_order_release);
-            notify_parser();
+            notify_writer();
             return;
         }
         while (!stop_requested_.load(std::memory_order_acquire)) {
@@ -661,86 +780,212 @@ void SnifferRuntime::capture_loop(InterfaceCaptureContext& context) noexcept {
         context.ring->notify_all();
     }
 
-    notify_parser();
+    notify_writer();
 }
 
-void SnifferRuntime::parser_loop() noexcept {
-    parser_thread_running_.store(true, std::memory_order_release);
+void SnifferRuntime::publish_committed(
+    const std::vector<capture::CommittedPacket>& packets) noexcept {
+    if (packets.empty()) return;
+    writer_in_flight_.fetch_sub(packets.size(), std::memory_order_relaxed);
+    packets_available_for_analysis_.fetch_add(packets.size(), std::memory_order_relaxed);
+    std::uint64_t bytes = 0;
+    for (const auto& packet : packets) bytes += packet.metadata.captured_len;
+    analysis_backlog_bytes_.fetch_add(bytes, std::memory_order_relaxed);
+    notify_analyzer();
+}
 
+void SnifferRuntime::fail_spool(const capture::SpoolError& error) noexcept {
+    if (spool_failed_.exchange(true, std::memory_order_acq_rel)) return;
+    const auto in_flight = writer_in_flight_.exchange(0, std::memory_order_acq_rel);
+    terminal_write_losses_.fetch_add(in_flight, std::memory_order_relaxed);
+    emit_error(make_sniffer_error(spool_error_code(error.reason),
+                                  SnifferSeverity::Fatal, error.message));
+    request_stop();
+}
+
+void SnifferRuntime::account_unwritten_queues() noexcept {
+    for (auto& context : interfaces_) {
+        while (context->ring && context->ring->peek()) {
+            context->ring->pop();
+            terminal_write_losses_.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+}
+
+void SnifferRuntime::writer_loop() noexcept {
+    writer_thread_running_.store(true, std::memory_order_release);
     try {
         if (!wait_for_start_gate()) {
-            parser_thread_running_.store(false, std::memory_order_release);
-            running_.store(false, std::memory_order_release);
+            writer_done_.store(true, std::memory_order_release);
+            writer_thread_running_.store(false, std::memory_order_release);
+            notify_analyzer();
             return;
         }
         std::size_t next_interface_index = 0;
         while (!all_capture_done() || any_ring_has_packets()) {
-            bool parsed_any = false;
-
+            bool wrote_any = false;
             for (std::size_t offset = 0; offset < interfaces_.size(); ++offset) {
                 const auto index = (next_interface_index + offset) % interfaces_.size();
                 auto& context = *interfaces_[index];
-                if (!context.ring) {
-                    continue;
-                }
+                if (!context.ring) continue;
+                const auto queued = context.ring->peek();
+                if (!queued) continue;
 
-                if (auto queued = context.ring->peek()) {
-                    RawPacketView raw_packet;
-                    raw_packet.metadata = queued->metadata;
-                    raw_packet.bytes = queued->bytes;
-
-                    auto parsed_packet = parser_.parse(raw_packet);
-                    context.stats.increment_packets_parsed();
-
-                    packet_callback_(raw_packet, parsed_packet);
-                    parser_.recycle(std::move(parsed_packet));
-                    context.ring->pop();
-                    next_interface_index = (index + 1) % interfaces_.size();
-                    parsed_any = true;
+                writer_in_flight_.fetch_add(1, std::memory_order_relaxed);
+                const auto append_error = spool_->append(queued->metadata, queued->bytes);
+                context.ring->pop();
+                if (append_error) {
+                    fail_spool(*append_error);
+                    account_unwritten_queues();
                     break;
                 }
+                const auto committed = spool_->flush_if_due();
+                if (const auto* error = std::get_if<capture::SpoolError>(&committed)) {
+                    fail_spool(*error);
+                    account_unwritten_queues();
+                    break;
+                }
+                publish_committed(std::get<std::vector<capture::CommittedPacket>>(committed));
+                next_interface_index = (index + 1) % interfaces_.size();
+                wrote_any = true;
+                break;
             }
+            if (spool_failed_.load(std::memory_order_acquire)) break;
+            if (wrote_any) continue;
 
-            if (parsed_any) {
+            const auto committed = spool_->flush_if_due();
+            if (const auto* error = std::get_if<capture::SpoolError>(&committed)) {
+                fail_spool(*error);
+                account_unwritten_queues();
+                break;
+            }
+            publish_committed(std::get<std::vector<capture::CommittedPacket>>(committed));
+            const auto generation = writer_wakeup_generation_.load(std::memory_order_acquire);
+            if (!all_capture_done() && !any_ring_has_packets())
+                writer_wakeup_generation_.wait(generation, std::memory_order_acquire);
+        }
+        if (!spool_failed_.load(std::memory_order_acquire)) {
+            const auto finalized = spool_->finalize();
+            if (const auto* error = std::get_if<capture::SpoolError>(&finalized))
+                fail_spool(*error);
+            else
+                publish_committed(std::get<std::vector<capture::CommittedPacket>>(finalized));
+        }
+    } catch (const std::exception& error) {
+        fail_spool({capture::SpoolFailureReason::WriteFailed,
+                    std::string("Unhandled exception in pcapng writer: ") + error.what(), 0});
+        account_unwritten_queues();
+    } catch (...) {
+        fail_spool({capture::SpoolFailureReason::WriteFailed,
+                    "Unknown exception in pcapng writer.", 0});
+        account_unwritten_queues();
+    }
+    writer_done_.store(true, std::memory_order_release);
+    writer_thread_running_.store(false, std::memory_order_release);
+    notify_analyzer();
+    if (!analyzer_running_.load(std::memory_order_acquire))
+        running_.store(false, std::memory_order_release);
+}
+
+void SnifferRuntime::analyzer_loop() noexcept {
+    analyzer_running_.store(true, std::memory_order_release);
+    std::uint64_t ordinal = 0;
+    try {
+        if (!wait_for_start_gate()) {
+            analyzer_running_.store(false, std::memory_order_release);
+            return;
+        }
+        while (!writer_done_.load(std::memory_order_acquire) ||
+               (spool_ && ordinal < spool_->committed_count())) {
+            const auto committed = spool_->committed_packet(ordinal);
+            if (!committed) {
+                const auto generation = analyzer_wakeup_generation_.load(std::memory_order_acquire);
+                if (!writer_done_.load(std::memory_order_acquire) &&
+                    ordinal >= spool_->committed_count())
+                    analyzer_wakeup_generation_.wait(generation, std::memory_order_acquire);
                 continue;
             }
 
-            const auto generation = parser_wakeup_generation_.load(std::memory_order_acquire);
-            if (!all_capture_done() && !any_ring_has_packets()) {
-                parser_wakeup_generation_.wait(generation, std::memory_order_acquire);
+            const auto lookup = spool_->lookup_ordinal(ordinal);
+            const auto complete_backlog_bytes = [&] {
+                auto backlog_bytes = analysis_backlog_bytes_.load(std::memory_order_relaxed);
+                while (!analysis_backlog_bytes_.compare_exchange_weak(
+                    backlog_bytes,
+                    backlog_bytes > committed->metadata.captured_len
+                        ? backlog_bytes - committed->metadata.captured_len
+                        : 0,
+                    std::memory_order_relaxed)) {
+                }
+            };
+            ++ordinal;
+            if (lookup.status == capture::PacketSpoolLookupStatus::Evicted) {
+                analysis_gap_count_.fetch_add(1, std::memory_order_relaxed);
+                analysis_evicted_before_analysis_.fetch_add(1, std::memory_order_relaxed);
+                complete_backlog_bytes();
+                continue;
             }
+            if (lookup.status != capture::PacketSpoolLookupStatus::Found || !lookup.packet) {
+                analysis_errors_.fetch_add(1, std::memory_order_relaxed);
+                analysis_gap_count_.fetch_add(1, std::memory_order_relaxed);
+                analysis_rejects_.fetch_add(1, std::memory_order_relaxed);
+                complete_backlog_bytes();
+                continue;
+            }
+
+            const auto& persisted = *lookup.packet;
+            const RawPacketView raw_packet{persisted.metadata, persisted.bytes};
+            try {
+                auto parsed_packet = parser_.parse(raw_packet);
+                if (parsed_packet.condition() == parsing::ParseCondition::ResourceLimit)
+                    analysis_resource_limits_.fetch_add(1, std::memory_order_relaxed);
+                try {
+                    packet_callback_(raw_packet, parsed_packet);
+                    packets_analyzed_.fetch_add(1, std::memory_order_relaxed);
+                } catch (...) {
+                    analysis_errors_.fetch_add(1, std::memory_order_relaxed);
+                    analysis_gap_count_.fetch_add(1, std::memory_order_relaxed);
+                    analysis_rejects_.fetch_add(1, std::memory_order_relaxed);
+                }
+                parser_.recycle(std::move(parsed_packet));
+            } catch (...) {
+                analysis_errors_.fetch_add(1, std::memory_order_relaxed);
+                analysis_gap_count_.fetch_add(1, std::memory_order_relaxed);
+                analysis_rejects_.fetch_add(1, std::memory_order_relaxed);
+            }
+            complete_backlog_bytes();
         }
     } catch (const std::exception& error) {
+        analysis_errors_.fetch_add(1, std::memory_order_relaxed);
         emit_error(make_sniffer_error(
-            SnifferErrorCode::InternalInvariantViolation,
-            SnifferSeverity::Fatal,
-            std::string("Unhandled exception in parser thread: ") + error.what()));
-        request_stop();
+            SnifferErrorCode::AnalysisFailed, SnifferSeverity::Error,
+            std::string("Analyzer stopped after an exception: ") + error.what(),
+            {}, 0, {}, true));
     } catch (...) {
-        emit_error(make_sniffer_error(
-            SnifferErrorCode::InternalInvariantViolation,
-            SnifferSeverity::Fatal,
-            "Unknown exception in parser thread."));
-        request_stop();
+        analysis_errors_.fetch_add(1, std::memory_order_relaxed);
+        emit_error(make_sniffer_error(SnifferErrorCode::AnalysisFailed,
+                                      SnifferSeverity::Error,
+                                      "Analyzer stopped after an unknown exception.",
+                                      {}, 0, {}, true));
     }
-
-    parser_thread_running_.store(false, std::memory_order_release);
-    running_.store(false, std::memory_order_release);
+    analyzer_running_.store(false, std::memory_order_release);
+    if (writer_done_.load(std::memory_order_acquire))
+        running_.store(false, std::memory_order_release);
 }
 
 void SnifferRuntime::handle_packet(
     InterfaceCaptureContext& context,
     const pcap_pkthdr& header,
     const unsigned char* bytes) noexcept {
-    context.stats.increment_packets_seen();
+    context.stats.increment_packets_observed();
 
     PacketMetadata metadata;
     metadata.key.capture_id = active_capture_id_;
     metadata.key.packet_id = next_packet_id_.fetch_add(1, std::memory_order_relaxed);
 
     if (bytes == nullptr && header.caplen > 0) {
+        context.stats.increment_invalid_callback_drops();
         emit_error(make_sniffer_error(
-            SnifferErrorCode::DispatchFailed,
+            SnifferErrorCode::InvalidCallbackPayload,
             SnifferSeverity::Warning,
             "pcap callback produced a null packet payload.",
             context.source->source_name(),
@@ -766,13 +1011,26 @@ void SnifferRuntime::handle_packet(
         reinterpret_cast<const std::byte*>(bytes),
         static_cast<std::size_t>(header.caplen));
 
-    if (!context.ring->try_push(metadata, payload)) {
-        context.stats.increment_app_ring_drops();
+    const auto pushed = context.ring->try_push(metadata, payload);
+    if (pushed == PacketRingPushResult::Oversize) {
+        context.stats.increment_capture_queue_oversize_drops();
+        if (!context.oversize_reported.exchange(true, std::memory_order_acq_rel)) {
+            emit_error(make_sniffer_error(
+                SnifferErrorCode::PacketOversize, SnifferSeverity::Warning,
+                "A packet exceeded the configured capture queue byte capacity.",
+                context.source->source_name(), 0, {}, true, context.options.id));
+        }
+        return;
+    }
+    if (pushed != PacketRingPushResult::Accepted) {
+        context.stats.increment_capture_queue_full_drops();
         if (!context.ring_full_reported.exchange(true, std::memory_order_acq_rel)) {
             emit_error(make_sniffer_error(
                 SnifferErrorCode::RingFull,
                 SnifferSeverity::Warning,
-                "Application packet ring is full or packet exceeds the ring slot size; newest packets are being dropped.",
+                pushed == PacketRingPushResult::PacketCapacityReached
+                    ? "The per-interface capture queue reached its packet capacity; newest packets are being dropped."
+                    : "The per-interface capture queue reached its byte capacity; newest packets are being dropped.",
                 context.source->source_name(),
                 0,
                 {},
@@ -782,9 +1040,9 @@ void SnifferRuntime::handle_packet(
         return;
     }
 
-    context.stats.increment_packets_enqueued();
-    context.stats.observe_ring_depth(context.ring->depth());
-    notify_parser();
+    context.stats.increment_capture_queue_accepted();
+    context.stats.observe_capture_queue(context.ring->depth(), context.ring->bytes());
+    notify_writer();
 }
 
 void SnifferRuntime::update_kernel_stats_if_due(InterfaceCaptureContext& context) noexcept {
@@ -807,6 +1065,7 @@ void SnifferRuntime::update_kernel_stats(InterfaceCaptureContext& context) noexc
         const auto kernel_stats = std::get<PcapKernelStats>(result);
         context.stats.set_kernel_stats(kernel_stats.recv, kernel_stats.drop, kernel_stats.ifdrop);
     } else {
+        context.stats.increment_pcap_stats_read_failures();
         emit_error(with_interface_context(std::get<SnifferError>(std::move(result)), context));
     }
 }

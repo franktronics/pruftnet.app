@@ -24,43 +24,65 @@ std::size_t checked_packet_size(std::size_t max_packet_size) {
     return max_packet_size;
 }
 
-std::size_t checked_data_size(std::size_t slot_count, std::size_t max_packet_size) {
-    if (slot_count > std::numeric_limits<std::size_t>::max() / max_packet_size) {
-        throw std::invalid_argument("PacketRing requested byte storage is too large.");
+std::size_t checked_byte_capacity(std::size_t capacity) {
+    if (capacity == 0) {
+        throw std::invalid_argument("PacketRing byte capacity must be greater than zero.");
     }
-    return slot_count * max_packet_size;
+    return capacity;
 }
 
 } // namespace
 
-PacketRing::PacketRing(std::size_t capacity, std::size_t max_packet_size)
-    : capacity_(capacity),
-      slot_count_(checked_slot_count(capacity)),
+PacketRing::PacketRing(std::size_t capacity_packets, std::size_t capacity_bytes,
+                       std::size_t max_packet_size)
+    : capacity_(capacity_packets),
+      slot_count_(checked_slot_count(capacity_packets)),
+      byte_capacity_(checked_byte_capacity(capacity_bytes)),
       max_packet_size_(checked_packet_size(max_packet_size)),
-      metadata_(slot_count_),
-      lengths_(slot_count_, 0),
-      data_(checked_data_size(slot_count_, max_packet_size_)) {}
+      descriptors_(slot_count_), data_(byte_capacity_) {}
 
-bool PacketRing::try_push(const PacketMetadata& metadata, std::span<const std::byte> bytes) noexcept {
-    if (bytes.size() > max_packet_size_) {
-        return false;
+PacketRingPushResult PacketRing::try_push(const PacketMetadata& metadata,
+                                          std::span<const std::byte> bytes) noexcept {
+    if (bytes.size() > max_packet_size_ || bytes.size() > byte_capacity_) {
+        return PacketRingPushResult::Oversize;
     }
 
     const auto write = write_index_.load(std::memory_order_relaxed);
     const auto next = increment(write);
     if (next == read_index_.load(std::memory_order_acquire)) {
-        return false;
+        return PacketRingPushResult::PacketCapacityReached;
     }
 
-    metadata_[write] = metadata;
-    lengths_[write] = static_cast<std::uint32_t>(bytes.size());
+    const auto used = used_bytes_.load(std::memory_order_acquire);
+    if (used == 0) {
+        write_offset_ = 0;
+    }
+
+    const auto tail = byte_capacity_ - write_offset_;
+    const auto padding = bytes.size() > tail ? tail : 0;
+    const auto required = padding + bytes.size();
+    if (required > byte_capacity_ - used) {
+        return PacketRingPushResult::ByteCapacityReached;
+    }
+    if (padding != 0) {
+        write_offset_ = 0;
+    }
+
+    auto& descriptor = descriptors_[write];
+    descriptor.metadata = metadata;
+    descriptor.data_offset = write_offset_;
+    descriptor.length = bytes.size();
+    descriptor.reserved_bytes = required;
     if (!bytes.empty()) {
-        std::memcpy(slot_data(write), bytes.data(), bytes.size());
+        std::memcpy(data_.data() + write_offset_, bytes.data(), bytes.size());
     }
+    write_offset_ += bytes.size();
+    if (write_offset_ == byte_capacity_) write_offset_ = 0;
 
+    used_bytes_.fetch_add(required, std::memory_order_release);
     write_index_.store(next, std::memory_order_release);
     data_available_.notify_one();
-    return true;
+    return PacketRingPushResult::Accepted;
 }
 
 std::optional<QueuedPacketView> PacketRing::peek() const noexcept {
@@ -70,8 +92,10 @@ std::optional<QueuedPacketView> PacketRing::peek() const noexcept {
     }
 
     QueuedPacketView view;
-    view.metadata = metadata_[read];
-    view.bytes = std::span<const std::byte>(slot_data(read), lengths_[read]);
+    const auto& descriptor = descriptors_[read];
+    view.metadata = descriptor.metadata;
+    view.bytes = std::span<const std::byte>(data_.data() + descriptor.data_offset,
+                                           descriptor.length);
     return view;
 }
 
@@ -81,7 +105,9 @@ void PacketRing::pop() noexcept {
         return;
     }
 
+    const auto reserved = descriptors_[read].reserved_bytes;
     read_index_.store(increment(read), std::memory_order_release);
+    used_bytes_.fetch_sub(reserved, std::memory_order_release);
 }
 
 bool PacketRing::empty() const noexcept {
@@ -102,6 +128,12 @@ std::size_t PacketRing::capacity() const noexcept {
     return capacity_;
 }
 
+std::size_t PacketRing::bytes() const noexcept {
+    return used_bytes_.load(std::memory_order_acquire);
+}
+
+std::size_t PacketRing::byte_capacity() const noexcept { return byte_capacity_; }
+
 void PacketRing::wait_for_data(std::chrono::milliseconds timeout) {
     std::unique_lock lock(wait_mutex_);
     data_available_.wait_for(lock, timeout);
@@ -117,14 +149,6 @@ std::size_t PacketRing::increment(std::size_t value) const noexcept {
         return 0;
     }
     return value;
-}
-
-std::byte* PacketRing::slot_data(std::size_t slot) noexcept {
-    return data_.data() + slot * max_packet_size_;
-}
-
-const std::byte* PacketRing::slot_data(std::size_t slot) const noexcept {
-    return data_.data() + slot * max_packet_size_;
 }
 
 } // namespace pruftnet::sniffing::internal

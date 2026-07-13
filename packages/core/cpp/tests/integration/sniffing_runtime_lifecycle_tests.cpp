@@ -113,9 +113,9 @@ void offline_style_empty_source_stops_at_eof() {
     assert(!runtime.is_running());
     assert(callbacks.load(std::memory_order_relaxed) == 0);
     const auto stats = runtime.stats();
-    assert(stats.packets_seen == 0);
-    assert(stats.packets_enqueued == 0);
-    assert(stats.packets_parsed == 0);
+    assert(stats.packets_observed == 0);
+    assert(stats.capture_queue_accepted == 0);
+    assert(stats.packets_analyzed == 0);
     assert(source_ptr->read_stats_calls == 1);
 }
 
@@ -276,8 +276,13 @@ void rejected_observations_leave_packet_id_gaps() {
     assert(keys.size() == 1);
     assert(keys[0].packet_id == 2);
     const auto stats = runtime.stats();
-    assert(stats.packets_seen == 2);
-    assert(stats.packets_enqueued == 1);
+    assert(stats.packets_observed == 2);
+    assert(stats.capture_queue_accepted == 1);
+    assert(stats.invalid_callback_drops == 1);
+    assert(stats.packets_observed == stats.capture_queue_accepted +
+                                         stats.capture_queue_full_drops +
+                                         stats.capture_queue_oversize_drops +
+                                         stats.invalid_callback_drops);
 }
 
 } // namespace

@@ -20,7 +20,7 @@ std::array<std::byte, 4> bytes(std::uint8_t first) {
 }
 
 void push_pop_preserves_order_and_bytes() {
-    PacketRing ring(2, 8);
+    PacketRing ring(2, 16, 8);
 
     PacketMetadata first;
     first.key.packet_id = 1;
@@ -32,8 +32,8 @@ void push_pop_preserves_order_and_bytes() {
     second.captured_len = 4;
     auto second_bytes = bytes(9);
 
-    assert(ring.try_push(first, first_bytes));
-    assert(ring.try_push(second, second_bytes));
+    assert(ring.try_push(first, first_bytes) == pruftnet::sniffing::internal::PacketRingPushResult::Accepted);
+    assert(ring.try_push(second, second_bytes) == pruftnet::sniffing::internal::PacketRingPushResult::Accepted);
     assert(ring.depth() == 2);
 
     auto first_view = ring.peek();
@@ -53,7 +53,7 @@ void push_pop_preserves_order_and_bytes() {
 }
 
 void full_ring_rejects_newest() {
-    PacketRing ring(1, 8);
+    PacketRing ring(1, 8, 8);
     PacketMetadata first;
     first.key.packet_id = 1;
     PacketMetadata dropped;
@@ -62,23 +62,23 @@ void full_ring_rejects_newest() {
     next.key.packet_id = 3;
     auto payload = bytes(1);
 
-    assert(ring.try_push(first, payload));
-    assert(!ring.try_push(dropped, payload));
+    assert(ring.try_push(first, payload) == pruftnet::sniffing::internal::PacketRingPushResult::Accepted);
+    assert(ring.try_push(dropped, payload) == pruftnet::sniffing::internal::PacketRingPushResult::PacketCapacityReached);
     assert(ring.depth() == 1);
     ring.pop();
 
-    assert(ring.try_push(next, payload));
+    assert(ring.try_push(next, payload) == pruftnet::sniffing::internal::PacketRingPushResult::Accepted);
     const auto view = ring.peek();
     assert(view.has_value());
     assert(view->metadata.key.packet_id == 3);
 }
 
 void packet_larger_than_slot_is_rejected() {
-    PacketRing ring(1, 2);
+    PacketRing ring(1, 2, 2);
     PacketMetadata metadata;
     auto payload = bytes(1);
 
-    assert(!ring.try_push(metadata, payload));
+    assert(ring.try_push(metadata, payload) == pruftnet::sniffing::internal::PacketRingPushResult::Oversize);
     assert(ring.empty());
 }
 

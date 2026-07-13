@@ -1,6 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-import { CaptureNotFound, PacketEvicted, PacketNotFound } from '@repo/shared/capture'
+import {
+    CaptureNotFound,
+    PacketDataCorrupted,
+    PacketDetailPending,
+    PacketEvicted,
+    PacketNotFound,
+} from '@repo/shared/capture'
 import { Cause, Effect, Option, Schema } from 'effect'
 
 import { Capture } from './service'
@@ -9,6 +15,7 @@ const PacketRoute = Schema.Struct({
     captureId: Schema.String.pipe(Schema.pattern(/^[0-9a-f]{32}$/)),
     packetId: Schema.String.pipe(Schema.pattern(/^(0|[1-9][0-9]*)$/)),
 })
+const Revision = /^(0|[1-9][0-9]*)$/
 const routePattern = /^\/capture\/([^/]+)\/packets\/([^/]+)$/
 
 function sendJson(response: ServerResponse, status: number, body: unknown) {
@@ -43,7 +50,12 @@ export const makePacketDetailNodeHandler = Effect.gen(function* () {
         const controller = new AbortController()
         request.once('aborted', () => controller.abort())
         void Effect.runPromiseExit(
-            capture.detail(decoded.right.captureId, decoded.right.packetId),
+            capture.detail(
+                decoded.right.captureId,
+                decoded.right.packetId,
+                url.searchParams.get('registryRevision')?.match(Revision)?.[0],
+                url.searchParams.get('analysisRevision')?.match(Revision)?.[0],
+            ),
             {
                 signal: controller.signal,
             },
@@ -61,6 +73,10 @@ export const makePacketDetailNodeHandler = Effect.gen(function* () {
             const failure = Cause.failureOption(exit.cause)
             if (Option.isSome(failure) && failure.value instanceof PacketEvicted) {
                 sendJson(response, 410, { error: failure.value._tag })
+            } else if (Option.isSome(failure) && failure.value instanceof PacketDetailPending) {
+                sendJson(response, 425, { error: failure.value._tag })
+            } else if (Option.isSome(failure) && failure.value instanceof PacketDataCorrupted) {
+                sendJson(response, 422, { error: failure.value._tag })
             } else if (
                 Option.isSome(failure) &&
                 (failure.value instanceof PacketNotFound ||

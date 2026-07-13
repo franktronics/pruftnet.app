@@ -66,7 +66,13 @@ describe('capture schemas', () => {
             readTimeoutMs: 10,
             dispatchBatchSize: 64,
             ringSlots: 1024,
+            captureQueueBytes: 16 * 1024 * 1024,
             maxTotalRingBytes: 128 * 1024 * 1024,
+            spoolMaxTotalBytes: String(8 * 1024 * 1024 * 1024),
+            spoolSegmentBytes: String(512 * 1024 * 1024),
+            spoolMaxSegments: 16,
+            spoolRingMode: false,
+            spoolTemporary: true,
         }
         expect(decode(CaptureSource, live)).toMatchObject(live)
 

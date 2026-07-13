@@ -1,5 +1,6 @@
 #include <cassert>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <memory>
 #include <stdexcept>
@@ -29,6 +30,23 @@ using pruftnet::tests::FakePacketSource;
 using pruftnet::tests::fake_packet;
 using pruftnet::tests::one_source;
 using pruftnet::tests::single_interface_options;
+
+class DiskFullSink final : public pruftnet::capture::SpoolSink {
+public:
+    std::size_t write(std::span<const std::byte> bytes) noexcept override {
+        ++writes_;
+        if (writes_ <= 2) return bytes.size();
+        error_ = ENOSPC;
+        return bytes.size() / 2;
+    }
+    bool flush() noexcept override { return true; }
+    bool close() noexcept override { return true; }
+    int last_error() const noexcept override { return error_; }
+
+private:
+    std::size_t writes_ = 0;
+    int error_ = 0;
+};
 
 SnifferOptions base_options() {
     SnifferOptions options = single_interface_options();
@@ -236,7 +254,7 @@ void stats_read_error_emits_warning_event() {
     assert(has_event_code(events, SnifferErrorCode::StatsReadFailed));
 }
 
-void packet_callback_throw_emits_fatal_event_and_stops() {
+void packet_callback_throw_is_an_analysis_rejection() {
     auto source = std::make_unique<FakePacketSource>();
     source->packets.push_back(fake_packet(24));
 
@@ -255,8 +273,41 @@ void packet_callback_throw_emits_fatal_event_and_stops() {
     assert(!runtime.start().has_value());
     wait_until_stopped(runtime);
 
-    assert(has_event_code(events, SnifferErrorCode::InternalInvariantViolation));
+    const auto stats = runtime.stats();
+    assert(!has_event_code(events, SnifferErrorCode::InternalInvariantViolation));
+    assert(stats.packets_persisted == 1);
+    assert(stats.packets_analyzed == 0);
+    assert(stats.analysis_errors == 1);
+    assert(stats.analysis_gap_count == 1);
+    assert(stats.analysis_rejects == 1);
+    assert(stats.analysis_backlog_packets == 0);
     assert(!runtime.is_running());
+}
+
+void disk_full_stops_capture_with_attributed_write_loss() {
+    auto source = std::make_unique<FakePacketSource>();
+    for (std::uint8_t index = 0; index < 8; ++index)
+        source->packets.push_back(fake_packet(24));
+    std::vector<SnifferEvent> events;
+    SnifferRuntime runtime(
+        base_options(),
+        one_source(std::move(source)),
+        SnifferOptionsValidation{.require_interface_name = false},
+        [](const auto&, const auto&) {},
+        [&](const SnifferEvent& event) { events.push_back(event); },
+        [](const std::filesystem::path&, pruftnet::capture::SpoolError&) {
+            return std::make_unique<DiskFullSink>();
+        });
+
+    assert(!runtime.start().has_value());
+    wait_until_stopped(runtime);
+    const auto stats = runtime.stats();
+    assert(has_event_code(events, SnifferErrorCode::SpoolWriteFailed));
+    assert(stats.spool_write_failures == 1);
+    assert(stats.terminal_write_losses > 0);
+    assert(stats.capture_queue_accepted ==
+           stats.packets_persisted + stats.capture_queue_depth +
+               stats.writer_in_flight + stats.terminal_write_losses);
 }
 
 void event_callback_throw_does_not_crash_runtime() {
@@ -292,7 +343,8 @@ int main() {
     open_warning_is_emitted_from_start();
     dispatch_error_emits_event_and_updates_stats();
     stats_read_error_emits_warning_event();
-    packet_callback_throw_emits_fatal_event_and_stops();
+    packet_callback_throw_is_an_analysis_rejection();
+    disk_full_stops_capture_with_attributed_write_loss();
     event_callback_throw_does_not_crash_runtime();
     return 0;
 }

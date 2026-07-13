@@ -19,17 +19,21 @@ import {
     CaptureWorkerCrashed,
     CaptureWorkerUnavailable,
     PacketEvicted,
+    PacketDetailPending,
+    PacketDataCorrupted,
     PacketNotFound,
     RegistryUnavailable,
     ReplayFailed,
 } from '@repo/shared/capture'
+import { readFile, unlink } from 'node:fs/promises'
+import { basename, isAbsolute } from 'node:path'
 import { Context, Effect, Either, Layer, Schema } from 'effect'
 
 import { CaptureWorker, CaptureWorkerError } from './replay-worker'
 
 const Decimal = Schema.String.pipe(Schema.pattern(/^(0|[1-9][0-9]*)$/))
 const SessionResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Boolean,
     captureHigh: Decimal,
@@ -41,20 +45,20 @@ const SessionResponse = Schema.Struct({
     failure: Schema.NullOr(Schema.String),
 })
 const HelloResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
-    protocolVersion: Schema.Literal(1),
+    protocolVersion: Schema.Literal(2),
     features: Schema.Array(Schema.String),
 })
 const InterfacesResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     interfaces: Schema.Array(CaptureInterface),
 })
 const CapabilitiesResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     name: Schema.NonEmptyString,
@@ -80,7 +84,7 @@ const RawSummary = Schema.Struct({
     analysisRevision: Decimal,
 })
 const SummariesResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     captureHigh: Decimal,
@@ -94,36 +98,25 @@ const SummariesResponse = Schema.Struct({
     summaries: Schema.Array(RawSummary),
 })
 const RegistryResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     registryRevision: Decimal,
     protocols: RegistrySnapshot.fields.protocols,
     fields: RegistrySnapshot.fields.fields,
 })
+const { captureId: _captureStatsId, ...CaptureStatsResponseFields } = CaptureStats.fields
+void _captureStatsId
 const StatsResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     captureHigh: Decimal,
     captureLow: Decimal,
-    interfaces: CaptureStats.fields.interfaces,
-    packetsSeen: Decimal,
-    packetsEnqueued: Decimal,
-    packetsParsed: Decimal,
-    appRingDrops: Decimal,
-    pcapReceived: Decimal,
-    pcapDropped: Decimal,
-    pcapInterfaceDropped: Decimal,
-    retainedPackets: Decimal,
-    retainedBytes: Decimal,
-    retentionEvictions: Decimal,
-    retentionRejected: Decimal,
-    ipcDrops: Decimal,
-    parserThreadRunning: Schema.Boolean,
+    ...CaptureStatsResponseFields,
 })
 const EventsResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     captureHigh: Decimal,
@@ -132,16 +125,19 @@ const EventsResponse = Schema.Struct({
     events: CaptureEventBatch.fields.events,
 })
 const DetailResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(true),
     captureHigh: Decimal,
     captureLow: Decimal,
     format: Schema.Literal('PRT2'),
-    data_base64: Schema.String,
+    dataPath: Schema.NonEmptyString,
+    byteLength: Decimal,
+    registryRevision: Decimal,
+    analysisRevision: Decimal,
 })
 const FailureResponse = Schema.Struct({
-    v: Schema.Literal(1),
+    v: Schema.Literal(2),
     id: Schema.String,
     ok: Schema.Literal(false),
     error: Schema.String,
@@ -156,7 +152,10 @@ const captureId = (high: string, low: string) =>
 type CaptureError = Schema.Schema.Type<typeof CaptureRpcError>
 
 const rpcError = (error: CaptureWorkerError): CaptureError =>
-    error.reason === 'spawn' || error.reason === 'write'
+    error.reason === 'spawn' ||
+    error.reason === 'write' ||
+    error.reason === 'timeout' ||
+    error.reason === 'capacity'
         ? new CaptureWorkerUnavailable({
               title: 'Capture worker unavailable',
               message: error.message,
@@ -190,7 +189,12 @@ export interface CaptureService {
         cursor: string | undefined,
         limit: number,
     ) => Effect.Effect<CaptureEventBatch, CaptureError>
-    readonly detail: (capture: string, packetId: string) => Effect.Effect<Uint8Array, CaptureError>
+    readonly detail: (
+        capture: string,
+        packetId: string,
+        registryRevision?: string,
+        analysisRevision?: string,
+    ) => Effect.Effect<Uint8Array, CaptureError>
 }
 
 export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, CaptureService>() {
@@ -228,6 +232,27 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                         })
                     case 'evicted':
                         return new PacketEvicted({ title: 'Packet was evicted' })
+                    case 'detail_pending':
+                        return new PacketDetailPending({
+                            title: 'Packet detail is not analyzed yet',
+                        })
+                    case 'corrupt_packet':
+                        return new PacketDataCorrupted({
+                            title: 'Persisted packet data is corrupted',
+                        })
+                    case 'analysis_failed':
+                        return new PacketDataCorrupted({
+                            title: 'Packet analysis failed',
+                        })
+                    case 'revision_mismatch':
+                        return new RegistryUnavailable({
+                            title: 'Packet detail revision is no longer available',
+                        })
+                    case 'detail_capacity':
+                        return new CaptureWorkerUnavailable({
+                            title: 'Packet detail capacity is exhausted',
+                            retryable: true,
+                        })
                     case 'not_found':
                         return new PacketNotFound({ title: 'Packet not found' })
                     case 'InvalidOptions':
@@ -397,7 +422,13 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                                 readTimeoutMs: nextSource.readTimeoutMs,
                                 dispatchBatchSize: nextSource.dispatchBatchSize,
                                 ringSlots: nextSource.ringSlots,
+                                ringBytes: nextSource.captureQueueBytes,
                                 maxTotalRingBytes: nextSource.maxTotalRingBytes,
+                                spoolMaxTotalBytes: nextSource.spoolMaxTotalBytes,
+                                spoolSegmentBytes: nextSource.spoolSegmentBytes,
+                                spoolMaxSegments: nextSource.spoolMaxSegments,
+                                spoolRingMode: nextSource.spoolRingMode,
+                                spoolTemporary: nextSource.spoolTemporary,
                                 ...interfaces,
                             })
                         }),
@@ -434,47 +465,39 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                     )
                 }),
                 summaries: Effect.fn('Capture.summaries')(function* (capture, cursor, limit) {
-                    return yield* locked(
-                        Effect.gen(function* () {
-                            yield* requireCapture(capture)
-                            const raw = yield* call(SummariesResponse, {
-                                op: 'summaries',
-                                ...captureHalves(capture),
-                                cursor: cursor ?? '0',
-                                limit,
-                            })
-                            yield* requireResponseCapture(capture, raw)
-                            for (const item of raw.summaries)
-                                yield* requireResponseCapture(capture, item)
-                            return new PacketSummaryBatch({
-                                ...raw,
-                                captureId: capture,
-                                summaries: raw.summaries.map(
-                                    (item) =>
-                                        new PacketSummary({
-                                            cursor: item.cursor,
-                                            key: new PacketKey({
-                                                captureId: captureId(
-                                                    item.captureHigh,
-                                                    item.captureLow,
-                                                ),
-                                                packetId: item.packetId,
-                                            }),
-                                            timestampNs: item.timestampNs,
-                                            interfaceId: item.interfaceId,
-                                            capturedLength: item.capturedLength,
-                                            wireLength: item.wireLength,
-                                            linkType: item.linkType,
-                                            captureFlags: item.captureFlags,
-                                            parseCondition: item.parseCondition,
-                                            protocolPath: item.protocolPath,
-                                            columns: item.columns,
-                                            analysisRevision: item.analysisRevision,
-                                        }),
-                                ),
-                            })
-                        }),
-                    )
+                    yield* requireCapture(capture)
+                    const raw = yield* call(SummariesResponse, {
+                        op: 'summaries',
+                        ...captureHalves(capture),
+                        cursor: cursor ?? '0',
+                        limit,
+                    })
+                    yield* requireResponseCapture(capture, raw)
+                    for (const item of raw.summaries) yield* requireResponseCapture(capture, item)
+                    return new PacketSummaryBatch({
+                        ...raw,
+                        captureId: capture,
+                        summaries: raw.summaries.map(
+                            (item) =>
+                                new PacketSummary({
+                                    cursor: item.cursor,
+                                    key: new PacketKey({
+                                        captureId: captureId(item.captureHigh, item.captureLow),
+                                        packetId: item.packetId,
+                                    }),
+                                    timestampNs: item.timestampNs,
+                                    interfaceId: item.interfaceId,
+                                    capturedLength: item.capturedLength,
+                                    wireLength: item.wireLength,
+                                    linkType: item.linkType,
+                                    captureFlags: item.captureFlags,
+                                    parseCondition: item.parseCondition,
+                                    protocolPath: item.protocolPath,
+                                    columns: item.columns,
+                                    analysisRevision: item.analysisRevision,
+                                }),
+                        ),
+                    })
                 }),
                 registry: Effect.fn('Capture.registry')(function* (revision) {
                     const raw = yield* call(RegistryResponse, { op: 'registry' })
@@ -486,58 +509,78 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                     return new RegistrySnapshot(raw)
                 }),
                 stats: Effect.fn('Capture.stats')(function* (capture) {
-                    return yield* locked(
-                        Effect.gen(function* () {
-                            yield* requireCapture(capture)
-                            const raw = yield* call(StatsResponse, {
-                                op: 'stats',
-                                ...captureHalves(capture),
-                            })
-                            const responseCaptureId = captureId(raw.captureHigh, raw.captureLow)
-                            if (responseCaptureId !== capture)
-                                return yield* new CaptureNotFound({ title: 'Capture not found' })
-                            return new CaptureStats({ ...raw, captureId: responseCaptureId })
-                        }),
-                    )
+                    yield* requireCapture(capture)
+                    const raw = yield* call(StatsResponse, {
+                        op: 'stats',
+                        ...captureHalves(capture),
+                    })
+                    const responseCaptureId = captureId(raw.captureHigh, raw.captureLow)
+                    if (responseCaptureId !== capture)
+                        return yield* new CaptureNotFound({ title: 'Capture not found' })
+                    return new CaptureStats({ ...raw, captureId: responseCaptureId })
                 }),
                 events: Effect.fn('Capture.events')(function* (capture, cursor, limit) {
-                    return yield* locked(
-                        Effect.gen(function* () {
-                            yield* requireCapture(capture)
-                            const raw = yield* call(EventsResponse, {
-                                op: 'events',
+                    yield* requireCapture(capture)
+                    const raw = yield* call(EventsResponse, {
+                        op: 'events',
+                        ...captureHalves(capture),
+                        cursor: cursor ?? '0',
+                        limit,
+                    })
+                    yield* requireResponseCapture(capture, raw)
+                    return new CaptureEventBatch({
+                        captureId: capture,
+                        gapBeforeFirst: raw.gapBeforeFirst,
+                        events: raw.events,
+                    })
+                }),
+                detail: Effect.fn('Capture.detail')(
+                    function* (capture, packetId, registryRevision, analysisRevision) {
+                        yield* requireCapture(capture)
+                        const value = yield* worker
+                            .request({
+                                op: 'detail',
                                 ...captureHalves(capture),
-                                cursor: cursor ?? '0',
-                                limit,
+                                packetId,
+                                registryRevision:
+                                    registryRevision ?? activeSession?.registryRevision ?? '0',
+                                analysisRevision:
+                                    analysisRevision ?? activeSession?.registryRevision ?? '0',
                             })
-                            yield* requireResponseCapture(capture, raw)
-                            return new CaptureEventBatch({
-                                captureId: capture,
-                                gapBeforeFirst: raw.gapBeforeFirst,
-                                events: raw.events,
+                            .pipe(Effect.mapError(rpcError))
+                        const failure = Schema.decodeUnknownEither(FailureResponse)(value)
+                        if (Either.isRight(failure)) return yield* workerFailure(failure.right)
+                        const raw = yield* decode(DetailResponse, value)
+                        yield* requireResponseCapture(capture, raw)
+                        if (
+                            !isAbsolute(raw.dataPath) ||
+                            !basename(raw.dataPath).startsWith('detail-') ||
+                            !basename(raw.dataPath).endsWith('.prt2')
+                        ) {
+                            return yield* new PacketDataCorrupted({
+                                title: 'Capture worker returned an invalid detail path',
                             })
-                        }),
-                    )
-                }),
-                detail: Effect.fn('Capture.detail')(function* (capture, packetId) {
-                    return yield* locked(
-                        Effect.gen(function* () {
-                            yield* requireCapture(capture)
-                            const value = yield* worker
-                                .request({
-                                    op: 'detail',
-                                    ...captureHalves(capture),
-                                    packetId,
-                                })
-                                .pipe(Effect.mapError(rpcError))
-                            const failure = Schema.decodeUnknownEither(FailureResponse)(value)
-                            if (Either.isRight(failure)) return yield* workerFailure(failure.right)
-                            const raw = yield* decode(DetailResponse, value)
-                            yield* requireResponseCapture(capture, raw)
-                            return Uint8Array.from(Buffer.from(raw.data_base64, 'base64'))
-                        }),
-                    )
-                }),
+                        }
+                        const expectedLength = BigInt(raw.byteLength)
+                        const bytes = yield* Effect.tryPromise({
+                            try: () => readFile(raw.dataPath),
+                            catch: () =>
+                                new PacketDataCorrupted({
+                                    title: 'Packet detail file is unavailable',
+                                }),
+                        }).pipe(
+                            Effect.ensuring(
+                                Effect.promise(() => unlink(raw.dataPath).catch(() => undefined)),
+                            ),
+                        )
+                        if (BigInt(bytes.byteLength) !== expectedLength) {
+                            return yield* new PacketDataCorrupted({
+                                title: 'Packet detail length does not match the worker response',
+                            })
+                        }
+                        return Uint8Array.from(bytes)
+                    },
+                ),
             })
         }),
     )

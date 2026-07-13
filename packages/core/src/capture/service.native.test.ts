@@ -48,6 +48,6 @@ test.runIf(existsSync(workerPath))(
             expect.objectContaining({ key: 'info' }),
         ])
         expect(new TextDecoder().decode(result.detail.slice(4, 8))).toBe('PRT2')
-        expect(result.stats.packetsParsed).toBe('10')
+        expect(result.stats.packetsAnalyzed).toBe('10')
     },
 )

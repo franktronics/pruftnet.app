@@ -48,6 +48,10 @@ std::string to_string(SnifferErrorCode code) {
         return "FilterApplyFailed";
     case SnifferErrorCode::RingFull:
         return "RingFull";
+    case SnifferErrorCode::PacketOversize:
+        return "PacketOversize";
+    case SnifferErrorCode::InvalidCallbackPayload:
+        return "InvalidCallbackPayload";
     case SnifferErrorCode::DispatchFailed:
         return "DispatchFailed";
     case SnifferErrorCode::AllocationFailed:
@@ -60,6 +64,18 @@ std::string to_string(SnifferErrorCode code) {
         return "ThreadStartFailed";
     case SnifferErrorCode::StatsReadFailed:
         return "StatsReadFailed";
+    case SnifferErrorCode::SpoolOpenFailed:
+        return "SpoolOpenFailed";
+    case SnifferErrorCode::SpoolWriteFailed:
+        return "SpoolWriteFailed";
+    case SnifferErrorCode::SpoolFlushFailed:
+        return "SpoolFlushFailed";
+    case SnifferErrorCode::SpoolFinalizeFailed:
+        return "SpoolFinalizeFailed";
+    case SnifferErrorCode::SpoolQuotaExceeded:
+        return "SpoolQuotaExceeded";
+    case SnifferErrorCode::AnalysisFailed:
+        return "AnalysisFailed";
     case SnifferErrorCode::InternalInvariantViolation:
         return "InternalInvariantViolation";
     }

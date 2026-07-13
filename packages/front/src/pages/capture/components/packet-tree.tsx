@@ -198,13 +198,15 @@ function EmptyDetail({ state }: { state?: PacketDetailState }) {
     const message =
         state?.kind === 'loading'
             ? 'Loading packet structure...'
-            : state?.kind === 'evicted'
-              ? 'Packet detail was evicted from retention.'
-              : state?.kind === 'invalid'
-                ? 'Packet detail is invalid.'
-                : state?.kind === 'unavailable'
-                  ? 'Packet detail is unavailable.'
-                  : 'Select a packet to inspect its structure'
+            : state?.kind === 'pending'
+              ? 'Packet detail is waiting for analysis.'
+              : state?.kind === 'evicted'
+                ? 'Packet detail was evicted from retention.'
+                : state?.kind === 'invalid'
+                  ? 'Packet detail is invalid.'
+                  : state?.kind === 'unavailable'
+                    ? 'Packet detail is unavailable.'
+                    : 'Select a packet to inspect its structure'
     return (
         <div
             className="text-muted-foreground grid h-full place-items-center text-xs"

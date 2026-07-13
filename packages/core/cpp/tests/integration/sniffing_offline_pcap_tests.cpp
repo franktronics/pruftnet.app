@@ -110,14 +110,23 @@ int main() {
     }
 
     const auto stats = runtime.stats();
-    assert(stats.packets_seen == pruftnet::tests::kOfflineExpectedPacketCount);
-    assert(stats.packets_enqueued == pruftnet::tests::kOfflineExpectedPacketCount);
-    assert(stats.packets_parsed == pruftnet::tests::kOfflineExpectedPacketCount);
-    assert(stats.app_ring_drops == 0);
+    assert(stats.packets_observed == pruftnet::tests::kOfflineExpectedPacketCount);
+    assert(stats.capture_queue_accepted == pruftnet::tests::kOfflineExpectedPacketCount);
+    assert(stats.packets_analyzed == pruftnet::tests::kOfflineExpectedPacketCount);
+    assert(stats.capture_queue_full_drops == 0);
     assert(stats.pcap_dispatch_calls >= 1);
     assert(stats.pcap_dispatch_errors == 0);
-    assert(stats.ring_depth == 0);
-    assert(stats.ring_capacity == 32);
+    assert(stats.capture_queue_depth == 0);
+    assert(stats.capture_queue_capacity_packets == 32);
+    assert(stats.capture_queue_accepted ==
+           stats.packets_persisted + stats.capture_queue_depth +
+               stats.writer_in_flight + stats.terminal_write_losses);
+    assert(stats.packets_persisted ==
+           stats.packets_analyzed + stats.analysis_backlog_packets +
+               stats.analysis_evicted_before_analysis + stats.analysis_rejects);
+    assert(stats.analysis_backlog_packets == 0);
+    assert(stats.analysis_backlog_bytes == 0);
+    assert(stats.writer_in_flight == 0);
 
     return 0;
 }

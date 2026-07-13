@@ -74,9 +74,9 @@ int main() {
     }
 
     const auto stats = sniffer.stats();
-    if (stats.packets_seen < pruftnet::tests::kLivePacketsToCapture ||
-        stats.packets_enqueued < pruftnet::tests::kLivePacketsToCapture ||
-        stats.packets_parsed < pruftnet::tests::kLivePacketsToCapture) {
+    if (stats.packets_observed < pruftnet::tests::kLivePacketsToCapture ||
+        stats.capture_queue_accepted < pruftnet::tests::kLivePacketsToCapture ||
+        stats.packets_analyzed < pruftnet::tests::kLivePacketsToCapture) {
         return 1;
     }
 

@@ -5,15 +5,12 @@
 #include <thread>
 #include <variant>
 
-#include "parsing/packet_parser.hpp"
-#include "pruftnet/parsing/packet_tree_codec.hpp"
 #include "pruftnet/replay/replay_store.hpp"
 #include "pruftnet/sniffing/network_sniffer.hpp"
 #include "tests/test_config.hpp"
 
 int main() {
   using namespace pruftnet;
-  replay::RawPacketStore store(32, 4096);
   replay::SummaryJournal journal(32);
   replay::EventJournal events(32);
   parsing::RegistrySnapshotPtr registry;
@@ -28,7 +25,6 @@ int main() {
         std::move(options),
         [&](const sniffing::RawPacketView &raw,
             const parsing::ParsedPacketTree &parsed) noexcept {
-          assert(store.insert(raw));
           assert(registry);
           assert(extractor);
           assert(journal.append(
@@ -63,26 +59,9 @@ int main() {
     assert(summary.length == std::to_string(summary.metadata.wire_len));
     assert(summary.info.size() <= parsing::kPacketSummaryColumnMaxBytes);
   }
-  const auto lookup = store.get(summaries.entries.front().metadata.key);
-  assert(lookup.status == replay::PacketLookup::Found);
-  parsing::internal::PacketParser parser(registry);
-  const sniffing::RawPacketView raw{lookup.packet->metadata,
-                                    lookup.packet->bytes};
-  const auto tree = parser.parse(raw);
-  parsing::PacketTreeEncoder encoder;
-  const auto encoded = encoder.encode(tree);
-  const auto *bytes = std::get_if<std::span<const std::byte>>(&encoded);
-  assert(bytes && !bytes->empty());
-  assert(std::holds_alternative<parsing::VerifiedPacketTreeView>(
-      parsing::verify_packet_tree(*bytes, *registry)));
-
   const auto first_capture_key = summaries.entries.front().metadata.key;
-  store.clear();
   journal.clear();
   events.clear();
-  const auto cleared_stats = store.stats();
-  assert(cleared_stats.packets == 0 && cleared_stats.bytes == 0 &&
-         cleared_stats.evictions == 0 && cleared_stats.rejected == 0);
   assert(journal.read(0, 32).entries.empty());
   assert(events.read(0, 32).entries.empty());
 
@@ -95,7 +74,5 @@ int main() {
   for (const auto &summary : restarted.entries)
     assert(summary.metadata.key.capture_id ==
            restarted.entries.front().metadata.key.capture_id);
-  assert(store.get(first_capture_key).status == replay::PacketLookup::Unknown);
-  assert(store.stats().packets == tests::kOfflineExpectedPacketCount);
   return 0;
 }

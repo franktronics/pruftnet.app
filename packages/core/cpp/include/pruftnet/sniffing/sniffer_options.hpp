@@ -30,6 +30,7 @@ struct SnifferInterfaceOptions {
     int read_timeout_ms = 10;
     int pcap_dispatch_batch_size = 64;
     std::size_t ring_slots = 65'536;
+    std::size_t ring_bytes = 16 * 1024 * 1024;
     std::string bpf_filter;
     bool bpf_optimize = true;
     std::optional<int> requested_link_type;
@@ -43,6 +44,14 @@ struct SnifferOptions {
     std::vector<int> accepted_link_types;
     std::chrono::milliseconds stats_poll_interval = std::chrono::milliseconds(1'000);
     std::size_t max_total_ring_bytes = 0;
+    std::string spool_directory;
+    std::uint64_t spool_max_total_bytes = 0;
+    std::uint64_t spool_segment_bytes = 0;
+    std::size_t spool_max_segments = 0;
+    bool spool_ring_mode = false;
+    bool spool_temporary = true;
+    std::chrono::milliseconds spool_flush_interval = std::chrono::milliseconds(50);
+    std::size_t spool_flush_bytes = 1024 * 1024;
 };
 
 } // namespace pruftnet::sniffing
