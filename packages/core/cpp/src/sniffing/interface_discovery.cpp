@@ -1,6 +1,17 @@
 #include "pruftnet/sniffing/interface_discovery.hpp"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#endif
+
+#include <algorithm>
+#include <array>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -12,6 +23,51 @@ namespace pruftnet::sniffing {
 namespace {
 
 bool has_flag(unsigned int flags, unsigned int flag) noexcept { return (flags & flag) != 0; }
+
+std::optional<CaptureInterfaceAddress> capture_address(const sockaddr* address) {
+    if (address == nullptr) {
+        return std::nullopt;
+    }
+
+    std::array<char, INET6_ADDRSTRLEN> buffer{};
+    const void* source = nullptr;
+    CaptureInterfaceAddressFamily family{};
+    int native_family = 0;
+
+    if (address->sa_family == AF_INET) {
+        source = &reinterpret_cast<const sockaddr_in*>(address)->sin_addr;
+        family = CaptureInterfaceAddressFamily::IPv4;
+        native_family = AF_INET;
+    } else if (address->sa_family == AF_INET6) {
+        source = &reinterpret_cast<const sockaddr_in6*>(address)->sin6_addr;
+        family = CaptureInterfaceAddressFamily::IPv6;
+        native_family = AF_INET6;
+    } else {
+        return std::nullopt;
+    }
+
+    if (inet_ntop(native_family, source, buffer.data(), buffer.size()) == nullptr) {
+        return std::nullopt;
+    }
+
+    return CaptureInterfaceAddress{family, buffer.data()};
+}
+
+void add_capture_addresses(CaptureInterfaceDescriptor& descriptor, const pcap_addr_t* addresses) {
+    for (auto* entry = addresses; entry != nullptr; entry = entry->next) {
+        const auto address = capture_address(entry->addr);
+        if (!address.has_value() || address->address.empty()) {
+            continue;
+        }
+
+        const auto duplicate = std::ranges::any_of(descriptor.addresses, [&](const auto& existing) {
+            return existing.family == address->family && existing.address == address->address;
+        });
+        if (!duplicate) {
+            descriptor.addresses.push_back(*address);
+        }
+    }
+}
 
 std::string datalink_name(int link_type) {
 #if defined(PRUFTNET_HAVE_PCAP_DATALINK_NAME)
@@ -86,6 +142,7 @@ std::variant<std::vector<CaptureInterfaceDescriptor>, SnifferError> list_capture
         CaptureInterfaceDescriptor descriptor;
         descriptor.name = device->name != nullptr ? device->name : "";
         descriptor.description = device->description != nullptr ? device->description : "";
+        add_capture_addresses(descriptor, device->addresses);
 #ifdef PCAP_IF_LOOPBACK
         descriptor.is_loopback = has_flag(device->flags, PCAP_IF_LOOPBACK);
 #endif

@@ -30,6 +30,38 @@ const helloResponse = {
 } as const
 
 describe('Capture', () => {
+    test('preserves portable interface addresses from the native worker', async () => {
+        const interfaces = await provideCapture(
+            Effect.gen(function* () {
+                return yield* (yield* Capture).listInterfaces()
+            }),
+            {
+                v: 1,
+                id: '1',
+                ok: true,
+                interfaces: [
+                    {
+                        name: 'en0',
+                        description: 'Wi-Fi',
+                        addresses: [
+                            { family: 'IPv4', address: '192.0.2.10' },
+                            { family: 'IPv6', address: '2001:db8::10' },
+                        ],
+                        isLoopback: false,
+                        isUp: true,
+                        isRunning: true,
+                        isWireless: true,
+                    },
+                ],
+            },
+        )
+
+        expect(interfaces[0]?.addresses).toEqual([
+            { family: 'IPv4', address: '192.0.2.10' },
+            { family: 'IPv6', address: '2001:db8::10' },
+        ])
+    })
+
     test('converts capture halves to canonical hex and preserves u64 decimal strings', async () => {
         const session = await provideCapture(
             Effect.gen(function* () {

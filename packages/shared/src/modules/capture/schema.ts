@@ -70,9 +70,17 @@ export class CaptureInterfaceRequest extends Schema.Class<CaptureInterfaceReques
     monitorMode: Schema.Boolean,
 }) {}
 
+export class CaptureInterfaceAddress extends Schema.Class<CaptureInterfaceAddress>(
+    'CaptureInterfaceAddress',
+)({
+    family: Schema.Literal('IPv4', 'IPv6'),
+    address: Schema.NonEmptyString,
+}) {}
+
 export class CaptureInterface extends Schema.Class<CaptureInterface>('CaptureInterface')({
     name: Schema.NonEmptyString,
     description: Schema.String,
+    addresses: Schema.Array(CaptureInterfaceAddress),
     isLoopback: Schema.Boolean,
     isUp: Schema.Boolean,
     isRunning: Schema.Boolean,

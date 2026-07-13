@@ -275,7 +275,7 @@ function InterfaceSelector({
                 </span>
                 <ChevronDown className="text-muted-foreground" />
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 gap-1 p-0">
+            <PopoverContent align="start" className="w-96 gap-1 p-0">
                 <Command>
                     <CommandInput className="text-sm" placeholder="Search interfaces..." />
                     <CommandList>
@@ -284,7 +284,7 @@ function InterfaceSelector({
                             {interfaces.map((item) => (
                                 <CommandItem
                                     key={item.name}
-                                    value={`${item.name} ${item.description}`}
+                                    value={`${item.name} ${item.description} ${item.addresses.map(({ address }) => address).join(' ')}`}
                                     data-checked={Boolean(selected[item.name])}
                                     onSelect={() => onToggle(item.name)}
                                     className="min-h-9 text-sm"
@@ -306,6 +306,14 @@ function InterfaceSelector({
                                         <p className="text-muted-foreground truncate text-xs">
                                             {item.description || 'No description'}
                                         </p>
+                                        {item.addresses.length > 0 ? (
+                                            <p className="text-muted-foreground truncate font-mono text-xs">
+                                                {item.addresses[0]?.address}
+                                                {item.addresses.length > 1
+                                                    ? ` +${item.addresses.length - 1}`
+                                                    : null}
+                                            </p>
+                                        ) : null}
                                     </div>
                                 </CommandItem>
                             ))}

@@ -8,7 +8,7 @@ The capture workspace supports local live capture through the real libpcap/Npcap
 
 The home route is the idle capture workspace, not a separate setup page. The control bar, display filter, packet table, statistics, packet tree, and bytes pane are mounted before capture starts and keep the same geometry after navigation to a running capture.
 
-The control bar uses a searchable Command popover for explicit multi-interface selection. The adjacent settings button opens a modal containing BPF capture filter, per-interface promiscuous/monitor/DLT/timestamp options, and bounded snapshot/kernel-buffer/ring settings. Selection is never inferred from `node:os` data. Replay has no entry point in the product UI; it remains backend test infrastructure until capture-file import is implemented.
+The control bar uses a searchable Command popover for explicit multi-interface selection. Each entry shows its first libpcap-provided IPv4 or IPv6 address and an additional-address count; search covers all addresses. The adjacent settings button opens a modal containing BPF capture filter, per-interface promiscuous/monitor/DLT/timestamp options, and bounded snapshot/kernel-buffer/ring settings. Selection is never inferred from `node:os` data. Replay has no entry point in the product UI; it remains backend test infrastructure until capture-file import is implemented.
 
 In Electron, interface selection, settings, Start/Stop, and capture state are portaled into a dedicated non-draggable titlebar slot. Follow tail remains in the workspace because it controls presentation rather than capture lifecycle. Server/browser mode renders both groups in the normal workspace toolbar. This uses one control implementation rather than duplicating desktop and browser state.
 
@@ -91,7 +91,7 @@ Capture-specific components, hooks, models, and query policies stay under `packa
 
 ## Deferred Work
 
-- joining libpcap descriptors with OS address/MAC data;
+- optional OS-specific MAC address enrichment;
 - explicit DLT and timestamp selection in the frontend;
 - shared-memory packet batches and persistent pcapng output for sustained high-rate capture;
 - packaged privilege installation and helper signing on Linux, macOS, and Windows;

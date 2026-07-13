@@ -9,9 +9,20 @@
 
 namespace pruftnet::sniffing {
 
+enum class CaptureInterfaceAddressFamily {
+    IPv4,
+    IPv6,
+};
+
+struct CaptureInterfaceAddress {
+    CaptureInterfaceAddressFamily family = CaptureInterfaceAddressFamily::IPv4;
+    std::string address;
+};
+
 struct CaptureInterfaceDescriptor {
     std::string name;
     std::string description;
+    std::vector<CaptureInterfaceAddress> addresses;
     bool is_loopback = false;
     bool is_up = false;
     bool is_running = false;

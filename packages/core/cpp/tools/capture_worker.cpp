@@ -849,6 +849,18 @@ private:
         out << ',';
       out << "{\"name\":" << json_string(item.name)
           << ",\"description\":" << json_string(item.description)
+          << ",\"addresses\":[";
+      for (std::size_t address_index = 0; address_index < item.addresses.size(); ++address_index) {
+        if (address_index)
+          out << ',';
+        const auto &address = item.addresses[address_index];
+        out << "{\"family\":"
+            << json_string(address.family == sniffing::CaptureInterfaceAddressFamily::IPv4
+                               ? "IPv4"
+                               : "IPv6")
+            << ",\"address\":" << json_string(address.address) << '}';
+      }
+      out << ']'
           << ",\"isLoopback\":" << boolean(item.is_loopback)
           << ",\"isUp\":" << boolean(item.is_up)
           << ",\"isRunning\":" << boolean(item.is_running)

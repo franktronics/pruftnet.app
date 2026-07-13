@@ -39,7 +39,7 @@ Internal architecture:
 - `SnifferOptions::interfaces` configures one or more `SnifferInterfaceOptions` entries.
 - `SnifferOptions::max_total_ring_bytes` optionally caps total packet-ring memory across all interfaces.
 - `SnifferRuntime` owns the shared multi-interface capture/ring/parser lifecycle.
-- `interface_discovery.hpp` provides libpcap/Npcap-based capture interface listing and capabilities discovery.
+- `interface_discovery.hpp` provides libpcap/Npcap-based capture interface listing, portable IPv4/IPv6 address discovery, and capabilities discovery. Link-layer addresses are intentionally excluded because libpcap does not expose them consistently across supported operating systems.
 - `PacketSource` abstracts packet input.
 - `parsing::PacketView` provides bounded endian-safe reads and zero-copy child views while distinguishing capture truncation, reported-length violations, parent-boundary violations, and offset overflow.
 - `parsing::RegistrySnapshot` is bootstrapped before runtime capture starts; its immutable revision is exposed by `NetworkSniffer::registry_revision()`.

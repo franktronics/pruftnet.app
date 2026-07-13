@@ -20,6 +20,12 @@ int main() {
     const auto& interfaces = std::get<std::vector<CaptureInterfaceDescriptor>>(result);
     for (const auto& interface : interfaces) {
         assert(!interface.name.empty());
+        for (const auto& address : interface.addresses) {
+            assert(!address.address.empty());
+            assert(
+                address.family == CaptureInterfaceAddressFamily::IPv4 ||
+                address.family == CaptureInterfaceAddressFamily::IPv6);
+        }
     }
 
     return 0;
