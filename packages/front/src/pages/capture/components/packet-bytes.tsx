@@ -21,6 +21,7 @@ export function PacketBytes({
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const [activeByte, setActiveByte] = useState<number>()
+    const [hoveredByte, setHoveredByte] = useState<number>()
     const source =
         detail?.sources.find((candidate) => candidate.id === (range?.sourceId ?? 0)) ??
         detail?.sources.find((candidate) => candidate.id === 0) ??
@@ -36,6 +37,7 @@ export function PacketBytes({
     })
     useEffect(() => {
         setActiveByte(undefined)
+        setHoveredByte(undefined)
         scrollRef.current?.scrollTo({ top: 0 })
         virtualizer.scrollToIndex(0)
     }, [sourceId, virtualizer])
@@ -67,6 +69,8 @@ export function PacketBytes({
     function byteProps(index: number) {
         return {
             onClick: () => select(index),
+            onPointerEnter: () => setHoveredByte(index),
+            onPointerLeave: () => setHoveredByte(undefined),
             'aria-selected': activeByte !== undefined && index === activeByte,
         }
     }
@@ -121,6 +125,7 @@ export function PacketBytes({
                                 : undefined
                         }
                         onKeyDown={handleKey}
+                        onPointerLeave={() => setHoveredByte(undefined)}
                     >
                         <div
                             className="relative min-w-[680px]"
@@ -148,6 +153,7 @@ export function PacketBytes({
                                                     range?.sourceId === sourceId &&
                                                     index >= range.start &&
                                                     index < range.end
+                                                const hovered = hoveredByte === index
                                                 return index < bytes.length ? (
                                                     <span
                                                         key={column}
@@ -155,7 +161,7 @@ export function PacketBytes({
                                                         role="gridcell"
                                                         {...byteProps(index)}
                                                         aria-label={`Byte ${index}`}
-                                                        className={`inline-block w-6 cursor-pointer text-center ${highlighted ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                                                        className={`inline-block w-6 cursor-pointer text-center ${highlighted ? 'bg-primary text-primary-foreground' : hovered ? 'ring-primary ring-1 ring-inset' : ''}`}
                                                     >
                                                         {bytes[index]!.toString(16).padStart(
                                                             2,
@@ -180,11 +186,14 @@ export function PacketBytes({
                                                     range?.sourceId === sourceId &&
                                                     index >= range.start &&
                                                     index < range.end
+                                                const hovered = hoveredByte === index
                                                 return (
                                                     <span
                                                         key={column}
-                                                        onClick={() => select(index)}
-                                                        className={`cursor-pointer ${highlighted ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                                                        role="gridcell"
+                                                        {...byteProps(index)}
+                                                        aria-label={`ASCII equivalent of byte ${index}`}
+                                                        className={`cursor-pointer ${highlighted ? 'bg-primary text-primary-foreground' : hovered ? 'ring-primary ring-1 ring-inset' : ''}`}
                                                     >
                                                         {byte >= 32 && byte <= 126
                                                             ? String.fromCharCode(byte)

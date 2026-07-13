@@ -202,7 +202,7 @@ export function CaptureControlBar({
                 <span
                     className={`size-1.5 rounded-full ${active ? 'bg-emerald-500' : session?.state === 'failed' ? 'bg-destructive' : 'bg-muted-foreground/40'}`}
                 />
-                <span className="text-muted-foreground text-xs capitalize">
+                <span className="text-muted-foreground text-xs uppercase">
                     {session?.state ?? 'idle'}
                 </span>
             </div>

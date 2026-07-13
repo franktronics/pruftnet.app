@@ -17,6 +17,7 @@ import { PanelLeft } from 'lucide-react'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const SIDEBAR_STORAGE_KEY = 'pruftnet-sidebar-open'
 const SIDEBAR_WIDTH = '16rem'
 const SIDEBAR_WIDTH_MOBILE = '18rem'
 const SIDEBAR_WIDTH_ICON = '3rem'
@@ -33,6 +34,15 @@ type SidebarContextProps = {
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
+
+function getStoredSidebarOpen(defaultOpen: boolean) {
+    if (typeof window === 'undefined') {
+        return defaultOpen
+    }
+
+    const storedOpen = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+    return storedOpen === null ? defaultOpen : storedOpen === 'true'
+}
 
 function useSidebar() {
     const context = React.useContext(SidebarContext)
@@ -61,7 +71,7 @@ function SidebarProvider({
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    const [_open, _setOpen] = React.useState(() => getStoredSidebarOpen(defaultOpen))
     const open = openProp ?? _open
     const setOpen = React.useCallback(
         (value: boolean | ((value: boolean) => boolean)) => {
@@ -72,8 +82,9 @@ function SidebarProvider({
                 _setOpen(openState)
             }
 
-            // This sets the cookie to keep the sidebar state.
+            // Persist the preference for both browser and desktop sessions.
             document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+            window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(openState))
         },
         [setOpenProp, open],
     )

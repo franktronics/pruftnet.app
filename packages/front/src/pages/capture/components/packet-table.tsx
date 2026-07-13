@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
 
 import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 import {
@@ -10,7 +11,17 @@ import {
 } from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 
-const grid = 'grid-cols-[64px_82px_minmax(100px,1fr)_minmax(100px,1fr)_86px_70px_minmax(180px,2fr)]'
+const columns = [
+    { id: 'number', label: 'No.', width: 64, minWidth: 48 },
+    { id: 'time', label: 'Time', width: 82, minWidth: 64 },
+    { id: 'source', label: 'Source', width: 180, minWidth: 100 },
+    { id: 'destination', label: 'Destination', width: 180, minWidth: 100 },
+    { id: 'protocol', label: 'Protocol', width: 86, minWidth: 72 },
+    { id: 'length', label: 'Length', width: 70, minWidth: 56 },
+    { id: 'info', label: 'Info', width: 360, minWidth: 180 },
+] as const
+
+const initialColumnWidths: number[] = columns.map((column) => column.width)
 
 export function PacketTable({
     rows,
@@ -30,6 +41,13 @@ export function PacketTable({
     emptyMessage?: string
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
+    const columnResizeRef = useRef<{
+        index: number
+        pointerId: number
+        startX: number
+        startWidth: number
+    } | null>(null)
+    const [columnWidths, setColumnWidths] = useState(initialColumnWidths)
     const packetCount = rows.filter((row) => row.kind === 'packet').length
     const virtualizer = useVirtualizer({
         count: rows.length,
@@ -57,6 +75,51 @@ export function PacketTable({
             onSelect(row)
             virtualizer.scrollToIndex(index, { align: 'auto' })
         }
+    }
+
+    const gridStyle = {
+        gridTemplateColumns: columnWidths.map((width) => `${width}px`).join(' '),
+    }
+    const tableWidth = columnWidths.reduce((total, width) => total + width, 0)
+
+    function resizeColumn(index: number, change: number) {
+        setColumnWidths((current) =>
+            current.map((width, columnIndex) =>
+                columnIndex === index ? Math.max(columns[index]!.minWidth, width + change) : width,
+            ),
+        )
+    }
+
+    function handleColumnPointerDown(index: number, event: PointerEvent<HTMLSpanElement>) {
+        event.preventDefault()
+        event.stopPropagation()
+        columnResizeRef.current = {
+            index,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startWidth: columnWidths[index]!,
+        }
+        event.currentTarget.setPointerCapture(event.pointerId)
+    }
+
+    function handleColumnPointerMove(event: PointerEvent<HTMLSpanElement>) {
+        const resize = columnResizeRef.current
+        if (!resize || resize.pointerId !== event.pointerId) return
+        const width = Math.max(
+            columns[resize.index]!.minWidth,
+            resize.startWidth + event.clientX - resize.startX,
+        )
+        setColumnWidths((current) =>
+            current.map((currentWidth, index) => (index === resize.index ? width : currentWidth)),
+        )
+    }
+
+    function finishColumnResize(event: PointerEvent<HTMLSpanElement>) {
+        const resize = columnResizeRef.current
+        if (!resize || resize.pointerId !== event.pointerId) return
+        columnResizeRef.current = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId)
     }
 
     return (
@@ -93,21 +156,43 @@ export function PacketTable({
             >
                 <div
                     role="row"
-                    className={`bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 min-w-max items-center border-b px-2 text-xs font-semibold tracking-wide uppercase ${grid}`}
+                    className="bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
+                    style={{ ...gridStyle, minWidth: tableWidth }}
                 >
-                    <span role="columnheader">No.</span>
-                    <span role="columnheader">Time</span>
-                    <span role="columnheader">Source</span>
-                    <span role="columnheader">Destination</span>
-                    <span role="columnheader">Protocol</span>
-                    <span role="columnheader" className="text-right">
-                        Length
-                    </span>
-                    <span role="columnheader" className="pl-3">
-                        Info
-                    </span>
+                    {columns.map((column, index) => (
+                        <span
+                            key={column.id}
+                            role="columnheader"
+                            className={`relative flex h-full min-w-0 items-center px-2 ${column.id === 'length' ? 'justify-end' : ''}`}
+                        >
+                            <span className="truncate">{column.label}</span>
+                            {index < columns.length - 1 ? (
+                                <span
+                                    role="separator"
+                                    aria-orientation="vertical"
+                                    aria-label={`Resize ${column.label} column`}
+                                    tabIndex={0}
+                                    className="group absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-border after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] hover:after:bg-primary focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:after:bg-primary"
+                                    onPointerDown={(event) => handleColumnPointerDown(index, event)}
+                                    onPointerMove={handleColumnPointerMove}
+                                    onPointerUp={finishColumnResize}
+                                    onPointerCancel={finishColumnResize}
+                                    onKeyDown={(event) => {
+                                        const step = event.shiftKey ? 24 : 8
+                                        if (event.key === 'ArrowRight') resizeColumn(index, step)
+                                        else if (event.key === 'ArrowLeft') resizeColumn(index, -step)
+                                        else return
+                                        event.preventDefault()
+                                    }}
+                                />
+                            ) : null}
+                        </span>
+                    ))}
                 </div>
-                <div className="relative min-w-max" style={{ height: virtualizer.getTotalSize() }}>
+                <div
+                    className="relative w-full"
+                    style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
+                >
                     {packetCount === 0 && emptyMessage ? (
                         <div
                             className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
@@ -141,31 +226,32 @@ export function PacketTable({
                                 role="row"
                                 aria-selected={selected}
                                 onClick={() => onSelect(row)}
-                                className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b px-2 font-mono text-xs tabular-nums ${grid} ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
+                                className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
                                 style={{
+                                    ...gridStyle,
                                     height: item.size,
                                     transform: `translateY(${item.start}px)`,
                                 }}
                             >
-                                <span role="gridcell">{summary.key.packetId}</span>
-                                <span role="gridcell">
+                                <span role="gridcell" className="truncate px-2">{summary.key.packetId}</span>
+                                <span role="gridcell" className="truncate px-2">
                                     {originTimestampNs
                                         ? relativePacketTime(summary.timestampNs, originTimestampNs)
                                         : '0.000000'}
                                 </span>
-                                <span role="gridcell" className="truncate">
+                                <span role="gridcell" className="truncate px-2">
                                     {summaryColumn(summary, 'source')}
                                 </span>
-                                <span role="gridcell" className="truncate">
+                                <span role="gridcell" className="truncate px-2">
                                     {summaryColumn(summary, 'destination')}
                                 </span>
-                                <span role="gridcell" className="truncate font-sans font-medium">
+                                <span role="gridcell" className="truncate px-2 font-sans font-medium">
                                     {summaryColumn(summary, 'protocol')}
                                 </span>
-                                <span role="gridcell" className="text-right">
+                                <span role="gridcell" className="truncate px-2 text-right">
                                     {summaryColumn(summary, 'length') || summary.capturedLength}
                                 </span>
-                                <span role="gridcell" className="truncate pl-3 font-sans">
+                                <span role="gridcell" className="truncate px-2 font-sans">
                                     {summaryColumn(summary, 'info')}
                                 </span>
                             </div>
