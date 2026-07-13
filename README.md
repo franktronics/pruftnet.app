@@ -15,6 +15,12 @@ Install dependencies:
 pnpm install
 ```
 
+Build the native capture worker required by desktop and server development:
+
+```bash
+pnpm build:cpp
+```
+
 Run the desktop app in development mode:
 
 ```bash

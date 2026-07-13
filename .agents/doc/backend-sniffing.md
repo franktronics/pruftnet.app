@@ -18,7 +18,7 @@ The worker remains a separate process and advertises its protocol features throu
 
 ## Configuration
 
-`PRUFTNET_CAPTURE_WORKER_PATH` selects the worker executable. Without an override, development walks upward from the process working directory and finds `packages/core/cpp/build/pruftnet_capture_worker`; Windows multi-config `Debug` and `Release` directories are also supported. This keeps filtered server and desktop scripts independent of their application-specific working directories.
+`PRUFTNET_CAPTURE_WORKER_PATH` selects the worker executable. Without an override, development walks upward from the process working directory and finds `packages/core/cpp/build/pruftnet_capture_worker`; Windows multi-config `Debug` and `Release` directories are also supported. This keeps filtered server and desktop scripts independent of their application-specific working directories. After a fresh clone, run `pnpm build:cpp` from the repository root to configure CMake and build this worker.
 
 `PRUFTNET_REPLAY_FILES` is a JSON object mapping opaque local file IDs to trusted pcap paths:
 

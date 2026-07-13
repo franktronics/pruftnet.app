@@ -7,6 +7,7 @@
     "main": "index.js",
     "scripts": {
         "build": "pnpm --filter @repo/desktop build",
+        "build:cpp": "cmake -S packages/core/cpp -B packages/core/cpp/build && cmake --build packages/core/cpp/build --target pruftnet_capture_worker",
         "dev:server": "pnpm --filter @repo/server dev",
         "dev:desktop": "pnpm --filter @repo/desktop dev",
         "format": "prettier --write .",
