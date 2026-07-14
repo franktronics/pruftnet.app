@@ -234,7 +234,7 @@ function CaptureStatsContent({
                     </div>
                 </div>
                 {expanded ? (
-                    <DetailedTrafficChart data={chartData} animated={active && !reducedMotion} />
+                    <DetailedTrafficChart data={chartData} />
                 ) : (
                     <Sparkline
                         data={chartData}
@@ -451,13 +451,7 @@ function CaptureStatsContent({
     )
 }
 
-function DetailedTrafficChart({
-    data,
-    animated,
-}: {
-    data: CaptureChartPoint[]
-    animated: boolean
-}) {
+function DetailedTrafficChart({ data }: { data: CaptureChartPoint[] }) {
     const visibleDuration = data.length > 1 ? data.at(-1)!.at - data[0]!.at : 0
     return (
         <div className="mt-4">
@@ -491,34 +485,34 @@ function DetailedTrafficChart({
                         content={<CaptureRateTooltip />}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="observed"
                         stroke="var(--color-observed)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="persisted"
                         stroke="var(--color-persisted)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="analyzed"
                         stroke="var(--color-analyzed)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                 </ChartLineChart>
             </ChartContainer>

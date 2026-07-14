@@ -45,6 +45,7 @@ export function PacketTable({
     emptyMessage?: string
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
+    const headerRef = useRef<HTMLDivElement>(null)
     const columnResizeRef = useRef<{
         index: number
         pointerId: number
@@ -128,40 +129,12 @@ export function PacketTable({
 
     return (
         <PanelShell title="Packets" showHeader={false}>
-            <div className="relative h-full">
-                <div
-                    ref={scrollRef}
-                    className="focus-visible:ring-ring h-full overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                    role="grid"
-                    tabIndex={0}
-                    aria-label="Captured packets"
-                    aria-activedescendant={
-                        selectedKey &&
-                        virtualizer.getVirtualItems().some((item) => {
-                            const row = rows[item.index]
-                            return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
-                        })
-                            ? `packet-row-${selectedKey}`
-                            : undefined
-                    }
-                    onScroll={(event) => {
-                        const target = event.currentTarget
-                        if (
-                            following &&
-                            target.scrollHeight - target.scrollTop - target.clientHeight > 2
-                        )
-                            onPauseFollowing()
-                    }}
-                    onKeyDown={(event) => {
-                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                            event.preventDefault()
-                            moveSelection(event.key === 'ArrowDown' ? 1 : -1)
-                        }
-                    }}
-                >
+            <div className="relative flex h-full min-h-0 flex-col">
+                <div className="relative shrink-0 overflow-hidden">
                     <div
+                        ref={headerRef}
                         role="row"
-                        className="bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
+                        className="bg-muted text-muted-foreground grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
                         style={{ ...gridStyle, minWidth: tableWidth }}
                     >
                         {columns.map((column, index) => (
@@ -196,6 +169,50 @@ export function PacketTable({
                             </span>
                         ))}
                     </div>
+                    <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 normal-case"
+                            onClick={() => onFollowingChange(!following)}
+                        >
+                            {following ? <Pause /> : <Play />}
+                            {following ? 'Pause tail' : 'Follow tail'}
+                        </Button>
+                    </div>
+                </div>
+                <div
+                    ref={scrollRef}
+                    className="focus-visible:ring-ring min-h-0 flex-1 overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                    role="grid"
+                    tabIndex={0}
+                    aria-label="Captured packets"
+                    aria-activedescendant={
+                        selectedKey &&
+                        virtualizer.getVirtualItems().some((item) => {
+                            const row = rows[item.index]
+                            return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
+                        })
+                            ? `packet-row-${selectedKey}`
+                            : undefined
+                    }
+                    onScroll={(event) => {
+                        const target = event.currentTarget
+                        if (headerRef.current)
+                            headerRef.current.style.transform = `translateX(${-target.scrollLeft}px)`
+                        if (
+                            following &&
+                            target.scrollHeight - target.scrollTop - target.clientHeight > 2
+                        )
+                            onPauseFollowing()
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                            event.preventDefault()
+                            moveSelection(event.key === 'ArrowDown' ? 1 : -1)
+                        }
+                    }}
+                >
                     <div
                         className="relative w-full"
                         style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
@@ -265,17 +282,6 @@ export function PacketTable({
                         )
                     })}
                     </div>
-                </div>
-                <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 normal-case"
-                        onClick={() => onFollowingChange(!following)}
-                    >
-                        {following ? <Pause /> : <Play />}
-                        {following ? 'Pause tail' : 'Follow tail'}
-                    </Button>
                 </div>
             </div>
         </PanelShell>
