@@ -183,7 +183,7 @@ export function CapturesPage() {
                 </div>
             ) : null}
 
-            <div className="bg-background min-h-0 min-w-0 flex-1 overflow-auto border-t">
+            <div className="bg-background mx-4 min-h-0 min-w-0 flex-1 overflow-auto border-t">
                 <Table>
                     <TableHeader className="bg-muted/40 sticky top-0 z-10">
                         <TableRow>

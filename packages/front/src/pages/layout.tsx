@@ -26,14 +26,14 @@ import { CaptureTitlebarActions } from '#front/pages/capture/components/capture-
 
 const mainNavigation = [
     {
-        title: 'History',
-        to: '/captures',
-        icon: History,
-    },
-    {
         title: 'Capture',
         to: '/',
         icon: Radar,
+    },
+    {
+        title: 'History',
+        to: '/captures',
+        icon: History,
     },
 ] as const
 
@@ -46,7 +46,9 @@ const footerNavigation = [
 ] as const
 
 function isActiveRoute(pathname: string, to: string) {
-    return to === '/' ? pathname === '/' : pathname.startsWith(to)
+    return to === '/'
+        ? pathname === '/' || pathname.startsWith('/capture/')
+        : pathname.startsWith(to)
 }
 
 export function DashboardLayout() {
@@ -181,14 +183,14 @@ function AppSidebar({
     desktopPlatform,
     isDesktop,
     pathname,
+    style,
     ...props
 }: ComponentProps<typeof Sidebar> & {
     readonly isDesktop: boolean
     readonly desktopPlatform: string | undefined
     readonly pathname: string
 }) {
-    const desktopSidebarClassName =
-        'desktop-sidebar [top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]'
+    const desktopSidebarClassName = 'desktop-sidebar'
     const sidebarAppearanceClassName =
         desktopPlatform === 'darwin' ? 'desktop-sidebar--vibrant' : undefined
 
@@ -202,6 +204,16 @@ function AppSidebar({
                           .filter(Boolean)
                           .join(' ')
                     : className
+            }
+            style={
+                isDesktop
+                    ? {
+                          ...style,
+                          top: 'var(--desktop-titlebar-height)',
+                          bottom: 'auto',
+                          height: 'calc(100svh - var(--desktop-titlebar-height))',
+                      }
+                    : style
             }
             {...props}
         >
