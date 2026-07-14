@@ -54,18 +54,18 @@ function defaultDataRoot(options: AppDataPathsOptions) {
             message: 'Tests must provide a unique data root.',
         })
     }
+    if (process.env.PRUFTNET_DATA_DIR) {
+        return resolve(process.env.PRUFTNET_DATA_DIR)
+    }
     if (options.environment === 'development') {
         if (!options.workspaceRoot) {
             throw new AppDataPathError({
                 message: 'Development data paths require the workspace root.',
             })
         }
-        return resolve(options.workspaceRoot, '.data', options.runtime)
+        return resolve(options.workspaceRoot, '.data', 'pruftnet')
     }
-    if (options.runtime === 'server' && process.env.PRUFTNET_DATA_DIR) {
-        return resolve(process.env.PRUFTNET_DATA_DIR)
-    }
-    return platformDataRoot(options.runtime === 'desktop' ? 'Pruftnet' : 'pruftnet-server')
+    return platformDataRoot('Pruftnet')
 }
 
 function isContained(root: string, candidate: string) {

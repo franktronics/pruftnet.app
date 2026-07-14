@@ -3,13 +3,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { Cause, Effect, Exit } from 'effect'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { AppDataPaths, AppDataPathError } from './index'
 
 const roots: Array<string> = []
 
 afterEach(async () => {
+    vi.unstubAllEnvs()
     await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
 })
 
@@ -51,7 +52,7 @@ describe('AppDataPaths', () => {
         if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain('AppDataPathError')
     })
 
-    test('isolates desktop and server development roots', async () => {
+    test('shares the development root between desktop and server', async () => {
         const workspace = await mkdtemp(join(tmpdir(), 'pruftnet-workspace-'))
         roots.push(workspace)
         const desktop = await Effect.runPromise(
@@ -77,9 +78,35 @@ describe('AppDataPaths', () => {
             ),
         )
 
-        expect(desktop.dataRoot).toBe(await realpath(join(workspace, '.data', 'desktop')))
-        expect(server.dataRoot).toBe(await realpath(join(workspace, '.data', 'server')))
-        expect(desktop.dataRoot).not.toBe(server.dataRoot)
+        const sharedRoot = await realpath(join(workspace, '.data', 'pruftnet'))
+        expect(desktop.dataRoot).toBe(sharedRoot)
+        expect(server.dataRoot).toBe(sharedRoot)
+    })
+
+    test('honors the shared data directory override for desktop and server', async () => {
+        const root = await mkdtemp(join(tmpdir(), 'pruftnet-shared-root-'))
+        roots.push(root)
+        vi.stubEnv('PRUFTNET_DATA_DIR', root)
+
+        const resolvePaths = (runtime: 'desktop' | 'server') =>
+            Effect.runPromise(
+                AppDataPaths.pipe(
+                    Effect.provide(
+                        AppDataPaths.layer({
+                            runtime,
+                            environment: 'production',
+                        }),
+                    ),
+                ),
+            )
+
+        const [desktop, server] = await Promise.all([
+            resolvePaths('desktop'),
+            resolvePaths('server'),
+        ])
+        const sharedRoot = await realpath(root)
+        expect(desktop.dataRoot).toBe(sharedRoot)
+        expect(server.dataRoot).toBe(sharedRoot)
     })
 
     test('rejects a segment path belonging to another capture', async () => {

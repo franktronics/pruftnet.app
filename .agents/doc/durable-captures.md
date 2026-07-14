@@ -16,9 +16,13 @@ dataRoot/
   locks/instance.lock
 ```
 
-Development roots are `<workspace>/.data/desktop` and `<workspace>/.data/server`. Production uses
-the platform data directory; Server supports `PRUFTNET_DATA_DIR`. Tests must provide an isolated
-temporary root.
+Desktop and Server share the same durable root. Development uses
+`<workspace>/.data/pruftnet`; production uses the platform `Pruftnet` data directory. Both runtimes
+honor `PRUFTNET_DATA_DIR` as an explicit override. Tests must provide an isolated temporary root.
+
+The shared root is single-instance storage. The instance lock deliberately rejects a second live
+Desktop or Server process using the same root. Switching runtimes after a clean shutdown exposes the
+same captures and exports without copying or synchronization.
 
 ## Startup and persistence
 

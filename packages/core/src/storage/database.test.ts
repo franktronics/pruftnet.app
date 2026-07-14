@@ -63,6 +63,57 @@ describe('Database', () => {
         expect(second).toEqual(first)
     })
 
+    test('persists captures when switching from desktop to server', async () => {
+        const workspaceRoot = await testRoot()
+        const captureId = 'a'.repeat(32)
+        const desktop = storageLayer({
+            runtime: 'desktop',
+            environment: 'development',
+            workspaceRoot,
+        })
+        const server = storageLayer({
+            runtime: 'server',
+            environment: 'development',
+            workspaceRoot,
+        })
+
+        await Effect.runPromise(
+            Effect.gen(function* () {
+                const database = yield* Database
+                yield* database.write('insert desktop capture', (connection) =>
+                    connection
+                        .insert(captureSessions)
+                        .values({
+                            id: captureId,
+                            state: 'stopped',
+                            sourceJson: {},
+                            interfaceCount: 1,
+                            sourceFormat: 'pcapng',
+                            startedAtNs: '1',
+                            stoppedAtNs: '2',
+                            createdAtNs: '1',
+                            updatedAtNs: '2',
+                        })
+                        .run(),
+                )
+            }).pipe(Effect.scoped, Effect.provide(desktop)),
+        )
+
+        const captures = await Effect.runPromise(
+            Database.pipe(
+                Effect.flatMap((database) =>
+                    database.read('read captures from server', (connection) =>
+                        connection.select().from(captureSessions).all(),
+                    ),
+                ),
+                Effect.scoped,
+                Effect.provide(server),
+            ),
+        )
+
+        expect(captures.map((capture) => capture.id)).toContain(captureId)
+    })
+
     test('rolls back failed transactions', async () => {
         const root = await testRoot()
         const layer = storageLayer({ runtime: 'test', environment: 'test', dataRoot: root })
@@ -112,18 +163,23 @@ describe('Database', () => {
         )
     })
 
-    test('rejects a second live instance for the same data root', async () => {
-        const root = await testRoot()
-        const options: AppDataPathsOptions = {
-            runtime: 'test',
-            environment: 'test',
-            dataRoot: root,
+    test('rejects a server instance while desktop owns the shared root', async () => {
+        const workspaceRoot = await testRoot()
+        const desktop: AppDataPathsOptions = {
+            runtime: 'desktop',
+            environment: 'development',
+            workspaceRoot,
+        }
+        const server: AppDataPathsOptions = {
+            runtime: 'server',
+            environment: 'development',
+            workspaceRoot,
         }
         const firstScope = await Effect.runPromise(Scope.make())
-        await Effect.runPromise(Layer.buildWithScope(storageLayer(options), firstScope))
+        await Effect.runPromise(Layer.buildWithScope(storageLayer(desktop), firstScope))
 
         const exit = await Effect.runPromiseExit(
-            Database.pipe(Effect.scoped, Effect.provide(storageLayer(options))),
+            Database.pipe(Effect.scoped, Effect.provide(storageLayer(server))),
         )
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain('InstanceLockError')
