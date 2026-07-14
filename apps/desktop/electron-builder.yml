@@ -11,6 +11,10 @@ files:
     - assets/**/*
     - package.json
 
+extraResources:
+    - from: ../../packages/core/drizzle
+      to: drizzle
+
 asar: true
 afterPack: scripts/apply-fuses.cjs
 

@@ -71,11 +71,21 @@ public:
   }
 
   SnifferStatsSnapshot stats() const { return runtime_->stats(); }
-  capture::PacketSpoolLookup persisted_packet(const PacketKey& key) const {
+  capture::PacketSpoolLookup persisted_packet(const PacketKey &key) const {
     return runtime_->persisted_packet(key);
   }
   std::vector<std::filesystem::path> spool_paths() const {
     return runtime_->spool_paths();
+  }
+  std::vector<capture::PcapngSegmentSnapshot> spool_segments() const {
+    return runtime_->spool_segments();
+  }
+  std::vector<capture::PcapngSegmentSnapshot> lease_spool_snapshot() {
+    return runtime_->lease_spool_snapshot();
+  }
+  void
+  release_spool_leases(std::span<const std::uint64_t> segment_ids) noexcept {
+    runtime_->release_spool_leases(segment_ids);
   }
 
 private:
@@ -131,12 +141,27 @@ NetworkSniffer::registry_snapshot() const noexcept {
 SnifferStatsSnapshot NetworkSniffer::stats() const { return impl_->stats(); }
 
 capture::PacketSpoolLookup
-NetworkSniffer::persisted_packet(const PacketKey& key) const {
+NetworkSniffer::persisted_packet(const PacketKey &key) const {
   return impl_->persisted_packet(key);
 }
 
 std::vector<std::filesystem::path> NetworkSniffer::spool_paths() const {
   return impl_->spool_paths();
+}
+
+std::vector<capture::PcapngSegmentSnapshot>
+NetworkSniffer::spool_segments() const {
+  return impl_->spool_segments();
+}
+
+std::vector<capture::PcapngSegmentSnapshot>
+NetworkSniffer::lease_spool_snapshot() {
+  return impl_->lease_spool_snapshot();
+}
+
+void NetworkSniffer::release_spool_leases(
+    std::span<const std::uint64_t> segment_ids) noexcept {
+  impl_->release_spool_leases(segment_ids);
 }
 
 } // namespace pruftnet::sniffing

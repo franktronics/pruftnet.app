@@ -1,5 +1,12 @@
 import { RpcClient } from '@effect/rpc'
-import { CaptureRpcs, type LiveCaptureSource, ReplayCaptureSource } from '@repo/shared/capture'
+import {
+    CaptureRpcs,
+    DesktopExportDestination,
+    ServerExportDestination,
+    type ExportFormat,
+    type LiveCaptureSource,
+    ReplayCaptureSource,
+} from '@repo/shared/capture'
 import { Effect } from 'effect'
 
 import { RpcClientLive } from '#front/config/rpc-client'
@@ -27,10 +34,39 @@ export const captureClient = {
     startLive: (source: LiveCaptureSource) => call((client) => client.StartCapture({ source })),
     stop: (captureId: string) => call((client) => client.StopCapture({ captureId })),
     stats: (captureId: string) => call((client) => client.GetCaptureStats({ captureId })),
+    statSamples: (captureId: string) =>
+        call((client) => client.ListCaptureStatSamples({ captureId, limit: 1_000 })),
     summaries: (captureId: string, afterCursor?: string) =>
         call((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 })),
     events: (captureId: string, afterCursor?: string) =>
         call((client) => client.ReadCaptureEvents({ captureId, afterCursor, limit: 512 })),
     registry: (registryRevision: string) =>
         call((client) => client.GetRegistrySnapshot({ registryRevision })),
+    captures: () => call((client) => client.ListCaptures()),
+    activeCapture: () => call((client) => client.GetActiveCapture()),
+    openCapture: (captureId: string) => call((client) => client.OpenCapture({ captureId })),
+    deleteCapture: (captureId: string) => call((client) => client.DeleteCapture({ captureId })),
+    createExport: (input: {
+        captureId: string
+        format: ExportFormat
+        idempotencyKey: string
+        destinationToken?: string
+    }) =>
+        call((client) =>
+            client.CreateExport({
+                captureId: input.captureId,
+                format: input.format,
+                idempotencyKey: input.idempotencyKey,
+                destination: input.destinationToken
+                    ? new DesktopExportDestination({
+                          destinationToken: input.destinationToken,
+                      })
+                    : new ServerExportDestination(),
+            }),
+        ),
+    exports: (captureId?: string) => call((client) => client.ListExports({ captureId })),
+    cancelExport: (exportId: string) => call((client) => client.CancelExport({ exportId })),
+    retryExport: (exportId: string) => call((client) => client.RetryExport({ exportId })),
+    deleteExportArtifact: (exportId: string) =>
+        call((client) => client.DeleteExportArtifact({ exportId })),
 }

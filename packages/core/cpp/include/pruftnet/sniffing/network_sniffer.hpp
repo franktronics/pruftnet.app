@@ -1,13 +1,14 @@
 #pragma once
 
-#include <functional>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 
-#include "pruftnet/parsing/registry.hpp"
 #include "pruftnet/capture/pcapng_spool.hpp"
+#include "pruftnet/parsing/registry.hpp"
 #include "pruftnet/sniffing/packet.hpp"
 #include "pruftnet/sniffing/parsed_packet.hpp"
 #include "pruftnet/sniffing/sniffer_error.hpp"
@@ -47,6 +48,12 @@ public:
   [[nodiscard]] capture::PacketSpoolLookup
   persisted_packet(const PacketKey &key) const;
   [[nodiscard]] std::vector<std::filesystem::path> spool_paths() const;
+  [[nodiscard]] std::vector<capture::PcapngSegmentSnapshot>
+  spool_segments() const;
+  [[nodiscard]] std::vector<capture::PcapngSegmentSnapshot>
+  lease_spool_snapshot();
+  void
+  release_spool_leases(std::span<const std::uint64_t> segment_ids) noexcept;
 
 private:
   struct OfflineTag {};

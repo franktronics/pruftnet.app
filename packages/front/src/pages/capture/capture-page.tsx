@@ -10,7 +10,12 @@ import { DisplayFilter } from './components/display-filter'
 import { PacketBytes } from './components/packet-bytes'
 import { PacketTable } from './components/packet-table'
 import { PacketTree } from './components/packet-tree'
-import { useCaptureRegistry, useCaptureSession, useCaptureStats } from './hooks/use-capture'
+import {
+    useCaptureRegistry,
+    useCaptureSession,
+    useCaptureStatSamples,
+    useCaptureStats,
+} from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
 import {
@@ -22,6 +27,7 @@ import {
 } from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
 import { BasicErrorAlert } from '#front/components/error-renderer'
+import { CaptureTerminalActions } from './components/capture-terminal-actions'
 
 export function CapturePage() {
     const { captureId } = useParams({ from: '/capture/$captureId' })
@@ -31,6 +37,7 @@ export function CapturePage() {
 function CaptureWorkspace({ captureId }: { captureId: string }) {
     const session = useCaptureSession(captureId)
     const stats = useCaptureStats(captureId, session.data?.state)
+    const statSamples = useCaptureStatSamples(captureId, session.data?.state)
     const summaries = usePacketSummaries(captureId)
     const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
     const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
@@ -143,6 +150,12 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 following={following}
                 onFollowingChange={setFollowing}
             />
+            {session.data &&
+            (session.data.state === 'stopped' ||
+                session.data.state === 'completed' ||
+                session.data.state === 'failed') ? (
+                <CaptureTerminalActions session={session.data} />
+            ) : null}
             <DisplayFilter
                 value={filters.search}
                 onChange={(search) => updateFilters({ ...filters, search })}
@@ -171,7 +184,11 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                             </ResizablePanel>
                             <ResizableHandle />
                             <ResizablePanel defaultSize="26%" minSize="18%">
-                                <CaptureStatsPanel stats={stats.data} state={session.data?.state} />
+                                <CaptureStatsPanel
+                                    stats={stats.data}
+                                    durableSamples={statSamples.data?.samples}
+                                    state={session.data?.state}
+                                />
                             </ResizablePanel>
                         </ResizablePanelGroup>
                     </ResizablePanel>
@@ -223,7 +240,11 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         <TabsTrigger value="bytes">Bytes</TabsTrigger>
                     </TabsList>
                     <TabsContent value="stats" className="min-h-0 flex-1">
-                        <CaptureStatsPanel stats={stats.data} state={session.data?.state} />
+                        <CaptureStatsPanel
+                            stats={stats.data}
+                            durableSamples={statSamples.data?.samples}
+                            state={session.data?.state}
+                        />
                     </TabsContent>
                     <TabsContent value="structure" className="min-h-0 flex-1">
                         <PacketTree

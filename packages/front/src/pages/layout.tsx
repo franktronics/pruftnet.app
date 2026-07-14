@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { Settings, Files } from 'lucide-react'
+import { Settings, Files, Plus } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
 
 import { Button, Separator } from '@repo/ui/atoms'
@@ -26,8 +26,13 @@ import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-contex
 const mainNavigation = [
     {
         title: 'Captures',
-        to: '/',
+        to: '/captures',
         icon: Files,
+    },
+    {
+        title: 'New capture',
+        to: '/',
+        icon: Plus,
     },
 ] as const
 
@@ -62,11 +67,11 @@ export function DashboardLayout() {
                         isDesktop={isDesktop}
                         desktopPlatform={desktopPlatform}
                     />
-                    <SidebarInset className="min-h-0 overflow-hidden">
+                    <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
                         {!isDesktop && <WebHeader />}
                         <main
                             className={cn(
-                                'flex min-h-0 flex-1 flex-col',
+                                'flex min-h-0 min-w-0 flex-1 flex-col',
                                 isCaptureWorkspace ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
                             )}
                         >

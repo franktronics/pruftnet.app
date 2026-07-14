@@ -56,6 +56,26 @@ export class LiveCaptureFailed extends Schema.TaggedError<LiveCaptureFailed>()(
     'LiveCaptureFailed',
     BasicErrorFields,
 ) {}
+export class CaptureStorageUnavailable extends Schema.TaggedError<CaptureStorageUnavailable>()(
+    'CaptureStorageUnavailable',
+    BasicErrorFields,
+) {}
+export class CaptureInUse extends Schema.TaggedError<CaptureInUse>()(
+    'CaptureInUse',
+    BasicErrorFields,
+) {}
+export class ExportNotFound extends Schema.TaggedError<ExportNotFound>()(
+    'ExportNotFound',
+    BasicErrorFields,
+) {}
+export class ExportOptionsInvalid extends Schema.TaggedError<ExportOptionsInvalid>()(
+    'ExportOptionsInvalid',
+    BasicErrorFields,
+) {}
+export class ExportUnavailable extends Schema.TaggedError<ExportUnavailable>()(
+    'ExportUnavailable',
+    BasicErrorFields,
+) {}
 
 export const CaptureRpcError = Schema.Union(
     CaptureAlreadyRunning,
@@ -71,4 +91,9 @@ export const CaptureRpcError = Schema.Union(
     RegistryUnavailable,
     ReplayFailed,
     LiveCaptureFailed,
+    CaptureStorageUnavailable,
+    CaptureInUse,
+    ExportNotFound,
+    ExportOptionsInvalid,
+    ExportUnavailable,
 )

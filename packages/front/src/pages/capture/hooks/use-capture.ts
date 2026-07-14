@@ -8,6 +8,7 @@ import {
     captureInterfacesOptions,
     captureSessionOptions,
     captureStatsOptions,
+    captureStatSamplesOptions,
     registryOptions,
 } from '#front/pages/capture/api/capture-queries'
 
@@ -26,6 +27,8 @@ export function useCaptureStats(captureId: string, state?: string) {
     }, [state, refetch])
     return query
 }
+export const useCaptureStatSamples = (captureId: string, state?: string) =>
+    useQuery(captureStatSamplesOptions(captureId, isTerminal(state)))
 export const useCaptureRegistry = (revision: string | undefined) =>
     useQuery({ ...registryOptions(revision ?? ''), enabled: Boolean(revision) })
 

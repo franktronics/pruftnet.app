@@ -1,4 +1,4 @@
-import type { CaptureStats } from '@repo/shared/capture'
+import type { CaptureStatSample, CaptureStats } from '@repo/shared/capture'
 import {
     Button,
     ChartCartesianGrid,
@@ -70,10 +70,35 @@ type Metric = {
     tone?: 'danger' | 'retention' | 'normal'
 }
 
-export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; state?: string }) {
+export function CaptureStatsPanel({
+    stats,
+    durableSamples,
+    state,
+}: {
+    stats?: CaptureStats
+    durableSamples?: readonly CaptureStatSample[]
+    state?: string
+}) {
     const [history, setHistory] = useState<readonly CaptureStatsSample[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
     const reducedMotion = useReducedMotion()
+    useEffect(() => {
+        if (!durableSamples) return
+        const frame = requestAnimationFrame(() =>
+            setHistory(
+                durableSamples.reduce<readonly CaptureStatsSample[]>(
+                    (current, sample) =>
+                        appendCaptureStatsSample(
+                            current,
+                            sample.stats,
+                            Number(BigInt(sample.sampledAtNs) / 1_000_000n),
+                        ),
+                    [],
+                ),
+            ),
+        )
+        return () => cancelAnimationFrame(frame)
+    }, [durableSamples])
     useEffect(() => {
         if (!stats) return
         const frame = requestAnimationFrame(() =>

@@ -1,0 +1,1024 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "f590840f-fa0c-4459-843f-b1106bc2f218",
+  "prevIds": [
+    "a6f480d0-5aef-4e84-8ee3-8e794c67cce5"
+  ],
+  "ddl": [
+    {
+      "name": "capture_events",
+      "entityType": "tables"
+    },
+    {
+      "name": "capture_segments",
+      "entityType": "tables"
+    },
+    {
+      "name": "capture_sessions",
+      "entityType": "tables"
+    },
+    {
+      "name": "capture_stat_samples",
+      "entityType": "tables"
+    },
+    {
+      "name": "capture_summaries",
+      "entityType": "tables"
+    },
+    {
+      "name": "export_job_segments",
+      "entityType": "tables"
+    },
+    {
+      "name": "export_jobs",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "capture_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cursor",
+      "entityType": "columns",
+      "table": "capture_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_json",
+      "entityType": "columns",
+      "table": "capture_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "generation",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "path",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "committed_bytes",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "committed_packets",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_packet_id",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_packet_id",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checksum_sha256",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "valid",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "evicted",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "lease_count",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at_ns",
+      "entityType": "columns",
+      "table": "capture_segments"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_json",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interface_count",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_format",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "started_at_ns",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stopped_at_ns",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "packet_count",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "retained_bytes",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "registry_revision",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "summary_cursor",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "analysis_cursor",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "failure_code",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "failure_message",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "delete_requested",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at_ns",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at_ns",
+      "entityType": "columns",
+      "table": "capture_sessions"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "capture_stat_samples"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sampled_at_ns",
+      "entityType": "columns",
+      "table": "capture_stat_samples"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stats_json",
+      "entityType": "columns",
+      "table": "capture_stat_samples"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "capture_summaries"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cursor",
+      "entityType": "columns",
+      "table": "capture_summaries"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "packet_id",
+      "entityType": "columns",
+      "table": "capture_summaries"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary_json",
+      "entityType": "columns",
+      "table": "capture_summaries"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "export_id",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ordinal",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "generation",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "committed_bytes",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "committed_packets",
+      "entityType": "columns",
+      "table": "export_job_segments"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capture_id",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "format",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "destination_kind",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "destination_token",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "artifact_path",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "partial_path",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "packets_total",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "packets_written",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'0'",
+      "generated": null,
+      "name": "bytes_written",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "retained_portion_only",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "cancel_requested",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "leases_released",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checksum_sha256",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "final_size",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "failure_code",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "failure_message",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at_ns",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "started_at_ns",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_at_ns",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at_ns",
+      "entityType": "columns",
+      "table": "export_jobs"
+    },
+    {
+      "columns": [
+        "capture_id"
+      ],
+      "tableTo": "capture_sessions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_capture_events_capture_id_capture_sessions_id_fk",
+      "entityType": "fks",
+      "table": "capture_events"
+    },
+    {
+      "columns": [
+        "capture_id"
+      ],
+      "tableTo": "capture_sessions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_capture_segments_capture_id_capture_sessions_id_fk",
+      "entityType": "fks",
+      "table": "capture_segments"
+    },
+    {
+      "columns": [
+        "capture_id"
+      ],
+      "tableTo": "capture_sessions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_capture_stat_samples_capture_id_capture_sessions_id_fk",
+      "entityType": "fks",
+      "table": "capture_stat_samples"
+    },
+    {
+      "columns": [
+        "capture_id"
+      ],
+      "tableTo": "capture_sessions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_capture_summaries_capture_id_capture_sessions_id_fk",
+      "entityType": "fks",
+      "table": "capture_summaries"
+    },
+    {
+      "columns": [
+        "export_id"
+      ],
+      "tableTo": "export_jobs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_export_job_segments_export_id_export_jobs_id_fk",
+      "entityType": "fks",
+      "table": "export_job_segments"
+    },
+    {
+      "columns": [
+        "capture_id",
+        "generation"
+      ],
+      "tableTo": "capture_segments",
+      "columnsTo": [
+        "capture_id",
+        "generation"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_export_job_segments_capture_id_generation_capture_segments_capture_id_generation_fk",
+      "entityType": "fks",
+      "table": "export_job_segments"
+    },
+    {
+      "columns": [
+        "capture_id"
+      ],
+      "tableTo": "capture_sessions",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_export_jobs_capture_id_capture_sessions_id_fk",
+      "entityType": "fks",
+      "table": "export_jobs"
+    },
+    {
+      "columns": [
+        "capture_id",
+        "cursor"
+      ],
+      "nameExplicit": false,
+      "name": "capture_events_pk",
+      "entityType": "pks",
+      "table": "capture_events"
+    },
+    {
+      "columns": [
+        "capture_id",
+        "generation"
+      ],
+      "nameExplicit": false,
+      "name": "capture_segments_pk",
+      "entityType": "pks",
+      "table": "capture_segments"
+    },
+    {
+      "columns": [
+        "capture_id",
+        "sampled_at_ns"
+      ],
+      "nameExplicit": false,
+      "name": "capture_stat_samples_pk",
+      "entityType": "pks",
+      "table": "capture_stat_samples"
+    },
+    {
+      "columns": [
+        "capture_id",
+        "cursor"
+      ],
+      "nameExplicit": false,
+      "name": "capture_summaries_pk",
+      "entityType": "pks",
+      "table": "capture_summaries"
+    },
+    {
+      "columns": [
+        "export_id",
+        "ordinal"
+      ],
+      "nameExplicit": false,
+      "name": "export_job_segments_pk",
+      "entityType": "pks",
+      "table": "export_job_segments"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "capture_sessions_pk",
+      "table": "capture_sessions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "export_jobs_pk",
+      "table": "export_jobs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "1",
+          "isExpression": true
+        }
+      ],
+      "isUnique": true,
+      "where": "\"capture_sessions\".\"state\" in ('preparing', 'capturing', 'stopping')",
+      "origin": "manual",
+      "name": "capture_sessions_one_live",
+      "entityType": "indexes",
+      "table": "capture_sessions"
+    },
+    {
+      "columns": [
+        {
+          "value": "capture_id",
+          "isExpression": false
+        },
+        {
+          "value": "packet_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "capture_summaries_packet",
+      "entityType": "indexes",
+      "table": "capture_summaries"
+    },
+    {
+      "columns": [
+        {
+          "value": "capture_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "export_jobs_capture_id",
+      "entityType": "indexes",
+      "table": "export_jobs"
+    },
+    {
+      "columns": [
+        "path"
+      ],
+      "nameExplicit": false,
+      "name": "capture_segments_path_unique",
+      "entityType": "uniques",
+      "table": "capture_segments"
+    },
+    {
+      "columns": [
+        "idempotency_key"
+      ],
+      "nameExplicit": false,
+      "name": "export_jobs_idempotency_key_unique",
+      "entityType": "uniques",
+      "table": "export_jobs"
+    },
+    {
+      "value": "\"generation\" >= 0",
+      "name": "capture_segments_generation",
+      "entityType": "checks",
+      "table": "capture_segments"
+    },
+    {
+      "value": "\"lease_count\" >= 0",
+      "name": "capture_segments_lease_count",
+      "entityType": "checks",
+      "table": "capture_segments"
+    },
+    {
+      "value": "length(\"committed_bytes\") > 0 and \"committed_bytes\" not glob '*[^0-9]*'",
+      "name": "capture_segments_committed_bytes",
+      "entityType": "checks",
+      "table": "capture_segments"
+    },
+    {
+      "value": "length(\"id\") = 32",
+      "name": "capture_sessions_id",
+      "entityType": "checks",
+      "table": "capture_sessions"
+    },
+    {
+      "value": "\"interface_count\" > 0",
+      "name": "capture_sessions_interface_count",
+      "entityType": "checks",
+      "table": "capture_sessions"
+    },
+    {
+      "value": "\"state\" in ('preparing','capturing','stopping','stopped','failed','interrupted','recovering','deleting','deleted')",
+      "name": "capture_sessions_state",
+      "entityType": "checks",
+      "table": "capture_sessions"
+    },
+    {
+      "value": "\"source_format\" in ('pcapng','pcap')",
+      "name": "capture_sessions_source_format",
+      "entityType": "checks",
+      "table": "capture_sessions"
+    },
+    {
+      "value": "\"ordinal\" >= 0",
+      "name": "export_job_segments_ordinal",
+      "entityType": "checks",
+      "table": "export_job_segments"
+    },
+    {
+      "value": "\"state\" in ('queued','preparing','running','finalizing','completed','failed','cancelled','interrupted')",
+      "name": "export_jobs_state",
+      "entityType": "checks",
+      "table": "export_jobs"
+    },
+    {
+      "value": "\"format\" in ('pcapng','pcap')",
+      "name": "export_jobs_format",
+      "entityType": "checks",
+      "table": "export_jobs"
+    },
+    {
+      "value": "\"destination_kind\" in ('desktop','server')",
+      "name": "export_jobs_destination_kind",
+      "entityType": "checks",
+      "table": "export_jobs"
+    }
+  ],
+  "renames": []
+}

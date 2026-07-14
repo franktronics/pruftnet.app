@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <thread>
 #include <vector>
 
@@ -49,6 +50,12 @@ public:
   [[nodiscard]] capture::PacketSpoolLookup
   persisted_packet(const PacketKey &key) const;
   [[nodiscard]] std::vector<std::filesystem::path> spool_paths() const;
+  [[nodiscard]] std::vector<capture::PcapngSegmentSnapshot>
+  spool_segments() const;
+  [[nodiscard]] std::vector<capture::PcapngSegmentSnapshot>
+  lease_spool_snapshot();
+  void
+  release_spool_leases(std::span<const std::uint64_t> segment_ids) noexcept;
 
 private:
   struct InterfaceCaptureContext;
@@ -71,7 +78,8 @@ private:
   void capture_loop(InterfaceCaptureContext &context) noexcept;
   void writer_loop() noexcept;
   void analyzer_loop() noexcept;
-  void publish_committed(const std::vector<capture::CommittedPacket> &packets) noexcept;
+  void publish_committed(
+      const std::vector<capture::CommittedPacket> &packets) noexcept;
   void fail_spool(const capture::SpoolError &error) noexcept;
   void account_unwritten_queues() noexcept;
   void handle_packet(InterfaceCaptureContext &context,

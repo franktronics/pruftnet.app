@@ -6,7 +6,7 @@ The capture workspace supports local live capture through the real libpcap/Npcap
 
 `/capture/$captureId` owns the full-height packet inspection workspace.
 
-The home route is the idle capture workspace, not a separate setup page. The control bar, display filter, packet table, statistics, packet tree, and bytes pane are mounted before capture starts and keep the same geometry after navigation to a running capture.
+The home route is the idle capture workspace and redirects to the backend-owned active capture when one exists. `/captures` is the dense retained-session ledger. The control bar, display filter, packet table, statistics, packet tree, and bytes pane keep the same geometry after navigation to a running or retained capture.
 
 The control bar uses a searchable Command popover for explicit multi-interface selection. Each entry shows its first libpcap-provided IPv4 or IPv6 address and an additional-address count; search covers all addresses. The adjacent settings button opens a modal containing BPF capture filter, per-interface promiscuous/monitor/DLT/timestamp options, and bounded snapshot/kernel-buffer/ring settings. Selection is never inferred from `node:os` data. Replay has no entry point in the product UI; it remains backend test infrastructure until capture-file import is implemented.
 

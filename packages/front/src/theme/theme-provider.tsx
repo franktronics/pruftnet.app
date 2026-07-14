@@ -8,6 +8,7 @@ declare global {
             readonly platform: string
             readonly rpcUrl: string
             readonly setTheme: (theme: Theme) => Promise<'dark' | 'light'>
+            readonly selectExportDestination: (format: 'pcapng' | 'pcap') => Promise<string | null>
         }
     }
 }

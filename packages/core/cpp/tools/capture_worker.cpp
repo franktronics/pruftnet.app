@@ -15,6 +15,7 @@
 #include <mutex>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -39,6 +40,7 @@ constexpr std::uint32_t kMaxRequestBytes = 64 * 1024;
 constexpr std::size_t kMaxSummaryRead = 1024;
 constexpr std::size_t kMaxEventRead = 512;
 constexpr std::size_t kMaxPendingDetailRequests = 64;
+constexpr std::size_t kSummaryJournalCapacity = 32 * 1024;
 
 std::uint64_t wall_time_ns() noexcept {
   return static_cast<std::uint64_t>(
@@ -126,9 +128,8 @@ std::optional<std::string> field(std::string_view json, std::string_view key) {
     } else {
       const auto end = json.find_first_of(",}", pos);
       auto raw = json.substr(pos, end - pos);
-      while (!raw.empty() &&
-             (raw.back() == ' ' || raw.back() == '\t' || raw.back() == '\r' ||
-              raw.back() == '\n'))
+      while (!raw.empty() && (raw.back() == ' ' || raw.back() == '\t' ||
+                              raw.back() == '\r' || raw.back() == '\n'))
         raw.remove_suffix(1);
       value = std::string(raw);
       pos = end == std::string_view::npos ? json.size() : end;
@@ -179,10 +180,9 @@ FrameRead read_frame(std::istream &input, std::string &payload) {
     return FrameRead::End;
   if (input.gcount() != static_cast<std::streamsize>(header.size()))
     return FrameRead::Truncated;
-  const auto length = std::uint32_t(header[0]) |
-                      (std::uint32_t(header[1]) << 8U) |
-                      (std::uint32_t(header[2]) << 16U) |
-                      (std::uint32_t(header[3]) << 24U);
+  const auto length =
+      std::uint32_t(header[0]) | (std::uint32_t(header[1]) << 8U) |
+      (std::uint32_t(header[2]) << 16U) | (std::uint32_t(header[3]) << 24U);
   if (length > kMaxRequestBytes) {
     std::array<char, 4096> discard{};
     std::uint32_t remaining = length;
@@ -250,7 +250,16 @@ std::string value_type(parsing::FieldValueType type) {
 class Worker {
 public:
   explicit Worker(std::unordered_map<std::string, std::string> paths)
-      : paths_(std::move(paths)), journal_(8192), events_(1024) {}
+      : paths_(std::move(paths)), journal_(kSummaryJournalCapacity),
+        events_(1024) {
+    auto result = parsing::make_core_registry();
+    if (auto *registry = std::get_if<parsing::RegistrySnapshot>(&result))
+      registry_ = std::make_shared<const parsing::RegistrySnapshot>(
+          std::move(*registry));
+    else
+      throw std::logic_error(
+          "Failed to bootstrap the built-in parser registry.");
+  }
 
   ~Worker() {
     if (const auto sniffer = current_sniffer())
@@ -269,13 +278,14 @@ public:
     if (*version != 2)
       return prefix + "\"ok\":false,\"error\":\"unsupported_version\"}";
     if (*op == "hello")
-      return prefix +
-             "\"ok\":true,\"protocolVersion\":2,\"features\":[\"live\",\"replay\",\"packetDetail\",\"framedControl\",\"detailFile\"]}";
+      return prefix + "\"ok\":true,\"protocolVersion\":2,\"features\":["
+                      "\"live\",\"replay\",\"recovery\",\"packetDetail\","
+                      "\"framedControl\",\"detailFile\"]}";
     if (*op == "start") {
       const auto token = field(request, "token");
       if (!token || token->empty())
         return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
-      return start(prefix, *token);
+      return start(prefix, *token, request);
     }
     if (*op == "startLive")
       return start_live(prefix, request);
@@ -296,6 +306,10 @@ public:
     }
     if (*op == "registry")
       return registry(prefix);
+    if (*op == "recoverSegments")
+      return recover_segments(prefix, request);
+    if (*op == "detailStored")
+      return detail_stored(prefix, request);
 
     if (const auto error = validate_capture(prefix, request))
       return *error;
@@ -312,6 +326,12 @@ public:
     }
     if (*op == "stats")
       return stats(prefix);
+    if (*op == "segments")
+      return segments(prefix);
+    if (*op == "leaseSnapshot")
+      return lease_snapshot(prefix);
+    if (*op == "releaseSnapshot")
+      return release_snapshot(prefix, request);
     if (*op == "detail")
       return detail(prefix, request);
     if (*op == "events") {
@@ -357,8 +377,8 @@ private:
     const auto sniffer = current_sniffer();
     const auto capture = sniffer ? sniffer->capture_id() : std::nullopt;
     if (!capture || capture->high != *high || capture->low != *low) {
-      std::string response = prefix +
-                             "\"ok\":false,\"error\":\"stale_capture\"";
+      std::string response =
+          prefix + "\"ok\":false,\"error\":\"stale_capture\"";
       if (capture)
         response += ",\"captureHigh\":" + decimal(capture->high) +
                     ",\"captureLow\":" + decimal(capture->low);
@@ -402,8 +422,7 @@ private:
       out << "null";
     else
       out << decimal(stopped_ns_.load());
-    out << ",\"failure\":"
-        << (failure.empty() ? "null" : json_string(failure));
+    out << ",\"failure\":" << (failure.empty() ? "null" : json_string(failure));
     return out.str();
   }
 
@@ -417,6 +436,85 @@ private:
     state_ = State::Stopped;
     stopped_ns_ = wall_time_ns();
     return prefix + "\"ok\":true," + session_json() + "}";
+  }
+
+  std::string recover_segments(const std::string &prefix,
+                               std::string_view request) {
+    const auto high = number(request, "captureHigh");
+    const auto low = number(request, "captureLow");
+    const auto directory = field(request, "spoolDirectory");
+    const auto truncate_partial_tail =
+        boolean_field(request, "truncatePartialTail");
+    if (!high || !low || (*high == 0 && *low == 0) || !directory ||
+        directory->empty() || !truncate_partial_tail)
+      return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
+    std::error_code path_error;
+    const auto requested = std::filesystem::path(*directory);
+    const auto canonical =
+        std::filesystem::weakly_canonical(requested, path_error);
+    if (!requested.is_absolute() || path_error ||
+        canonical != requested.lexically_normal())
+      return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"}";
+    std::vector<std::filesystem::path> segments;
+    for (std::filesystem::directory_iterator iterator(canonical, path_error),
+         end;
+         !path_error && iterator != end; iterator.increment(path_error)) {
+      if (iterator->is_regular_file(path_error) &&
+          iterator->path().extension() == ".pcapng")
+        segments.push_back(iterator->path());
+    }
+    if (path_error)
+      return prefix + "\"ok\":false,\"error\":\"recovery_io\"}";
+    std::sort(segments.begin(), segments.end());
+    const sniffing::CaptureId expected{*high, *low};
+    std::ostringstream output;
+    output << prefix << "\"ok\":true,\"captureHigh\":" << decimal(*high)
+           << ",\"captureLow\":" << decimal(*low) << ",\"segments\":[";
+    for (std::size_t index = 0; index < segments.size(); ++index) {
+      const auto recovered = capture::PcapngSpool::recover_segment(
+          segments[index], *truncate_partial_tail);
+      if (const auto *error = std::get_if<capture::SpoolError>(&recovered))
+        return prefix + "\"ok\":false,\"error\":\"" +
+               capture::to_string(error->reason) +
+               "\",\"message\":" + json_string(error->message) + "}";
+      const auto &result =
+          std::get<capture::PcapngSpool::RecoveryResult>(recovered);
+      if (!*truncate_partial_tail && result.truncated_bytes != 0)
+        return prefix + "\"ok\":false,\"error\":\"CorruptData\",\"message\":"
+                        "\"A finalized segment has an invalid tail.\"}";
+      if (result.capture_id != expected)
+        return prefix + "\"ok\":false,\"error\":\"capture_identity_mismatch\"}";
+      if (index)
+        output << ',';
+      const auto first = result.packets.empty()
+                             ? 0
+                             : result.packets.front().metadata.key.packet_id;
+      const auto last = result.packets.empty()
+                            ? 0
+                            : result.packets.back().metadata.key.packet_id;
+      const auto stem = segments[index].stem().string();
+      const auto separator = stem.rfind('-');
+      std::uint64_t generation = 0;
+      const auto generation_text =
+          separator == std::string::npos
+              ? std::string_view{}
+              : std::string_view(stem).substr(separator + 1);
+      const auto parsed_generation = std::from_chars(
+          generation_text.data(),
+          generation_text.data() + generation_text.size(), generation);
+      if (generation_text.empty() || parsed_generation.ec != std::errc{} ||
+          parsed_generation.ptr !=
+              generation_text.data() + generation_text.size())
+        return prefix + "\"ok\":false,\"error\":\"invalid_segment_name\"}";
+      output << "{\"generation\":" << generation
+             << ",\"path\":" << json_string(segments[index].string())
+             << ",\"committedBytes\":" << decimal(result.valid_bytes)
+             << ",\"committedPackets\":" << decimal(result.packets.size())
+             << ",\"firstPacketId\":" << decimal(first)
+             << ",\"lastPacketId\":" << decimal(last) << ",\"evicted\":false}";
+    }
+    output << "]}";
+    return output.str();
   }
   void reset_capture() {
     if (const auto sniffer = current_sniffer())
@@ -438,7 +536,8 @@ private:
                       const sniffing::ParsedPacket &parsed) {
     const auto registry = current_registry();
     if (!registry || !summary_extractor_ ||
-        !journal_.append(replay::extract_summary(raw, parsed, *summary_extractor_))) {
+        !journal_.append(
+            replay::extract_summary(raw, parsed, *summary_extractor_))) {
       {
         std::lock_guard lock(analyzed_packets_mutex_);
         analysis_failed_packets_.insert(raw.metadata.key.packet_id);
@@ -466,8 +565,7 @@ private:
       std::lock_guard lock(session_mutex_);
       registry_ = registry;
     }
-    summary_extractor_ =
-        std::make_unique<parsing::SummaryExtractor>(*registry);
+    summary_extractor_ = std::make_unique<parsing::SummaryExtractor>(*registry);
     started_ns_ = wall_time_ns();
     if (const auto error = sniffer->start()) {
       state_ = State::Failed;
@@ -482,12 +580,32 @@ private:
     return prefix + "\"ok\":true," + session_json() + "}";
   }
 
-  std::string start(const std::string &prefix, const std::string &token) {
+  std::string start(const std::string &prefix, const std::string &token,
+                    std::string_view request) {
     const auto path = paths_.find(token);
     if (path == paths_.end())
       return prefix + "\"ok\":false,\"error\":\"unknown_path_token\"}";
     reset_capture();
     sniffing::SnifferOptions options;
+    const auto capture_high = number(request, "captureHigh");
+    const auto capture_low = number(request, "captureLow");
+    const auto spool_directory = field(request, "spoolDirectory");
+    if (capture_high || capture_low || spool_directory) {
+      if (!capture_high || !capture_low ||
+          (*capture_high == 0 && *capture_low == 0) || !spool_directory ||
+          spool_directory->empty())
+        return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"}";
+      std::error_code spool_path_error;
+      const auto requested_spool_path = std::filesystem::path(*spool_directory);
+      const auto canonical_spool_path = std::filesystem::weakly_canonical(
+          requested_spool_path, spool_path_error);
+      if (!requested_spool_path.is_absolute() || spool_path_error ||
+          canonical_spool_path != requested_spool_path.lexically_normal())
+        return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"}";
+      options.capture_id = sniffing::CaptureId{*capture_high, *capture_low};
+      options.spool_directory = canonical_spool_path.string();
+      options.spool_temporary = false;
+    }
     options.interfaces.emplace_back();
     options.interfaces.front().ring_slots = 1024;
     options.interfaces.front().pcap_dispatch_batch_size = 64;
@@ -504,6 +622,9 @@ private:
   }
 
   std::string start_live(const std::string &prefix, std::string_view request) {
+    const auto capture_high = number(request, "captureHigh");
+    const auto capture_low = number(request, "captureLow");
+    const auto spool_directory = field(request, "spoolDirectory");
     const auto interface_count = number(request, "interfaceCount");
     const auto snaplen = number(request, "snaplen");
     const auto pcap_buffer = number(request, "pcapBufferSizeBytes");
@@ -518,12 +639,15 @@ private:
     const auto spool_ring_mode = boolean_field(request, "spoolRingMode");
     const auto spool_temporary = boolean_field(request, "spoolTemporary");
     const auto bpf_filter = field(request, "bpfFilter");
-    if (!interface_count || *interface_count == 0 || *interface_count > 256 ||
-        !snaplen || !pcap_buffer || !read_timeout || !dispatch_batch ||
-        !ring_slots || !ring_bytes || !max_ring_bytes || !spool_max_bytes ||
-        !spool_segment_bytes || !spool_max_segments || !spool_ring_mode ||
-        !spool_temporary || !bpf_filter ||
-        *snaplen > static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
+    if (!capture_high || !capture_low ||
+        (*capture_high == 0 && *capture_low == 0) || !spool_directory ||
+        spool_directory->empty() || !interface_count || *interface_count == 0 ||
+        *interface_count > 256 || !snaplen || !pcap_buffer || !read_timeout ||
+        !dispatch_batch || !ring_slots || !ring_bytes || !max_ring_bytes ||
+        !spool_max_bytes || !spool_segment_bytes || !spool_max_segments ||
+        !spool_ring_mode || !spool_temporary || !bpf_filter ||
+        *snaplen >
+            static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
         *pcap_buffer >
             static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
         *read_timeout >
@@ -533,12 +657,23 @@ private:
       return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
 
     sniffing::SnifferOptions options;
+    std::error_code spool_path_error;
+    const auto requested_spool_path = std::filesystem::path(*spool_directory);
+    if (!requested_spool_path.is_absolute())
+      return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"}";
+    const auto canonical_spool_path = std::filesystem::weakly_canonical(
+        requested_spool_path, spool_path_error);
+    if (spool_path_error ||
+        canonical_spool_path != requested_spool_path.lexically_normal())
+      return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"}";
+    options.capture_id = sniffing::CaptureId{*capture_high, *capture_low};
+    options.spool_directory = canonical_spool_path.string();
     options.max_total_ring_bytes = static_cast<std::size_t>(*max_ring_bytes);
     options.spool_max_total_bytes = *spool_max_bytes;
     options.spool_segment_bytes = *spool_segment_bytes;
     options.spool_max_segments = static_cast<std::size_t>(*spool_max_segments);
     options.spool_ring_mode = *spool_ring_mode;
-    options.spool_temporary = *spool_temporary;
+    options.spool_temporary = false;
     options.interfaces.reserve(static_cast<std::size_t>(*interface_count));
     for (std::uint64_t index = 0; index < *interface_count; ++index) {
       const auto key = std::to_string(index);
@@ -562,12 +697,14 @@ private:
       interface_options.snaplen = static_cast<int>(*snaplen);
       interface_options.pcap_buffer_size_bytes = static_cast<int>(*pcap_buffer);
       interface_options.read_timeout_ms = static_cast<int>(*read_timeout);
-      interface_options.pcap_dispatch_batch_size = static_cast<int>(*dispatch_batch);
+      interface_options.pcap_dispatch_batch_size =
+          static_cast<int>(*dispatch_batch);
       interface_options.ring_slots = static_cast<std::size_t>(*ring_slots);
       interface_options.ring_bytes = static_cast<std::size_t>(*ring_bytes);
       interface_options.bpf_filter = *bpf_filter;
       if (*link_type != 0)
-        interface_options.requested_link_type = static_cast<int>(*link_type - 1);
+        interface_options.requested_link_type =
+            static_cast<int>(*link_type - 1);
       if (!timestamp_type->empty())
         interface_options.timestamp_type = *timestamp_type;
       options.interfaces.push_back(std::move(interface_options));
@@ -590,9 +727,9 @@ private:
         cursor, std::min<std::uint64_t>(requested, kMaxSummaryRead));
     std::ostringstream out;
     const auto capture = current_sniffer()->capture_id();
-    out << prefix << "\"ok\":true,\"captureHigh\":"
-        << decimal(capture->high) << ",\"captureLow\":"
-        << decimal(capture->low) << ",\"oldestAvailableCursor\":";
+    out << prefix << "\"ok\":true,\"captureHigh\":" << decimal(capture->high)
+        << ",\"captureLow\":" << decimal(capture->low)
+        << ",\"oldestAvailableCursor\":";
     if (read.oldest_cursor)
       out << decimal(*read.oldest_cursor);
     else
@@ -613,7 +750,8 @@ private:
     else
       out << "null";
     const auto state = state_name();
-    const auto capture_complete = state == "completed" || state == "stopped" || state == "failed";
+    const auto capture_complete =
+        state == "completed" || state == "stopped" || state == "failed";
     out << ",\"gapBeforeFirst\":" << boolean(read.cursor_evicted)
         << ",\"captureComplete\":" << boolean(capture_complete)
         << ",\"summaries\":[";
@@ -645,11 +783,9 @@ private:
           << "{\"key\":\"source\",\"value\":" << json_string(e.source)
           << "},{\"key\":\"destination\",\"value\":"
           << json_string(e.destination)
-          << "},{\"key\":\"protocol\",\"value\":"
-          << json_string(e.protocol)
+          << "},{\"key\":\"protocol\",\"value\":" << json_string(e.protocol)
           << "},{\"key\":\"length\",\"value\":" << json_string(e.length)
-          << "},{\"key\":\"info\",\"value\":" << json_string(e.info)
-          << "}]}";
+          << "},{\"key\":\"info\",\"value\":" << json_string(e.info) << "}]}";
     }
     out << "]}";
     return out.str();
@@ -662,10 +798,13 @@ private:
     const auto summaries = journal_.read(0, 1);
     const auto now = std::chrono::steady_clock::now();
     std::uint64_t write_rate = 0;
-    if (last_stats_at_.time_since_epoch().count() != 0 && capture.spool_bytes_written >= last_stats_bytes_) {
-      const auto elapsed = std::chrono::duration<double>(now - last_stats_at_).count();
+    if (last_stats_at_.time_since_epoch().count() != 0 &&
+        capture.spool_bytes_written >= last_stats_bytes_) {
+      const auto elapsed =
+          std::chrono::duration<double>(now - last_stats_at_).count();
       if (elapsed > 0)
-        write_rate = static_cast<std::uint64_t>((capture.spool_bytes_written - last_stats_bytes_) / elapsed);
+        write_rate = static_cast<std::uint64_t>(
+            (capture.spool_bytes_written - last_stats_bytes_) / elapsed);
     }
     last_stats_at_ = now;
     last_stats_bytes_ = capture.spool_bytes_written;
@@ -674,22 +813,31 @@ private:
         << "\"ok\":true,\"captureHigh\":" << decimal(id ? id->high : 0)
         << ",\"captureLow\":" << decimal(id ? id->low : 0)
         << ",\"packetsObserved\":" << decimal(capture.packets_observed)
-        << ",\"captureQueueAccepted\":" << decimal(capture.capture_queue_accepted)
-        << ",\"captureQueueFullDrops\":" << decimal(capture.capture_queue_full_drops)
-        << ",\"captureQueueOversizeDrops\":" << decimal(capture.capture_queue_oversize_drops)
-        << ",\"invalidCallbackDrops\":" << decimal(capture.invalid_callback_drops)
+        << ",\"captureQueueAccepted\":"
+        << decimal(capture.capture_queue_accepted)
+        << ",\"captureQueueFullDrops\":"
+        << decimal(capture.capture_queue_full_drops)
+        << ",\"captureQueueOversizeDrops\":"
+        << decimal(capture.capture_queue_oversize_drops)
+        << ",\"invalidCallbackDrops\":"
+        << decimal(capture.invalid_callback_drops)
         << ",\"pcapDispatchCalls\":" << decimal(capture.pcap_dispatch_calls)
         << ",\"pcapDispatchErrors\":" << decimal(capture.pcap_dispatch_errors)
-        << ",\"pcapStatsReadFailures\":" << decimal(capture.pcap_stats_read_failures)
+        << ",\"pcapStatsReadFailures\":"
+        << decimal(capture.pcap_stats_read_failures)
         << ",\"pcapReceived\":" << decimal(capture.pcap_received)
         << ",\"pcapKernelDrops\":" << decimal(capture.pcap_kernel_drops)
         << ",\"pcapInterfaceDrops\":" << decimal(capture.pcap_interface_drops)
         << ",\"captureQueueDepth\":" << decimal(capture.capture_queue_depth)
-        << ",\"captureQueueCapacityPackets\":" << decimal(capture.capture_queue_capacity_packets)
-        << ",\"captureQueueCapacityBytes\":" << decimal(capture.capture_queue_capacity_bytes)
+        << ",\"captureQueueCapacityPackets\":"
+        << decimal(capture.capture_queue_capacity_packets)
+        << ",\"captureQueueCapacityBytes\":"
+        << decimal(capture.capture_queue_capacity_bytes)
         << ",\"captureQueueBytes\":" << decimal(capture.capture_queue_bytes)
-        << ",\"captureQueueMaxDepth\":" << decimal(capture.capture_queue_max_depth)
-        << ",\"captureQueueMaxBytes\":" << decimal(capture.capture_queue_max_bytes)
+        << ",\"captureQueueMaxDepth\":"
+        << decimal(capture.capture_queue_max_depth)
+        << ",\"captureQueueMaxBytes\":"
+        << decimal(capture.capture_queue_max_bytes)
         << ",\"packetsPersisted\":" << decimal(capture.packets_persisted)
         << ",\"spoolBytesWritten\":" << decimal(capture.spool_bytes_written)
         << ",\"spoolWriteRate\":" << decimal(write_rate)
@@ -700,22 +848,30 @@ private:
         << ",\"spoolEvictedBytes\":" << decimal(capture.spool_evicted_bytes)
         << ",\"spoolWriteFailures\":" << decimal(capture.spool_write_failures)
         << ",\"spoolFlushFailures\":" << decimal(capture.spool_flush_failures)
-        << ",\"lastCommittedPacketId\":" << decimal(capture.last_committed_packet_id)
+        << ",\"lastCommittedPacketId\":"
+        << decimal(capture.last_committed_packet_id)
         << ",\"writerInFlight\":" << decimal(capture.writer_in_flight)
         << ",\"terminalWriteLosses\":" << decimal(capture.terminal_write_losses)
-        << ",\"packetsAvailableForAnalysis\":" << decimal(capture.packets_available_for_analysis)
+        << ",\"packetsAvailableForAnalysis\":"
+        << decimal(capture.packets_available_for_analysis)
         << ",\"packetsAnalyzed\":" << decimal(capture.packets_analyzed)
-        << ",\"analysisBacklogPackets\":" << decimal(capture.analysis_backlog_packets)
-        << ",\"analysisBacklogBytes\":" << decimal(capture.analysis_backlog_bytes)
-        << ",\"analysisErrors\":" << decimal(capture.analysis_errors + analysis_callback_errors_.load())
-        << ",\"analysisResourceLimits\":" << decimal(capture.analysis_resource_limits)
+        << ",\"analysisBacklogPackets\":"
+        << decimal(capture.analysis_backlog_packets)
+        << ",\"analysisBacklogBytes\":"
+        << decimal(capture.analysis_backlog_bytes) << ",\"analysisErrors\":"
+        << decimal(capture.analysis_errors + analysis_callback_errors_.load())
+        << ",\"analysisResourceLimits\":"
+        << decimal(capture.analysis_resource_limits)
         << ",\"summaryCount\":" << decimal(journal_.size())
         << ",\"summaryOldestCursor\":"
-        << (summaries.oldest_cursor ? decimal(*summaries.oldest_cursor) : "null")
+        << (summaries.oldest_cursor ? decimal(*summaries.oldest_cursor)
+                                    : "null")
         << ",\"summaryNewestCursor\":"
-        << (summaries.newest_cursor ? decimal(*summaries.newest_cursor) : "null")
+        << (summaries.newest_cursor ? decimal(*summaries.newest_cursor)
+                                    : "null")
         << ",\"analysisGapCount\":" << decimal(capture.analysis_gap_count)
-        << ",\"analysisEvictedBeforeAnalysis\":" << decimal(capture.analysis_evicted_before_analysis)
+        << ",\"analysisEvictedBeforeAnalysis\":"
+        << decimal(capture.analysis_evicted_before_analysis)
         << ",\"analysisRejects\":" << decimal(capture.analysis_rejects)
         << ",\"writerRunning\":" << boolean(capture.writer_thread_running)
         << ",\"analyzerRunning\":" << boolean(capture.analyzer_running)
@@ -728,22 +884,31 @@ private:
           << ",\"interfaceName\":" << json_string(item.interface_name)
           << ",\"linkType\":" << item.link_type
           << ",\"packetsObserved\":" << decimal(item.packets_observed)
-          << ",\"captureQueueAccepted\":" << decimal(item.capture_queue_accepted)
-          << ",\"captureQueueFullDrops\":" << decimal(item.capture_queue_full_drops)
-          << ",\"captureQueueOversizeDrops\":" << decimal(item.capture_queue_oversize_drops)
-          << ",\"invalidCallbackDrops\":" << decimal(item.invalid_callback_drops)
+          << ",\"captureQueueAccepted\":"
+          << decimal(item.capture_queue_accepted)
+          << ",\"captureQueueFullDrops\":"
+          << decimal(item.capture_queue_full_drops)
+          << ",\"captureQueueOversizeDrops\":"
+          << decimal(item.capture_queue_oversize_drops)
+          << ",\"invalidCallbackDrops\":"
+          << decimal(item.invalid_callback_drops)
           << ",\"pcapDispatchCalls\":" << decimal(item.pcap_dispatch_calls)
           << ",\"pcapDispatchErrors\":" << decimal(item.pcap_dispatch_errors)
-          << ",\"pcapStatsReadFailures\":" << decimal(item.pcap_stats_read_failures)
+          << ",\"pcapStatsReadFailures\":"
+          << decimal(item.pcap_stats_read_failures)
           << ",\"pcapReceived\":" << decimal(item.pcap_received)
           << ",\"pcapKernelDrops\":" << decimal(item.pcap_kernel_drops)
           << ",\"pcapInterfaceDrops\":" << decimal(item.pcap_interface_drops)
           << ",\"captureQueueDepth\":" << decimal(item.capture_queue_depth)
-          << ",\"captureQueueCapacityPackets\":" << decimal(item.capture_queue_capacity_packets)
-          << ",\"captureQueueCapacityBytes\":" << decimal(item.capture_queue_capacity_bytes)
+          << ",\"captureQueueCapacityPackets\":"
+          << decimal(item.capture_queue_capacity_packets)
+          << ",\"captureQueueCapacityBytes\":"
+          << decimal(item.capture_queue_capacity_bytes)
           << ",\"captureQueueBytes\":" << decimal(item.capture_queue_bytes)
-          << ",\"captureQueueMaxDepth\":" << decimal(item.capture_queue_max_depth)
-          << ",\"captureQueueMaxBytes\":" << decimal(item.capture_queue_max_bytes)
+          << ",\"captureQueueMaxDepth\":"
+          << decimal(item.capture_queue_max_depth)
+          << ",\"captureQueueMaxBytes\":"
+          << decimal(item.capture_queue_max_bytes)
           << ",\"captureThreadRunning\":"
           << boolean(item.capture_thread_running) << '}';
     }
@@ -780,6 +945,78 @@ private:
     out << "]}";
     return out.str();
   }
+  std::string segments(const std::string &prefix) {
+    const auto sniffer = current_sniffer();
+    const auto capture = sniffer ? sniffer->capture_id() : std::nullopt;
+    std::ostringstream out;
+    out << prefix << "\"ok\":true,\"captureHigh\":"
+        << decimal(capture ? capture->high : 0)
+        << ",\"captureLow\":" << decimal(capture ? capture->low : 0)
+        << ",\"segments\":[";
+    const auto snapshots = sniffer
+                               ? sniffer->spool_segments()
+                               : std::vector<capture::PcapngSegmentSnapshot>{};
+    for (std::size_t index = 0; index < snapshots.size(); ++index) {
+      if (index)
+        out << ',';
+      const auto &segment = snapshots[index];
+      out << "{\"generation\":" << segment.id
+          << ",\"path\":" << json_string(segment.path.string())
+          << ",\"committedBytes\":" << decimal(segment.committed_bytes)
+          << ",\"committedPackets\":" << decimal(segment.committed_packets)
+          << ",\"firstPacketId\":" << decimal(segment.first_packet_id)
+          << ",\"lastPacketId\":" << decimal(segment.last_packet_id)
+          << ",\"evicted\":" << boolean(segment.evicted) << '}';
+    }
+    out << "]}";
+    return out.str();
+  }
+  std::string lease_snapshot(const std::string &prefix) {
+    const auto sniffer = current_sniffer();
+    if (!sniffer)
+      return prefix + "\"ok\":false,\"error\":\"not_started\"}";
+    const auto snapshots = sniffer->lease_spool_snapshot();
+    const auto token = "segment-lease-" +
+                       std::to_string(segment_lease_sequence_.fetch_add(1) + 1);
+    std::vector<std::uint64_t> generations;
+    generations.reserve(snapshots.size());
+    for (const auto &segment : snapshots)
+      generations.push_back(segment.id);
+    segment_leases_.insert_or_assign(token, std::move(generations));
+    const auto capture = sniffer->capture_id();
+    std::ostringstream out;
+    out << prefix << "\"ok\":true,\"captureHigh\":"
+        << decimal(capture ? capture->high : 0)
+        << ",\"captureLow\":" << decimal(capture ? capture->low : 0)
+        << ",\"leaseToken\":" << json_string(token) << ",\"segments\":[";
+    for (std::size_t index = 0; index < snapshots.size(); ++index) {
+      if (index)
+        out << ',';
+      const auto &segment = snapshots[index];
+      out << "{\"generation\":" << segment.id
+          << ",\"path\":" << json_string(segment.path.string())
+          << ",\"committedBytes\":" << decimal(segment.committed_bytes)
+          << ",\"committedPackets\":" << decimal(segment.committed_packets)
+          << ",\"firstPacketId\":" << decimal(segment.first_packet_id)
+          << ",\"lastPacketId\":" << decimal(segment.last_packet_id)
+          << ",\"evicted\":false}";
+    }
+    out << "]}";
+    return out.str();
+  }
+  std::string release_snapshot(const std::string &prefix,
+                               std::string_view request) {
+    const auto token = field(request, "leaseToken");
+    if (!token || token->empty())
+      return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
+    const auto lease = segment_leases_.find(*token);
+    if (lease != segment_leases_.end()) {
+      if (const auto sniffer = current_sniffer())
+        sniffer->release_spool_leases(lease->second);
+      segment_leases_.erase(lease);
+    }
+    return prefix + "\"ok\":true}";
+  }
   std::string detail(const std::string &prefix, std::string_view request) {
     const auto high = number(request, "captureHigh");
     const auto low = number(request, "captureLow");
@@ -794,57 +1031,152 @@ private:
     const auto sniffer = current_sniffer();
     const auto registry = current_registry();
     if (!sniffer)
-      return prefix + "\"ok\":false,\"error\":\"stale_capture\"" + identity + "}";
+      return prefix + "\"ok\":false,\"error\":\"stale_capture\"" + identity +
+             "}";
     const auto lookup = sniffer->persisted_packet(key);
     if (lookup.status != capture::PacketSpoolLookupStatus::Found)
       return prefix + "\"ok\":false,\"error\":\"" +
              (lookup.status == capture::PacketSpoolLookupStatus::Evicted
                   ? "evicted"
-                  : lookup.status == capture::PacketSpoolLookupStatus::Corrupt
-                        ? "corrupt_packet"
-                        : "not_found") +
+              : lookup.status == capture::PacketSpoolLookupStatus::Corrupt
+                  ? "corrupt_packet"
+                  : "not_found") +
              "\"" + identity + "}";
     if (!registry || *registry_revision != registry->revision().value ||
         *analysis_revision != registry->revision().value)
-      return prefix + "\"ok\":false,\"error\":\"revision_mismatch\"" + identity + "}";
+      return prefix + "\"ok\":false,\"error\":\"revision_mismatch\"" +
+             identity + "}";
     {
       std::lock_guard lock(analyzed_packets_mutex_);
       if (analysis_failed_packets_.contains(*packet_id))
-        return prefix + "\"ok\":false,\"error\":\"analysis_failed\"" + identity + "}";
+        return prefix + "\"ok\":false,\"error\":\"analysis_failed\"" +
+               identity + "}";
       if (!analyzed_packets_.contains(*packet_id))
-        return prefix + "\"ok\":false,\"error\":\"detail_pending\"" + identity + "}";
+        return prefix + "\"ok\":false,\"error\":\"detail_pending\"" + identity +
+               "}";
     }
+    const auto spool_paths = sniffer->spool_paths();
+    if (spool_paths.empty())
+      return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity +
+             "}";
+    const auto &retained = *lookup.packet;
+    return encode_detail(prefix, identity, retained.metadata, retained.bytes,
+                         spool_paths.front().parent_path(), registry);
+  }
+  std::string detail_stored(const std::string &prefix,
+                            std::string_view request) {
+    const auto high = number(request, "captureHigh");
+    const auto low = number(request, "captureLow");
+    const auto packet_id = number(request, "packetId");
+    const auto registry_revision = number(request, "registryRevision");
+    const auto analysis_revision = number(request, "analysisRevision");
+    const auto directory = field(request, "spoolDirectory");
+    if (!high || !low || !packet_id || !registry_revision ||
+        !analysis_revision || !directory || directory->empty())
+      return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
+    const std::string identity = ",\"captureHigh\":" + decimal(*high) +
+                                 ",\"captureLow\":" + decimal(*low);
+    const auto registry = current_registry();
+    if (!registry || *registry_revision != registry->revision().value ||
+        *analysis_revision != registry->revision().value)
+      return prefix + "\"ok\":false,\"error\":\"revision_mismatch\"" +
+             identity + "}";
+
+    std::error_code path_error;
+    const auto requested = std::filesystem::path(*directory);
+    const auto canonical =
+        std::filesystem::weakly_canonical(requested, path_error);
+    if (!requested.is_absolute() || path_error ||
+        canonical != requested.lexically_normal())
+      return prefix + "\"ok\":false,\"error\":\"invalid_spool_path\"" +
+             identity + "}";
+
+    std::vector<std::filesystem::path> segments;
+    for (std::filesystem::directory_iterator iterator(canonical, path_error),
+         end;
+         !path_error && iterator != end; iterator.increment(path_error)) {
+      if (iterator->is_regular_file(path_error) &&
+          iterator->path().extension() == ".pcapng")
+        segments.push_back(iterator->path());
+    }
+    if (path_error)
+      return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
+             "}";
+    std::sort(segments.begin(), segments.end());
+    const sniffing::CaptureId expected{*high, *low};
+    for (const auto &path : segments) {
+      const auto recovered = capture::PcapngSpool::recover_segment(path, false);
+      const auto *result =
+          std::get_if<capture::PcapngSpool::RecoveryResult>(&recovered);
+      if (!result || result->capture_id != expected ||
+          result->truncated_bytes != 0)
+        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
+               "}";
+      const auto packet =
+          std::find_if(result->packets.begin(), result->packets.end(),
+                       [&](const capture::CommittedPacket &candidate) {
+                         return candidate.metadata.key.packet_id == *packet_id;
+                       });
+      if (packet == result->packets.end())
+        continue;
+      if (packet->data_offset > result->valid_bytes ||
+          packet->metadata.captured_len >
+              result->valid_bytes - packet->data_offset)
+        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
+               "}";
+      std::vector<std::byte> bytes(packet->metadata.captured_len);
+      std::ifstream input(path, std::ios::binary);
+      input.seekg(static_cast<std::streamoff>(packet->data_offset));
+      input.read(reinterpret_cast<char *>(bytes.data()),
+                 static_cast<std::streamsize>(bytes.size()));
+      if (!input ||
+          input.gcount() != static_cast<std::streamsize>(bytes.size()))
+        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
+               "}";
+      return encode_detail(prefix, identity, packet->metadata, bytes, canonical,
+                           registry);
+    }
+    return prefix + "\"ok\":false,\"error\":\"not_found\"" + identity + "}";
+  }
+  std::string encode_detail(const std::string &prefix,
+                            const std::string &identity,
+                            const sniffing::PacketMetadata &metadata,
+                            std::span<const std::byte> packet_bytes,
+                            const std::filesystem::path &directory,
+                            const parsing::RegistrySnapshotPtr &registry) {
     try {
       parsing::internal::PacketParser parser(registry);
-      const auto &retained = *lookup.packet;
-      const sniffing::RawPacketView view{retained.metadata, retained.bytes};
+      const sniffing::RawPacketView view{metadata, packet_bytes};
       auto tree = parser.parse(view);
       parsing::PacketTreeEncoder encoder;
       const auto encoded = encoder.encode(tree);
       const auto *bytes = std::get_if<std::span<const std::byte>>(&encoded);
       if (!bytes)
-        return prefix + "\"ok\":false,\"error\":\"encode_failed\"" +
-               identity + "}";
-      const auto spool_paths = sniffer->spool_paths();
-      if (spool_paths.empty())
-        return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity + "}";
-      const auto detail_path = spool_paths.front().parent_path() /
-          ("detail-" + std::to_string(*high) + "-" + std::to_string(*low) + "-" +
-           std::to_string(*packet_id) + "-" + std::to_string(detail_sequence_.fetch_add(1) + 1) + ".prt2");
+        return prefix + "\"ok\":false,\"error\":\"encode_failed\"" + identity +
+               "}";
+      const auto detail_path =
+          directory /
+          ("detail-" + std::to_string(metadata.key.capture_id.high) + "-" +
+           std::to_string(metadata.key.capture_id.low) + "-" +
+           std::to_string(metadata.key.packet_id) + "-" +
+           std::to_string(detail_sequence_.fetch_add(1) + 1) + ".prt2");
       std::ofstream output(detail_path, std::ios::binary | std::ios::trunc);
-      output.write(reinterpret_cast<const char*>(bytes->data()),
+      output.write(reinterpret_cast<const char *>(bytes->data()),
                    static_cast<std::streamsize>(bytes->size()));
       output.close();
       if (!output)
-        return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity + "}";
+        return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity +
+               "}";
       return prefix + "\"ok\":true" + identity +
-             ",\"format\":\"PRT2\",\"dataPath\":" + json_string(detail_path.string()) +
+             ",\"format\":\"PRT2\",\"dataPath\":" +
+             json_string(detail_path.string()) +
              ",\"byteLength\":" + decimal(bytes->size()) +
              ",\"registryRevision\":" + decimal(registry->revision().value) +
-             ",\"analysisRevision\":" + decimal(registry->revision().value) + "}";
+             ",\"analysisRevision\":" + decimal(registry->revision().value) +
+             "}";
     } catch (...) {
-      return prefix + "\"ok\":false,\"error\":\"detail_failed\"" +
-             identity + "}";
+      return prefix + "\"ok\":false,\"error\":\"detail_failed\"" + identity +
+             "}";
     }
   }
   std::string events(const std::string &prefix, std::uint64_t cursor,
@@ -853,9 +1185,8 @@ private:
         events_.read(cursor, std::min<std::uint64_t>(requested, kMaxEventRead));
     const auto capture = current_sniffer()->capture_id();
     std::ostringstream out;
-    out << prefix << "\"ok\":true,\"captureHigh\":"
-        << decimal(capture->high) << ",\"captureLow\":"
-        << decimal(capture->low)
+    out << prefix << "\"ok\":true,\"captureHigh\":" << decimal(capture->high)
+        << ",\"captureLow\":" << decimal(capture->low)
         << ",\"gapBeforeFirst\":" << boolean(read.cursor_evicted)
         << ",\"oldestAvailableCursor\":";
     if (read.oldest_cursor)
@@ -905,18 +1236,19 @@ private:
       out << "{\"name\":" << json_string(item.name)
           << ",\"description\":" << json_string(item.description)
           << ",\"addresses\":[";
-      for (std::size_t address_index = 0; address_index < item.addresses.size(); ++address_index) {
+      for (std::size_t address_index = 0; address_index < item.addresses.size();
+           ++address_index) {
         if (address_index)
           out << ',';
         const auto &address = item.addresses[address_index];
         out << "{\"family\":"
-            << json_string(address.family == sniffing::CaptureInterfaceAddressFamily::IPv4
+            << json_string(address.family ==
+                                   sniffing::CaptureInterfaceAddressFamily::IPv4
                                ? "IPv4"
                                : "IPv6")
             << ",\"address\":" << json_string(address.address) << '}';
       }
-      out << ']'
-          << ",\"isLoopback\":" << boolean(item.is_loopback)
+      out << ']' << ",\"isLoopback\":" << boolean(item.is_loopback)
           << ",\"isUp\":" << boolean(item.is_up)
           << ",\"isRunning\":" << boolean(item.is_running)
           << ",\"isWireless\":" << boolean(item.is_wireless) << '}';
@@ -981,6 +1313,8 @@ private:
   std::unordered_set<std::uint64_t> analyzed_packets_;
   std::unordered_set<std::uint64_t> analysis_failed_packets_;
   std::atomic<std::uint64_t> detail_sequence_{0};
+  std::atomic<std::uint64_t> segment_lease_sequence_{0};
+  std::unordered_map<std::string, std::vector<std::uint64_t>> segment_leases_;
   std::uint64_t last_stats_bytes_ = 0;
   std::chrono::steady_clock::time_point last_stats_at_{};
   mutable std::mutex failure_mutex_;
@@ -1044,8 +1378,10 @@ int main(int argc, char **argv) {
     if (frame_result == FrameRead::End || frame_result == FrameRead::Truncated)
       break;
     if (frame_result == FrameRead::TooLarge)
-      respond("{\"v\":2,\"kind\":\"response\",\"id\":\"\",\"ok\":false,\"error\":\"request_too_large\"}");
-    else if (field(payload, "op") == "detail") {
+      respond("{\"v\":2,\"kind\":\"response\",\"id\":\"\",\"ok\":false,"
+              "\"error\":\"request_too_large\"}");
+    else if (const auto op = field(payload, "op");
+             op == "detail" || op == "detailStored") {
       bool queued = false;
       {
         std::lock_guard lock(detail_mutex);

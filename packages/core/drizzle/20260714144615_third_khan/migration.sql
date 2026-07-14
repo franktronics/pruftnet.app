@@ -1,0 +1,1 @@
+ALTER TABLE `export_jobs` ADD `leases_released` integer DEFAULT false NOT NULL;

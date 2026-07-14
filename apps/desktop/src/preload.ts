@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('pruftnet', {
     platform: process.platform,
     rpcUrl,
     setTheme: (theme: DesktopTheme) => ipcRenderer.invoke('theme:set', theme),
+    selectExportDestination: (format: 'pcapng' | 'pcap') =>
+        ipcRenderer.invoke('export:select-destination', format),
 })

@@ -36,13 +36,13 @@ The in-memory committed index maps both file ordinal and sparse packet ID to seg
 
 Policies:
 
-- temporary: the default session file is removed only when its owner is destroyed after a clean finalization;
-- failed temporary capture: retained for recovery and troubleshooting;
+- durable: application captures always use the permanent directory allocated by `AppDataPaths`;
+- failed capture: retained for recovery and troubleshooting;
 - quota without ring mode: capture stops with a typed quota failure;
 - segmented ring mode: the oldest closed segment is intentionally deleted, and packet/byte eviction counters increase;
 - active segments are never evicted.
 
-Desktop and server mode pass spool policy through the shared `LiveCaptureSource`; core defaults to the platform temporary directory when no directory override is supplied.
+Desktop and server allocate a capture row and permanent spool directory before starting C++. Direct low-level tests may still provide an explicit temporary spool, but application captures never silently fall back to the system temporary directory. Durable ownership, recovery, exports, and shutdown are documented in `durable-captures.md`.
 
 ## Packet identity and cursors
 

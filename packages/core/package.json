@@ -8,6 +8,8 @@
     },
     "scripts": {
         "codegen:packet-tree": "cmake --build cpp/build --target packet_tree_ts_codegen",
+        "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+        "db:check": "drizzle-kit check --config drizzle.config.ts",
         "lint": "eslint .",
         "test": "cmake --build cpp/build --target packet_tree_fixture_writer parser_packet_tree_fixture_writer pruftnet_capture_worker && vitest run",
         "typecheck": "tsc --noEmit"
@@ -17,11 +19,13 @@
         "@effect/rpc": "catalog:",
         "@repo/packet-codec": "workspace:*",
         "@repo/shared": "workspace:*",
+        "drizzle-orm": "1.0.0-rc.4",
         "effect": "catalog:"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",
         "@types/node": "catalog:",
+        "drizzle-kit": "1.0.0-rc.4",
         "eslint": "catalog:",
         "globals": "catalog:",
         "typescript": "catalog:",

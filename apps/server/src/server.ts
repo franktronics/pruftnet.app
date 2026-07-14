@@ -10,7 +10,7 @@ import { createViteDevServer, serveViteFrontend } from './http/vite-dev'
 
 type StartedServer = {
     readonly address: string
-    readonly close: Effect.Effect<void>
+    readonly close: Effect.Effect<void, Error>
 }
 
 function sendHealth(response: ServerResponse) {
@@ -60,7 +60,12 @@ export function startServer(
                 : (request: IncomingMessage, response: ServerResponse) => {
                       void serveStaticFrontend(request, response, config.frontendDistPath)
                   }
-            const handlers = yield* makeAppNodeHandlers
+            const handlers = yield* makeAppNodeHandlers({
+                runtime: 'server',
+                environment: config.mode,
+                workspaceRoot: config.workspaceRoot,
+                migrationsFolder: config.migrationsFolder,
+            })
 
             const server = createServer((request, response) => {
                 const url = new URL(request.url ?? '/', 'http://localhost')
@@ -80,6 +85,11 @@ export function startServer(
                     return
                 }
 
+                if (url.pathname.startsWith('/exports/')) {
+                    handlers.exportDownload(request, response)
+                    return
+                }
+
                 serveFrontend(request, response)
             })
 
@@ -88,6 +98,11 @@ export function startServer(
             return {
                 address: `http://${config.host}:${config.port}`,
                 close: Effect.gen(function* () {
+                    yield* handlers.shutdown
+                        .shutdownServer()
+                        .pipe(
+                            Effect.mapError((error) => new Error(error.message, { cause: error })),
+                        )
                     yield* close(server)
                     if (vite) {
                         yield* Effect.promise(() => vite.close())
@@ -95,6 +110,6 @@ export function startServer(
                 }),
             }
         }),
-        (server) => server.close,
+        (server) => server.close.pipe(Effect.catchAll((error) => Effect.logError(error))),
     )
 }

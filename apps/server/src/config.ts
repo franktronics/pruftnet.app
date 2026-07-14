@@ -10,6 +10,8 @@ export type ServerConfig = {
     readonly frontendRootPath: string
     readonly frontendViteConfigPath: string
     readonly frontendDistPath: string
+    readonly workspaceRoot: string
+    readonly migrationsFolder: string
 }
 
 const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url))
@@ -43,6 +45,13 @@ export function loadServerConfig(overrides: Partial<ServerConfig> = {}): ServerC
             resolve(workspaceRoot, 'packages/front/vite.config.ts'),
         frontendDistPath:
             process.env.FRONTEND_DIST_PATH ?? resolve(workspaceRoot, 'packages/front/dist'),
+        workspaceRoot,
+        migrationsFolder:
+            process.env.PRUFTNET_MIGRATIONS_DIR ??
+            resolve(
+                workspaceRoot,
+                mode === 'production' ? 'apps/server/dist/drizzle' : 'packages/core/drizzle',
+            ),
         ...overrides,
         host,
     }
