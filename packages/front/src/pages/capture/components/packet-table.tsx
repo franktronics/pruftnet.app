@@ -24,6 +24,7 @@ const columns = [
 ] as const
 
 const initialColumnWidths: number[] = columns.map((column) => column.width)
+const initialTableWidth = initialColumnWidths.reduce((total, width) => total + width, 0)
 
 export function PacketTable({
     rows,
@@ -46,6 +47,8 @@ export function PacketTable({
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const headerRef = useRef<HTMLDivElement>(null)
+    const tableRef = useRef<HTMLDivElement>(null)
+    const hasInitializedColumnWidths = useRef(false)
     const columnResizeRef = useRef<{
         index: number
         pointerId: number
@@ -66,6 +69,18 @@ export function PacketTable({
         if (following && rows.length > 0)
             virtualizer.scrollToIndex(rows.length - 1, { align: 'end' })
     }, [following, rows.length, virtualizer])
+    useEffect(() => {
+        const table = tableRef.current
+        if (!table) return
+        const observer = new ResizeObserver(([entry]) => {
+            if (hasInitializedColumnWidths.current || entry.contentRect.width <= 0) return
+            hasInitializedColumnWidths.current = true
+            const scale = Math.max(1, entry.contentRect.width / initialTableWidth)
+            setColumnWidths(initialColumnWidths.map((width) => Math.round(width * scale)))
+        })
+        observer.observe(table)
+        return () => observer.disconnect()
+    }, [])
 
     function moveSelection(delta: number) {
         const current = rows.findIndex(
@@ -129,7 +144,7 @@ export function PacketTable({
 
     return (
         <PanelShell title="Packets" showHeader={false}>
-            <div className="relative flex h-full min-h-0 flex-col">
+            <div ref={tableRef} className="relative flex h-full min-h-0 flex-col">
                 <div className="relative shrink-0 overflow-hidden">
                     <div
                         ref={headerRef}

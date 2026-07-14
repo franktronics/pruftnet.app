@@ -8,5 +8,6 @@
 - Prefer derived state over synchronized duplicate state when possible.
 - Keep React components mostly presentational when data can be normalized before rendering.
 - Comments should explain non-obvious decisions, not restate the code.
+- For long Tailwind class lists, use `cn(...)` to group classes by logical concern (for example layout, sizing, interaction, and state styles) rather than keeping one unreadable string.
 - Use a package-specific private alias (`#front/...`, `#shared/...`, `#server/...`) for imports outside the current directory. Keep `./...` imports for immediate neighbors and do not use parent-relative module imports.
 - Use Vitest for TypeScript unit and integration tests. Keep pure backend/binary tests in the Node environment and add separate browser projects only when browser or Web Worker behavior is part of the contract.
