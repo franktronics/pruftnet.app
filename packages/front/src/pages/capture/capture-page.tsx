@@ -27,7 +27,6 @@ import {
 } from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
 import { BasicErrorAlert } from '#front/components/error-renderer'
-import { CaptureTerminalActions } from './components/capture-terminal-actions'
 
 export function CapturePage() {
     const { captureId } = useParams({ from: '/capture/$captureId' })
@@ -145,17 +144,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
             className="bg-border flex h-full min-h-0 flex-col overflow-hidden"
             data-capture-id={captureId}
         >
-            <CaptureControlBar
-                session={session.data}
-                following={following}
-                onFollowingChange={setFollowing}
-            />
-            {session.data &&
-            (session.data.state === 'stopped' ||
-                session.data.state === 'completed' ||
-                session.data.state === 'failed') ? (
-                <CaptureTerminalActions session={session.data} />
-            ) : null}
+            <CaptureControlBar session={session.data} />
             <DisplayFilter
                 value={filters.search}
                 onChange={(search) => updateFilters({ ...filters, search })}
@@ -178,6 +167,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                                     selectedKey={selectedKey}
                                     onSelect={handleSelect}
                                     following={following}
+                                    onFollowingChange={setFollowing}
                                     onPauseFollowing={() => setFollowing(false)}
                                     emptyMessage={emptyMessage}
                                 />
@@ -226,6 +216,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         selectedKey={selectedKey}
                         onSelect={handleSelect}
                         following={following}
+                        onFollowingChange={setFollowing}
                         onPauseFollowing={() => setFollowing(false)}
                         emptyMessage={emptyMessage}
                     />

@@ -46,7 +46,13 @@ export function useStopCapture(captureId: string) {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: () => captureClient.stop(captureId),
-        onSuccess: (session) => queryClient.setQueryData(captureKeys.session(captureId), session),
+        onSuccess: async (session) => {
+            queryClient.setQueryData(captureKeys.session(captureId), session)
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: captureKeys.active() }),
+                queryClient.invalidateQueries({ queryKey: captureKeys.history() }),
+            ])
+        },
     })
 }
 

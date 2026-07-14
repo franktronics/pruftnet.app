@@ -43,6 +43,7 @@ export const captureClient = {
     registry: (registryRevision: string) =>
         call((client) => client.GetRegistrySnapshot({ registryRevision })),
     captures: () => call((client) => client.ListCaptures()),
+    capture: (captureId: string) => call((client) => client.GetCapture({ captureId })),
     activeCapture: () => call((client) => client.GetActiveCapture()),
     openCapture: (captureId: string) => call((client) => client.OpenCapture({ captureId })),
     deleteCapture: (captureId: string) => call((client) => client.DeleteCapture({ captureId })),

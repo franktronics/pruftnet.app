@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import type { CaptureRecord } from '@repo/shared/capture'
 import {
     AlertDialog,
@@ -12,6 +12,9 @@ import {
     AlertDialogTitle,
     Badge,
     Button,
+    Input,
+    NativeSelect,
+    NativeSelectOption,
     Table,
     TableBody,
     TableCell,
@@ -19,8 +22,8 @@ import {
     TableHeader,
     TableRow,
 } from '@repo/ui'
-import { Clock3, FileOutput, FolderOpen, Plus, Radio, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Clock3, FileOutput, FolderOpen, Radio, Search, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 import { BasicErrorAlert } from '#front/components/error-renderer'
 import { captureClient } from '#front/pages/capture/api/capture-client'
@@ -86,6 +89,8 @@ export function CapturesPage() {
     const captures = useQuery(captureHistoryOptions())
     const [exportCapture, setExportCapture] = useState<CaptureRecord>()
     const [deleteCapture, setDeleteCapture] = useState<CaptureRecord>()
+    const [search, setSearch] = useState('')
+    const [state, setState] = useState('all')
     const open = useMutation({
         mutationFn: captureClient.openCapture,
         onSuccess: (result) =>
@@ -101,22 +106,67 @@ export function CapturesPage() {
             await queryClient.invalidateQueries({ queryKey: captureKeys.history() })
         },
     })
+    const visibleCaptures = useMemo(() => {
+        const needle = search.trim().toLocaleLowerCase()
+        return (captures.data?.captures ?? []).filter((capture) => {
+            const stateMatches =
+                state === 'all' ||
+                (state === 'live'
+                    ? capture.state === 'capturing' || capture.state === 'stopping'
+                    : capture.state === state)
+            if (!stateMatches) return false
+            if (!needle) return true
+            return [
+                capture.captureId,
+                capture.state,
+                capture.sourceFormat,
+                ...capture.interfaceNames,
+                capture.failure?.code,
+                capture.failure?.message,
+            ].some((value) => value?.toLocaleLowerCase().includes(needle))
+        })
+    }, [captures.data?.captures, search, state])
 
     return (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 py-4">
-            <div className="flex flex-wrap items-end justify-between gap-3 px-4">
+            <div className="px-4">
                 <div>
                     <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase">
                         <Clock3 className="size-3.5" /> Retained packet ledger
                     </p>
-                    <h1 className="mt-1 text-xl font-semibold tracking-tight">Captures</h1>
+                    <h1 className="mt-1 text-xl font-semibold tracking-tight">Capture history</h1>
                     <p className="text-muted-foreground text-sm">
                         Durable sessions remain available until explicitly deleted.
                     </p>
                 </div>
-                <Button nativeButton={false} render={<Link to="/" />}>
-                    <Plus /> New capture
-                </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 px-4" aria-label="History filters">
+                <label className="relative min-w-56 flex-1 sm:max-w-sm">
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                    <Input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Filter by capture, interface, or failure"
+                        className="pl-8"
+                    />
+                    <span className="sr-only">Filter capture history</span>
+                </label>
+                <NativeSelect
+                    value={state}
+                    onChange={(event) => setState(event.target.value)}
+                    aria-label="Filter by state"
+                    className="w-36"
+                >
+                    <NativeSelectOption value="all">All states</NativeSelectOption>
+                    <NativeSelectOption value="live">Live</NativeSelectOption>
+                    <NativeSelectOption value="stopped">Stopped</NativeSelectOption>
+                    <NativeSelectOption value="completed">Completed</NativeSelectOption>
+                    <NativeSelectOption value="failed">Failed</NativeSelectOption>
+                </NativeSelect>
+                <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+                    {visibleCaptures.length} of {captures.data?.captures.length ?? 0}
+                </span>
             </div>
 
             {captures.error ? (
@@ -133,7 +183,7 @@ export function CapturesPage() {
                 </div>
             ) : null}
 
-            <div className="bg-background min-h-0 min-w-0 flex-1 overflow-hidden border-y">
+            <div className="bg-background min-h-0 min-w-0 flex-1 overflow-auto border-t">
                 <Table>
                     <TableHeader className="bg-muted/40 sticky top-0 z-10">
                         <TableRow>
@@ -143,31 +193,35 @@ export function CapturesPage() {
                             <TableHead>Ended / duration</TableHead>
                             <TableHead>Interfaces</TableHead>
                             <TableHead className="text-right">Packets</TableHead>
-                            <TableHead className="text-right">Retained</TableHead>
-                            <TableHead>Format</TableHead>
-                            <TableHead>Recovery / failure</TableHead>
-                            <TableHead className="text-right">Exports</TableHead>
-                            <TableHead className="w-48 text-right">Actions</TableHead>
+                            <TableHead className="hidden text-right xl:table-cell">Retained</TableHead>
+                            <TableHead className="hidden xl:table-cell">Format</TableHead>
+                            <TableHead className="hidden 2xl:table-cell">Recovery / failure</TableHead>
+                            <TableHead className="hidden text-right 2xl:table-cell">Exports</TableHead>
+                            <TableHead className="w-32 text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(captures.data?.captures ?? []).map((capture) => (
+                        {visibleCaptures.map((capture) => (
                             <TableRow
                                 key={capture.captureId}
-                                className={
+                                tabIndex={0}
+                                aria-label={`Open capture ${capture.captureId}`}
+                                onClick={() => open.mutate(capture.captureId)}
+                                onKeyDown={(event) => {
+                                    if (event.key !== 'Enter' && event.key !== ' ') return
+                                    event.preventDefault()
+                                    open.mutate(capture.captureId)
+                                }}
+                                className={`cursor-pointer focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:outline-none ${
                                     capture.state === 'capturing'
-                                        ? 'border-l-2 border-l-emerald-500'
-                                        : 'border-l-2 border-l-transparent'
-                                }
+                                        ? 'shadow-[inset_3px_0_0_var(--color-emerald-500)]'
+                                        : ''
+                                }`}
                             >
                                 <TableCell>
-                                    <button
-                                        className="hover:text-primary text-left font-mono text-xs"
-                                        title={capture.captureId}
-                                        onClick={() => open.mutate(capture.captureId)}
-                                    >
+                                    <span className="font-mono text-xs" title={capture.captureId}>
                                         {capture.captureId.slice(0, 12)}
-                                    </button>
+                                    </span>
                                 </TableCell>
                                 <TableCell>
                                     <StateBadge capture={capture} />
@@ -188,11 +242,13 @@ export function CapturesPage() {
                                 <TableCell className="text-right font-mono">
                                     {BigInt(capture.packetCount).toLocaleString()}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="hidden text-right font-mono xl:table-cell">
                                     {bytes(capture.retainedBytes)}
                                 </TableCell>
-                                <TableCell className="uppercase">{capture.sourceFormat}</TableCell>
-                                <TableCell className="max-w-64">
+                                <TableCell className="hidden uppercase xl:table-cell">
+                                    {capture.sourceFormat}
+                                </TableCell>
+                                <TableCell className="hidden max-w-64 2xl:table-cell">
                                     {capture.failure ? (
                                         <span
                                             className="text-destructive block truncate"
@@ -208,11 +264,15 @@ export function CapturesPage() {
                                         <span className="text-muted-foreground">Healthy</span>
                                     )}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="hidden text-right font-mono 2xl:table-cell">
                                     {capture.exportCount}
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex justify-end gap-1">
+                                    <div
+                                        className="flex justify-end gap-1"
+                                        onClick={(event) => event.stopPropagation()}
+                                        onKeyDown={(event) => event.stopPropagation()}
+                                    >
                                         <Button
                                             size="icon-sm"
                                             variant="ghost"
@@ -255,6 +315,27 @@ export function CapturesPage() {
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Start a capture to create the first durable session.
                             </p>
+                        </div>
+                    </div>
+                ) : null}
+                {!captures.isPending &&
+                captures.data?.captures.length !== 0 &&
+                visibleCaptures.length === 0 ? (
+                    <div className="grid min-h-48 place-items-center p-8 text-center">
+                        <div>
+                            <Search className="text-muted-foreground mx-auto mb-3 size-6" />
+                            <p className="text-sm font-medium">No captures match these filters</p>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="mt-2"
+                                onClick={() => {
+                                    setSearch('')
+                                    setState('all')
+                                }}
+                            >
+                                Clear filters
+                            </Button>
                         </div>
                     </div>
                 ) : null}

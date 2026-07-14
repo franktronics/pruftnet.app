@@ -35,6 +35,7 @@ export function IdleCaptureWorkspace() {
                                     rows={[]}
                                     onSelect={ignorePacket}
                                     following
+                                    onFollowingChange={ignorePacket}
                                     onPauseFollowing={ignorePacket}
                                     emptyMessage="Select an interface and start capture to collect packets."
                                 />
@@ -65,6 +66,7 @@ export function IdleCaptureWorkspace() {
                         rows={[]}
                         onSelect={ignorePacket}
                         following
+                        onFollowingChange={ignorePacket}
                         onPauseFollowing={ignorePacket}
                         emptyMessage="Select an interface and start capture."
                     />

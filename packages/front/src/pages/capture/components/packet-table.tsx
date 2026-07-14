@@ -1,6 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
+import { Pause, Play } from 'lucide-react'
+import { Button } from '@repo/ui/atoms'
 
 import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 import {
@@ -28,6 +30,7 @@ export function PacketTable({
     selectedKey,
     onSelect,
     following,
+    onFollowingChange,
     onPauseFollowing,
     originTimestampNs,
     emptyMessage,
@@ -36,6 +39,7 @@ export function PacketTable({
     selectedKey?: string
     onSelect: (row: Extract<SummaryRow, { kind: 'packet' }>) => void
     following: boolean
+    onFollowingChange: (following: boolean) => void
     onPauseFollowing: () => void
     originTimestampNs?: string
     emptyMessage?: string
@@ -124,75 +128,78 @@ export function PacketTable({
 
     return (
         <PanelShell title="Packets" showHeader={false}>
-            <div
-                ref={scrollRef}
-                className="focus-visible:ring-ring h-full overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                role="grid"
-                tabIndex={0}
-                aria-label="Captured packets"
-                aria-activedescendant={
-                    selectedKey &&
-                    virtualizer.getVirtualItems().some((item) => {
-                        const row = rows[item.index]
-                        return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
-                    })
-                        ? `packet-row-${selectedKey}`
-                        : undefined
-                }
-                onScroll={(event) => {
-                    const target = event.currentTarget
-                    if (
-                        following &&
-                        target.scrollHeight - target.scrollTop - target.clientHeight > 2
-                    )
-                        onPauseFollowing()
-                }}
-                onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                        event.preventDefault()
-                        moveSelection(event.key === 'ArrowDown' ? 1 : -1)
+            <div className="relative h-full">
+                <div
+                    ref={scrollRef}
+                    className="focus-visible:ring-ring h-full overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                    role="grid"
+                    tabIndex={0}
+                    aria-label="Captured packets"
+                    aria-activedescendant={
+                        selectedKey &&
+                        virtualizer.getVirtualItems().some((item) => {
+                            const row = rows[item.index]
+                            return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
+                        })
+                            ? `packet-row-${selectedKey}`
+                            : undefined
                     }
-                }}
-            >
-                <div
-                    role="row"
-                    className="bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
-                    style={{ ...gridStyle, minWidth: tableWidth }}
+                    onScroll={(event) => {
+                        const target = event.currentTarget
+                        if (
+                            following &&
+                            target.scrollHeight - target.scrollTop - target.clientHeight > 2
+                        )
+                            onPauseFollowing()
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                            event.preventDefault()
+                            moveSelection(event.key === 'ArrowDown' ? 1 : -1)
+                        }
+                    }}
                 >
-                    {columns.map((column, index) => (
-                        <span
-                            key={column.id}
-                            role="columnheader"
-                            className={`relative flex h-full min-w-0 items-center px-2 ${column.id === 'length' ? 'justify-end' : ''}`}
-                        >
-                            <span className="truncate">{column.label}</span>
-                            {index < columns.length - 1 ? (
-                                <span
-                                    role="separator"
-                                    aria-orientation="vertical"
-                                    aria-label={`Resize ${column.label} column`}
-                                    tabIndex={0}
-                                    className="group absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-border after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] hover:after:bg-primary focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:after:bg-primary"
-                                    onPointerDown={(event) => handleColumnPointerDown(index, event)}
-                                    onPointerMove={handleColumnPointerMove}
-                                    onPointerUp={finishColumnResize}
-                                    onPointerCancel={finishColumnResize}
-                                    onKeyDown={(event) => {
-                                        const step = event.shiftKey ? 24 : 8
-                                        if (event.key === 'ArrowRight') resizeColumn(index, step)
-                                        else if (event.key === 'ArrowLeft') resizeColumn(index, -step)
-                                        else return
-                                        event.preventDefault()
-                                    }}
-                                />
-                            ) : null}
-                        </span>
-                    ))}
-                </div>
-                <div
-                    className="relative w-full"
-                    style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
-                >
+                    <div
+                        role="row"
+                        className="bg-muted text-muted-foreground sticky top-0 z-10 grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
+                        style={{ ...gridStyle, minWidth: tableWidth }}
+                    >
+                        {columns.map((column, index) => (
+                            <span
+                                key={column.id}
+                                role="columnheader"
+                                className={`relative flex h-full min-w-0 items-center px-2 ${column.id === 'length' ? 'justify-end' : ''}`}
+                            >
+                                <span className="truncate">{column.label}</span>
+                                {index < columns.length - 1 ? (
+                                    <span
+                                        role="separator"
+                                        aria-orientation="vertical"
+                                        aria-label={`Resize ${column.label} column`}
+                                        tabIndex={0}
+                                        className="group absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-border after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] hover:after:bg-primary focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:after:bg-primary"
+                                        onPointerDown={(event) => handleColumnPointerDown(index, event)}
+                                        onPointerMove={handleColumnPointerMove}
+                                        onPointerUp={finishColumnResize}
+                                        onPointerCancel={finishColumnResize}
+                                        onKeyDown={(event) => {
+                                            const step = event.shiftKey ? 24 : 8
+                                            if (event.key === 'ArrowRight')
+                                                resizeColumn(index, step)
+                                            else if (event.key === 'ArrowLeft')
+                                                resizeColumn(index, -step)
+                                            else return
+                                            event.preventDefault()
+                                        }}
+                                    />
+                                ) : null}
+                            </span>
+                        ))}
+                    </div>
+                    <div
+                        className="relative w-full"
+                        style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
+                    >
                     {packetCount === 0 && emptyMessage ? (
                         <div
                             className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
@@ -257,6 +264,18 @@ export function PacketTable({
                             </div>
                         )
                     })}
+                    </div>
+                </div>
+                <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 normal-case"
+                        onClick={() => onFollowingChange(!following)}
+                    >
+                        {following ? <Pause /> : <Play />}
+                        {following ? 'Pause tail' : 'Follow tail'}
+                    </Button>
                 </div>
             </div>
         </PanelShell>

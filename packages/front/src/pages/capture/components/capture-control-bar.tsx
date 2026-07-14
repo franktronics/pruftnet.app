@@ -25,7 +25,7 @@ import {
     PopoverTrigger,
     Switch,
 } from '@repo/ui'
-import { ChevronDown, Pause, Play, RefreshCw, Settings2, Square } from 'lucide-react'
+import { ChevronDown, RefreshCw, Settings2, Square } from 'lucide-react'
 import { useContext, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -67,12 +67,8 @@ function sourceSelection(session?: CaptureSession) {
 
 export function CaptureControlBar({
     session,
-    following,
-    onFollowingChange,
 }: {
     session?: CaptureSession
-    following?: boolean
-    onFollowingChange?: (following: boolean) => void
 }) {
     const navigate = useNavigate()
     const interfaces = useCaptureInterfaces()
@@ -126,6 +122,7 @@ export function CaptureControlBar({
                 buildLiveCaptureSource(selected, { bpfFilter, snaplen, bufferMiB, ringSlots }),
             )
             queryClient.setQueryData(captureKeys.session(next.captureId), next)
+            await queryClient.invalidateQueries({ queryKey: captureKeys.active() })
             await navigate({ to: '/capture/$captureId', params: { captureId: next.captureId } })
         } catch (error) {
             if (
@@ -144,13 +141,6 @@ export function CaptureControlBar({
         }
     }
 
-    const followControl =
-        following !== undefined && onFollowingChange ? (
-            <Button variant="ghost" onClick={() => onFollowingChange(!following)}>
-                {following ? <Pause /> : <Play />}
-                {following ? 'Pause tail' : 'Follow tail'}
-            </Button>
-        ) : null
     const lifecycleControls = (
         <div
             className={
@@ -192,20 +182,12 @@ export function CaptureControlBar({
                     {start.isPending ? 'Starting...' : 'Start capture'}
                 </Button>
             )}
-            {!isDesktop ? followControl : null}
             {interfaces.error ? (
                 <span className="text-destructive truncate text-xs" role="alert">
                     Interfaces unavailable
                 </span>
             ) : null}
-            <div className="ml-auto flex items-center gap-2">
-                <span
-                    className={`size-1.5 rounded-full ${active ? 'bg-emerald-500' : session?.state === 'failed' ? 'bg-destructive' : 'bg-muted-foreground/40'}`}
-                />
-                <span className="text-muted-foreground text-xs uppercase">
-                    {session?.state ?? 'idle'}
-                </span>
-            </div>
+            <div className="ml-auto" />
         </div>
     )
 
@@ -216,11 +198,6 @@ export function CaptureControlBar({
                     ? createPortal(lifecycleControls, titlebarTarget)
                     : null
                 : lifecycleControls}
-            {isDesktop && followControl ? (
-                <div className="bg-background flex h-10 shrink-0 items-center border-b px-3">
-                    {followControl}
-                </div>
-            ) : null}
             <CaptureSettingsDialog
                 open={settingsOpen}
                 onOpenChange={setSettingsOpen}
