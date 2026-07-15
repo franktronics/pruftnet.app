@@ -2,9 +2,8 @@
 
 ## Ownership
 
-Capture sessions and export jobs are application-scoped backend resources. RPC requests only create,
-inspect, or explicitly mutate them. React navigation, request cancellation, refresh, and browser
-disconnects do not own their lifetime.
+Capture sessions are application-scoped backend resources. Export requests produce or reuse a cached
+artifact; they are not retained as user-visible jobs or history.
 
 `AppDataPaths` is the path authority. The durable layout is:
 
@@ -12,7 +11,7 @@ disconnects do not own their lifetime.
 dataRoot/
   pruftnet.sqlite
   captures/<captureId>/{segments,indexes,recovery}/
-  exports/<exportId>/{artifact.partial,artifact.pcapng|artifact.pcap}
+  exports/<captureId>/{artifact.pcapng,artifact.pcap,*.partial}
   locks/instance.lock
 ```
 
@@ -30,9 +29,9 @@ Startup resolves and canonicalizes paths, acquires the instance lock, opens SQLi
 foreign keys, and a five-second busy timeout, runs Drizzle migrations, checks database integrity,
 reconciles interrupted records with pcapng files, and only then exposes RPC/HTTP.
 
-SQLite contains capture sessions, committed segment generations and offsets, export jobs and their
-immutable segment snapshots, export leases, compact statistics samples, summary cursors, summaries,
-and events. Packet data remains in pcapng. UInt64 values are stored and compared as decimal text.
+SQLite contains capture sessions, committed segment generations and offsets, one export artifact
+cache record per capture and format, compact statistics samples, summary cursors, summaries, and
+events. Packet data remains in pcapng. UInt64 values are stored and compared as decimal text.
 
 Capture states are:
 
@@ -49,39 +48,37 @@ truncates only an interrupted partial tail, preserves unknown files, and never r
 
 ## Exports
 
-Export states are:
+An export request snapshots committed segment offsets and computes a source fingerprint. A matching
+artifact is reused; otherwise the current artifact for that capture and format is atomically replaced.
+There is no export history, retry record, or completed-job ledger. Concurrent requests for the same
+capture and format share one preparation fiber.
 
-```text
-queued -> preparing -> running -> finalizing -> completed
-                           \-> failed|cancelled|interrupted
-```
+Progress is transient in-memory state exposed through `GetExportProgress`. It reports preparation,
+encoding, cache reuse, finalization, and delivery with decimal-string packet and byte counters. The
+state disappears when the request finishes and is never written as export history.
 
-Creation is idempotent. It snapshots committed segment offsets and acquires database leases. During
-an active ring capture, C++ also leases the selected generations so retention cannot evict them.
-Leases are idempotently released after terminal cleanup; a pending capture deletion is finalized only
-after the last lease and physical removal succeed.
-
-Every job has independent sequential I/O and bounded block memory. There is deliberately no global
-concurrency limit or quota, so operators must account for aggregate file descriptors, storage
-bandwidth, CPU, and destination capacity.
+Database segment leases protect a snapshot while it is encoded. During an active ring capture, C++
+also leases the selected generations so retention cannot evict them. These leases are transient and
+startup clears any counts left by a crashed process.
 
 - pcapng supports one or multiple interfaces. Segment headers are validated and a single canonical
   section is written; segments are never blindly concatenated.
 - pcap supports exactly one interface and preserves timestamp precision, captured/wire lengths, and
   link type.
-- Desktop consumes a one-use opaque token created by Electron's native save dialog. It writes beside
-  the selected destination as `.partial`, syncs, validates, and atomically renames without exposing
-  arbitrary filesystem access to React.
-- Server writes only below `dataRoot/exports`. The loopback-only HTTP endpoint supports GET, HEAD,
+- Desktop consumes a one-use opaque token created by Electron's native save dialog. It copies the
+  cached artifact beside the selected destination as `.partial`, syncs, and atomically renames it
+  without exposing arbitrary filesystem access to React.
+- Server serves the cached artifact below `dataRoot/exports`. The loopback-only HTTP endpoint supports GET, HEAD,
   single byte ranges, resumption, length, disposition, and SHA-256 metadata. Remote binding remains
   disabled until application authentication exists.
 
 ## Shutdown
 
 The shutdown coordinator first rejects new mutations. Desktop confirms stopping an active capture
-and cancelling exports; a failure keeps the app open. Server stops the active capture and marks
-unfinished exports interrupted. Workers have a 30-second coordinated shutdown bound. HTTP and files
-close before SQLite checkpoints and closes; the instance lock is released last by the Effect scope.
+and cancelling active artifact preparation; a failure keeps the app open. Server stops the active
+capture and interrupts artifact preparation. Workers have a 30-second coordinated shutdown bound.
+HTTP and files close before SQLite checkpoints and closes; the instance lock is released last by the
+Effect scope.
 
 ## UI recovery
 

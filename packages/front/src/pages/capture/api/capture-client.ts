@@ -47,17 +47,11 @@ export const captureClient = {
     activeCapture: () => call((client) => client.GetActiveCapture()),
     openCapture: (captureId: string) => call((client) => client.OpenCapture({ captureId })),
     deleteCapture: (captureId: string) => call((client) => client.DeleteCapture({ captureId })),
-    createExport: (input: {
-        captureId: string
-        format: ExportFormat
-        idempotencyKey: string
-        destinationToken?: string
-    }) =>
+    createExport: (input: { captureId: string; format: ExportFormat; destinationToken?: string }) =>
         call((client) =>
             client.CreateExport({
                 captureId: input.captureId,
                 format: input.format,
-                idempotencyKey: input.idempotencyKey,
                 destination: input.destinationToken
                     ? new DesktopExportDestination({
                           destinationToken: input.destinationToken,
@@ -65,9 +59,6 @@ export const captureClient = {
                     : new ServerExportDestination(),
             }),
         ),
-    exports: (captureId?: string) => call((client) => client.ListExports({ captureId })),
-    cancelExport: (exportId: string) => call((client) => client.CancelExport({ exportId })),
-    retryExport: (exportId: string) => call((client) => client.RetryExport({ exportId })),
-    deleteExportArtifact: (exportId: string) =>
-        call((client) => client.DeleteExportArtifact({ exportId })),
+    exportProgress: (captureId: string) =>
+        call((client) => client.GetExportProgress({ captureId })),
 }

@@ -84,7 +84,11 @@ export class CaptureCatalog extends Context.Tag('@repo/core/capture/CaptureCatal
                 const ready = yield* mapRepository(repository.deletionReady(captureId))
                 if (!ready) return capture
                 yield* Effect.tryPromise({
-                    try: () => rm(paths.captureRoot(captureId), { recursive: true, force: true }),
+                    try: () =>
+                        Promise.all([
+                            rm(paths.captureRoot(captureId), { recursive: true, force: true }),
+                            rm(paths.exportRoot(captureId), { recursive: true, force: true }),
+                        ]),
                     catch: (cause) =>
                         new CaptureStorageUnavailable({
                             title: 'Capture deletion failed',

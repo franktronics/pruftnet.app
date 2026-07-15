@@ -11,7 +11,7 @@ import { AppDataPaths, Database, InstanceLock } from '#core/storage'
 
 import { CaptureSessionRepository } from './capture-session-repository'
 import { CaptureCatalog } from './catalog'
-import { ExportJobRepository } from './export-repository'
+import { ExportArtifactRepository } from './export-repository'
 
 const roots: Array<string> = []
 const migrationsFolder = resolve(process.cwd(), 'drizzle')
@@ -28,9 +28,9 @@ async function durableLayer() {
     const lock = InstanceLock.layer.pipe(Layer.provideMerge(paths))
     const database = Database.layerWith({ migrationsFolder }).pipe(Layer.provideMerge(lock))
     const captures = CaptureSessionRepository.layer.pipe(Layer.provideMerge(database))
-    const exports = ExportJobRepository.layer.pipe(Layer.provideMerge(database))
+    const artifacts = ExportArtifactRepository.layer.pipe(Layer.provideMerge(database))
     const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(captures))
-    return Layer.mergeAll(paths, captures, exports, catalog)
+    return Layer.mergeAll(paths, captures, artifacts, catalog)
 }
 
 const stopCapture = Effect.fn('test.stopCapture')(function* (captureId: string) {
@@ -41,72 +41,47 @@ const stopCapture = Effect.fn('test.stopCapture')(function* (captureId: string) 
     yield* captures.transition(captureId, 'stopped', { stoppedAtNs: '4' })
 })
 
+const addSegment = Effect.fn('test.addSegment')(function* (captureId: string, size = 128) {
+    const paths = yield* AppDataPaths
+    const captures = yield* CaptureSessionRepository
+    const segmentRoot = paths.captureSegmentsRoot(captureId)
+    const segmentPath = join(segmentRoot, 'capture-1.pcapng')
+    yield* Effect.promise(() => mkdir(segmentRoot, { recursive: true }))
+    yield* Effect.promise(() => writeFile(segmentPath, Buffer.alloc(size)))
+    yield* captures.upsertSegments(captureId, [
+        {
+            generation: 1,
+            path: segmentPath,
+            committedBytes: String(size),
+            committedPackets: '2',
+            firstPacketId: '1',
+            lastPacketId: '2',
+            evicted: false,
+        },
+    ])
+})
+
 describe('durable repositories', () => {
-    test('keeps an immutable idempotent snapshot leased until deferred deletion completes', async () => {
+    test('leases an export snapshot until deferred capture deletion completes', async () => {
         const layer = await durableLayer()
         const result = await Effect.runPromise(
             Effect.gen(function* () {
                 const paths = yield* AppDataPaths
                 const captures = yield* CaptureSessionRepository
-                const exports = yield* ExportJobRepository
                 const catalog = yield* CaptureCatalog
                 const captureId = 'a'.repeat(32)
-                const exportId = 'b'.repeat(32)
                 yield* stopCapture(captureId)
-                const segmentRoot = paths.captureSegmentsRoot(captureId)
-                const segmentPath = join(segmentRoot, 'capture-1.pcapng')
-                yield* Effect.promise(() => mkdir(segmentRoot, { recursive: true }))
-                yield* Effect.promise(() => writeFile(segmentPath, Buffer.alloc(128)))
-                yield* captures.upsertSegments(captureId, [
-                    {
-                        generation: 1,
-                        path: segmentPath,
-                        committedBytes: '128',
-                        committedPackets: '2',
-                        firstPacketId: '1',
-                        lastPacketId: '2',
-                        evicted: false,
-                    },
-                ])
-                const exportRoot = paths.exportRoot(exportId)
-                yield* Effect.promise(() => mkdir(exportRoot, { recursive: true }))
-                const input = {
-                    exportId,
-                    captureId,
-                    idempotencyKey: 'stable-request',
-                    format: 'pcapng' as const,
-                    destinationKind: 'server' as const,
-                    artifactPath: join(exportRoot, 'artifact.pcapng'),
-                    partialPath: join(exportRoot, 'artifact.partial'),
-                }
-                const created = yield* exports.create(input)
-                const repeated = yield* exports.create({ ...input, exportId: 'c'.repeat(32) })
-                yield* captures.upsertSegments(captureId, [
-                    {
-                        generation: 1,
-                        path: segmentPath,
-                        committedBytes: '999',
-                        committedPackets: '9',
-                        firstPacketId: '1',
-                        lastPacketId: '9',
-                        evicted: false,
-                    },
-                ])
-                const snapshot = yield* exports.source(exportId)
+                yield* addSegment(captureId)
+                const snapshot = yield* captures.acquireExportSnapshot(captureId)
                 const deferred = yield* catalog.delete(captureId)
                 const existsWhileLeased = existsSync(paths.captureRoot(captureId))
-                yield* exports.update(exportId, 'completed', {
-                    checksumSha256: '0'.repeat(64),
-                    finalSize: '64',
-                    completedAtNs: '5',
-                })
-                yield* exports.releaseLeases(exportId)
-                yield* exports.releaseLeases(exportId)
+                yield* captures.releaseExportSnapshot(
+                    captureId,
+                    snapshot.segments.map((segment) => segment.generation),
+                )
                 const ready = yield* captures.deletionReady(captureId)
                 const deleted = yield* catalog.finalizeDeferred(captureId)
                 return {
-                    created,
-                    repeated,
                     snapshot,
                     deferred,
                     existsWhileLeased,
@@ -117,8 +92,7 @@ describe('durable repositories', () => {
             }).pipe(Effect.provide(layer), Effect.scoped),
         )
 
-        expect(result.repeated.exportId).toBe(result.created.exportId)
-        expect(result.snapshot).toEqual([
+        expect(result.snapshot.segments).toEqual([
             expect.objectContaining({ committedBytes: '128', committedPackets: '2' }),
         ])
         expect(result.deferred.state).toBe('deleting')
@@ -128,58 +102,64 @@ describe('durable repositories', () => {
         expect(result.existsAfterDelete).toBe(false)
     })
 
-    test('persists interrupted capture and server export states for restart recovery', async () => {
+    test('stores only the current cached artifact for each capture and format', async () => {
         const layer = await durableLayer()
         const result = await Effect.runPromise(
             Effect.gen(function* () {
                 const paths = yield* AppDataPaths
+                const artifacts = yield* ExportArtifactRepository
+                const captureId = 'b'.repeat(32)
+                yield* stopCapture(captureId)
+                const root = paths.exportRoot(captureId)
+                const artifactPath = join(root, 'artifact.pcapng')
+                yield* Effect.promise(() => mkdir(root, { recursive: true }))
+                yield* Effect.promise(() => writeFile(artifactPath, Buffer.alloc(64)))
+                yield* artifacts.put({
+                    captureId,
+                    format: 'pcapng',
+                    sourceFingerprint: 'first',
+                    artifactPath,
+                    retainedPortionOnly: false,
+                    checksumSha256: '1'.repeat(64),
+                    finalSize: '64',
+                })
+                yield* artifacts.put({
+                    captureId,
+                    format: 'pcapng',
+                    sourceFingerprint: 'second',
+                    artifactPath,
+                    retainedPortionOnly: false,
+                    checksumSha256: '2'.repeat(64),
+                    finalSize: '64',
+                })
+                return yield* artifacts.get(captureId, 'pcapng')
+            }).pipe(Effect.provide(layer), Effect.scoped),
+        )
+
+        expect(result?.sourceFingerprint).toBe('second')
+        expect(result?.checksumSha256).toBe('2'.repeat(64))
+    })
+
+    test('clears transient segment leases during restart recovery', async () => {
+        const layer = await durableLayer()
+        const result = await Effect.runPromise(
+            Effect.gen(function* () {
                 const captures = yield* CaptureSessionRepository
-                const exports = yield* ExportJobRepository
-                const captureId = 'd'.repeat(32)
-                const exportId = 'e'.repeat(32)
+                const captureId = 'c'.repeat(32)
                 yield* captures.create(captureId, source)
                 yield* captures.transition(captureId, 'capturing')
-                const segmentRoot = paths.captureSegmentsRoot(captureId)
-                const segmentPath = join(segmentRoot, 'capture-1.pcapng')
-                yield* Effect.promise(() => mkdir(segmentRoot, { recursive: true }))
-                yield* Effect.promise(() => writeFile(segmentPath, Buffer.alloc(64)))
-                yield* captures.upsertSegments(captureId, [
-                    {
-                        generation: 1,
-                        path: segmentPath,
-                        committedBytes: '64',
-                        committedPackets: '1',
-                        firstPacketId: '1',
-                        lastPacketId: '1',
-                        evicted: false,
-                    },
-                ])
-                const exportRoot = paths.exportRoot(exportId)
-                yield* Effect.promise(() => mkdir(exportRoot, { recursive: true }))
-                yield* exports.create({
-                    exportId,
-                    captureId,
-                    idempotencyKey: 'interrupted-request',
-                    format: 'pcapng',
-                    destinationKind: 'server',
-                    artifactPath: join(exportRoot, 'artifact.pcapng'),
-                    partialPath: join(exportRoot, 'artifact.partial'),
-                })
+                yield* addSegment(captureId, 64)
+                yield* captures.acquireExportSnapshot(captureId)
                 yield* captures.reconcileInterrupted()
                 return {
                     capture: yield* captures.get(captureId),
-                    export: yield* exports.get(exportId),
-                    resumable: yield* exports.interruptedServerJobs(),
+                    ready: yield* captures.deletionReady(captureId),
                 }
             }).pipe(Effect.provide(layer), Effect.scoped),
         )
 
         expect(result.capture.state).toBe('interrupted')
         expect(result.capture.failure?.code).toBe('BackendInterrupted')
-        expect(result.export.state).toBe('interrupted')
-        expect(result.export.failure?.code).toBe('BackendInterrupted')
-        expect(result.resumable.exports.map((job) => job.exportId)).toContain(
-            result.export.exportId,
-        )
+        expect(result.ready).toBe(true)
     })
 })

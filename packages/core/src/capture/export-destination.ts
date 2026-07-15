@@ -1,5 +1,5 @@
 import { constants } from 'node:fs'
-import { access, mkdir, realpath, stat } from 'node:fs/promises'
+import { access, copyFile, mkdir, open, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, resolve } from 'node:path'
 
 import type {
@@ -11,14 +11,12 @@ import { Context, Data, Effect, Layer } from 'effect'
 import { AppDataPaths } from '#core/storage'
 
 export class ExportDestinationError extends Data.TaggedError('ExportDestinationError')<{
-    readonly code: 'InvalidToken' | 'InvalidPath' | 'Collision' | 'Unavailable'
+    readonly code: 'InvalidToken' | 'InvalidPath' | 'Unavailable'
     readonly message: string
     readonly cause?: unknown
 }> {}
 
-export interface PreparedExportDestination {
-    readonly destinationKind: 'desktop' | 'server'
-    readonly destinationToken?: string
+export interface ExportCachePaths {
     readonly artifactPath: string
     readonly partialPath: string
 }
@@ -33,17 +31,15 @@ export interface ExportDestinationOptions {
 }
 
 export interface ExportDestinationService {
-    readonly prepare: (
-        exportId: string,
+    readonly cachePaths: (
+        captureId: string,
+        format: ExportFormat,
+    ) => Effect.Effect<ExportCachePaths, ExportDestinationError>
+    readonly deliver: (
         format: ExportFormat,
         destination: ExportDestinationRequest,
-    ) => Effect.Effect<PreparedExportDestination, ExportDestinationError>
-}
-
-async function exists(path: string) {
-    return stat(path)
-        .then(() => true)
-        .catch(() => false)
+        sourcePath: string,
+    ) => Effect.Effect<'desktop' | 'server', ExportDestinationError>
 }
 
 function expectedExtension(format: ExportFormat) {
@@ -60,23 +56,33 @@ export class ExportDestination extends Context.Tag('@repo/core/capture/ExportDes
             Effect.gen(function* () {
                 const paths = yield* AppDataPaths
                 return ExportDestination.of({
-                    prepare: (exportId, format, destination) =>
+                    cachePaths: (captureId, format) =>
                         Effect.tryPromise({
                             try: async () => {
-                                if (destination._tag === 'Server') {
-                                    const root = paths.exportRoot(exportId)
-                                    await mkdir(root, { recursive: false, mode: 0o700 })
-                                    const artifactPath = paths.resolveContained(
+                                const root = paths.exportRoot(captureId)
+                                await mkdir(root, { recursive: true, mode: 0o700 })
+                                return {
+                                    artifactPath: paths.resolveExportArtifactPath(
+                                        captureId,
                                         resolve(root, `artifact.${format}`),
-                                    )
-                                    return {
-                                        destinationKind: 'server' as const,
-                                        artifactPath,
-                                        partialPath: paths.resolveContained(
-                                            resolve(root, 'artifact.partial'),
-                                        ),
-                                    }
+                                    ),
+                                    partialPath: paths.resolveExportArtifactPath(
+                                        captureId,
+                                        resolve(root, `artifact.${format}.partial`),
+                                    ),
                                 }
+                            },
+                            catch: (cause) =>
+                                new ExportDestinationError({
+                                    code: 'Unavailable',
+                                    message: 'Unable to prepare the export cache.',
+                                    cause,
+                                }),
+                        }),
+                    deliver: (format, destination, sourcePath) => {
+                        if (destination._tag === 'Server') return Effect.succeed('server' as const)
+                        return Effect.tryPromise({
+                            try: async () => {
                                 if (
                                     paths.runtime !== 'desktop' ||
                                     !options.resolveDesktopDestination
@@ -108,29 +114,29 @@ export class ExportDestination extends Context.Tag('@repo/core/capture/ExportDes
                                     artifactPath += expectedExtension(format)
                                 }
                                 const partialPath = `${artifactPath}.partial`
-                                if ((await exists(artifactPath)) || (await exists(partialPath))) {
-                                    throw new ExportDestinationError({
-                                        code: 'Collision',
-                                        message:
-                                            'The selected destination or its partial file already exists.',
-                                    })
+                                try {
+                                    await rm(partialPath, { force: true })
+                                    await copyFile(sourcePath, partialPath)
+                                    const handle = await open(partialPath, 'r')
+                                    await handle.sync().finally(() => handle.close())
+                                    await rm(artifactPath, { force: true })
+                                    await rename(partialPath, artifactPath)
+                                } catch (cause) {
+                                    await rm(partialPath, { force: true }).catch(() => undefined)
+                                    throw cause
                                 }
-                                return {
-                                    destinationKind: 'desktop' as const,
-                                    destinationToken: destination.destinationToken,
-                                    artifactPath,
-                                    partialPath,
-                                }
+                                return 'desktop' as const
                             },
                             catch: (cause) =>
                                 cause instanceof ExportDestinationError
                                     ? cause
                                     : new ExportDestinationError({
                                           code: 'Unavailable',
-                                          message: 'Unable to prepare the export destination.',
+                                          message: 'Unable to deliver the desktop export.',
                                           cause,
                                       }),
-                        }),
+                        })
+                    },
                 })
             }),
         )

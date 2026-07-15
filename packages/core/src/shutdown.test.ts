@@ -35,11 +35,7 @@ function testLayer() {
     })
     const scheduler = ExportScheduler.of({
         create: () => Effect.die('unused'),
-        get: () => Effect.die('unused'),
-        list: () => Effect.die('unused'),
-        cancel: () => Effect.die('unused'),
-        retry: () => Effect.die('unused'),
-        deleteArtifact: () => Effect.die('unused'),
+        progress: () => Effect.succeed(null),
         cancelAll: () =>
             Effect.sync(() => {
                 calls.cancelAll += 1

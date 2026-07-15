@@ -1,0 +1,154 @@
+import { createHash } from 'node:crypto'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { CreateExportRequest, ServerExportDestination } from '@repo/shared/capture'
+import { Deferred, Effect, Fiber, Layer } from 'effect'
+import { afterEach, describe, expect, test } from 'vitest'
+
+import { CaptureCatalog } from './catalog'
+import { CaptureSessionRepository } from './capture-session-repository'
+import { ExportDestination } from './export-destination'
+import { ExportEncoder } from './export-encoder'
+import { ExportArtifactRepository, type CachedExportArtifact } from './export-repository'
+import { ExportScheduler } from './export-scheduler'
+import { CaptureSessionManager } from './manager'
+import { Capture } from './service'
+
+const roots: Array<string> = []
+
+afterEach(async () => {
+    await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
+})
+
+describe('ExportScheduler', () => {
+    test('reuses an unchanged artifact and replaces it when the snapshot advances', async () => {
+        const root = await mkdtemp(join(tmpdir(), 'pruftnet-export-cache-'))
+        roots.push(root)
+        const captureId = 'a'.repeat(32)
+        const sourcePath = join(root, 'capture.pcapng')
+        const artifactPath = join(root, 'artifact.pcapng')
+        const partialPath = `${artifactPath}.partial`
+        const encodedBytes = Buffer.from('prepared-export')
+        await writeFile(sourcePath, Buffer.alloc(64))
+        let cached: CachedExportArtifact | undefined
+        let encodeCount = 0
+        let deliveryCount = 0
+        let committedBytes = '64'
+        const encodingStarted = await Effect.runPromise(Deferred.make<void>())
+        const continueEncoding = await Effect.runPromise(Deferred.make<void>())
+
+        const dependencies = Layer.mergeAll(
+            Layer.succeed(
+                CaptureCatalog,
+                CaptureCatalog.of({
+                    get: () =>
+                        Effect.succeed({
+                            captureId,
+                            state: 'stopped',
+                            interfaceNames: ['en0'],
+                        } as never),
+                } as never),
+            ),
+            Layer.succeed(
+                CaptureSessionRepository,
+                CaptureSessionRepository.of({
+                    acquireExportSnapshot: () =>
+                        Effect.succeed({
+                            segments: [
+                                {
+                                    generation: 1n as never,
+                                    path: sourcePath,
+                                    committedBytes,
+                                    committedPackets: '1',
+                                },
+                            ],
+                            retainedPortionOnly: false,
+                        }),
+                    releaseExportSnapshot: () => Effect.void,
+                    upsertSegments: () => Effect.void,
+                } as never),
+            ),
+            Layer.succeed(
+                ExportArtifactRepository,
+                ExportArtifactRepository.of({
+                    get: () => Effect.succeed(cached),
+                    put: (artifact) =>
+                        Effect.sync(() => {
+                            cached = artifact
+                            return artifact
+                        }),
+                    remove: () => Effect.void,
+                }),
+            ),
+            Layer.succeed(
+                ExportDestination,
+                ExportDestination.of({
+                    cachePaths: () => Effect.succeed({ artifactPath, partialPath }),
+                    deliver: () =>
+                        Effect.sync(() => {
+                            deliveryCount += 1
+                            return 'server' as const
+                        }),
+                }),
+            ),
+            Layer.succeed(
+                ExportEncoder,
+                ExportEncoder.of({
+                    encode: (input) =>
+                        Effect.gen(function* () {
+                            encodeCount += 1
+                            yield* Deferred.succeed(encodingStarted, undefined)
+                            yield* Deferred.await(continueEncoding)
+                            yield* Effect.promise(() => writeFile(input.partialPath, encodedBytes))
+                            return {
+                                packetsWritten: '1',
+                                bytesWritten: String(encodedBytes.length),
+                                checksumSha256: createHash('sha256')
+                                    .update(encodedBytes)
+                                    .digest('hex'),
+                                finalSize: String(encodedBytes.length),
+                            }
+                        }),
+                }),
+            ),
+            Layer.succeed(Capture, Capture.of({} as never)),
+            Layer.succeed(CaptureSessionManager, CaptureSessionManager.of({} as never)),
+        )
+        const layer = ExportScheduler.layer.pipe(Layer.provide(dependencies))
+        const request = new CreateExportRequest({
+            captureId,
+            format: 'pcapng',
+            destination: new ServerExportDestination(),
+        })
+
+        const results = await Effect.runPromise(
+            Effect.gen(function* () {
+                const scheduler = yield* ExportScheduler
+                const firstFiber = yield* Effect.fork(scheduler.create(request))
+                yield* Deferred.await(encodingStarted)
+                const activeProgress = yield* scheduler.progress(captureId)
+                yield* Deferred.succeed(continueEncoding, undefined)
+                const first = yield* Fiber.join(firstFiber)
+                const repeated = yield* scheduler.create(request)
+                committedBytes = '65'
+                const advanced = yield* scheduler.create(request)
+                const inactiveProgress = yield* scheduler.progress(captureId)
+                return { first, repeated, advanced, activeProgress, inactiveProgress }
+            }).pipe(Effect.provide(layer), Effect.scoped),
+        )
+
+        expect(encodeCount).toBe(2)
+        expect(deliveryCount).toBe(3)
+        expect(results.activeProgress).toMatchObject({
+            captureId,
+            phase: 'encoding',
+            packetsTotal: '1',
+        })
+        expect(results.inactiveProgress).toBeNull()
+        expect(results.first.downloadPath).toBe(`/exports/${captureId}/pcapng/download`)
+        expect(results.repeated).toEqual(results.first)
+        expect(results.advanced).toEqual(results.first)
+    })
+})

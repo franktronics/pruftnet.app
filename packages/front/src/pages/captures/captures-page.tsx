@@ -193,10 +193,13 @@ export function CapturesPage() {
                             <TableHead>Ended / duration</TableHead>
                             <TableHead>Interfaces</TableHead>
                             <TableHead className="text-right">Packets</TableHead>
-                            <TableHead className="hidden text-right xl:table-cell">Retained</TableHead>
+                            <TableHead className="hidden text-right xl:table-cell">
+                                Retained
+                            </TableHead>
                             <TableHead className="hidden xl:table-cell">Format</TableHead>
-                            <TableHead className="hidden 2xl:table-cell">Recovery / failure</TableHead>
-                            <TableHead className="hidden text-right 2xl:table-cell">Exports</TableHead>
+                            <TableHead className="hidden 2xl:table-cell">
+                                Recovery / failure
+                            </TableHead>
                             <TableHead className="w-32 text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -212,7 +215,7 @@ export function CapturesPage() {
                                     event.preventDefault()
                                     open.mutate(capture.captureId)
                                 }}
-                                className={`cursor-pointer focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:outline-none ${
+                                className={`focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset ${
                                     capture.state === 'capturing'
                                         ? 'shadow-[inset_3px_0_0_var(--color-emerald-500)]'
                                         : ''
@@ -263,9 +266,6 @@ export function CapturesPage() {
                                     ) : (
                                         <span className="text-muted-foreground">Healthy</span>
                                     )}
-                                </TableCell>
-                                <TableCell className="hidden text-right font-mono 2xl:table-cell">
-                                    {capture.exportCount}
                                 </TableCell>
                                 <TableCell>
                                     <div

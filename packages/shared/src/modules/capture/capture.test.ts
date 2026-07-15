@@ -135,11 +135,7 @@ describe('capture RPC contract', () => {
             'OpenCapture',
             'DeleteCapture',
             'CreateExport',
-            'GetExport',
-            'ListExports',
-            'CancelExport',
-            'RetryExport',
-            'DeleteExportArtifact',
+            'GetExportProgress',
         ])
     })
 

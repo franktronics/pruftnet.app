@@ -12,7 +12,7 @@ import {
     PacketSummary,
     type DurableCaptureState,
 } from '@repo/shared/capture'
-import { and, asc, count, desc, eq, inArray, ne, sql, type AnyColumn } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne, sql, type AnyColumn } from 'drizzle-orm'
 import { Clock, Context, Data, Effect, Layer, Schema } from 'effect'
 
 import {
@@ -23,7 +23,7 @@ import {
     captureStatSamples,
     captureSummaries,
     Database,
-    exportJobs,
+    exportArtifacts,
     type DatabaseError,
 } from '#core/storage'
 
@@ -51,7 +51,6 @@ export interface StoredSegment {
 }
 
 const activeCaptureStates = ['preparing', 'capturing', 'stopping'] as const
-const activeExportStates = ['queued', 'preparing', 'running', 'finalizing'] as const
 const transitionTargets: Readonly<Record<DurableCaptureState, ReadonlySet<DurableCaptureState>>> = {
     preparing: new Set(['capturing', 'failed', 'interrupted']),
     capturing: new Set(['stopping', 'failed', 'interrupted']),
@@ -84,7 +83,7 @@ function decodeSource(value: unknown) {
     return Schema.decodeUnknownSync(CaptureSource)(value)
 }
 
-function decodeRecord(row: CaptureRow, exportCount: number, retainedPortionOnly: boolean) {
+function decodeRecord(row: CaptureRow, retainedPortionOnly: boolean) {
     const source = decodeSource(row.sourceJson)
     return new CaptureRecord({
         captureId: row.id,
@@ -106,8 +105,17 @@ function decodeRecord(row: CaptureRow, exportCount: number, retainedPortionOnly:
                       recoverable: row.state === 'interrupted',
                   })
                 : null,
-        exportCount,
     })
+}
+
+export interface ExportSnapshot {
+    readonly segments: ReadonlyArray<{
+        readonly generation: number
+        readonly path: string
+        readonly committedBytes: string
+        readonly committedPackets: string
+    }>
+    readonly retainedPortionOnly: boolean
 }
 
 export interface CaptureSessionRepositoryService {
@@ -145,6 +153,14 @@ export interface CaptureSessionRepositoryService {
     readonly reconcileInterrupted: () => Effect.Effect<void, CaptureRepositoryError>
     readonly requestDelete: (captureId: string) => Effect.Effect<CaptureRecord, RepositoryError>
     readonly deletionReady: (captureId: string) => Effect.Effect<boolean, RepositoryError>
+    readonly acquireExportSnapshot: (
+        captureId: string,
+        generations?: ReadonlyArray<number>,
+    ) => Effect.Effect<ExportSnapshot, RepositoryError>
+    readonly releaseExportSnapshot: (
+        captureId: string,
+        generations: ReadonlyArray<number>,
+    ) => Effect.Effect<void, CaptureRepositoryError>
     readonly finalizeDelete: (captureId: string) => Effect.Effect<CaptureRecord, RepositoryError>
     readonly upsertSegments: (
         captureId: string,
@@ -181,17 +197,6 @@ export class CaptureSessionRepository extends Context.Tag(
             const enrich = Effect.fn('CaptureSessionRepository.enrich')(function* (
                 row: CaptureRow,
             ) {
-                const relatedExports = yield* database
-                    .read('count capture exports', (db) =>
-                        db
-                            .select({ value: count() })
-                            .from(exportJobs)
-                            .where(eq(exportJobs.captureId, row.id))
-                            .get(),
-                    )
-                    .pipe(
-                        Effect.mapError((cause) => repositoryError('count capture exports', cause)),
-                    )
                 const evicted = yield* database
                     .read('find capture eviction', (db) =>
                         db
@@ -210,7 +215,7 @@ export class CaptureSessionRepository extends Context.Tag(
                         Effect.mapError((cause) => repositoryError('find capture eviction', cause)),
                     )
                 return yield* Effect.try({
-                    try: () => decodeRecord(row, relatedExports?.value ?? 0, Boolean(evicted)),
+                    try: () => decodeRecord(row, Boolean(evicted)),
                     catch: (cause) => repositoryError('decode capture', cause),
                 })
             })
@@ -441,15 +446,9 @@ export class CaptureSessionRepository extends Context.Tag(
                                         .where(inArray(captureSessions.state, activeCaptureStates))
                                         .run()
                                     transaction
-                                        .update(exportJobs)
-                                        .set({
-                                            state: 'interrupted',
-                                            failureCode: 'BackendInterrupted',
-                                            failureMessage:
-                                                'The backend stopped before export finalization completed.',
-                                            updatedAtNs: now,
-                                        })
-                                        .where(inArray(exportJobs.state, activeExportStates))
+                                        .update(captureSegments)
+                                        .set({ leaseCount: 0 })
+                                        .where(sql`${captureSegments.leaseCount} > 0`)
                                         .run()
                                 }),
                             )
@@ -516,24 +515,123 @@ export class CaptureSessionRepository extends Context.Tag(
                                     .from(captureSegments)
                                     .where(eq(captureSegments.captureId, captureId))
                                     .get()
-                                const exports = db
-                                    .select({ value: count() })
-                                    .from(exportJobs)
-                                    .where(
-                                        and(
-                                            eq(exportJobs.captureId, captureId),
-                                            inArray(exportJobs.state, activeExportStates),
-                                        ),
-                                    )
-                                    .get()
-                                return (
-                                    BigInt(leases?.value ?? 0) === 0n &&
-                                    BigInt(exports?.value ?? 0) === 0n
-                                )
+                                return BigInt(leases?.value ?? 0) === 0n
                             })
                             .pipe(
                                 Effect.mapError((cause) =>
                                     repositoryError('check capture deletion readiness', cause),
+                                ),
+                            )
+                    },
+                ),
+                acquireExportSnapshot: Effect.fn('CaptureSessionRepository.acquireExportSnapshot')(
+                    function* (captureId, generations) {
+                        yield* get(captureId)
+                        return yield* database
+                            .write('acquire export segment snapshot', (db) =>
+                                db.transaction((transaction) => {
+                                    const capture = transaction
+                                        .select({ state: captureSessions.state })
+                                        .from(captureSessions)
+                                        .where(eq(captureSessions.id, captureId))
+                                        .get()
+                                    if (
+                                        !capture ||
+                                        capture.state === 'deleting' ||
+                                        capture.state === 'deleted'
+                                    ) {
+                                        throw new Error('The capture is being deleted.')
+                                    }
+                                    const baseCondition = and(
+                                        eq(captureSegments.captureId, captureId),
+                                        eq(captureSegments.valid, true),
+                                        eq(captureSegments.evicted, false),
+                                    )
+                                    const segments = transaction
+                                        .select({
+                                            generation: captureSegments.generation,
+                                            path: captureSegments.path,
+                                            committedBytes: captureSegments.committedBytes,
+                                            committedPackets: captureSegments.committedPackets,
+                                        })
+                                        .from(captureSegments)
+                                        .where(
+                                            generations && generations.length > 0
+                                                ? and(
+                                                      baseCondition,
+                                                      inArray(
+                                                          captureSegments.generation,
+                                                          generations,
+                                                      ),
+                                                  )
+                                                : baseCondition,
+                                        )
+                                        .orderBy(asc(captureSegments.generation))
+                                        .all()
+                                    if (segments.length === 0) {
+                                        throw new Error(
+                                            'The capture has no committed source segments.',
+                                        )
+                                    }
+                                    const evicted = transaction
+                                        .select({ generation: captureSegments.generation })
+                                        .from(captureSegments)
+                                        .where(
+                                            and(
+                                                eq(captureSegments.captureId, captureId),
+                                                eq(captureSegments.evicted, true),
+                                            ),
+                                        )
+                                        .limit(1)
+                                        .get()
+                                    for (const segment of segments) {
+                                        transaction
+                                            .update(captureSegments)
+                                            .set({
+                                                leaseCount: sql`${captureSegments.leaseCount} + 1`,
+                                            })
+                                            .where(
+                                                and(
+                                                    eq(captureSegments.captureId, captureId),
+                                                    eq(
+                                                        captureSegments.generation,
+                                                        segment.generation,
+                                                    ),
+                                                ),
+                                            )
+                                            .run()
+                                    }
+                                    return { segments, retainedPortionOnly: Boolean(evicted) }
+                                }),
+                            )
+                            .pipe(
+                                Effect.mapError((cause) =>
+                                    repositoryError('acquire export segment snapshot', cause),
+                                ),
+                            )
+                    },
+                ),
+                releaseExportSnapshot: Effect.fn('CaptureSessionRepository.releaseExportSnapshot')(
+                    function* (captureId, generations) {
+                        if (generations.length === 0) return
+                        yield* database
+                            .write('release export segment snapshot', (db) =>
+                                db
+                                    .update(captureSegments)
+                                    .set({
+                                        leaseCount: sql`max(${captureSegments.leaseCount} - 1, 0)`,
+                                    })
+                                    .where(
+                                        and(
+                                            eq(captureSegments.captureId, captureId),
+                                            inArray(captureSegments.generation, generations),
+                                        ),
+                                    )
+                                    .run(),
+                            )
+                            .pipe(
+                                Effect.mapError((cause) =>
+                                    repositoryError('release export segment snapshot', cause),
                                 ),
                             )
                     },
@@ -545,16 +643,22 @@ export class CaptureSessionRepository extends Context.Tag(
                         const now = (yield* Clock.currentTimeNanos).toString()
                         yield* database
                             .write('finalize capture deletion', (db) =>
-                                db
-                                    .update(captureSessions)
-                                    .set({ state: 'deleted', updatedAtNs: now })
-                                    .where(
-                                        and(
-                                            eq(captureSessions.id, captureId),
-                                            eq(captureSessions.state, 'deleting'),
-                                        ),
-                                    )
-                                    .run(),
+                                db.transaction((transaction) => {
+                                    transaction
+                                        .delete(exportArtifacts)
+                                        .where(eq(exportArtifacts.captureId, captureId))
+                                        .run()
+                                    transaction
+                                        .update(captureSessions)
+                                        .set({ state: 'deleted', updatedAtNs: now })
+                                        .where(
+                                            and(
+                                                eq(captureSessions.id, captureId),
+                                                eq(captureSessions.state, 'deleting'),
+                                            ),
+                                        )
+                                        .run()
+                                }),
                             )
                             .pipe(
                                 Effect.mapError((cause) =>

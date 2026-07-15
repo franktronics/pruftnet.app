@@ -10,7 +10,7 @@ import {
     CaptureRecovery,
     ExportDestination,
     ExportEncoder,
-    ExportJobRepository,
+    ExportArtifactRepository,
     ExportScheduler,
     type ExportDestinationOptions,
 } from './capture'
@@ -31,7 +31,7 @@ export function makeAppLayer(options: AppLayerOptions) {
     const lock = InstanceLock.layer.pipe(Layer.provideMerge(paths))
     const database = Database.layerWith(options).pipe(Layer.provideMerge(lock))
     const captureRepository = CaptureSessionRepository.layer.pipe(Layer.provideMerge(database))
-    const exportRepository = ExportJobRepository.layer.pipe(Layer.provideMerge(database))
+    const exportRepository = ExportArtifactRepository.layer.pipe(Layer.provideMerge(database))
     const repositories = Layer.mergeAll(captureRepository, exportRepository)
     const captureDomain = Layer.mergeAll(repositories, CaptureServiceLive)
     const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(captureDomain))

@@ -12,12 +12,17 @@ import {
     AlertDialogTitle,
     Button,
 } from '@repo/ui'
-import { FileOutput, Plus, Trash2 } from 'lucide-react'
+import { FileOutput, LoaderCircle, Plus, Trash2 } from 'lucide-react'
 import { useState, type ComponentPropsWithoutRef } from 'react'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
-import { activeCaptureOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
+import {
+    activeCaptureOptions,
+    captureKeys,
+    exportProgressOptions,
+} from '#front/pages/capture/api/capture-queries'
 import { CaptureExportDialog } from '#front/pages/captures/export-dialog'
+import { exportProgressLabel, exportProgressPercent } from '#front/pages/captures/export-progress'
 import { cn } from '@repo/utils'
 
 const terminalStates = new Set(['stopped', 'completed', 'failed'])
@@ -60,6 +65,11 @@ export function CaptureTitlebarActions({
     const [deleteOpen, setDeleteOpen] = useState(false)
     const currentCapture = routeCapture.data ?? active.data ?? undefined
     const exportCapture = routeCapture.data ?? active.data ?? undefined
+    const exportProgress = useQuery({
+        ...exportProgressOptions(exportCapture?.captureId ?? ''),
+        enabled: Boolean(exportCapture),
+    })
+    const exportPercent = exportProgressPercent(exportProgress.data)
     const routeIsTerminal = Boolean(
         routeCapture.data && terminalStates.has(routeCapture.data.state),
     )
@@ -132,12 +142,31 @@ export function CaptureTitlebarActions({
             <Button
                 variant="outline"
                 size="default"
+                className="relative overflow-hidden"
                 onClick={() => setExportOpen(true)}
                 disabled={!exportCapture}
-                aria-label="Export capture"
+                aria-label={
+                    exportProgress.data
+                        ? `Export in progress: ${exportProgressLabel(exportProgress.data)}${exportPercent === null ? '' : `, ${exportPercent}%`}`
+                        : 'Export capture'
+                }
             >
-                <FileOutput />
+                {exportProgress.data ? <LoaderCircle className="animate-spin" /> : <FileOutput />}
                 <span className={compact ? 'hidden md:inline' : 'hidden xl:inline'}>Export</span>
+                {exportProgress.data ? (
+                    <span className="text-[10px] leading-none font-semibold tabular-nums">
+                        {exportPercent === null ? '…' : `${exportPercent}%`}
+                    </span>
+                ) : null}
+                {exportProgress.data ? (
+                    <span
+                        aria-hidden
+                        className="bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-transform duration-300"
+                        style={{
+                            transform: `scaleX(${Math.max(0, exportPercent ?? 4) / 100})`,
+                        }}
+                    />
+                ) : null}
             </Button>
             {routeIsTerminal ? (
                 <Button

@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
     check,
-    foreignKey,
     index,
     integer,
     primaryKey,
@@ -20,17 +19,6 @@ const captureStates = [
     'recovering',
     'deleting',
     'deleted',
-] as const
-
-const exportStates = [
-    'queued',
-    'preparing',
-    'running',
-    'finalizing',
-    'completed',
-    'failed',
-    'cancelled',
-    'interrupted',
 ] as const
 
 export const captureSessions = sqliteTable(
@@ -97,71 +85,26 @@ export const captureSegments = sqliteTable(
     ],
 )
 
-export const exportJobs = sqliteTable(
-    'export_jobs',
+export const exportArtifacts = sqliteTable(
+    'export_artifacts',
     {
-        id: text().primaryKey(),
         captureId: text('capture_id')
             .notNull()
             .references(() => captureSessions.id),
-        idempotencyKey: text('idempotency_key').notNull().unique(),
-        state: text({ enum: exportStates }).notNull(),
         format: text({ enum: ['pcapng', 'pcap'] }).notNull(),
-        destinationKind: text('destination_kind', { enum: ['desktop', 'server'] }).notNull(),
-        destinationToken: text('destination_token'),
-        nativeLeaseToken: text('native_lease_token'),
-        artifactPath: text('artifact_path'),
-        partialPath: text('partial_path'),
-        packetsTotal: text('packets_total').notNull().default('0'),
-        packetsWritten: text('packets_written').notNull().default('0'),
-        bytesWritten: text('bytes_written').notNull().default('0'),
+        sourceFingerprint: text('source_fingerprint').notNull(),
+        artifactPath: text('artifact_path').notNull(),
         retainedPortionOnly: integer('retained_portion_only', { mode: 'boolean' })
             .notNull()
             .default(false),
-        cancelRequested: integer('cancel_requested', { mode: 'boolean' }).notNull().default(false),
-        leasesReleased: integer('leases_released', { mode: 'boolean' }).notNull().default(false),
-        checksumSha256: text('checksum_sha256'),
-        finalSize: text('final_size'),
-        failureCode: text('failure_code'),
-        failureMessage: text('failure_message'),
+        checksumSha256: text('checksum_sha256').notNull(),
+        finalSize: text('final_size').notNull(),
         createdAtNs: text('created_at_ns').notNull(),
-        startedAtNs: text('started_at_ns'),
-        completedAtNs: text('completed_at_ns'),
         updatedAtNs: text('updated_at_ns').notNull(),
     },
     (table) => [
-        index('export_jobs_capture_id').on(table.captureId),
-        check(
-            'export_jobs_state',
-            sql`${table.state} in ('queued','preparing','running','finalizing','completed','failed','cancelled','interrupted')`,
-        ),
-        check('export_jobs_format', sql`${table.format} in ('pcapng','pcap')`),
-        check(
-            'export_jobs_destination_kind',
-            sql`${table.destinationKind} in ('desktop','server')`,
-        ),
-    ],
-)
-
-export const exportJobSegments = sqliteTable(
-    'export_job_segments',
-    {
-        exportId: text('export_id')
-            .notNull()
-            .references(() => exportJobs.id, { onDelete: 'cascade' }),
-        ordinal: integer().notNull(),
-        captureId: text('capture_id').notNull(),
-        generation: integer().notNull(),
-        committedBytes: text('committed_bytes').notNull(),
-        committedPackets: text('committed_packets').notNull(),
-    },
-    (table) => [
-        primaryKey({ columns: [table.exportId, table.ordinal] }),
-        foreignKey({
-            columns: [table.captureId, table.generation],
-            foreignColumns: [captureSegments.captureId, captureSegments.generation],
-        }),
-        check('export_job_segments_ordinal', sql`${table.ordinal} >= 0`),
+        primaryKey({ columns: [table.captureId, table.format] }),
+        check('export_artifacts_format', sql`${table.format} in ('pcapng','pcap')`),
     ],
 )
 
