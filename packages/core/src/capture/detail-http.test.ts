@@ -11,7 +11,7 @@ import { Effect, Layer } from 'effect'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { makePacketDetailNodeHandler } from './detail-http'
-import { Capture } from './service'
+import { CaptureSessionManager } from './manager'
 
 const captureId = '00000000000000000000000000000001'
 const packetTree = Uint8Array.from([0x50, 0x52, 0x54, 0x32, 0, 1, 2, 3])
@@ -30,16 +30,16 @@ const resetCancellation = () => {
     })
 }
 
-const capture = Capture.of({
+const capture = CaptureSessionManager.of({
     listInterfaces: () => Effect.die('unused'),
     capabilities: () => Effect.die('unused'),
-    startLive: () => Effect.die('unused'),
-    startReplay: () => Effect.die('unused'),
+    start: () => Effect.die('unused'),
     stop: () => Effect.die('unused'),
     session: () => Effect.die('unused'),
     summaries: () => Effect.die('unused'),
     registry: () => Effect.die('unused'),
     stats: () => Effect.die('unused'),
+    statSamples: () => Effect.die('unused'),
     events: () => Effect.die('unused'),
     detail: (_capture, packetId) => {
         switch (packetId) {
@@ -71,7 +71,9 @@ describe('makePacketDetailNodeHandler', () => {
     beforeAll(async () => {
         resetCancellation()
         const handler = await Effect.runPromise(
-            makePacketDetailNodeHandler.pipe(Effect.provide(Layer.succeed(Capture, capture))),
+            makePacketDetailNodeHandler.pipe(
+                Effect.provide(Layer.succeed(CaptureSessionManager, capture)),
+            ),
         )
         server.on('request', handler)
         await new Promise<void>((resolve, reject) => {

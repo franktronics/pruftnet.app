@@ -9,7 +9,7 @@ import {
 } from '@repo/shared/capture'
 import { Cause, Effect, Option, Schema } from 'effect'
 
-import { Capture } from './service'
+import { CaptureSessionManager } from './manager'
 
 const PacketRoute = Schema.Struct({
     captureId: Schema.String.pipe(Schema.pattern(/^[0-9a-f]{32}$/)),
@@ -24,7 +24,7 @@ function sendJson(response: ServerResponse, status: number, body: unknown) {
 }
 
 export const makePacketDetailNodeHandler = Effect.gen(function* () {
-    const capture = yield* Capture
+    const capture = yield* CaptureSessionManager
 
     return (request: IncomingMessage, response: ServerResponse): void => {
         if (request.method !== 'GET') {

@@ -61,6 +61,99 @@ export class CaptureSession extends Schema.Class<CaptureSession>('CaptureSession
     failure: Schema.NullOr(Schema.String),
 }) {}
 
+export const DurableCaptureState = Schema.Literal(
+    'preparing',
+    'capturing',
+    'stopping',
+    'stopped',
+    'failed',
+    'interrupted',
+    'recovering',
+    'deleting',
+    'deleted',
+)
+export type DurableCaptureState = Schema.Schema.Type<typeof DurableCaptureState>
+
+export class CaptureFailure extends Schema.Class<CaptureFailure>('CaptureFailure')({
+    code: Schema.NonEmptyString,
+    message: Schema.NonEmptyString,
+    recoverable: Schema.Boolean,
+}) {}
+
+export class CaptureRecord extends Schema.Class<CaptureRecord>('CaptureRecord')({
+    captureId: CaptureId,
+    state: DurableCaptureState,
+    source: CaptureSource,
+    interfaceNames: Schema.Array(Schema.String),
+    sourceFormat: Schema.Literal('pcapng', 'pcap'),
+    registryRevision: DecimalString,
+    startedAtNs: DecimalString,
+    stoppedAtNs: Schema.NullOr(DecimalString),
+    packetCount: DecimalString,
+    retainedBytes: DecimalString,
+    retainedPortionOnly: Schema.Boolean,
+    failure: Schema.NullOr(CaptureFailure),
+}) {}
+
+export class CaptureRecordList extends Schema.Class<CaptureRecordList>('CaptureRecordList')({
+    captures: Schema.Array(CaptureRecord),
+}) {}
+
+export class OpenCaptureResult extends Schema.Class<OpenCaptureResult>('OpenCaptureResult')({
+    capture: CaptureRecord,
+    session: CaptureSession,
+}) {}
+
+export const ExportFormat = Schema.Literal('pcapng', 'pcap')
+export type ExportFormat = Schema.Schema.Type<typeof ExportFormat>
+
+export const ExportProgressPhase = Schema.Literal(
+    'preparing',
+    'encoding',
+    'reusing',
+    'finalizing',
+    'delivering',
+)
+export type ExportProgressPhase = Schema.Schema.Type<typeof ExportProgressPhase>
+
+export class ExportProgress extends Schema.Class<ExportProgress>('ExportProgress')({
+    captureId: CaptureId,
+    format: ExportFormat,
+    phase: ExportProgressPhase,
+    packetsTotal: DecimalString,
+    packetsWritten: DecimalString,
+    bytesWritten: DecimalString,
+}) {}
+
+export class DesktopExportDestination extends Schema.TaggedClass<DesktopExportDestination>()(
+    'Desktop',
+    { destinationToken: Schema.NonEmptyString },
+) {}
+
+export class ServerExportDestination extends Schema.TaggedClass<ServerExportDestination>()(
+    'Server',
+    {},
+) {}
+
+export const ExportDestination = Schema.Union(DesktopExportDestination, ServerExportDestination)
+export type ExportDestination = Schema.Schema.Type<typeof ExportDestination>
+
+export class PreparedExport extends Schema.Class<PreparedExport>('PreparedExport')({
+    captureId: CaptureId,
+    format: ExportFormat,
+    destinationKind: Schema.Literal('desktop', 'server'),
+    retainedPortionOnly: Schema.Boolean,
+    checksumSha256: Schema.String,
+    finalSize: DecimalString,
+    downloadPath: Schema.NullOr(Schema.String),
+}) {}
+
+export class CreateExportRequest extends Schema.Class<CreateExportRequest>('CreateExportRequest')({
+    captureId: CaptureId,
+    format: ExportFormat,
+    destination: ExportDestination,
+}) {}
+
 export class StartCaptureRequest extends Schema.Class<StartCaptureRequest>('StartCaptureRequest')({
     source: CaptureSource,
 }) {}
@@ -267,6 +360,24 @@ export class CaptureStats extends Schema.Class<CaptureStats>('CaptureStats')({
     analysisRejects: DecimalString,
     writerRunning: Schema.Boolean,
     analyzerRunning: Schema.Boolean,
+}) {}
+
+export class CaptureStatSample extends Schema.Class<CaptureStatSample>('CaptureStatSample')({
+    sampledAtNs: DecimalString,
+    stats: CaptureStats,
+}) {}
+
+export class CaptureStatSampleList extends Schema.Class<CaptureStatSampleList>(
+    'CaptureStatSampleList',
+)({
+    samples: Schema.Array(CaptureStatSample),
+}) {}
+
+export class ListCaptureStatSamplesRequest extends Schema.Class<ListCaptureStatSamplesRequest>(
+    'ListCaptureStatSamplesRequest',
+)({
+    captureId: CaptureId,
+    limit: Schema.Number.pipe(Schema.int(), Schema.between(1, 10_000)),
 }) {}
 
 export class ReadCaptureEventsRequest extends Schema.Class<ReadCaptureEventsRequest>(

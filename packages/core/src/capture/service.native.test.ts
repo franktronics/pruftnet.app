@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs'
+import { mkdtemp, realpath, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 
 import { Effect, Layer } from 'effect'
@@ -13,6 +15,9 @@ const fixturePath = resolve(process.cwd(), 'cpp/tests/fixtures/ethernet_ipv4_tcp
 test.runIf(existsSync(workerPath))(
     'replays packets through the native worker boundary',
     async () => {
+        const spoolDirectory = await realpath(
+            await mkdtemp(resolve(tmpdir(), 'pruftnet-stored-detail-')),
+        )
         const layer = Capture.layer.pipe(
             Layer.provide(
                 ReplayWorker.layer({
@@ -24,7 +29,10 @@ test.runIf(existsSync(workerPath))(
         const result = await Effect.runPromise(
             Effect.gen(function* () {
                 const capture = yield* Capture
-                let session = yield* capture.startReplay('fixture')
+                let session = yield* capture.startReplay('fixture', {
+                    captureId: '00000000000000000000000000000001',
+                    spoolDirectory,
+                })
                 for (let attempt = 0; attempt < 100 && session.state === 'running'; attempt += 1) {
                     yield* Effect.sleep('5 millis')
                     session = yield* capture.session(session.captureId)
@@ -37,6 +45,18 @@ test.runIf(existsSync(workerPath))(
                 return { session, summaries, detail, stats }
             }).pipe(Effect.provide(layer), Effect.scoped),
         )
+        const first = result.summaries.summaries[0]!
+        const storedDetail = await Effect.runPromise(
+            Effect.gen(function* () {
+                return yield* (yield* Capture).storedDetail(
+                    result.session.captureId,
+                    spoolDirectory,
+                    first.key.packetId,
+                    result.session.registryRevision,
+                    first.analysisRevision,
+                )
+            }).pipe(Effect.provide(layer), Effect.scoped),
+        ).finally(() => rm(spoolDirectory, { recursive: true, force: true }))
 
         expect(result.session.state).toBe('completed')
         expect(result.summaries.summaries).toHaveLength(10)
@@ -48,6 +68,7 @@ test.runIf(existsSync(workerPath))(
             expect.objectContaining({ key: 'info' }),
         ])
         expect(new TextDecoder().decode(result.detail.slice(4, 8))).toBe('PRT2')
+        expect(storedDetail).toEqual(result.detail)
         expect(result.stats.packetsAnalyzed).toBe('10')
     },
 )

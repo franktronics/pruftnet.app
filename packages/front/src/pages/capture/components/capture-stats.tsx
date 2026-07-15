@@ -1,4 +1,4 @@
-import type { CaptureStats } from '@repo/shared/capture'
+import type { CaptureStatSample, CaptureStats } from '@repo/shared/capture'
 import {
     Button,
     ChartCartesianGrid,
@@ -70,10 +70,35 @@ type Metric = {
     tone?: 'danger' | 'retention' | 'normal'
 }
 
-export function CaptureStatsPanel({ stats, state }: { stats?: CaptureStats; state?: string }) {
+export function CaptureStatsPanel({
+    stats,
+    durableSamples,
+    state,
+}: {
+    stats?: CaptureStats
+    durableSamples?: readonly CaptureStatSample[]
+    state?: string
+}) {
     const [history, setHistory] = useState<readonly CaptureStatsSample[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
     const reducedMotion = useReducedMotion()
+    useEffect(() => {
+        if (!durableSamples) return
+        const frame = requestAnimationFrame(() =>
+            setHistory(
+                durableSamples.reduce<readonly CaptureStatsSample[]>(
+                    (current, sample) =>
+                        appendCaptureStatsSample(
+                            current,
+                            sample.stats,
+                            Number(BigInt(sample.sampledAtNs) / 1_000_000n),
+                        ),
+                    [],
+                ),
+            ),
+        )
+        return () => cancelAnimationFrame(frame)
+    }, [durableSamples])
     useEffect(() => {
         if (!stats) return
         const frame = requestAnimationFrame(() =>
@@ -209,7 +234,7 @@ function CaptureStatsContent({
                     </div>
                 </div>
                 {expanded ? (
-                    <DetailedTrafficChart data={chartData} animated={active && !reducedMotion} />
+                    <DetailedTrafficChart data={chartData} />
                 ) : (
                     <Sparkline
                         data={chartData}
@@ -426,13 +451,7 @@ function CaptureStatsContent({
     )
 }
 
-function DetailedTrafficChart({
-    data,
-    animated,
-}: {
-    data: CaptureChartPoint[]
-    animated: boolean
-}) {
+function DetailedTrafficChart({ data }: { data: CaptureChartPoint[] }) {
     const visibleDuration = data.length > 1 ? data.at(-1)!.at - data[0]!.at : 0
     return (
         <div className="mt-4">
@@ -466,34 +485,34 @@ function DetailedTrafficChart({
                         content={<CaptureRateTooltip />}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="observed"
                         stroke="var(--color-observed)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="persisted"
                         stroke="var(--color-persisted)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                     <ChartLine
-                        type="monotone"
+                        type="linear"
                         dataKey="analyzed"
                         stroke="var(--color-analyzed)"
                         strokeWidth={1.75}
                         dot={false}
                         activeDot={{ r: 3 }}
                         connectNulls={false}
-                        isAnimationActive={animated}
+                        isAnimationActive={false}
                     />
                 </ChartLineChart>
             </ChartContainer>

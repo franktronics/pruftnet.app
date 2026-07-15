@@ -1,8 +1,11 @@
 import { AppRpcGroup } from '@repo/shared'
-import { AppLayer } from './app'
-import { makeAppNodeHandlers, makeAppRpcNodeHandler } from './rpc-http'
+import { makeAppLayer } from './app'
+import { makeAppNodeHandlers } from './rpc-http'
 
-export { AppRpcGroup, makeAppNodeHandlers, makeAppRpcNodeHandler }
-export { AppLayer }
+export { AppRpcGroup, makeAppNodeHandlers }
+export { makeAppLayer }
+export type { AppLayerOptions } from './app'
 export * from './capture'
+export * from './storage'
+export * from './shutdown'
 export * from '@repo/packet-codec'

@@ -6,11 +6,22 @@ The capture workspace supports local live capture through the real libpcap/Npcap
 
 `/capture/$captureId` owns the full-height packet inspection workspace.
 
-The home route is the idle capture workspace, not a separate setup page. The control bar, display filter, packet table, statistics, packet tree, and bytes pane are mounted before capture starts and keep the same geometry after navigation to a running capture.
+The home route is the idle capture workspace and redirects to the backend-owned active capture when one exists. `/captures` is the dense retained-session ledger. The control bar, display filter, packet table, statistics, packet tree, and bytes pane keep the same geometry after navigation to a running or retained capture.
 
 The control bar uses a searchable Command popover for explicit multi-interface selection. Each entry shows its first libpcap-provided IPv4 or IPv6 address and an additional-address count; search covers all addresses. The adjacent settings button opens a modal containing BPF capture filter, per-interface promiscuous/monitor/DLT/timestamp options, and bounded snapshot/kernel-buffer/ring settings. Selection is never inferred from `node:os` data. Replay has no entry point in the product UI; it remains backend test infrastructure until capture-file import is implemented.
 
-In Electron, interface selection, settings, Start/Stop, and capture state are portaled into a dedicated non-draggable titlebar slot. Follow tail remains in the workspace because it controls presentation rather than capture lifecycle. Server/browser mode renders both groups in the normal workspace toolbar. This uses one control implementation rather than duplicating desktop and browser state.
+In Electron, interface selection, settings, and Start/Stop are portaled into a dedicated non-draggable titlebar slot. Global capture state plus New and Export actions remain visible in the application title bar on every route; starting over while a capture is active requires confirmation, then stops and deletes that capture before returning to the idle workspace. Follow tail sits at the right edge of the packet-column header because it controls table presentation rather than capture lifecycle. Server/browser mode renders the same responsibilities in the web header and workspace toolbar.
+
+The history route uses full-row keyboard and pointer navigation, a stable inset live-state marker that does not disturb column alignment, and simple text/state filters. Row actions stop event propagation so Open, Export, and Delete remain independent of row navigation. The history surface has only a top boundary; it does not stretch a decorative bottom border across empty page space.
+
+The export dialog is a single preparation action, not an export ledger. Desktop selects a native save
+destination and receives the prepared artifact; Server shows a download action when preparation
+completes. Repeated requests reuse the current artifact when the committed capture snapshot has not
+changed.
+
+While an export is active, the dialog shows its backend phase, packet counters, bytes written, and
+percentage. The titlebar Export button mirrors that state with a compact percentage and bottom-edge
+progress rail; both surfaces share the same polled query.
 
 The application sidebar uses off-canvas collapse on desktop. Closing it removes the complete sidebar instead of retaining an icon rail. The titlebar or web-header trigger and `Cmd/Ctrl+B` remain available to reopen it. Electron titlebar offsets preserve native controls on macOS, Windows, and Linux.
 

@@ -1,0 +1,1 @@
+ALTER TABLE `export_jobs` ADD `native_lease_token` text;

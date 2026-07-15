@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 
 import { getResolvedDesktopTheme, syncWindowTitleBarOverlay } from './window-appearance'
+import type { DesktopExportDestinations } from './export-destinations'
 
 export type DesktopTheme = 'dark' | 'light' | 'system'
 
@@ -8,7 +9,7 @@ function isDesktopTheme(theme: string): theme is DesktopTheme {
     return theme === 'dark' || theme === 'light' || theme === 'system'
 }
 
-export function registerIpcHandlers() {
+export function registerIpcHandlers(exportDestinations: DesktopExportDestinations) {
     nativeTheme.on('updated', () => {
         const resolvedTheme = getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors)
 
@@ -31,5 +32,15 @@ export function registerIpcHandlers() {
         }
 
         return resolvedTheme
+    })
+
+    ipcMain.handle('export:select-destination', async (event, format: string) => {
+        if (format !== 'pcapng' && format !== 'pcap') {
+            throw new Error(`Unsupported export format: ${format}`)
+        }
+        return exportDestinations.select(
+            BrowserWindow.fromWebContents(event.sender) ?? undefined,
+            format,
+        )
     })
 }

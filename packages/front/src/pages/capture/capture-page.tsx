@@ -10,7 +10,12 @@ import { DisplayFilter } from './components/display-filter'
 import { PacketBytes } from './components/packet-bytes'
 import { PacketTable } from './components/packet-table'
 import { PacketTree } from './components/packet-tree'
-import { useCaptureRegistry, useCaptureSession, useCaptureStats } from './hooks/use-capture'
+import {
+    useCaptureRegistry,
+    useCaptureSession,
+    useCaptureStatSamples,
+    useCaptureStats,
+} from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
 import {
@@ -31,6 +36,7 @@ export function CapturePage() {
 function CaptureWorkspace({ captureId }: { captureId: string }) {
     const session = useCaptureSession(captureId)
     const stats = useCaptureStats(captureId, session.data?.state)
+    const statSamples = useCaptureStatSamples(captureId, session.data?.state)
     const summaries = usePacketSummaries(captureId)
     const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
     const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
@@ -138,11 +144,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
             className="bg-border flex h-full min-h-0 flex-col overflow-hidden"
             data-capture-id={captureId}
         >
-            <CaptureControlBar
-                session={session.data}
-                following={following}
-                onFollowingChange={setFollowing}
-            />
+            <CaptureControlBar session={session.data} />
             <DisplayFilter
                 value={filters.search}
                 onChange={(search) => updateFilters({ ...filters, search })}
@@ -165,13 +167,18 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                                     selectedKey={selectedKey}
                                     onSelect={handleSelect}
                                     following={following}
+                                    onFollowingChange={setFollowing}
                                     onPauseFollowing={() => setFollowing(false)}
                                     emptyMessage={emptyMessage}
                                 />
                             </ResizablePanel>
                             <ResizableHandle />
                             <ResizablePanel defaultSize="26%" minSize="18%">
-                                <CaptureStatsPanel stats={stats.data} state={session.data?.state} />
+                                <CaptureStatsPanel
+                                    stats={stats.data}
+                                    durableSamples={statSamples.data?.samples}
+                                    state={session.data?.state}
+                                />
                             </ResizablePanel>
                         </ResizablePanelGroup>
                     </ResizablePanel>
@@ -209,6 +216,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         selectedKey={selectedKey}
                         onSelect={handleSelect}
                         following={following}
+                        onFollowingChange={setFollowing}
                         onPauseFollowing={() => setFollowing(false)}
                         emptyMessage={emptyMessage}
                     />
@@ -223,7 +231,11 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         <TabsTrigger value="bytes">Bytes</TabsTrigger>
                     </TabsList>
                     <TabsContent value="stats" className="min-h-0 flex-1">
-                        <CaptureStatsPanel stats={stats.data} state={session.data?.state} />
+                        <CaptureStatsPanel
+                            stats={stats.data}
+                            durableSamples={statSamples.data?.samples}
+                            state={session.data?.state}
+                        />
                     </TabsContent>
                     <TabsContent value="structure" className="min-h-0 flex-1">
                         <PacketTree

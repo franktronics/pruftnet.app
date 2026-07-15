@@ -136,6 +136,33 @@ const DetailResponse = Schema.Struct({
     registryRevision: Decimal,
     analysisRevision: Decimal,
 })
+const SegmentResponse = Schema.Struct({
+    v: Schema.Literal(2),
+    id: Schema.String,
+    ok: Schema.Literal(true),
+    captureHigh: Decimal,
+    captureLow: Decimal,
+    segments: Schema.Array(
+        Schema.Struct({
+            generation: Schema.NonNegativeInt,
+            path: Schema.NonEmptyString,
+            committedBytes: Decimal,
+            committedPackets: Decimal,
+            firstPacketId: Decimal,
+            lastPacketId: Decimal,
+            evicted: Schema.Boolean,
+        }),
+    ),
+})
+const LeaseSegmentResponse = Schema.Struct({
+    ...SegmentResponse.fields,
+    leaseToken: Schema.NonEmptyString,
+})
+const EmptySuccessResponse = Schema.Struct({
+    v: Schema.Literal(2),
+    id: Schema.String,
+    ok: Schema.Literal(true),
+})
 const FailureResponse = Schema.Struct({
     v: Schema.Literal(2),
     id: Schema.String,
@@ -173,8 +200,14 @@ export interface CaptureService {
         name: string,
         monitorMode: boolean,
     ) => Effect.Effect<CaptureInterfaceCapabilities, CaptureError>
-    readonly startLive: (source: LiveCaptureSource) => Effect.Effect<CaptureSession, CaptureError>
-    readonly startReplay: (fileId: string) => Effect.Effect<CaptureSession, CaptureError>
+    readonly startLive: (
+        source: LiveCaptureSource,
+        prepared?: PreparedCapture,
+    ) => Effect.Effect<CaptureSession, CaptureError>
+    readonly startReplay: (
+        fileId: string,
+        prepared?: PreparedCapture,
+    ) => Effect.Effect<CaptureSession, CaptureError>
     readonly stop: (capture: string) => Effect.Effect<CaptureSession, CaptureError>
     readonly session: (capture: string) => Effect.Effect<CaptureSession, CaptureError>
     readonly summaries: (
@@ -195,6 +228,45 @@ export interface CaptureService {
         registryRevision?: string,
         analysisRevision?: string,
     ) => Effect.Effect<Uint8Array, CaptureError>
+    readonly storedDetail: (
+        capture: string,
+        spoolDirectory: string,
+        packetId: string,
+        registryRevision: string,
+        analysisRevision: string,
+    ) => Effect.Effect<Uint8Array, CaptureError>
+    readonly segments: (
+        capture: string,
+    ) => Effect.Effect<
+        ReadonlyArray<Schema.Schema.Type<typeof SegmentResponse>['segments'][number]>,
+        CaptureError
+    >
+    readonly recoverSegments: (
+        capture: string,
+        spoolDirectory: string,
+        truncatePartialTail: boolean,
+    ) => Effect.Effect<
+        ReadonlyArray<Schema.Schema.Type<typeof SegmentResponse>['segments'][number]>,
+        CaptureError
+    >
+    readonly leaseSegmentSnapshot: (capture: string) => Effect.Effect<
+        {
+            readonly leaseToken: string
+            readonly segments: ReadonlyArray<
+                Schema.Schema.Type<typeof SegmentResponse>['segments'][number]
+            >
+        },
+        CaptureError
+    >
+    readonly releaseSegmentSnapshot: (
+        capture: string,
+        leaseToken: string,
+    ) => Effect.Effect<void, CaptureError>
+}
+
+export interface PreparedCapture {
+    readonly captureId: string
+    readonly spoolDirectory: string
 }
 
 export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, CaptureService>() {
@@ -351,6 +423,42 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                 }
             })
             const locked = <A, E>(effect: Effect.Effect<A, E>) => lifecycle.withPermits(1)(effect)
+            const readDetailArtifact = Effect.fn('Capture.readDetailArtifact')(function* (
+                expectedCapture: string,
+                value: unknown,
+            ) {
+                const failure = Schema.decodeUnknownEither(FailureResponse)(value)
+                if (Either.isRight(failure)) return yield* workerFailure(failure.right)
+                const raw = yield* decode(DetailResponse, value)
+                yield* requireResponseCapture(expectedCapture, raw)
+                if (
+                    !isAbsolute(raw.dataPath) ||
+                    !basename(raw.dataPath).startsWith('detail-') ||
+                    !basename(raw.dataPath).endsWith('.prt2')
+                ) {
+                    return yield* new PacketDataCorrupted({
+                        title: 'Capture worker returned an invalid detail path',
+                    })
+                }
+                const expectedLength = BigInt(raw.byteLength)
+                const bytes = yield* Effect.tryPromise({
+                    try: () => readFile(raw.dataPath),
+                    catch: () =>
+                        new PacketDataCorrupted({
+                            title: 'Packet detail file is unavailable',
+                        }),
+                }).pipe(
+                    Effect.ensuring(
+                        Effect.promise(() => unlink(raw.dataPath).catch(() => undefined)),
+                    ),
+                )
+                if (BigInt(bytes.byteLength) !== expectedLength) {
+                    return yield* new PacketDataCorrupted({
+                        title: 'Packet detail length does not match the worker response',
+                    })
+                }
+                return Uint8Array.from(bytes)
+            })
 
             const hello = yield* call(HelloResponse, { op: 'hello' })
             if (!hello.features.includes('live')) {
@@ -371,7 +479,7 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                     })
                     return new CaptureInterfaceCapabilities(raw)
                 }),
-                startReplay: Effect.fn('Capture.startReplay')(function* (fileId) {
+                startReplay: Effect.fn('Capture.startReplay')(function* (fileId, prepared) {
                     return yield* locked(
                         Effect.gen(function* () {
                             if (
@@ -385,11 +493,19 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                                 })
                             }
                             const nextSource = new ReplayCaptureSource({ fileId })
-                            return yield* sessionCall('start', nextSource, { token: fileId })
+                            return yield* sessionCall('start', nextSource, {
+                                token: fileId,
+                                ...(prepared
+                                    ? {
+                                          ...captureHalves(prepared.captureId),
+                                          spoolDirectory: prepared.spoolDirectory,
+                                      }
+                                    : {}),
+                            })
                         }),
                     )
                 }),
-                startLive: Effect.fn('Capture.startLive')(function* (nextSource) {
+                startLive: Effect.fn('Capture.startLive')(function* (nextSource, prepared) {
                     return yield* locked(
                         Effect.gen(function* () {
                             if (
@@ -415,6 +531,12 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                                 ]),
                             )
                             return yield* sessionCall('startLive', nextSource, {
+                                ...(prepared
+                                    ? {
+                                          ...captureHalves(prepared.captureId),
+                                          spoolDirectory: prepared.spoolDirectory,
+                                      }
+                                    : {}),
                                 interfaceCount: nextSource.interfaces.length,
                                 bpfFilter: nextSource.bpfFilter,
                                 snaplen: nextSource.snaplen,
@@ -548,37 +670,69 @@ export class Capture extends Context.Tag('@repo/core/capture/Capture')<Capture, 
                                     analysisRevision ?? activeSession?.registryRevision ?? '0',
                             })
                             .pipe(Effect.mapError(rpcError))
-                        const failure = Schema.decodeUnknownEither(FailureResponse)(value)
-                        if (Either.isRight(failure)) return yield* workerFailure(failure.right)
-                        const raw = yield* decode(DetailResponse, value)
+                        return yield* readDetailArtifact(capture, value)
+                    },
+                ),
+                storedDetail: Effect.fn('Capture.storedDetail')(
+                    function* (
+                        capture,
+                        spoolDirectory,
+                        packetId,
+                        registryRevision,
+                        analysisRevision,
+                    ) {
+                        const value = yield* worker
+                            .request({
+                                op: 'detailStored',
+                                ...captureHalves(capture),
+                                spoolDirectory,
+                                packetId,
+                                registryRevision,
+                                analysisRevision,
+                            })
+                            .pipe(Effect.mapError(rpcError))
+                        return yield* readDetailArtifact(capture, value)
+                    },
+                ),
+                segments: Effect.fn('Capture.segments')(function* (capture) {
+                    yield* requireCapture(capture)
+                    const raw = yield* call(SegmentResponse, {
+                        op: 'segments',
+                        ...captureHalves(capture),
+                    })
+                    yield* requireResponseCapture(capture, raw)
+                    return raw.segments
+                }),
+                recoverSegments: Effect.fn('Capture.recoverSegments')(
+                    function* (capture, spoolDirectory, truncatePartialTail) {
+                        const raw = yield* call(SegmentResponse, {
+                            op: 'recoverSegments',
+                            ...captureHalves(capture),
+                            spoolDirectory,
+                            truncatePartialTail,
+                        })
                         yield* requireResponseCapture(capture, raw)
-                        if (
-                            !isAbsolute(raw.dataPath) ||
-                            !basename(raw.dataPath).startsWith('detail-') ||
-                            !basename(raw.dataPath).endsWith('.prt2')
-                        ) {
-                            return yield* new PacketDataCorrupted({
-                                title: 'Capture worker returned an invalid detail path',
-                            })
-                        }
-                        const expectedLength = BigInt(raw.byteLength)
-                        const bytes = yield* Effect.tryPromise({
-                            try: () => readFile(raw.dataPath),
-                            catch: () =>
-                                new PacketDataCorrupted({
-                                    title: 'Packet detail file is unavailable',
-                                }),
-                        }).pipe(
-                            Effect.ensuring(
-                                Effect.promise(() => unlink(raw.dataPath).catch(() => undefined)),
-                            ),
-                        )
-                        if (BigInt(bytes.byteLength) !== expectedLength) {
-                            return yield* new PacketDataCorrupted({
-                                title: 'Packet detail length does not match the worker response',
-                            })
-                        }
-                        return Uint8Array.from(bytes)
+                        return raw.segments
+                    },
+                ),
+                leaseSegmentSnapshot: Effect.fn('Capture.leaseSegmentSnapshot')(
+                    function* (capture) {
+                        yield* requireCapture(capture)
+                        const raw = yield* call(LeaseSegmentResponse, {
+                            op: 'leaseSnapshot',
+                            ...captureHalves(capture),
+                        })
+                        yield* requireResponseCapture(capture, raw)
+                        return { leaseToken: raw.leaseToken, segments: raw.segments }
+                    },
+                ),
+                releaseSegmentSnapshot: Effect.fn('Capture.releaseSegmentSnapshot')(
+                    function* (capture, leaseToken) {
+                        yield* call(EmptySuccessResponse, {
+                            op: 'releaseSnapshot',
+                            ...captureHalves(capture),
+                            leaseToken,
+                        })
                     },
                 ),
             })

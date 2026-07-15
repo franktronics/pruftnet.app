@@ -8,7 +8,15 @@ import {
     CaptureInterfaceCapabilities,
     CaptureInterfaceRequest,
     CaptureSession,
+    CaptureRecord,
+    CaptureRecordList,
+    CreateExportRequest,
+    ExportProgress,
+    PreparedExport,
+    ListCaptureStatSamplesRequest,
+    OpenCaptureResult,
     CaptureStats,
+    CaptureStatSampleList,
     PacketSummaryBatch,
     ReadCaptureEventsRequest,
     ReadPacketSummariesRequest,
@@ -57,9 +65,47 @@ export class CaptureRpcs extends RpcGroup.make(
         success: CaptureStats,
         error: CaptureRpcError,
     }),
+    Rpc.make('ListCaptureStatSamples', {
+        payload: ListCaptureStatSamplesRequest,
+        success: CaptureStatSampleList,
+        error: CaptureRpcError,
+    }),
     Rpc.make('ReadCaptureEvents', {
         payload: ReadCaptureEventsRequest,
         success: CaptureEventBatch,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('ListCaptures', {
+        success: CaptureRecordList,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('GetCapture', {
+        payload: CaptureIdRequest,
+        success: CaptureRecord,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('GetActiveCapture', {
+        success: Schema.NullOr(CaptureRecord),
+        error: CaptureRpcError,
+    }),
+    Rpc.make('OpenCapture', {
+        payload: CaptureIdRequest,
+        success: OpenCaptureResult,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('DeleteCapture', {
+        payload: CaptureIdRequest,
+        success: CaptureRecord,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('CreateExport', {
+        payload: CreateExportRequest,
+        success: PreparedExport,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('GetExportProgress', {
+        payload: CaptureIdRequest,
+        success: Schema.NullOr(ExportProgress),
         error: CaptureRpcError,
     }),
 ) {}

@@ -127,7 +127,15 @@ describe('capture RPC contract', () => {
             'ReadPacketSummaries',
             'GetRegistrySnapshot',
             'GetCaptureStats',
+            'ListCaptureStatSamples',
             'ReadCaptureEvents',
+            'ListCaptures',
+            'GetCapture',
+            'GetActiveCapture',
+            'OpenCapture',
+            'DeleteCapture',
+            'CreateExport',
+            'GetExportProgress',
         ])
     })
 

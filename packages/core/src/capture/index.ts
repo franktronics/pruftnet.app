@@ -20,11 +20,16 @@ const loadWorkerOptions = Effect.try({
 const CaptureWorkerLive = Layer.unwrapEffect(
     loadWorkerOptions.pipe(Effect.map(CaptureWorker.layer)),
 )
-const CaptureServiceLive = Capture.layer.pipe(Layer.provide(CaptureWorkerLive))
-
-export const CaptureLive = Layer.merge(
-    CaptureServiceLive,
-    CaptureHandlers.pipe(Layer.provide(CaptureServiceLive)),
-)
+export const CaptureServiceLive = Capture.layer.pipe(Layer.provide(CaptureWorkerLive))
 
 export { Capture, CaptureWorker }
+export { CaptureHandlers }
+export * from './capture-session-repository'
+export * from './catalog'
+export * from './export-destination'
+export * from './export-download-http'
+export * from './export-encoder'
+export * from './export-repository'
+export * from './export-scheduler'
+export * from './manager'
+export * from './recovery'

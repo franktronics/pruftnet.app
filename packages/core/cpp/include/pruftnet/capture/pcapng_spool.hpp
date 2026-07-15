@@ -97,6 +97,16 @@ struct PcapngSpoolStats {
   std::size_t segments = 0;
 };
 
+struct PcapngSegmentSnapshot {
+  std::uint64_t id = 0;
+  std::filesystem::path path;
+  std::uint64_t committed_bytes = 0;
+  std::uint64_t committed_packets = 0;
+  std::uint64_t first_packet_id = 0;
+  std::uint64_t last_packet_id = 0;
+  bool evicted = false;
+};
+
 class SpoolSink {
 public:
   virtual ~SpoolSink() = default;
@@ -120,26 +130,26 @@ public:
   PcapngSpool(const PcapngSpool &) = delete;
   PcapngSpool &operator=(const PcapngSpool &) = delete;
 
-  std::optional<SpoolError>
-  append(const sniffing::PacketMetadata &metadata,
-         std::span<const std::byte> bytes) noexcept;
-  std::variant<std::vector<CommittedPacket>, SpoolError>
-  flush() noexcept;
+  std::optional<SpoolError> append(const sniffing::PacketMetadata &metadata,
+                                   std::span<const std::byte> bytes) noexcept;
+  std::variant<std::vector<CommittedPacket>, SpoolError> flush() noexcept;
   std::variant<std::vector<CommittedPacket>, SpoolError>
   flush_if_due() noexcept;
-  std::variant<std::vector<CommittedPacket>, SpoolError>
-  finalize() noexcept;
+  std::variant<std::vector<CommittedPacket>, SpoolError> finalize() noexcept;
 
-  [[nodiscard]] PacketSpoolLookup
-  lookup(const sniffing::PacketKey &key) const;
+  [[nodiscard]] PacketSpoolLookup lookup(const sniffing::PacketKey &key) const;
   [[nodiscard]] PacketSpoolLookup lookup_ordinal(std::uint64_t ordinal) const;
   [[nodiscard]] std::optional<CommittedPacket>
   committed_packet(std::uint64_t ordinal) const;
   [[nodiscard]] std::uint64_t committed_count() const noexcept;
   [[nodiscard]] PcapngSpoolStats stats() const noexcept;
   [[nodiscard]] std::vector<std::filesystem::path> segment_paths() const;
+  [[nodiscard]] std::vector<PcapngSegmentSnapshot> segment_snapshots() const;
+  [[nodiscard]] std::vector<PcapngSegmentSnapshot> lease_snapshot();
+  void release_leases(std::span<const std::uint64_t> segment_ids) noexcept;
 
   struct RecoveryResult {
+    sniffing::CaptureId capture_id{};
     std::uint64_t valid_bytes = 0;
     std::uint64_t truncated_bytes = 0;
     std::vector<CommittedPacket> packets;
@@ -158,9 +168,12 @@ private:
   struct Segment;
 
   std::optional<SpoolError> open_segment() noexcept;
-  std::optional<SpoolError> rotate_if_needed(std::size_t next_block_bytes) noexcept;
-  std::optional<SpoolError> write_block(std::span<const std::byte> block) noexcept;
-  std::optional<SpoolError> enforce_retention(std::size_t incoming_bytes) noexcept;
+  std::optional<SpoolError>
+  rotate_if_needed(std::size_t next_block_bytes) noexcept;
+  std::optional<SpoolError>
+  write_block(std::span<const std::byte> block) noexcept;
+  std::optional<SpoolError>
+  enforce_retention(std::size_t incoming_bytes) noexcept;
   std::optional<SpoolError> evict_oldest_segment() noexcept;
   std::variant<std::vector<CommittedPacket>, SpoolError>
   flush_locked() noexcept;

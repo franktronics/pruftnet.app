@@ -13,39 +13,20 @@
 #include "parsing/packet_parser.hpp"
 #include "pruftnet/parsing/registry.hpp"
 #include "tests/support/ethernet_ipv4_udp_fixture.hpp"
+#include "tests/support/parsed_tree_test_support.hpp"
 
 namespace {
 
 using namespace pruftnet::parsing;
 using pruftnet::parsing::internal::PacketParser;
+using pruftnet::tests::field_id;
+using pruftnet::tests::node;
+using pruftnet::tests::node_count;
 
 RegistrySnapshotPtr core_registry() {
     auto result = make_core_registry();
     assert(std::holds_alternative<RegistrySnapshot>(result));
     return std::make_shared<const RegistrySnapshot>(std::move(std::get<RegistrySnapshot>(result)));
-}
-
-FieldId field_id(const RegistrySnapshot& registry, std::string_view key) {
-    const auto result = registry.field(key);
-    assert(std::holds_alternative<std::reference_wrapper<const FieldDescriptor>>(result));
-    return std::get<std::reference_wrapper<const FieldDescriptor>>(result).get().id;
-}
-
-const ParsedFieldNode& node(const ParsedPacketTree& tree, const RegistrySnapshot& registry, std::string_view key) {
-    const auto id = field_id(registry, key);
-    for (const auto& candidate : tree.nodes()) {
-        if (candidate.field_id == id) {
-            return candidate;
-        }
-    }
-    assert(false && "Expected field is missing");
-    return tree.nodes().front();
-}
-
-std::size_t node_count(const ParsedPacketTree& tree, const RegistrySnapshot& registry, std::string_view key) {
-    const auto id = field_id(registry, key);
-    return static_cast<std::size_t>(std::count_if(tree.nodes().begin(), tree.nodes().end(),
-                                                  [id](const auto& candidate) { return candidate.field_id == id; }));
 }
 
 void valid_udp_packet_builds_exact_protocol_path() {

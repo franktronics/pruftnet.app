@@ -36,3 +36,6 @@ packages/core/cpp/build-*
 
 ## repos
 .repos
+
+# Runtime capture databases, locks, segments, and export artifacts
+.data/

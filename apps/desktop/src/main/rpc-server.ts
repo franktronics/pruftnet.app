@@ -1,14 +1,23 @@
 import { createServer, type Server as NodeServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { randomBytes } from 'node:crypto'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-import { makeAppNodeHandlers } from '@repo/core'
+import { makeAppNodeHandlers, type ShutdownError, type ShutdownStatus } from '@repo/core'
 import { Effect, Exit, Scope } from 'effect'
+import { app } from 'electron'
+
+import type { DesktopExportDestinations } from './export-destinations'
 
 type StartedDesktopRpcServer = {
     readonly rpcUrl: string
+    readonly shutdownStatus: Effect.Effect<ShutdownStatus, ShutdownError>
+    readonly shutdown: Effect.Effect<void, Error>
     readonly close: Effect.Effect<void>
 }
+
+const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url))
 
 function listen(server: NodeServer) {
     return Effect.async<void, Error>((resume) => {
@@ -53,16 +62,34 @@ function setCorsHeaders(
     }
 }
 
-export const startDesktopRpcServer: Effect.Effect<StartedDesktopRpcServer, Error> = Effect.gen(
-    function* () {
+export function startDesktopRpcServer(
+    exportDestinations: DesktopExportDestinations,
+): Effect.Effect<StartedDesktopRpcServer, Error> {
+    return Effect.gen(function* () {
         const scope = yield* Scope.make()
         return yield* Effect.gen(function* () {
             const token = randomBytes(32).toString('hex')
-            const handlers = yield* Scope.extend(makeAppNodeHandlers, scope)
+            const handlers = yield* Scope.extend(
+                makeAppNodeHandlers({
+                    runtime: 'desktop',
+                    environment: app.isPackaged ? 'production' : 'development',
+                    workspaceRoot,
+                    migrationsFolder: app.isPackaged
+                        ? join(process.resourcesPath, 'drizzle')
+                        : join(workspaceRoot, 'packages/core/drizzle'),
+                    resolveDesktopDestination: (destinationToken, format) =>
+                        exportDestinations.consume(destinationToken, format),
+                }),
+                scope,
+            )
             const server = createServer((request, response) => {
                 const url = new URL(request.url ?? '/', 'http://localhost')
 
-                if (url.pathname !== '/rpc' && !url.pathname.startsWith('/capture/')) {
+                if (
+                    url.pathname !== '/rpc' &&
+                    !url.pathname.startsWith('/capture/') &&
+                    !url.pathname.startsWith('/exports/')
+                ) {
                     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
                     response.end('Not found')
                     return
@@ -93,7 +120,11 @@ export const startDesktopRpcServer: Effect.Effect<StartedDesktopRpcServer, Error
                 }
 
                 if (url.pathname === '/rpc') handlers.rpc(request, response)
-                else handlers.packetDetail(request, response)
+                else if (url.pathname.startsWith('/capture/')) {
+                    handlers.packetDetail(request, response)
+                } else {
+                    handlers.exportDownload(request, response)
+                }
             })
 
             yield* listen(server)
@@ -107,10 +138,14 @@ export const startDesktopRpcServer: Effect.Effect<StartedDesktopRpcServer, Error
 
             return {
                 rpcUrl: `http://127.0.0.1:${(address as AddressInfo).port}/rpc?token=${token}`,
+                shutdownStatus: handlers.shutdown.status(),
+                shutdown: handlers.shutdown
+                    .shutdownDesktop()
+                    .pipe(Effect.mapError((error) => new Error(error.message, { cause: error }))),
                 close: close(server).pipe(
                     Effect.zipRight(Scope.close(scope, Exit.succeed(undefined))),
                 ),
             }
         }).pipe(Effect.onError((cause) => Scope.close(scope, Exit.failCause(cause))))
-    },
-)
+    })
+}

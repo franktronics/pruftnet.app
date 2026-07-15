@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { Settings, Files } from 'lucide-react'
+import { History, Radar, Settings } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
 
 import { Button, Separator } from '@repo/ui/atoms'
@@ -22,12 +22,18 @@ import pruftnetIcon from '#front/assets/pruftnet-icon.png'
 import { ThemeToggle } from '#front/theme/theme-toggle'
 import { cn } from '@repo/utils'
 import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
+import { CaptureTitlebarActions } from '#front/pages/capture/components/capture-titlebar-actions'
 
 const mainNavigation = [
     {
-        title: 'Captures',
+        title: 'Capture',
         to: '/',
-        icon: Files,
+        icon: Radar,
+    },
+    {
+        title: 'History',
+        to: '/captures',
+        icon: History,
     },
 ] as const
 
@@ -40,7 +46,9 @@ const footerNavigation = [
 ] as const
 
 function isActiveRoute(pathname: string, to: string) {
-    return to === '/' ? pathname === '/' : pathname.startsWith(to)
+    return to === '/'
+        ? pathname === '/' || pathname.startsWith('/capture/')
+        : pathname.startsWith(to)
 }
 
 export function DashboardLayout() {
@@ -55,18 +63,20 @@ export function DashboardLayout() {
     return (
         <SidebarProvider className={isDesktop ? 'flex-col' : undefined}>
             <DesktopTitlebarTarget.Provider value={titlebarTarget}>
-                {isDesktop && <DesktopTitleBar captureControlsRef={setTitlebarTarget} />}
-                <div className="flex min-h-0 flex-1">
+                {isDesktop && (
+                    <DesktopTitleBar pathname={pathname} captureControlsRef={setTitlebarTarget} />
+                )}
+                <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden">
                     <AppSidebar
                         pathname={pathname}
                         isDesktop={isDesktop}
                         desktopPlatform={desktopPlatform}
                     />
-                    <SidebarInset className="min-h-0 overflow-hidden">
-                        {!isDesktop && <WebHeader />}
+                    <SidebarInset className="min-h-0 w-auto min-w-0 overflow-hidden">
+                        {!isDesktop && <WebHeader pathname={pathname} />}
                         <main
                             className={cn(
-                                'flex min-h-0 flex-1 flex-col',
+                                'flex min-h-0 min-w-0 flex-1 flex-col',
                                 isCaptureWorkspace ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
                             )}
                         >
@@ -80,8 +90,10 @@ export function DashboardLayout() {
 }
 
 function DesktopTitleBar({
+    pathname,
     captureControlsRef,
 }: {
+    pathname: string
     captureControlsRef: (element: HTMLDivElement | null) => void
 }) {
     const { state } = useSidebar()
@@ -118,24 +130,34 @@ function DesktopTitleBar({
                 id="desktop-titlebar-capture-controls"
                 className="flex min-w-0 flex-1 items-center px-3"
             />
-            <div className="desktop-titlebar-actions no-drag-region flex items-center gap-1 px-3">
-                <SettingsButton />
-                <ThemeToggle />
+            <div
+                className={cn('desktop-titlebar-actions no-drag-region', 'flex items-center gap-8')}
+            >
+                <CaptureTitlebarActions pathname={pathname} />
+
+                <div className="flex items-center gap-1">
+                    <SettingsButton />
+                    <ThemeToggle />
+                </div>
             </div>
         </header>
     )
 }
 
-function WebHeader() {
+function WebHeader({ pathname }: { readonly pathname: string }) {
     return (
         <header className="flex h-10 shrink-0 items-center gap-2 border-b">
             <div className="flex flex-1 items-center gap-2 px-4">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="my-1.5 mr-2" />
                 <span className="text-sm font-medium tracking-tight">Pruftnet</span>
-                <div className="ml-auto flex items-center gap-1">
-                    <SettingsButton />
-                    <ThemeToggle />
+                <div className="ml-auto flex items-center gap-8">
+                    <CaptureTitlebarActions pathname={pathname} compact />
+
+                    <div className="flex items-center gap-1">
+                        <SettingsButton />
+                        <ThemeToggle />
+                    </div>
                 </div>
             </div>
         </header>
@@ -161,14 +183,14 @@ function AppSidebar({
     desktopPlatform,
     isDesktop,
     pathname,
+    style,
     ...props
 }: ComponentProps<typeof Sidebar> & {
     readonly isDesktop: boolean
     readonly desktopPlatform: string | undefined
     readonly pathname: string
 }) {
-    const desktopSidebarClassName =
-        'desktop-sidebar [top:var(--desktop-titlebar-height)] [bottom:auto] [height:calc(100svh_-_var(--desktop-titlebar-height))]'
+    const desktopSidebarClassName = 'desktop-sidebar'
     const sidebarAppearanceClassName =
         desktopPlatform === 'darwin' ? 'desktop-sidebar--vibrant' : undefined
 
@@ -182,6 +204,16 @@ function AppSidebar({
                           .filter(Boolean)
                           .join(' ')
                     : className
+            }
+            style={
+                isDesktop
+                    ? {
+                          ...style,
+                          top: 'var(--desktop-titlebar-height)',
+                          bottom: 'auto',
+                          height: 'calc(100svh - var(--desktop-titlebar-height))',
+                      }
+                    : style
             }
             {...props}
         >

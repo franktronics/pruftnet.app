@@ -8,6 +8,7 @@ import {
     captureInterfacesOptions,
     captureSessionOptions,
     captureStatsOptions,
+    captureStatSamplesOptions,
     registryOptions,
 } from '#front/pages/capture/api/capture-queries'
 
@@ -26,6 +27,8 @@ export function useCaptureStats(captureId: string, state?: string) {
     }, [state, refetch])
     return query
 }
+export const useCaptureStatSamples = (captureId: string, state?: string) =>
+    useQuery(captureStatSamplesOptions(captureId, isTerminal(state)))
 export const useCaptureRegistry = (revision: string | undefined) =>
     useQuery({ ...registryOptions(revision ?? ''), enabled: Boolean(revision) })
 
@@ -43,7 +46,13 @@ export function useStopCapture(captureId: string) {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: () => captureClient.stop(captureId),
-        onSuccess: (session) => queryClient.setQueryData(captureKeys.session(captureId), session),
+        onSuccess: async (session) => {
+            queryClient.setQueryData(captureKeys.session(captureId), session)
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: captureKeys.active() }),
+                queryClient.invalidateQueries({ queryKey: captureKeys.history() }),
+            ])
+        },
     })
 }
 
