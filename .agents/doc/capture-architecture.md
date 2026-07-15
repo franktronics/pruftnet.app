@@ -1,5 +1,8 @@
 # Capture-First Architecture
 
+For entry points, public/internal boundaries, and ranked refactor findings, see
+`cpp-architecture.md`.
+
 ## Information flow and ownership
 
 ```text

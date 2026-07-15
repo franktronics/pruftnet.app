@@ -11,6 +11,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+function(pruftnet_enable_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endfunction()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(PCAP REQUIRED)
@@ -102,6 +110,7 @@ add_custom_target(packet_tree_ts_codegen
 )
 
 add_library(pruftnet_sniffing STATIC
+    src/capture/pcapng_format.cpp
     src/capture/pcapng_spool.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
@@ -154,9 +163,26 @@ if(WIN32)
 endif()
 target_compile_features(pruftnet_sniffing PUBLIC cxx_std_20)
 
-add_executable(pruftnet_capture_worker tools/capture_worker.cpp)
+add_library(pruftnet_capture_worker_protocol STATIC
+    tools/capture_worker_protocol.cpp
+)
+target_include_directories(pruftnet_capture_worker_protocol
+    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+target_compile_features(pruftnet_capture_worker_protocol PUBLIC cxx_std_20)
+pruftnet_enable_warnings(pruftnet_capture_worker_protocol)
+
+add_executable(pruftnet_capture_worker
+    tools/capture_worker_main.cpp
+    tools/capture_worker.cpp
+)
 target_include_directories(pruftnet_capture_worker PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(pruftnet_capture_worker PRIVATE pruftnet_sniffing)
+target_link_libraries(pruftnet_capture_worker
+    PRIVATE
+        pruftnet_capture_worker_protocol
+        pruftnet_sniffing
+)
+pruftnet_enable_warnings(pruftnet_capture_worker)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT PRUFTNET_IPO_SUPPORTED OUTPUT PRUFTNET_IPO_ERROR LANGUAGES CXX)
@@ -182,265 +208,8 @@ target_compile_definitions(pruftnet_sniffing PRIVATE
     $<$<BOOL:${PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_VAL_TO_DESCRIPTION}>:PRUFTNET_HAVE_PCAP_TSTAMP_TYPE_VAL_TO_DESCRIPTION=1>
 )
 
-if(MSVC)
-    target_compile_options(pruftnet_sniffing PRIVATE /W4)
-else()
-    target_compile_options(pruftnet_sniffing PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+pruftnet_enable_warnings(pruftnet_sniffing)
 
-if(PRUFTNET_SNIFFING_BUILD_TESTS)
-    enable_testing()
-
-    function(pruftnet_add_sniffing_test target source)
-        add_executable(${target} ${source})
-        target_include_directories(${target}
-            PRIVATE
-                "${CMAKE_CURRENT_SOURCE_DIR}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        )
-        target_link_libraries(${target} PRIVATE pruftnet_sniffing)
-        if(MSVC)
-            target_compile_options(${target} PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(${target} PRIVATE -UNDEBUG)
-        endif()
-    endfunction()
-
-    pruftnet_add_sniffing_test(packet_ring_tests tests/unit/packet_ring_tests.cpp)
-    add_test(NAME unit.packet_ring COMMAND packet_ring_tests)
-
-    pruftnet_add_sniffing_test(pcapng_spool_tests tests/unit/pcapng_spool_tests.cpp)
-    add_test(NAME unit.pcapng_spool COMMAND pcapng_spool_tests)
-
-    pruftnet_add_sniffing_test(packet_view_tests tests/unit/packet_view_tests.cpp)
-    add_test(NAME unit.packet_view COMMAND packet_view_tests)
-
-    pruftnet_add_sniffing_test(registry_tests tests/unit/registry_tests.cpp)
-    add_test(NAME unit.registry COMMAND registry_tests)
-
-    pruftnet_add_sniffing_test(parsed_tree_tests tests/unit/parsed_tree_tests.cpp)
-    add_test(NAME unit.parsed_tree COMMAND parsed_tree_tests)
-
-    pruftnet_add_sniffing_test(parsed_tree_allocation_tests tests/unit/parsed_tree_allocation_tests.cpp)
-    target_include_directories(parsed_tree_allocation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    add_test(NAME unit.parsed_tree_allocations COMMAND parsed_tree_allocation_tests)
-
-    pruftnet_add_sniffing_test(utf8_tests tests/unit/utf8_tests.cpp)
-    add_test(NAME unit.utf8 COMMAND utf8_tests)
-
-    pruftnet_add_sniffing_test(packet_tree_codec_tests tests/unit/packet_tree_codec_tests.cpp)
-    target_include_directories(packet_tree_codec_tests
-        PRIVATE
-            "${PACKET_TREE_GENERATED_DIR}"
-            "${flatbuffers_SOURCE_DIR}/include"
-    )
-    add_test(NAME unit.packet_tree_codec COMMAND packet_tree_codec_tests)
-
-    pruftnet_add_sniffing_test(packet_parser_tests tests/unit/packet_parser_tests.cpp)
-    add_test(NAME unit.packet_parser COMMAND packet_parser_tests)
-
-    pruftnet_add_sniffing_test(packet_parser_allocation_tests tests/unit/packet_parser_allocation_tests.cpp)
-    add_test(NAME unit.packet_parser_allocations COMMAND packet_parser_allocation_tests)
-
-    pruftnet_add_sniffing_test(dissector_catalog_tests tests/unit/dissector_catalog_tests.cpp)
-    add_test(NAME unit.dissector_catalog COMMAND dissector_catalog_tests)
-
-    pruftnet_add_sniffing_test(phase5_dissector_tests tests/unit/phase5_dissector_tests.cpp)
-    add_test(NAME unit.phase5_dissectors COMMAND phase5_dissector_tests)
-
-    pruftnet_add_sniffing_test(replay_store_tests tests/unit/replay_store_tests.cpp)
-    add_test(NAME unit.replay_store COMMAND replay_store_tests)
-
-    pruftnet_add_sniffing_test(summary_extractor_tests tests/unit/summary_extractor_tests.cpp)
-    add_test(NAME unit.summary_extractor COMMAND summary_extractor_tests)
-
-    add_executable(packet_tree_fixture_writer tests/packet_tree_fixture_writer.cpp)
-    target_include_directories(packet_tree_fixture_writer
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-    target_link_libraries(packet_tree_fixture_writer PRIVATE pruftnet_sniffing)
-
-    add_executable(parser_packet_tree_fixture_writer tests/parser_packet_tree_fixture_writer.cpp)
-    target_include_directories(parser_packet_tree_fixture_writer
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-    target_link_libraries(parser_packet_tree_fixture_writer PRIVATE pruftnet_sniffing)
-
-    pruftnet_add_sniffing_test(sniffer_options_tests tests/unit/sniffer_options_tests.cpp)
-    add_test(NAME unit.sniffer_options COMMAND sniffer_options_tests)
-
-    pruftnet_add_sniffing_test(sniffing_offline_pcap_tests tests/integration/sniffing_offline_pcap_tests.cpp)
-    target_compile_definitions(sniffing_offline_pcap_tests
-        PRIVATE
-            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
-    )
-    add_test(NAME integration.sniffing_offline_pcap COMMAND sniffing_offline_pcap_tests)
-
-    pruftnet_add_sniffing_test(replay_pipeline_tests tests/integration/replay_pipeline_tests.cpp)
-    target_include_directories(replay_pipeline_tests PRIVATE "${PACKET_TREE_GENERATED_DIR}" "${flatbuffers_SOURCE_DIR}/include")
-    target_compile_definitions(replay_pipeline_tests PRIVATE PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
-    add_test(NAME integration.replay_pipeline COMMAND replay_pipeline_tests)
-
-    pruftnet_add_sniffing_test(sniffing_offline_bpf_tests tests/integration/sniffing_offline_bpf_tests.cpp)
-    target_compile_definitions(sniffing_offline_bpf_tests
-        PRIVATE
-            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
-    )
-    add_test(NAME integration.sniffing_offline_bpf COMMAND sniffing_offline_bpf_tests)
-
-    pruftnet_add_sniffing_test(sniffing_offline_invalid_pcap_tests tests/integration/sniffing_offline_invalid_pcap_tests.cpp)
-    target_compile_definitions(sniffing_offline_invalid_pcap_tests
-        PRIVATE
-            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
-    )
-    add_test(NAME integration.sniffing_offline_invalid_pcap COMMAND sniffing_offline_invalid_pcap_tests)
-
-    pruftnet_add_sniffing_test(sniffing_offline_multi_pcap_tests tests/integration/sniffing_offline_multi_pcap_tests.cpp)
-    target_compile_definitions(sniffing_offline_multi_pcap_tests
-        PRIVATE
-            PRUFTNET_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
-    )
-    add_test(NAME integration.sniffing_offline_multi_pcap COMMAND sniffing_offline_multi_pcap_tests)
-
-    pruftnet_add_sniffing_test(sniffing_runtime_lifecycle_tests tests/integration/sniffing_runtime_lifecycle_tests.cpp)
-    add_test(NAME integration.sniffing_runtime_lifecycle COMMAND sniffing_runtime_lifecycle_tests)
-
-    pruftnet_add_sniffing_test(sniffing_runtime_error_tests tests/integration/sniffing_runtime_error_tests.cpp)
-    add_test(NAME integration.sniffing_runtime_errors COMMAND sniffing_runtime_error_tests)
-
-    pruftnet_add_sniffing_test(sniffing_ring_pressure_tests tests/integration/sniffing_ring_pressure_tests.cpp)
-    add_test(NAME integration.sniffing_ring_pressure COMMAND sniffing_ring_pressure_tests)
-
-    pruftnet_add_sniffing_test(sniffing_multi_interface_tests tests/integration/sniffing_multi_interface_tests.cpp)
-    add_test(NAME integration.sniffing_multi_interface COMMAND sniffing_multi_interface_tests)
-
-    pruftnet_add_sniffing_test(sniffing_interface_discovery_tests tests/integration/sniffing_interface_discovery_tests.cpp)
-    add_test(NAME integration.sniffing_interface_discovery COMMAND sniffing_interface_discovery_tests)
-
-    pruftnet_add_sniffing_test(sniffing_interface_capabilities_live_tests tests/integration/sniffing_interface_capabilities_live_tests.cpp)
-    add_test(NAME integration.sniffing_interface_capabilities_live COMMAND sniffing_interface_capabilities_live_tests)
-    set_tests_properties(integration.sniffing_interface_capabilities_live PROPERTIES SKIP_RETURN_CODE 77)
-
-    pruftnet_add_sniffing_test(sniffing_live_tests tests/integration/sniffing_live_tests.cpp)
-    add_test(NAME integration.sniffing_live COMMAND sniffing_live_tests)
-    set_tests_properties(integration.sniffing_live PROPERTIES SKIP_RETURN_CODE 77)
-endif()
-
-if(PRUFTNET_SNIFFING_BUILD_BENCHMARKS)
-    add_executable(sniffing_runtime_benchmark benchmarks/sniffing_runtime_benchmark.cpp)
-    target_include_directories(sniffing_runtime_benchmark
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-    target_link_libraries(sniffing_runtime_benchmark PRIVATE pruftnet_sniffing)
-
-    add_executable(packet_tree_benchmark benchmarks/packet_tree_benchmark.cpp)
-    target_include_directories(packet_tree_benchmark PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries(packet_tree_benchmark PRIVATE pruftnet_sniffing)
-
-    add_executable(packet_parser_benchmark benchmarks/packet_parser_benchmark.cpp)
-    target_include_directories(packet_parser_benchmark
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-    target_link_libraries(packet_parser_benchmark PRIVATE pruftnet_sniffing)
-    if(PRUFTNET_IPO_SUPPORTED)
-        set_property(TARGET packet_parser_benchmark PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-    endif()
-
-    set(PACKET_CODEC_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/packet_codec")
-    set(PACKET_CODEC_GENERATED_HEADER "${PACKET_CODEC_GENERATED_DIR}/packet_codec_generated.h")
-    add_custom_command(
-        OUTPUT "${PACKET_CODEC_GENERATED_HEADER}"
-        COMMAND "${CMAKE_COMMAND}" -E make_directory "${PACKET_CODEC_GENERATED_DIR}"
-        COMMAND "${PRUFTNET_FLATC_COMMAND}" --cpp -o "${PACKET_CODEC_GENERATED_DIR}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/packet_codec/packet_codec.fbs"
-        DEPENDS
-            ${PRUFTNET_FLATC_DEPENDS}
-            "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/packet_codec/packet_codec.fbs"
-        VERBATIM
-    )
-
-    add_executable(packet_codec_benchmark
-        benchmarks/packet_codec/custom_packet_codec.cpp
-        benchmarks/packet_codec/flatbuffers_packet_codec.cpp
-        benchmarks/packet_codec/packet_codec_benchmark.cpp
-        benchmarks/packet_codec/packet_codec_model.cpp
-        "${PACKET_CODEC_GENERATED_HEADER}"
-    )
-    target_include_directories(packet_codec_benchmark
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${PACKET_CODEC_GENERATED_DIR}"
-            "${flatbuffers_SOURCE_DIR}/include"
-    )
-    target_compile_features(packet_codec_benchmark PRIVATE cxx_std_20)
-    if(MSVC)
-        target_compile_options(packet_codec_benchmark PRIVATE /W4)
-    else()
-        target_compile_options(packet_codec_benchmark PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
-endif()
-
-if(PRUFTNET_SNIFFING_BUILD_FUZZERS)
-    add_executable(packet_parser_fuzzer fuzz/packet_parser_fuzzer.cpp)
-    target_include_directories(packet_parser_fuzzer
-        PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    )
-    target_link_libraries(packet_parser_fuzzer PRIVATE pruftnet_sniffing)
-
-    add_executable(packet_view_fuzzer fuzz/packet_view_fuzzer.cpp)
-    target_link_libraries(packet_view_fuzzer PRIVATE pruftnet_sniffing)
-
-    add_executable(registry_fuzzer fuzz/registry_fuzzer.cpp)
-    target_link_libraries(registry_fuzzer PRIVATE pruftnet_sniffing)
-
-    add_executable(parsed_tree_fuzzer fuzz/parsed_tree_fuzzer.cpp)
-    target_link_libraries(parsed_tree_fuzzer PRIVATE pruftnet_sniffing)
-
-    add_executable(packet_tree_codec_fuzzer fuzz/packet_tree_codec_fuzzer.cpp)
-    target_include_directories(packet_tree_codec_fuzzer PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries(packet_tree_codec_fuzzer PRIVATE pruftnet_sniffing)
-
-    if(PRUFTNET_SNIFFING_USE_LIBFUZZER)
-        if(MSVC)
-            message(FATAL_ERROR
-                "PRUFTNET_SNIFFING_USE_LIBFUZZER currently requires a Clang or GCC-style toolchain")
-        endif()
-        include(CheckCXXSourceCompiles)
-        set(CMAKE_REQUIRED_FLAGS_SAVED "${CMAKE_REQUIRED_FLAGS}")
-        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fsanitize=fuzzer,address")
-        check_cxx_source_compiles(
-            "#include <cstddef>\n#include <cstdint>\nextern \"C\" int LLVMFuzzerTestOneInput(const std::uint8_t*, std::size_t) { return 0; }"
-            PRUFTNET_HAVE_LIBFUZZER
-        )
-        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS_SAVED}")
-        if(NOT PRUFTNET_HAVE_LIBFUZZER)
-            message(FATAL_ERROR "PRUFTNET_SNIFFING_USE_LIBFUZZER requires a compiler and linker with -fsanitize=fuzzer,address support")
-        endif()
-
-        target_compile_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(packet_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_compile_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(packet_view_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_compile_options(registry_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(registry_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_compile_options(parsed_tree_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(parsed_tree_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_compile_options(packet_tree_codec_fuzzer PRIVATE -fsanitize=fuzzer,address)
-        target_link_options(packet_tree_codec_fuzzer PRIVATE -fsanitize=fuzzer,address)
-    else()
-        target_compile_definitions(packet_parser_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
-        target_compile_definitions(packet_view_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
-        target_compile_definitions(registry_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
-        target_compile_definitions(parsed_tree_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
-        target_compile_definitions(packet_tree_codec_fuzzer PRIVATE PRUFTNET_STANDALONE_FUZZER=1)
-    endif()
-endif()
+include(PruftnetTests)
+include(PruftnetBenchmarks)
+include(PruftnetFuzzers)
