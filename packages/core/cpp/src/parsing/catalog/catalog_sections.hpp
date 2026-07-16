@@ -12,5 +12,6 @@ void register_core_catalog(CatalogRegistrar &registrar);
 [[nodiscard]] LinkCatalogHandles
 register_link_catalog(CatalogRegistrar &registrar);
 void register_network_catalog(CatalogRegistrar &registrar);
+void register_transport_catalog(CatalogRegistrar &registrar);
 
 } // namespace pruftnet::parsing::internal
