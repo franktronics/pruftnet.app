@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <variant>
 
+#include "parsing/catalog/catalog_registrar.hpp"
 #include "parsing/core_link_types.hpp"
 #include "parsing/dissector_catalog.hpp"
 #include "pruftnet/parsing/registry.hpp"
@@ -25,6 +26,21 @@ RegistrySnapshotPtr core_registry() {
 template <typename Value, std::size_t Size>
 bool contains(const std::array<Value, Size> &values, Value value) {
   return std::find(values.begin(), values.end(), value) != values.end();
+}
+
+DissectionResult noop_dissector(DissectorContext &, const void *,
+                                const PacketView &, std::uint32_t) {
+  return {};
+}
+
+template <typename Operation> void assert_logic_error(Operation operation) {
+  bool rejected = false;
+  try {
+    operation();
+  } catch (const std::logic_error &) {
+    rejected = true;
+  }
+  assert(rejected);
 }
 
 void core_catalog_has_typed_dispatch_paths() {
@@ -100,6 +116,37 @@ void core_catalog_has_typed_dispatch_paths() {
   }
 }
 
+void catalog_rejects_invalid_and_duplicate_registrations() {
+  DissectorCatalog catalog(core_registry());
+  CatalogRegistrar registrar(catalog);
+  const auto state = std::make_shared<const std::uint8_t>(0);
+
+  assert_logic_error([&] { (void)registrar.add(nullptr, state); });
+  assert_logic_error([&] {
+    (void)registrar.add(noop_dissector, std::shared_ptr<const void>{});
+  });
+
+  const auto handle = registrar.add(noop_dissector, state);
+  const auto link_types = core_link_types();
+  assert(!link_types.empty());
+  assert_logic_error([&] {
+    registrar.bind_dlt(static_cast<std::uint32_t>(link_types.front().value),
+                       handle);
+  });
+  assert_logic_error([&] { registrar.bind_ethertype(0x0800, handle); });
+  assert_logic_error(
+      [&] { registrar.bind_ip_protocol(IpFamily::V4, 17, handle); });
+  assert_logic_error(
+      [&] { registrar.bind_ip_protocol(IpFamily::V6, 17, handle); });
+  assert_logic_error([&] { registrar.bind_sll_protocol(0x0003, handle); });
+  assert_logic_error([&] { registrar.bind_null_family(2, handle); });
+  assert_logic_error([&] { registrar.bind_llc_sap(0x42, handle); });
+  assert_logic_error(
+      [&] { registrar.bind_snap_pid(0x0080c2, 0x000e, handle); });
+  assert_logic_error([&] { registrar.bind_udp_port(53, handle); });
+  assert_logic_error([&] { registrar.bind_tcp_port(53, handle); });
+}
+
 void catalog_rejects_incompatible_registries_before_capture() {
   RegistryBuilder builder;
   const auto protocol = builder.register_protocol("root", "Root");
@@ -123,5 +170,6 @@ void catalog_rejects_incompatible_registries_before_capture() {
 
 int main() {
   core_catalog_has_typed_dispatch_paths();
+  catalog_rejects_invalid_and_duplicate_registrations();
   catalog_rejects_incompatible_registries_before_capture();
 }

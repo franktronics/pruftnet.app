@@ -13,6 +13,8 @@
 
 namespace pruftnet::parsing::internal {
 
+class CatalogRegistrar;
+
 class DissectorCatalog {
 public:
   explicit DissectorCatalog(RegistrySnapshotPtr registry);
@@ -41,6 +43,8 @@ public:
   [[nodiscard]] DissectorHandle tcp_port(std::uint16_t value) const noexcept;
 
 private:
+  friend class CatalogRegistrar;
+
   [[nodiscard]] std::uint16_t add_handle(DissectorFunction function,
                                          std::shared_ptr<const void> state);
   void bind_dlt(std::uint32_t selector, std::uint16_t handle);
