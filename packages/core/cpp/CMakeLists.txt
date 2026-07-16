@@ -112,22 +112,54 @@ add_custom_target(packet_tree_ts_codegen
 add_library(pruftnet_sniffing STATIC
     src/capture/pcapng_format.cpp
     src/capture/pcapng_spool.cpp
+    src/parsing/catalog/catalog_registrar.cpp
+    src/parsing/catalog/core_catalog.cpp
+    src/parsing/catalog/link_catalog.cpp
+    src/parsing/catalog/network_catalog.cpp
+    src/parsing/catalog/transport_catalog.cpp
+    src/parsing/catalog/application_catalog.cpp
+    src/parsing/catalog/tunnel_catalog.cpp
+    src/parsing/core_link_types.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
-    src/parsing/dissectors/arp_dissector.cpp
-    src/parsing/dissectors/ethernet_dissector.cpp
-    src/parsing/dissectors/frame_dissector.cpp
-    src/parsing/dissectors/icmpv4_dissector.cpp
-    src/parsing/dissectors/icmpv6_dissector.cpp
-    src/parsing/dissectors/ipv4_dissector.cpp
-    src/parsing/dissectors/ipv6_dissector.cpp
-    src/parsing/dissectors/tcp_dissector.cpp
-    src/parsing/dissectors/udp_dissector.cpp
-    src/parsing/dissectors/vlan_dissector.cpp
+    src/parsing/dissectors/shared/dissector_utils.cpp
+    src/parsing/dissectors/link/ethernet_dissector.cpp
+    src/parsing/dissectors/link/ethernet_payload.cpp
+    src/parsing/dissectors/link/frame_dissector.cpp
+    src/parsing/dissectors/link/linux_cooked_dissector.cpp
+    src/parsing/dissectors/link/llc_dissector.cpp
+    src/parsing/dissectors/link/lldp_dissector.cpp
+    src/parsing/dissectors/link/null_loopback_dissector.cpp
+    src/parsing/dissectors/link/raw_dissector.cpp
+    src/parsing/dissectors/link/snap_dissector.cpp
+    src/parsing/dissectors/link/stp_dissector.cpp
+    src/parsing/dissectors/link/vlan_dissector.cpp
+    src/parsing/dissectors/network/arp_dissector.cpp
+    src/parsing/dissectors/network/icmp_extension.cpp
+    src/parsing/dissectors/network/icmpv4_dissector.cpp
+    src/parsing/dissectors/network/icmpv6_dissector.cpp
+    src/parsing/dissectors/network/igmp_dissector.cpp
+    src/parsing/dissectors/network/ipv4_dissector.cpp
+    src/parsing/dissectors/network/ipv6_dissector.cpp
+    src/parsing/dissectors/network/mld_dissector.cpp
+    src/parsing/dissectors/transport/tcp_dissector.cpp
+    src/parsing/dissectors/transport/udp_dissector.cpp
+    src/parsing/dissectors/application/dhcp_dissector.cpp
+    src/parsing/dissectors/application/dhcpv6_dissector.cpp
+    src/parsing/dissectors/application/dns_dissector.cpp
+    src/parsing/dissectors/application/http_dissector.cpp
+    src/parsing/dissectors/application/ntp_dissector.cpp
+    src/parsing/dissectors/application/quic_dissector.cpp
+    src/parsing/dissectors/application/tls_dissector.cpp
+    src/parsing/dissectors/tunnel/geneve_dissector.cpp
+    src/parsing/dissectors/tunnel/gre_dissector.cpp
+    src/parsing/dissectors/tunnel/mpls_dissector.cpp
+    src/parsing/dissectors/tunnel/vxlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp
     src/parsing/packet_parser.cpp
     src/parsing/packet_view.cpp
     src/parsing/parsed_tree.cpp
+    src/parsing/reassembly_store.cpp
     src/parsing/registry.cpp
     src/parsing/summary_extractor.cpp
     src/replay/replay_store.cpp

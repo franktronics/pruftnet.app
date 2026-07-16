@@ -76,15 +76,26 @@ Rules:
 - The first implementation freezes the registry for the lifetime of a capture.
 - Future plugin reload creates a new generation instead of mutating an existing snapshot.
 
-Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. Phase 5 appends deterministic ARP, IPv6, ICMPv4, ICMPv6, and Neighbor Discovery descriptors without renumbering fields 1 through 48; the current golden core revision is `16961375687554593336`.
+Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder`, and immutable `RegistrySnapshot`. IDs are assigned in registration order, and the nonzero 64-bit revision is an FNV-1a hash over the ordered canonical descriptors. Unknown IDs, invalid keys, duplicate keys, invalid UTF-8, and mutation after freeze are typed errors. The 2026-07-16 core snapshot contains 38 protocols and 649 fields. New built-ins remain append-only so existing IDs are not silently renumbered.
 
-## First Protocol Slice
+## Current Dissector Coverage
 
-`PacketParser` now owns only packet-session setup, source clipping, root creation, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, and family-qualified IP protocol selectors through function-pointer handles with immutable resolved field IDs. Frame, Ethernet, VLAN, ARP, IPv4, IPv6, UDP, TCP, ICMPv4, and ICMPv6 parsing live in separate modules. Parent dissectors know selector tables, not child implementations.
+`PacketParser` owns packet-session setup, source clipping, root creation, capture-scoped reassembly state, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, LLC/SNAP, family-qualified IP protocol, UDP port, and TCP port selectors through function-pointer handles with immutable resolved field IDs. Parent dissectors know selector tables, not child implementations.
 
-Ethernet handles type/length classification; VLAN handles recursive IEEE 802.1Q/802.1ad tags; ARP follows variable wire address lengths; IPv4 and IPv6 enforce declared datagram boundaries; IPv6 traverses a bounded extension chain; UDP, TCP, ICMPv4, ICMPv6, and Neighbor Discovery enforce their own body boundaries. Fragment payloads remain unknown unless an IPv6 atomic fragment can continue safely. Unsupported selectors, encrypted payloads, padding, trailers, quoted packets, and unknown options remain source-backed byte nodes.
+The physical family layout, registrar contract, registry append rules, and
+new-dissector checklist are documented in
+[`dissector-architecture.md`](dissector-architecture.md).
 
-Captured and reported lengths remain distinct. Capture truncation produces `ParseCondition::Partial`; impossible protocol declarations and reserved IPv4 flags produce `Malformed`; budget exhaustion returns a finalized prefix with `ResourceLimit`. Packet-controlled bytes do not throw from the parser.
+The built-in set currently covers:
+
+- Frame, Ethernet II/IEEE 802.3, VLAN, Linux SLL/SLL2, NULL/LOOP, RAW, LLC, and SNAP.
+- ARP, RARP, InARP, IPv4, IPv6 and bounded extension traversal, ICMPv4, ICMPv6, RFC 4884 extensions, LLDP, STP/RSTP/MSTP, IGMP, MLD, and MPLS.
+- UDP, TCP, DNS/mDNS/LLMNR, DHCPv4, DHCPv6, NTP, HTTP/1.x, TLS records and cleartext handshake messages, and QUIC invariant/v1/v2 headers.
+- IP-in-IP, GRE, VXLAN/VXLAN-GPE, and Geneve.
+
+IPv4 and IPv6 fragments are reassembled with packet provenance before upper-layer dispatch. Known TCP application flows use bounded sequence-aware stream reassembly and retain an unconsumed suffix until a complete PDU is available. HTTP supports content-length, chunked, pipelined, split, and close-delimited messages with strict ambiguous-framing rejection. TLS supports record framing, handshake messages split across records, ClientHello/ServerHello, selected extensions, alerts, heartbeat, and a per-direction post-ChangeCipherSpec opaque state. QUIC exposes coalesced packet boundaries, connection IDs, Version Negotiation, Retry, Initial/0-RTT/Handshake metadata, and short-header protected data without pretending that protected packet numbers or frames are plaintext.
+
+Captured and reported lengths remain distinct. Capture truncation produces `ParseCondition::Partial`; impossible protocol declarations produce `Malformed`; budget exhaustion returns a finalized prefix with `ResourceLimit`. Unsupported selectors, encrypted payloads, padding, trailers, quoted packets, unknown options, and unsupported version-specific data remain source-backed byte nodes. Packet-controlled bytes do not throw from the parser.
 
 Packet-backed byte nodes carry `ParsedNodeFlagSourceBacked` and reference their data-source range instead of duplicating payloads in the value arena. Builder, C++ verifier, and TypeScript reader all enforce source bounds and same-source parent containment. The parser thread recycles tree capacities after each callback, so the warmed-up non-retaining runtime path performs zero parser allocations per packet. A callback may copy the owning tree before return when retention is required.
 
@@ -163,13 +174,15 @@ The frontend renders and navigates these references. It never searches for fragm
 
 Root protocol selection uses an extensible `u32 DLT -> dissector` table. Ethernet is the first parser registration. Capture may accept additional link types, but their bytes remain unknown until matching dissector modules are registered.
 
-An unregistered link type produces a partial `UnsupportedLinkType` result while preserving packet metadata and bytes. Adding another link type must not require changes to higher-layer dissectors.
+An unregistered link type produces a complete bounded tree whose payload remains under `unknown.data`. Adding another link type requires a new root registration but no changes to higher-layer dissectors.
 
 ## Resource Bounds
 
-All parser stages must have explicit limits for nesting, dissector calls, fields, diagnostics, strings, reassembly bytes, fragments, flow state, output batches, and client queues. Hitting a limit produces a finalized `ResourceLimit` prefix instead of terminating the capture. Phase 4 centrally enforces `max_dissector_calls` and dispatch depth before invoking a child handle.
+All parser stages must have explicit limits for nesting, dissector calls, fields, diagnostics, strings, reassembly bytes, fragments, flow state, output batches, and client queues. Hitting a limit produces a finalized `ResourceLimit` prefix instead of terminating the capture. The dispatcher centrally enforces `max_dissector_calls` and depth before invoking a child handle.
 
 The Phase 2 `ParseBudget` defaults are 65,536 nodes, depth 256, 64 data sources, 4,096 contributors, 1 MiB of UTF-8 strings, 16 MiB of value bytes, 64 MiB of source bytes, and a 128 MiB encoded message. Builders check limits and integer conversions before mutation. Budget rejection leaves a structurally valid partial tree.
+
+The capture-scoped `ReassemblyBudget` defaults to 2,048 IP datagrams, 4,096 directional TCP flows, 64 MiB total buffered bytes, 256 fragments per IP datagram, 4,096 segments and 4 MiB per TCP flow, 4,096 contributors per item, and expiration after 65,536 packet ticks. Capture identity changes clear all reassembly and application state.
 
 ## Packet Tree Wire Format
 

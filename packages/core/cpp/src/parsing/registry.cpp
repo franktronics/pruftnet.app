@@ -15,374 +15,1543 @@ constexpr std::uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 
 bool is_valid_key(std::string_view key) noexcept {
-    if (key.empty() || key.front() == '.' || key.back() == '.') {
+  if (key.empty() || key.front() == '.' || key.back() == '.') {
+    return false;
+  }
+  bool segment_start = true;
+  for (const char character : key) {
+    if (character == '.') {
+      if (segment_start) {
         return false;
+      }
+      segment_start = true;
+      continue;
     }
-    bool segment_start = true;
-    for (const char character : key) {
-        if (character == '.') {
-            if (segment_start) {
-                return false;
-            }
-            segment_start = true;
-            continue;
-        }
-        const bool letter = character >= 'a' && character <= 'z';
-        const bool digit = character >= '0' && character <= '9';
-        if ((!letter && !digit && character != '_') || (segment_start && digit)) {
-            return false;
-        }
-        segment_start = false;
+    const bool letter = character >= 'a' && character <= 'z';
+    const bool digit = character >= '0' && character <= '9';
+    if ((!letter && !digit && character != '_') || (segment_start && digit)) {
+      return false;
     }
-    return !segment_start;
+    segment_start = false;
+  }
+  return !segment_start;
 }
 
-void hash_byte(std::uint64_t& hash, std::uint8_t value) noexcept {
-    hash ^= value;
-    hash *= kFnvPrime;
+void hash_byte(std::uint64_t &hash, std::uint8_t value) noexcept {
+  hash ^= value;
+  hash *= kFnvPrime;
 }
 
-template <typename Integer> void hash_integer(std::uint64_t& hash, Integer value) noexcept {
-    for (std::size_t index = 0; index < sizeof(Integer); ++index) {
-        hash_byte(hash, static_cast<std::uint8_t>(value & static_cast<Integer>(0xFFU)));
-        value >>= 8U;
-    }
+template <typename Integer>
+void hash_integer(std::uint64_t &hash, Integer value) noexcept {
+  for (std::size_t index = 0; index < sizeof(Integer); ++index) {
+    hash_byte(hash,
+              static_cast<std::uint8_t>(value & static_cast<Integer>(0xFFU)));
+    value >>= 8U;
+  }
 }
 
-void hash_string(std::uint64_t& hash, std::string_view value) noexcept {
-    hash_integer(hash, static_cast<std::uint64_t>(value.size()));
-    for (const unsigned char character : value) {
-        hash_byte(hash, character);
-    }
+void hash_string(std::uint64_t &hash, std::string_view value) noexcept {
+  hash_integer(hash, static_cast<std::uint64_t>(value.size()));
+  for (const unsigned char character : value) {
+    hash_byte(hash, character);
+  }
 }
 
-RegistryRevision compute_revision(std::span<const ProtocolDescriptor> protocols,
-                                  std::span<const FieldDescriptor> fields) noexcept {
-    std::uint64_t hash = kFnvOffsetBasis;
-    hash_integer(hash, static_cast<std::uint64_t>(protocols.size()));
-    for (const auto& protocol : protocols) {
-        hash_byte(hash, 1);
-        hash_integer(hash, protocol.id.value);
-        hash_string(hash, protocol.key);
-        hash_string(hash, protocol.display_name);
-        hash_integer(hash, protocol.visibility_flags);
-    }
-    hash_integer(hash, static_cast<std::uint64_t>(fields.size()));
-    for (const auto& field : fields) {
-        hash_byte(hash, 2);
-        hash_integer(hash, field.id.value);
-        hash_integer(hash, field.protocol_id.value);
-        hash_string(hash, field.key);
-        hash_string(hash, field.display_name);
-        hash_byte(hash, static_cast<std::uint8_t>(field.value_type));
-        hash_integer(hash, field.visibility_flags);
-    }
-    return RegistryRevision{hash == 0 ? 1 : hash};
+RegistryRevision
+compute_revision(std::span<const ProtocolDescriptor> protocols,
+                 std::span<const FieldDescriptor> fields) noexcept {
+  std::uint64_t hash = kFnvOffsetBasis;
+  hash_integer(hash, static_cast<std::uint64_t>(protocols.size()));
+  for (const auto &protocol : protocols) {
+    hash_byte(hash, 1);
+    hash_integer(hash, protocol.id.value);
+    hash_string(hash, protocol.key);
+    hash_string(hash, protocol.display_name);
+    hash_integer(hash, protocol.visibility_flags);
+  }
+  hash_integer(hash, static_cast<std::uint64_t>(fields.size()));
+  for (const auto &field : fields) {
+    hash_byte(hash, 2);
+    hash_integer(hash, field.id.value);
+    hash_integer(hash, field.protocol_id.value);
+    hash_string(hash, field.key);
+    hash_string(hash, field.display_name);
+    hash_byte(hash, static_cast<std::uint8_t>(field.value_type));
+    hash_integer(hash, field.visibility_flags);
+  }
+  return RegistryRevision{hash == 0 ? 1 : hash};
 }
 
-RegistryError error(RegistryErrorCode code, std::string_view key = {}, std::uint64_t id = 0) {
-    return RegistryError{code, std::string(key), id};
+RegistryError error(RegistryErrorCode code, std::string_view key = {},
+                    std::uint64_t id = 0) {
+  return RegistryError{code, std::string(key), id};
 }
 
 } // namespace
 
-RegistrySnapshot::RegistrySnapshot(std::vector<ProtocolDescriptor> protocols, std::vector<FieldDescriptor> fields,
+RegistrySnapshot::RegistrySnapshot(std::vector<ProtocolDescriptor> protocols,
+                                   std::vector<FieldDescriptor> fields,
                                    RegistryRevision revision)
-    : protocols_(std::move(protocols)), fields_(std::move(fields)), revision_(revision) {
-    protocol_keys_.reserve(protocols_.size());
-    for (const auto& descriptor : protocols_) {
-        protocol_keys_.emplace(descriptor.key, descriptor.id.value);
-    }
-    field_keys_.reserve(fields_.size());
-    for (const auto& descriptor : fields_) {
-        field_keys_.emplace(descriptor.key, descriptor.id.value);
-    }
+    : protocols_(std::move(protocols)), fields_(std::move(fields)),
+      revision_(revision) {
+  protocol_keys_.reserve(protocols_.size());
+  for (const auto &descriptor : protocols_) {
+    protocol_keys_.emplace(descriptor.key, descriptor.id.value);
+  }
+  field_keys_.reserve(fields_.size());
+  for (const auto &descriptor : fields_) {
+    field_keys_.emplace(descriptor.key, descriptor.id.value);
+  }
 }
 
-RegistryRevision RegistrySnapshot::revision() const noexcept { return revision_; }
+RegistryRevision RegistrySnapshot::revision() const noexcept {
+  return revision_;
+}
 
-std::span<const ProtocolDescriptor> RegistrySnapshot::protocols() const noexcept { return protocols_; }
+std::span<const ProtocolDescriptor>
+RegistrySnapshot::protocols() const noexcept {
+  return protocols_;
+}
 
-std::span<const FieldDescriptor> RegistrySnapshot::fields() const noexcept { return fields_; }
+std::span<const FieldDescriptor> RegistrySnapshot::fields() const noexcept {
+  return fields_;
+}
 
-RegistryResult<std::reference_wrapper<const ProtocolDescriptor>> RegistrySnapshot::protocol(ProtocolId id) const {
-    if (!id.is_valid() || id.value > protocols_.size()) {
-        return error(RegistryErrorCode::UnknownProtocol, {}, id.value);
-    }
-    return std::cref(protocols_[id.value - 1]);
+RegistryResult<std::reference_wrapper<const ProtocolDescriptor>>
+RegistrySnapshot::protocol(ProtocolId id) const {
+  if (!id.is_valid() || id.value > protocols_.size()) {
+    return error(RegistryErrorCode::UnknownProtocol, {}, id.value);
+  }
+  return std::cref(protocols_[id.value - 1]);
 }
 
 RegistryResult<std::reference_wrapper<const ProtocolDescriptor>>
 RegistrySnapshot::protocol(std::string_view key) const {
-    const auto found = protocol_keys_.find(std::string(key));
-    if (found == protocol_keys_.end()) {
-        return error(RegistryErrorCode::UnknownProtocol, key);
-    }
-    return std::cref(protocols_[found->second - 1]);
+  const auto found = protocol_keys_.find(std::string(key));
+  if (found == protocol_keys_.end()) {
+    return error(RegistryErrorCode::UnknownProtocol, key);
+  }
+  return std::cref(protocols_[found->second - 1]);
 }
 
-RegistryResult<std::reference_wrapper<const FieldDescriptor>> RegistrySnapshot::field(FieldId id) const {
-    if (!id.is_valid() || id.value > fields_.size()) {
-        return error(RegistryErrorCode::UnknownField, {}, id.value);
-    }
-    return std::cref(fields_[id.value - 1]);
+RegistryResult<std::reference_wrapper<const FieldDescriptor>>
+RegistrySnapshot::field(FieldId id) const {
+  if (!id.is_valid() || id.value > fields_.size()) {
+    return error(RegistryErrorCode::UnknownField, {}, id.value);
+  }
+  return std::cref(fields_[id.value - 1]);
 }
 
-RegistryResult<std::reference_wrapper<const FieldDescriptor>> RegistrySnapshot::field(std::string_view key) const {
-    const auto found = field_keys_.find(std::string(key));
-    if (found == field_keys_.end()) {
-        return error(RegistryErrorCode::UnknownField, key);
-    }
-    return std::cref(fields_[found->second - 1]);
+RegistryResult<std::reference_wrapper<const FieldDescriptor>>
+RegistrySnapshot::field(std::string_view key) const {
+  const auto found = field_keys_.find(std::string(key));
+  if (found == field_keys_.end()) {
+    return error(RegistryErrorCode::UnknownField, key);
+  }
+  return std::cref(fields_[found->second - 1]);
 }
 
-RegistryResult<ProtocolId> RegistryBuilder::register_protocol(std::string key, std::string display_name,
-                                                              std::uint32_t visibility_flags) {
-    if (frozen_) {
-        return error(RegistryErrorCode::Frozen, key);
-    }
-    if (!is_valid_key(key)) {
-        return error(RegistryErrorCode::InvalidKey, key);
-    }
-    if (!internal::is_valid_utf8(display_name)) {
-        return error(RegistryErrorCode::InvalidUtf8, key);
-    }
-    if (protocol_keys_.contains(key)) {
-        return error(RegistryErrorCode::DuplicateKey, key);
-    }
-    if (protocols_.size() >= std::numeric_limits<std::uint32_t>::max()) {
-        return error(RegistryErrorCode::CapacityExceeded, key);
-    }
-    const ProtocolId id{static_cast<std::uint32_t>(protocols_.size() + 1)};
-    try {
-        protocols_.reserve(protocols_.size() + 1);
-        protocol_keys_.reserve(protocol_keys_.size() + 1);
-        protocol_keys_.emplace(key, id.value);
-        protocols_.push_back(ProtocolDescriptor{id, std::move(key), std::move(display_name), visibility_flags});
-    } catch (const std::bad_alloc&) {
-        return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
-    }
-    return id;
+RegistryResult<ProtocolId>
+RegistryBuilder::register_protocol(std::string key, std::string display_name,
+                                   std::uint32_t visibility_flags) {
+  if (frozen_) {
+    return error(RegistryErrorCode::Frozen, key);
+  }
+  if (!is_valid_key(key)) {
+    return error(RegistryErrorCode::InvalidKey, key);
+  }
+  if (!internal::is_valid_utf8(display_name)) {
+    return error(RegistryErrorCode::InvalidUtf8, key);
+  }
+  if (protocol_keys_.contains(key)) {
+    return error(RegistryErrorCode::DuplicateKey, key);
+  }
+  if (protocols_.size() >= std::numeric_limits<std::uint32_t>::max()) {
+    return error(RegistryErrorCode::CapacityExceeded, key);
+  }
+  const ProtocolId id{static_cast<std::uint32_t>(protocols_.size() + 1)};
+  try {
+    protocols_.reserve(protocols_.size() + 1);
+    protocol_keys_.reserve(protocol_keys_.size() + 1);
+    protocol_keys_.emplace(key, id.value);
+    protocols_.push_back(ProtocolDescriptor{
+        id, std::move(key), std::move(display_name), visibility_flags});
+  } catch (const std::bad_alloc &) {
+    return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
+  }
+  return id;
 }
 
-RegistryResult<FieldId> RegistryBuilder::register_field(ProtocolId protocol_id, std::string key,
-                                                        std::string display_name, FieldValueType value_type,
-                                                        std::uint32_t visibility_flags) {
-    if (frozen_) {
-        return error(RegistryErrorCode::Frozen, key);
-    }
-    if (!is_valid_key(key)) {
-        return error(RegistryErrorCode::InvalidKey, key);
-    }
-    if (!internal::is_valid_utf8(display_name)) {
-        return error(RegistryErrorCode::InvalidUtf8, key);
-    }
-    if (value_type < FieldValueType::Protocol || value_type > FieldValueType::GeneratedText) {
-        return error(RegistryErrorCode::InvalidValueType, key);
-    }
-    if (field_keys_.contains(key)) {
-        return error(RegistryErrorCode::DuplicateKey, key);
-    }
-    if (!protocol_id.is_valid() || protocol_id.value > protocols_.size()) {
-        return error(RegistryErrorCode::UnknownProtocol, {}, protocol_id.value);
-    }
-    if (fields_.size() >= std::numeric_limits<std::uint32_t>::max()) {
-        return error(RegistryErrorCode::CapacityExceeded, key);
-    }
-    const FieldId id{static_cast<std::uint32_t>(fields_.size() + 1)};
-    try {
-        fields_.reserve(fields_.size() + 1);
-        field_keys_.reserve(field_keys_.size() + 1);
-        field_keys_.emplace(key, id.value);
-        fields_.push_back(
-            FieldDescriptor{id, protocol_id, std::move(key), std::move(display_name), value_type, visibility_flags});
-    } catch (const std::bad_alloc&) {
-        return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
-    }
-    return id;
+RegistryResult<FieldId> RegistryBuilder::register_field(
+    ProtocolId protocol_id, std::string key, std::string display_name,
+    FieldValueType value_type, std::uint32_t visibility_flags) {
+  if (frozen_) {
+    return error(RegistryErrorCode::Frozen, key);
+  }
+  if (!is_valid_key(key)) {
+    return error(RegistryErrorCode::InvalidKey, key);
+  }
+  if (!internal::is_valid_utf8(display_name)) {
+    return error(RegistryErrorCode::InvalidUtf8, key);
+  }
+  if (value_type < FieldValueType::Protocol ||
+      value_type > FieldValueType::GeneratedText) {
+    return error(RegistryErrorCode::InvalidValueType, key);
+  }
+  if (field_keys_.contains(key)) {
+    return error(RegistryErrorCode::DuplicateKey, key);
+  }
+  if (!protocol_id.is_valid() || protocol_id.value > protocols_.size()) {
+    return error(RegistryErrorCode::UnknownProtocol, {}, protocol_id.value);
+  }
+  if (fields_.size() >= std::numeric_limits<std::uint32_t>::max()) {
+    return error(RegistryErrorCode::CapacityExceeded, key);
+  }
+  const FieldId id{static_cast<std::uint32_t>(fields_.size() + 1)};
+  try {
+    fields_.reserve(fields_.size() + 1);
+    field_keys_.reserve(field_keys_.size() + 1);
+    field_keys_.emplace(key, id.value);
+    fields_.push_back(FieldDescriptor{id, protocol_id, std::move(key),
+                                      std::move(display_name), value_type,
+                                      visibility_flags});
+  } catch (const std::bad_alloc &) {
+    return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
+  }
+  return id;
 }
 
 RegistryResult<RegistrySnapshot> RegistryBuilder::freeze() {
-    if (frozen_) {
-        return error(RegistryErrorCode::Frozen);
-    }
-    if (protocols_.empty()) {
-        return error(RegistryErrorCode::Empty);
-    }
-    const RegistryRevision revision = compute_revision(protocols_, fields_);
-    try {
-        RegistrySnapshot snapshot(protocols_, fields_, revision);
-        frozen_ = true;
-        return snapshot;
-    } catch (const std::bad_alloc&) {
-        return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
-    }
+  if (frozen_) {
+    return error(RegistryErrorCode::Frozen);
+  }
+  if (protocols_.empty()) {
+    return error(RegistryErrorCode::Empty);
+  }
+  const RegistryRevision revision = compute_revision(protocols_, fields_);
+  try {
+    RegistrySnapshot snapshot(protocols_, fields_, revision);
+    frozen_ = true;
+    return snapshot;
+  } catch (const std::bad_alloc &) {
+    return RegistryError{RegistryErrorCode::AllocationFailed, {}, 0};
+  }
 }
 
 RegistryResult<RegistrySnapshot> make_core_registry() {
-    RegistryBuilder builder;
+  RegistryBuilder builder;
 
-    struct ProtocolDefinition {
-        std::string_view key;
-        std::string_view display_name;
-    };
-    constexpr std::array protocols{
-        ProtocolDefinition{"root", "Root"},
-        ProtocolDefinition{"unknown", "Unknown"},
-        ProtocolDefinition{"diagnostics", "Diagnostics"},
-        ProtocolDefinition{"eth", "Ethernet"},
-        ProtocolDefinition{"ipv4", "Internet Protocol Version 4"},
-        ProtocolDefinition{"udp", "User Datagram Protocol"},
-        ProtocolDefinition{"vlan", "IEEE 802.1Q Virtual LAN"},
-        ProtocolDefinition{"tcp", "Transmission Control Protocol"},
-        ProtocolDefinition{"arp", "Address Resolution Protocol"},
-        ProtocolDefinition{"ipv6", "Internet Protocol Version 6"},
-        ProtocolDefinition{"icmp", "Internet Control Message Protocol"},
-        ProtocolDefinition{"icmpv6", "Internet Control Message Protocol Version 6"},
-    };
-    std::array<ProtocolId, protocols.size()> protocol_ids{};
-    for (std::size_t index = 0; index < protocols.size(); ++index) {
-        auto result =
-            builder.register_protocol(std::string(protocols[index].key), std::string(protocols[index].display_name));
-        if (const auto* failure = std::get_if<RegistryError>(&result)) {
-            return *failure;
-        }
-        protocol_ids[index] = std::get<ProtocolId>(result);
+  // This is an append-only identity ledger. Reordering existing protocols or
+  // fields changes stable IDs and the registry revision.
+  struct ProtocolDefinition {
+    std::string_view key;
+    std::string_view display_name;
+  };
+  constexpr std::array protocols{
+      ProtocolDefinition{"root", "Root"},
+      ProtocolDefinition{"unknown", "Unknown"},
+      ProtocolDefinition{"diagnostics", "Diagnostics"},
+      ProtocolDefinition{"eth", "Ethernet"},
+      ProtocolDefinition{"ipv4", "Internet Protocol Version 4"},
+      ProtocolDefinition{"udp", "User Datagram Protocol"},
+      ProtocolDefinition{"vlan", "IEEE 802.1Q Virtual LAN"},
+      ProtocolDefinition{"tcp", "Transmission Control Protocol"},
+      ProtocolDefinition{"arp", "Address Resolution Protocol"},
+      ProtocolDefinition{"ipv6", "Internet Protocol Version 6"},
+      ProtocolDefinition{"icmp", "Internet Control Message Protocol"},
+      ProtocolDefinition{"icmpv6",
+                         "Internet Control Message Protocol Version 6"},
+      ProtocolDefinition{"sll", "Linux Cooked Capture"},
+      ProtocolDefinition{"null", "Null/Loopback"},
+      ProtocolDefinition{"raw", "Raw Packet Data"},
+      ProtocolDefinition{"llc", "IEEE 802.2 Logical Link Control"},
+      ProtocolDefinition{"snap", "Subnetwork Access Protocol"},
+      ProtocolDefinition{"lldp", "Link Layer Discovery Protocol"},
+      ProtocolDefinition{"stp", "Spanning Tree Protocol"},
+      ProtocolDefinition{"mstp", "Multiple Spanning Tree Protocol"},
+      ProtocolDefinition{"icmp_ext", "ICMP Extension Structure"},
+      ProtocolDefinition{"dns", "Domain Name System"},
+      ProtocolDefinition{"mdns", "Multicast Domain Name System"},
+      ProtocolDefinition{"llmnr", "Link-Local Multicast Name Resolution"},
+      ProtocolDefinition{"dhcp", "Dynamic Host Configuration Protocol"},
+      ProtocolDefinition{"dhcpv6",
+                         "Dynamic Host Configuration Protocol for IPv6"},
+      ProtocolDefinition{"igmp", "Internet Group Management Protocol"},
+      ProtocolDefinition{"mld", "Multicast Listener Discovery"},
+      ProtocolDefinition{"ntp", "Network Time Protocol"},
+      ProtocolDefinition{"gre", "Generic Routing Encapsulation"},
+      ProtocolDefinition{"vxlan", "Virtual eXtensible Local Area Network"},
+      ProtocolDefinition{"geneve",
+                         "Generic Network Virtualization Encapsulation"},
+      ProtocolDefinition{"mpls", "Multiprotocol Label Switching"},
+      ProtocolDefinition{"rarp", "Reverse Address Resolution Protocol"},
+      ProtocolDefinition{"inarp", "Inverse Address Resolution Protocol"},
+      ProtocolDefinition{"http", "Hypertext Transfer Protocol"},
+      ProtocolDefinition{"tls", "Transport Layer Security"},
+      ProtocolDefinition{"quic", "QUIC"},
+  };
+  std::array<ProtocolId, protocols.size()> protocol_ids{};
+  for (std::size_t index = 0; index < protocols.size(); ++index) {
+    auto result =
+        builder.register_protocol(std::string(protocols[index].key),
+                                  std::string(protocols[index].display_name));
+    if (const auto *failure = std::get_if<RegistryError>(&result)) {
+      return *failure;
     }
+    protocol_ids[index] = std::get<ProtocolId>(result);
+  }
 
-    struct FieldDefinition {
-        std::size_t protocol_index;
-        std::string_view key;
-        std::string_view display_name;
-        FieldValueType value_type;
-    };
-    constexpr std::array fields{
-        FieldDefinition{0, "root.frame", "Frame", FieldValueType::Protocol},
-        FieldDefinition{1, "unknown.data", "Unknown data", FieldValueType::Bytes},
-        FieldDefinition{2, "diagnostics.message", "Diagnostic", FieldValueType::GeneratedText},
-        FieldDefinition{0, "root.captured_length", "Captured length", FieldValueType::Unsigned},
-        FieldDefinition{0, "root.reported_length", "Reported length", FieldValueType::Unsigned},
-        FieldDefinition{0, "root.link_type", "Link type", FieldValueType::Unsigned},
-        FieldDefinition{3, "eth.frame", "Ethernet frame", FieldValueType::Protocol},
-        FieldDefinition{3, "eth.destination", "Destination", FieldValueType::Bytes},
-        FieldDefinition{3, "eth.source", "Source", FieldValueType::Bytes},
-        FieldDefinition{3, "eth.type", "Type/Length", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.packet", "Internet Protocol Version 4", FieldValueType::Protocol},
-        FieldDefinition{4, "ipv4.version", "Version", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.header_length", "Header length", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.dscp_ecn", "DSCP/ECN", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.total_length", "Total length", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.identification", "Identification", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.flags", "Flags", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.fragment_offset", "Fragment offset", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.ttl", "Time to live", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.protocol", "Protocol", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.checksum", "Header checksum", FieldValueType::Unsigned},
-        FieldDefinition{4, "ipv4.source", "Source", FieldValueType::Bytes},
-        FieldDefinition{4, "ipv4.destination", "Destination", FieldValueType::Bytes},
-        FieldDefinition{4, "ipv4.options", "Options", FieldValueType::Bytes},
-        FieldDefinition{5, "udp.datagram", "User Datagram Protocol", FieldValueType::Protocol},
-        FieldDefinition{5, "udp.source_port", "Source port", FieldValueType::Unsigned},
-        FieldDefinition{5, "udp.destination_port", "Destination port", FieldValueType::Unsigned},
-        FieldDefinition{5, "udp.length", "Length", FieldValueType::Unsigned},
-        FieldDefinition{5, "udp.checksum", "Checksum", FieldValueType::Unsigned},
-        FieldDefinition{5, "udp.payload", "Payload", FieldValueType::Bytes},
-        FieldDefinition{6, "vlan.tag", "IEEE 802.1Q tag", FieldValueType::Protocol},
-        FieldDefinition{6, "vlan.priority", "Priority code point", FieldValueType::Unsigned},
-        FieldDefinition{6, "vlan.dei", "Drop eligible indicator", FieldValueType::Unsigned},
-        FieldDefinition{6, "vlan.id", "VLAN identifier", FieldValueType::Unsigned},
-        FieldDefinition{6, "vlan.type", "Encapsulated type", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.segment", "Transmission Control Protocol", FieldValueType::Protocol},
-        FieldDefinition{7, "tcp.source_port", "Source port", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.destination_port", "Destination port", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.sequence_number", "Sequence number", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.acknowledgment_number", "Acknowledgment number", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.header_length", "Header length", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.reserved", "Reserved bits", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.flags", "Flags", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.window", "Window size", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.checksum", "Checksum", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.urgent_pointer", "Urgent pointer", FieldValueType::Unsigned},
-        FieldDefinition{7, "tcp.options", "Options", FieldValueType::Bytes},
-        FieldDefinition{7, "tcp.payload", "Payload", FieldValueType::Bytes},
-        FieldDefinition{8, "arp.packet", "Address Resolution Protocol", FieldValueType::Protocol},
-        FieldDefinition{8, "arp.hardware_type", "Hardware type", FieldValueType::Unsigned},
-        FieldDefinition{8, "arp.protocol_type", "Protocol type", FieldValueType::Unsigned},
-        FieldDefinition{8, "arp.hardware_length", "Hardware address length", FieldValueType::Unsigned},
-        FieldDefinition{8, "arp.protocol_length", "Protocol address length", FieldValueType::Unsigned},
-        FieldDefinition{8, "arp.operation", "Operation", FieldValueType::Unsigned},
-        FieldDefinition{8, "arp.sender_hardware", "Sender hardware address", FieldValueType::Bytes},
-        FieldDefinition{8, "arp.sender_protocol", "Sender protocol address", FieldValueType::Bytes},
-        FieldDefinition{8, "arp.target_hardware", "Target hardware address", FieldValueType::Bytes},
-        FieldDefinition{8, "arp.target_protocol", "Target protocol address", FieldValueType::Bytes},
-        FieldDefinition{9, "ipv6.packet", "Internet Protocol Version 6", FieldValueType::Protocol},
-        FieldDefinition{9, "ipv6.version", "Version", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.traffic_class", "Traffic class", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.flow_label", "Flow label", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.payload_length", "Payload length", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.next_header", "Next header", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.hop_limit", "Hop limit", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.source", "Source", FieldValueType::Bytes},
-        FieldDefinition{9, "ipv6.destination", "Destination", FieldValueType::Bytes},
-        FieldDefinition{9, "ipv6.extension", "Extension header", FieldValueType::Protocol},
-        FieldDefinition{9, "ipv6.extension_next_header", "Next header", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.extension_length", "Extension length", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.extension_type", "Extension type", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.extension_data", "Extension data", FieldValueType::Bytes},
-        FieldDefinition{9, "ipv6.fragment_offset_encoded", "Encoded fragment offset", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.fragment_offset", "Fragment offset", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.fragment_reserved", "Fragment reserved bits", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.fragment_more", "More fragments", FieldValueType::Unsigned},
-        FieldDefinition{9, "ipv6.fragment_identification", "Fragment identification", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.message", "Internet Control Message Protocol", FieldValueType::Protocol},
-        FieldDefinition{10, "icmp.type", "Type", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.code", "Code", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.checksum", "Checksum", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.identifier", "Identifier", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.sequence", "Sequence number", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.gateway", "Gateway", FieldValueType::Bytes},
-        FieldDefinition{10, "icmp.pointer", "Pointer", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.mtu", "Next-Hop MTU", FieldValueType::Unsigned},
-        FieldDefinition{10, "icmp.body", "Message body", FieldValueType::Bytes},
-        FieldDefinition{10, "icmp.quoted", "Quoted packet", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.message", "Internet Control Message Protocol Version 6", FieldValueType::Protocol},
-        FieldDefinition{11, "icmpv6.type", "Type", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.code", "Code", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.checksum", "Checksum", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.informational", "Informational message", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.identifier", "Identifier", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.sequence", "Sequence number", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.mtu", "MTU", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.pointer", "Pointer", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.target", "Target address", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.destination", "Destination address", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.flags", "Flags", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.current_hop_limit", "Current hop limit", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.router_lifetime", "Router lifetime", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.reachable_time", "Reachable time", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.retrans_timer", "Retransmission timer", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.body", "Message body", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.quoted", "Quoted packet", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.option", "Neighbor Discovery option", FieldValueType::Protocol},
-        FieldDefinition{11, "icmpv6.option_type", "Option type", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.option_length", "Option length", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.option_body", "Option body", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.redirected_packet", "Redirected packet", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.link_layer_address", "Link-layer address", FieldValueType::Bytes},
-        FieldDefinition{11, "icmpv6.prefix_length", "Prefix length", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.prefix_flags", "Prefix flags", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.valid_lifetime", "Valid lifetime", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.preferred_lifetime", "Preferred lifetime", FieldValueType::Unsigned},
-        FieldDefinition{11, "icmpv6.prefix", "Prefix", FieldValueType::Bytes},
-    };
-    for (const auto& field : fields) {
-        auto result = builder.register_field(protocol_ids[field.protocol_index], std::string(field.key),
-                                             std::string(field.display_name), field.value_type);
-        if (const auto* failure = std::get_if<RegistryError>(&result)) {
-            return *failure;
-        }
+  struct FieldDefinition {
+    std::size_t protocol_index;
+    std::string_view key;
+    std::string_view display_name;
+    FieldValueType value_type;
+  };
+  constexpr std::array fields{
+      FieldDefinition{0, "root.frame", "Frame", FieldValueType::Protocol},
+      FieldDefinition{1, "unknown.data", "Unknown data", FieldValueType::Bytes},
+      FieldDefinition{2, "diagnostics.message", "Diagnostic",
+                      FieldValueType::GeneratedText},
+      FieldDefinition{0, "root.captured_length", "Captured length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{0, "root.reported_length", "Reported length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{0, "root.link_type", "Link type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{3, "eth.frame", "Ethernet frame",
+                      FieldValueType::Protocol},
+      FieldDefinition{3, "eth.destination", "Destination",
+                      FieldValueType::Bytes},
+      FieldDefinition{3, "eth.source", "Source", FieldValueType::Bytes},
+      FieldDefinition{3, "eth.type", "Type/Length", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.packet", "Internet Protocol Version 4",
+                      FieldValueType::Protocol},
+      FieldDefinition{4, "ipv4.version", "Version", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.header_length", "Header length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.dscp_ecn", "DSCP/ECN", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.total_length", "Total length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.identification", "Identification",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.reserved_flag", "Reserved flag",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.dont_fragment", "Don't fragment",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.more_fragments", "More fragments",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.fragment_offset_encoded",
+                      "Encoded fragment offset", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.fragment_offset", "Fragment offset",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.reassembled", "Payload reassembled",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.reassembled_length",
+                      "Reassembled payload length", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.reassembled_fragment_count",
+                      "Reassembled fragment count", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.fragment_overlap", "Fragment overlap observed",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.ttl", "Time to live", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.protocol", "Protocol", FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.checksum", "Header checksum",
+                      FieldValueType::Unsigned},
+      FieldDefinition{4, "ipv4.source", "Source", FieldValueType::Bytes},
+      FieldDefinition{4, "ipv4.destination", "Destination",
+                      FieldValueType::Bytes},
+      FieldDefinition{4, "ipv4.options", "Options", FieldValueType::Bytes},
+      FieldDefinition{5, "udp.datagram", "User Datagram Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{5, "udp.source_port", "Source port",
+                      FieldValueType::Unsigned},
+      FieldDefinition{5, "udp.destination_port", "Destination port",
+                      FieldValueType::Unsigned},
+      FieldDefinition{5, "udp.length", "Length", FieldValueType::Unsigned},
+      FieldDefinition{5, "udp.checksum", "Checksum", FieldValueType::Unsigned},
+      FieldDefinition{5, "udp.payload", "Payload", FieldValueType::Bytes},
+      FieldDefinition{6, "vlan.tag", "IEEE 802.1Q tag",
+                      FieldValueType::Protocol},
+      FieldDefinition{6, "vlan.priority", "Priority code point",
+                      FieldValueType::Unsigned},
+      FieldDefinition{6, "vlan.dei", "Drop eligible indicator",
+                      FieldValueType::Unsigned},
+      FieldDefinition{6, "vlan.id", "VLAN identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{6, "vlan.type", "Encapsulated type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.segment", "Transmission Control Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{7, "tcp.source_port", "Source port",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.destination_port", "Destination port",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.sequence_number", "Sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.acknowledgment_number", "Acknowledgment number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.header_length", "Header length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.reserved", "Reserved bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.window", "Window size", FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.checksum", "Checksum", FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.urgent_pointer", "Urgent pointer",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.options", "Options", FieldValueType::Bytes},
+      FieldDefinition{7, "tcp.payload", "Payload", FieldValueType::Bytes},
+      FieldDefinition{7, "tcp.reassembled", "Stream data reassembled",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.reassembled_length",
+                      "Contiguous reassembled stream length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.reassembled_segment_count",
+                      "Reassembled segment count", FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.reassembly_overlap",
+                      "TCP segment overlap observed", FieldValueType::Unsigned},
+      FieldDefinition{7, "tcp.reassembly_conflict",
+                      "Conflicting TCP retransmission observed",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.packet", "Address Resolution Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{8, "arp.hardware_type", "Hardware type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.protocol_type", "Protocol type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.hardware_length", "Hardware address length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.protocol_length", "Protocol address length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.operation", "Operation",
+                      FieldValueType::Unsigned},
+      FieldDefinition{8, "arp.sender_hardware", "Sender hardware address",
+                      FieldValueType::Bytes},
+      FieldDefinition{8, "arp.sender_protocol", "Sender protocol address",
+                      FieldValueType::Bytes},
+      FieldDefinition{8, "arp.target_hardware", "Target hardware address",
+                      FieldValueType::Bytes},
+      FieldDefinition{8, "arp.target_protocol", "Target protocol address",
+                      FieldValueType::Bytes},
+      FieldDefinition{9, "ipv6.packet", "Internet Protocol Version 6",
+                      FieldValueType::Protocol},
+      FieldDefinition{9, "ipv6.version", "Version", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.traffic_class", "Traffic class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.flow_label", "Flow label",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.payload_length", "Payload length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.next_header", "Next header",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.hop_limit", "Hop limit",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.source", "Source", FieldValueType::Bytes},
+      FieldDefinition{9, "ipv6.destination", "Destination",
+                      FieldValueType::Bytes},
+      FieldDefinition{9, "ipv6.extension", "Extension header",
+                      FieldValueType::Protocol},
+      FieldDefinition{9, "ipv6.extension_next_header", "Next header",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.extension_length", "Extension length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.extension_type", "Extension type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.extension_data", "Extension data",
+                      FieldValueType::Bytes},
+      FieldDefinition{9, "ipv6.fragment_offset_encoded",
+                      "Encoded fragment offset", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_offset", "Fragment offset",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_reserved_octet",
+                      "Fragment reserved octet", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_reserved", "Fragment reserved bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_more", "More fragments",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_atomic", "Atomic fragment",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_identification",
+                      "Fragment identification", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.reassembled", "Payload reassembled",
+                      FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.reassembled_length",
+                      "Reassembled payload length", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.reassembled_fragment_count",
+                      "Reassembled fragment count", FieldValueType::Unsigned},
+      FieldDefinition{9, "ipv6.fragment_overlap", "Fragment overlap observed",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.message", "Internet Control Message Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{10, "icmp.type", "Type", FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.code", "Code", FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.checksum", "Checksum",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.identifier", "Identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.sequence", "Sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.gateway", "Gateway", FieldValueType::Bytes},
+      FieldDefinition{10, "icmp.pointer", "Pointer", FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.mtu", "Next-Hop MTU", FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.body", "Message body", FieldValueType::Bytes},
+      FieldDefinition{10, "icmp.quoted", "Quoted packet",
+                      FieldValueType::Bytes},
+      FieldDefinition{10, "icmp.original_datagram_length_words",
+                      "Original datagram length (32-bit words)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.original_datagram_length",
+                      "Original datagram length", FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.extended_sequence",
+                      "Extended Echo sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.extended_flags",
+                      "Extended Echo state and flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.originate_timestamp", "Originate timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.receive_timestamp", "Receive timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.transmit_timestamp", "Transmit timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.address_mask", "Address mask",
+                      FieldValueType::Bytes},
+      FieldDefinition{10, "icmp.router_address_count", "Router address count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.router_entry_size", "Router entry size",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.router_lifetime", "Router lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{10, "icmp.router_entry", "Router advertisement entry",
+                      FieldValueType::Protocol},
+      FieldDefinition{10, "icmp.router_address", "Router address",
+                      FieldValueType::Bytes},
+      FieldDefinition{10, "icmp.router_preference", "Router preference",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.message",
+                      "Internet Control Message Protocol Version 6",
+                      FieldValueType::Protocol},
+      FieldDefinition{11, "icmpv6.type", "Type", FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.code", "Code", FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.checksum", "Checksum",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.informational", "Informational message",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.identifier", "Identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.sequence", "Sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.mtu", "MTU", FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.pointer", "Pointer",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.target", "Target address",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.destination", "Destination address",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.current_hop_limit", "Current hop limit",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.router_lifetime", "Router lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.reachable_time", "Reachable time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.retrans_timer", "Retransmission timer",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.body", "Message body", FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.quoted", "Quoted packet",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.option", "Neighbor Discovery option",
+                      FieldValueType::Protocol},
+      FieldDefinition{11, "icmpv6.option_type", "Option type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.option_length", "Option length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.option_body", "Option body",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.redirected_packet", "Redirected packet",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.link_layer_address", "Link-layer address",
+                      FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.prefix_length", "Prefix length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.prefix_flags", "Prefix flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.valid_lifetime", "Valid lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.preferred_lifetime", "Preferred lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.prefix", "Prefix", FieldValueType::Bytes},
+      FieldDefinition{11, "icmpv6.original_datagram_length_words",
+                      "Original datagram length (64-bit words)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.original_datagram_length",
+                      "Original datagram length", FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.extended_sequence",
+                      "Extended Echo sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{11, "icmpv6.extended_flags",
+                      "Extended Echo state and flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.packet", "Linux cooked capture",
+                      FieldValueType::Protocol},
+      FieldDefinition{12, "sll.version", "Header version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.protocol", "Protocol", FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.packet_type", "Packet type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.hardware_type", "Link-layer address type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.address_length", "Link-layer address length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.address", "Link-layer address",
+                      FieldValueType::Bytes},
+      FieldDefinition{12, "sll.address_padding", "Address padding",
+                      FieldValueType::Bytes},
+      FieldDefinition{12, "sll.interface_index", "Interface index",
+                      FieldValueType::Unsigned},
+      FieldDefinition{12, "sll.reserved", "Reserved", FieldValueType::Unsigned},
+      FieldDefinition{13, "null.packet", "Null/Loopback",
+                      FieldValueType::Protocol},
+      FieldDefinition{13, "null.family", "Address family",
+                      FieldValueType::Unsigned},
+      FieldDefinition{13, "null.type", "Protocol type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{14, "raw.packet", "Raw packet data",
+                      FieldValueType::Protocol},
+      FieldDefinition{3, "eth.trailer", "Trailer", FieldValueType::Bytes},
+      FieldDefinition{6, "vlan.trailer", "Trailer", FieldValueType::Bytes},
+      FieldDefinition{15, "llc.packet", "IEEE 802.2 Logical Link Control",
+                      FieldValueType::Protocol},
+      FieldDefinition{15, "llc.dsap", "Destination SAP",
+                      FieldValueType::Unsigned},
+      FieldDefinition{15, "llc.ssap", "Source SAP", FieldValueType::Unsigned},
+      FieldDefinition{15, "llc.control", "Control", FieldValueType::Unsigned},
+      FieldDefinition{15, "llc.control_length", "Control length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{16, "snap.packet", "Subnetwork Access Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{16, "snap.oui", "Organization code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{16, "snap.pid", "Protocol identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.packet", "Link Layer Discovery Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{17, "lldp.tlv", "LLDP TLV", FieldValueType::Protocol},
+      FieldDefinition{17, "lldp.tlv.type", "TLV type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.tlv.length", "TLV length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.tlv.value", "TLV value", FieldValueType::Bytes},
+      FieldDefinition{17, "lldp.chassis.subtype", "Chassis ID subtype",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.chassis.id", "Chassis ID",
+                      FieldValueType::Bytes},
+      FieldDefinition{17, "lldp.port.subtype", "Port ID subtype",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.port.id", "Port ID", FieldValueType::Bytes},
+      FieldDefinition{17, "lldp.address_family", "Network address family",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.ttl", "Time to live", FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.port_description", "Port description",
+                      FieldValueType::String},
+      FieldDefinition{17, "lldp.system_name", "System name",
+                      FieldValueType::String},
+      FieldDefinition{17, "lldp.system_description", "System description",
+                      FieldValueType::String},
+      FieldDefinition{17, "lldp.system_capabilities", "System capabilities",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.enabled_capabilities", "Enabled capabilities",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.management.address_length",
+                      "Management address length", FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.management.address_subtype",
+                      "Management address subtype", FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.management.address", "Management address",
+                      FieldValueType::Bytes},
+      FieldDefinition{17, "lldp.management.interface_subtype",
+                      "Interface numbering subtype", FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.management.interface_number",
+                      "Interface number", FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.management.oid", "Object identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{17, "lldp.organization.oui", "Organization code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.organization.subtype", "Organization subtype",
+                      FieldValueType::Unsigned},
+      FieldDefinition{17, "lldp.organization.data", "Organization data",
+                      FieldValueType::Bytes},
+      FieldDefinition{18, "stp.packet", "Spanning Tree Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{18, "stp.protocol_identifier", "Protocol identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.version", "Protocol version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.type", "BPDU type", FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.root.priority", "Root priority",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.root.system_id_extension",
+                      "Root system ID extension", FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.root.mac", "Root MAC address",
+                      FieldValueType::Bytes},
+      FieldDefinition{18, "stp.root_path_cost", "Root path cost",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.bridge.priority", "Bridge priority",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.bridge.system_id_extension",
+                      "Bridge system ID extension", FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.bridge.mac", "Bridge MAC address",
+                      FieldValueType::Bytes},
+      FieldDefinition{18, "stp.port_id", "Port identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.message_age", "Message age (1/256 s)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.max_age", "Maximum age (1/256 s)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.hello_time", "Hello time (1/256 s)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.forward_delay", "Forward delay (1/256 s)",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.version_1_length", "Version 1 length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{18, "stp.body", "Unrecognized BPDU body",
+                      FieldValueType::Bytes},
+      FieldDefinition{19, "mstp.extension", "MSTP extension",
+                      FieldValueType::Protocol},
+      FieldDefinition{19, "mstp.version_3_length", "Version 3 length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.config_format_selector",
+                      "Configuration format selector",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.config_name", "Configuration name",
+                      FieldValueType::Bytes},
+      FieldDefinition{19, "mstp.config_revision", "Configuration revision",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.config_digest", "Configuration digest",
+                      FieldValueType::Bytes},
+      FieldDefinition{19, "mstp.cist.internal_root_path_cost",
+                      "CIST internal root path cost", FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.cist.bridge_priority", "CIST bridge priority",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.cist.bridge_system_id_extension",
+                      "CIST bridge system ID extension",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.cist.bridge_mac", "CIST bridge MAC address",
+                      FieldValueType::Bytes},
+      FieldDefinition{19, "mstp.cist.remaining_hops", "CIST remaining hops",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance", "MSTI configuration message",
+                      FieldValueType::Protocol},
+      FieldDefinition{19, "mstp.instance.flags", "MSTI flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.root_priority",
+                      "MSTI regional root priority", FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.id", "MSTI identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.regional_root_mac",
+                      "MSTI regional root MAC address", FieldValueType::Bytes},
+      FieldDefinition{19, "mstp.instance.internal_root_path_cost",
+                      "MSTI internal root path cost", FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.bridge_priority",
+                      "MSTI bridge priority", FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.port_priority", "MSTI port priority",
+                      FieldValueType::Unsigned},
+      FieldDefinition{19, "mstp.instance.remaining_hops", "MSTI remaining hops",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.structure", "ICMP Extension Structure",
+                      FieldValueType::Protocol},
+      FieldDefinition{20, "icmp_ext.version", "Version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.reserved", "Reserved",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.checksum", "Checksum",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.checksum_valid", "Checksum valid",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.object", "Extension object",
+                      FieldValueType::Protocol},
+      FieldDefinition{20, "icmp_ext.object.length", "Object length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.object.class", "Object class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.object.ctype", "Object C-Type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.object.data", "Object data",
+                      FieldValueType::Bytes},
+      FieldDefinition{20, "icmp_ext.mpls_entry", "MPLS label stack entry",
+                      FieldValueType::Protocol},
+      FieldDefinition{20, "icmp_ext.mpls_label", "MPLS label",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.mpls_traffic_class", "MPLS traffic class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.mpls_bottom_of_stack",
+                      "MPLS bottom of stack", FieldValueType::Unsigned},
+      FieldDefinition{20, "icmp_ext.mpls_ttl", "MPLS time to live",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.message", "Domain Name System",
+                      FieldValueType::Protocol},
+      FieldDefinition{22, "mdns.message", "Multicast Domain Name System",
+                      FieldValueType::Protocol},
+      FieldDefinition{23, "llmnr.message",
+                      "Link-Local Multicast Name Resolution",
+                      FieldValueType::Protocol},
+      FieldDefinition{21, "dns.tcp_stream", "DNS over TCP stream",
+                      FieldValueType::Protocol},
+      FieldDefinition{21, "dns.tcp_length", "TCP message length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.id", "Transaction identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.response", "Response", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.opcode", "Operation code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.authoritative", "Authoritative answer",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.truncated", "Truncated",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.recursion_desired", "Recursion desired",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.recursion_available", "Recursion available",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.authenticated_data", "Authenticated data",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.checking_disabled", "Checking disabled",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.rcode", "Response code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{23, "llmnr.conflict", "Conflict",
+                      FieldValueType::Unsigned},
+      FieldDefinition{23, "llmnr.tentative", "Tentative",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.question_count", "Question count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.answer_count", "Answer count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.authority_count", "Authority count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.additional_count", "Additional count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.question", "Question", FieldValueType::Protocol},
+      FieldDefinition{21, "dns.question.name", "Name", FieldValueType::String},
+      FieldDefinition{21, "dns.question.type", "Type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.question.class", "Class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{22, "mdns.question.unicast_response",
+                      "Unicast response requested", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record", "Resource record",
+                      FieldValueType::Protocol},
+      FieldDefinition{21, "dns.record.section", "Section",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record.name", "Name", FieldValueType::String},
+      FieldDefinition{21, "dns.record.type", "Type", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record.class", "Class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{22, "mdns.record.cache_flush", "Cache flush",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record.ttl", "Time to live",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record.length", "Data length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.record.data", "Record data",
+                      FieldValueType::Bytes},
+      FieldDefinition{21, "dns.address", "Address", FieldValueType::Bytes},
+      FieldDefinition{21, "dns.target", "Target", FieldValueType::String},
+      FieldDefinition{21, "dns.preference", "Preference",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.priority", "Priority", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.weight", "Weight", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.port", "Port", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.text", "Text", FieldValueType::String},
+      FieldDefinition{21, "dns.soa.mname", "Primary name server",
+                      FieldValueType::String},
+      FieldDefinition{21, "dns.soa.rname", "Responsible mailbox",
+                      FieldValueType::String},
+      FieldDefinition{21, "dns.soa.serial", "Serial", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.soa.refresh", "Refresh",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.soa.retry", "Retry", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.soa.expire", "Expire", FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.soa.minimum", "Minimum TTL",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.udp_payload_size", "UDP payload size",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.extended_rcode", "Extended response code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.version", "EDNS version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.flags", "EDNS flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.option", "EDNS option",
+                      FieldValueType::Protocol},
+      FieldDefinition{21, "dns.edns.option.code", "Option code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.option.length", "Option length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{21, "dns.edns.option.data", "Option data",
+                      FieldValueType::Bytes},
+      FieldDefinition{21, "dns.trailing", "Trailing or incomplete data",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.message", "Dynamic Host Configuration Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{24, "dhcp.operation", "Operation",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.hardware_type", "Hardware type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.hardware_length", "Hardware address length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.hops", "Relay hops", FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.transaction_id", "Transaction identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.seconds", "Seconds elapsed",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.broadcast", "Broadcast reply requested",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.client_address", "Client address",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.your_address", "Assigned client address",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.server_address", "Next server address",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.relay_address", "Relay agent address",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.client_hardware_address",
+                      "Client hardware address", FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.client_hardware_padding",
+                      "Client hardware address padding", FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.server_name", "Server host name",
+                      FieldValueType::String},
+      FieldDefinition{24, "dhcp.boot_file", "Boot file name",
+                      FieldValueType::String},
+      FieldDefinition{24, "dhcp.magic_cookie", "DHCP magic cookie",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.option", "DHCP option",
+                      FieldValueType::Protocol},
+      FieldDefinition{24, "dhcp.option.code", "Option code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.option.length", "Option length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.option.data", "Option data",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.message_type", "DHCP message type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.subnet_mask", "Subnet mask",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.router", "Router", FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.dns_server", "Domain name server",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.host_name", "Host name",
+                      FieldValueType::String},
+      FieldDefinition{24, "dhcp.domain_name", "Domain name",
+                      FieldValueType::String},
+      FieldDefinition{24, "dhcp.requested_address", "Requested address",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.lease_time", "Address lease time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.server_identifier", "Server identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.parameter_request", "Requested option code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.maximum_message_size",
+                      "Maximum DHCP message size", FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.renewal_time", "Renewal time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.rebinding_time", "Rebinding time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.vendor_class", "Vendor class identifier",
+                      FieldValueType::String},
+      FieldDefinition{24, "dhcp.client_identifier", "Client identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.overload", "Option overload",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.relay_suboption", "Relay agent suboption",
+                      FieldValueType::Protocol},
+      FieldDefinition{24, "dhcp.relay_suboption.code", "Suboption code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.relay_suboption.length", "Suboption length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.relay_suboption.data", "Suboption data",
+                      FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.end", "End option", FieldValueType::Unsigned},
+      FieldDefinition{24, "dhcp.padding", "Padding", FieldValueType::Bytes},
+      FieldDefinition{24, "dhcp.trailing", "BOOTP vendor or trailing data",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.message",
+                      "Dynamic Host Configuration Protocol for IPv6",
+                      FieldValueType::Protocol},
+      FieldDefinition{25, "dhcpv6.message_type", "Message type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.transaction_id", "Transaction identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.hop_count", "Relay hop count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.link_address", "Relay link address",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.peer_address", "Relay peer address",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.option", "DHCPv6 option",
+                      FieldValueType::Protocol},
+      FieldDefinition{25, "dhcpv6.option.code", "Option code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.option.length", "Option length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.option.data", "Option data",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.duid", "DHCP unique identifier",
+                      FieldValueType::Protocol},
+      FieldDefinition{25, "dhcpv6.duid.type", "DUID type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.duid.hardware_type", "DUID hardware type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.duid.time", "DUID time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.duid.enterprise", "DUID enterprise number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.duid.identifier", "DUID identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.iaid", "Identity association identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.t1", "T1", FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.t2", "T2", FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.address", "IPv6 address",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.preferred_lifetime", "Preferred lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.valid_lifetime", "Valid lifetime",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.prefix_length", "Prefix length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.prefix", "Delegated prefix",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.requested_option", "Requested option code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.preference", "Server preference",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.elapsed_time", "Elapsed time",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.status_code", "Status code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.status_message", "Status message",
+                      FieldValueType::String},
+      FieldDefinition{25, "dhcpv6.dns_server", "DNS recursive name server",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.domain_search", "Domain search list",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.relay_message", "Relay message",
+                      FieldValueType::Protocol},
+      FieldDefinition{25, "dhcpv6.interface_id", "Relay interface identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{25, "dhcpv6.rapid_commit", "Rapid commit",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.information_refresh_time",
+                      "Information refresh time", FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.sol_max_rt", "SOL_MAX_RT",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.inf_max_rt", "INF_MAX_RT",
+                      FieldValueType::Unsigned},
+      FieldDefinition{25, "dhcpv6.trailing", "Trailing or incomplete data",
+                      FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.packet", "Internet Group Management Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{26, "igmp.type", "Message type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.version", "IGMP version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.max_response_code", "Maximum response code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.max_response_time",
+                      "Maximum response time in tenths of a second",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.checksum", "Checksum",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.checksum_valid", "Checksum valid",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.group_address", "Group address",
+                      FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.reserved", "Reserved",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.suppress", "Suppress router-side processing",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.qrv", "Querier robustness variable",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.qqic", "Querier query interval code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.query_interval",
+                      "Querier query interval in seconds",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.source_count", "Source count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.source_address", "Source address",
+                      FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.record_count", "Group record count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.record", "Group record",
+                      FieldValueType::Protocol},
+      FieldDefinition{26, "igmp.record.type", "Record type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.record.aux_data_length",
+                      "Auxiliary data length", FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.record.source_count", "Record source count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{26, "igmp.record.multicast_address",
+                      "Record multicast address", FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.record.source_address", "Record source address",
+                      FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.record.aux_data", "Auxiliary data",
+                      FieldValueType::Bytes},
+      FieldDefinition{26, "igmp.trailing", "Trailing data",
+                      FieldValueType::Bytes},
+      FieldDefinition{27, "mld.message", "Multicast Listener Discovery",
+                      FieldValueType::Protocol},
+      FieldDefinition{27, "mld.version", "MLD version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.maximum_response_code", "Maximum response code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.maximum_response_delay",
+                      "Maximum response delay in milliseconds",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.reserved", "Reserved", FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.multicast_address", "Multicast address",
+                      FieldValueType::Bytes},
+      FieldDefinition{27, "mld.flags", "Query flags", FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.suppress", "Suppress router-side processing",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.qrv", "Querier robustness variable",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.qqic", "Querier query interval code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.query_interval",
+                      "Querier query interval in seconds",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.source_count", "Source count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.source_address", "Source address",
+                      FieldValueType::Bytes},
+      FieldDefinition{27, "mld.record_count", "Multicast address record count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.record", "Multicast address record",
+                      FieldValueType::Protocol},
+      FieldDefinition{27, "mld.record.type", "Record type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.record.aux_data_length", "Auxiliary data length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.record.source_count", "Record source count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{27, "mld.record.multicast_address",
+                      "Record multicast address", FieldValueType::Bytes},
+      FieldDefinition{27, "mld.record.source_address", "Record source address",
+                      FieldValueType::Bytes},
+      FieldDefinition{27, "mld.record.aux_data", "Auxiliary data",
+                      FieldValueType::Bytes},
+      FieldDefinition{27, "mld.trailing", "Trailing data",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.message", "Network Time Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{28, "ntp.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.leap_indicator", "Leap indicator",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.version", "Version", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.mode", "Mode", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.stratum", "Stratum", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.poll", "Poll exponent", FieldValueType::Signed},
+      FieldDefinition{28, "ntp.precision", "Precision exponent",
+                      FieldValueType::Signed},
+      FieldDefinition{28, "ntp.root_delay", "Root delay 16.16 value",
+                      FieldValueType::Signed},
+      FieldDefinition{28, "ntp.root_dispersion", "Root dispersion 16.16 value",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.reference_id", "Reference identifier",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.reference_timestamp", "Reference timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.origin_timestamp", "Origin timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.receive_timestamp", "Receive timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.transmit_timestamp", "Transmit timestamp",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.extension", "Extension field",
+                      FieldValueType::Protocol},
+      FieldDefinition{28, "ntp.extension.type", "Extension field type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.extension.length", "Extension field length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.extension.value", "Extension field value",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.key_id", "Authentication key identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.digest", "Authentication digest",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.control.flags", "Control flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.response", "Control response",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.error", "Control error",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.more", "More control fragments",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.opcode", "Control operation code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.sequence", "Control sequence",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.status", "Control status",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.association_id",
+                      "Control association identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.offset", "Control data offset",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.count", "Control data count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.control.data", "Control data",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.private.flags", "Private mode flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.response", "Private mode response",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.more", "More private mode fragments",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.authenticated",
+                      "Private mode authenticated", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.sequence", "Private mode sequence",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.implementation",
+                      "Private mode implementation", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.request_code",
+                      "Private mode request code", FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.error_code", "Private mode error code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.item_count", "Private mode item count",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.item_size", "Private mode item size",
+                      FieldValueType::Unsigned},
+      FieldDefinition{28, "ntp.private.data", "Private mode data",
+                      FieldValueType::Bytes},
+      FieldDefinition{28, "ntp.trailing", "Padding or trailing data",
+                      FieldValueType::Bytes},
+      FieldDefinition{29, "gre.packet", "Generic Routing Encapsulation",
+                      FieldValueType::Protocol},
+      FieldDefinition{29, "gre.flags", "Flags and version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.checksum_present", "Checksum present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.routing_present", "Routing present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.key_present", "Key present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.sequence_present", "Sequence number present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.strict_source_route", "Strict source route",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.recursion_control", "Recursion control",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.acknowledgment_present",
+                      "Acknowledgment present", FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.reserved", "Reserved bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.version", "Version", FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.protocol_type", "Protocol type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.checksum", "Checksum", FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.checksum_valid", "Checksum valid",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.offset", "Routing offset",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.key", "Key", FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.sequence_number", "Sequence number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.payload_length", "Payload length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.call_id", "Call identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.acknowledgment_number", "Acknowledgment number",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.routing_entry", "Source route entry",
+                      FieldValueType::Protocol},
+      FieldDefinition{29, "gre.routing.address_family", "Address family",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.routing.offset", "Source route offset",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.routing.length", "Source route length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{29, "gre.routing.information", "Source route information",
+                      FieldValueType::Bytes},
+      FieldDefinition{30, "vxlan.packet",
+                      "Virtual eXtensible Local Area Network",
+                      FieldValueType::Protocol},
+      FieldDefinition{30, "vxlan.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.version", "GPE version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.instance", "GPE instance present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.next_protocol_present",
+                      "GPE next protocol present", FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.oam", "OAM packet", FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.group_policy_present",
+                      "Group policy extension present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.vni_present", "VNI present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.dont_learn", "Don't learn",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.policy_applied", "Policy applied",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.reserved_flags", "Reserved flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.group_policy_id", "Group policy identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.reserved_16", "Reserved 16-bit field",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.next_protocol", "GPE next protocol",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.vni", "VXLAN network identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{30, "vxlan.reserved_8", "Reserved 8-bit field",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.packet",
+                      "Generic Network Virtualization Encapsulation",
+                      FieldValueType::Protocol},
+      FieldDefinition{31, "geneve.version", "Version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option_length", "Total option length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.flags", "Flags", FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.oam", "OAM packet", FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.critical_options", "Critical options present",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.reserved_flags", "Reserved flags",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.protocol_type", "Protocol type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.vni", "Virtual network identifier",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.reserved", "Reserved",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option", "Geneve option",
+                      FieldValueType::Protocol},
+      FieldDefinition{31, "geneve.option.class", "Option class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option.type", "Option type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option.critical", "Critical option",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option.reserved", "Option reserved bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option.data_length", "Option data length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{31, "geneve.option.data", "Option data",
+                      FieldValueType::Bytes},
+      FieldDefinition{32, "mpls.packet", "Multiprotocol Label Switching packet",
+                      FieldValueType::Protocol},
+      FieldDefinition{32, "mpls.entry", "Label stack entry",
+                      FieldValueType::Protocol},
+      FieldDefinition{32, "mpls.label", "Label", FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.traffic_class", "Traffic class",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.bottom_of_stack", "Bottom of stack",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.ttl", "Time to live", FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.payload_protocol", "Payload protocol",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.gach", "Generic Associated Channel header",
+                      FieldValueType::Protocol},
+      FieldDefinition{32, "mpls.gach.channel_indicator",
+                      "Associated channel indicator", FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.gach.version", "Associated channel version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.gach.reserved",
+                      "Associated channel reserved field",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.gach.channel_type", "Associated channel type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{32, "mpls.payload", "Unrecognized MPLS payload",
+                      FieldValueType::Bytes},
+      FieldDefinition{33, "rarp.packet", "Reverse Address Resolution Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{34, "inarp.packet", "Inverse Address Resolution Protocol",
+                      FieldValueType::Protocol},
+      FieldDefinition{35, "http.stream", "HTTP stream",
+                      FieldValueType::Protocol},
+      FieldDefinition{35, "http.message", "HTTP message",
+                      FieldValueType::Protocol},
+      FieldDefinition{35, "http.request", "Request", FieldValueType::Unsigned},
+      FieldDefinition{35, "http.response", "Response",
+                      FieldValueType::Unsigned},
+      FieldDefinition{35, "http.request_line", "Request line",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.response_line", "Status line",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.method", "Request method",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.request_target", "Request target",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.version", "HTTP version",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.status_code", "Status code",
+                      FieldValueType::Unsigned},
+      FieldDefinition{35, "http.reason_phrase", "Reason phrase",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.header", "Header field",
+                      FieldValueType::Protocol},
+      FieldDefinition{35, "http.header.name", "Header field name",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.header.value", "Header field value",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.host", "Host", FieldValueType::String},
+      FieldDefinition{35, "http.user_agent", "User agent",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.content_type", "Content type",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.content_length", "Content length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{35, "http.transfer_encoding", "Transfer encoding",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.connection", "Connection options",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.body", "Message body", FieldValueType::Bytes},
+      FieldDefinition{35, "http.chunk", "Chunk", FieldValueType::Protocol},
+      FieldDefinition{35, "http.chunk.size", "Chunk size",
+                      FieldValueType::Unsigned},
+      FieldDefinition{35, "http.chunk.extension", "Chunk extension",
+                      FieldValueType::String},
+      FieldDefinition{35, "http.chunk.data", "Chunk data",
+                      FieldValueType::Bytes},
+      FieldDefinition{35, "http.trailing", "Incomplete or trailing data",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.stream", "TLS stream", FieldValueType::Protocol},
+      FieldDefinition{36, "tls.record", "TLS record", FieldValueType::Protocol},
+      FieldDefinition{36, "tls.content_type", "Record content type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.legacy_version", "Legacy record version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.length", "Record length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.record_payload", "Record payload",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.alert", "Alert", FieldValueType::Protocol},
+      FieldDefinition{36, "tls.alert.level", "Alert level",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.alert.description", "Alert description",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.change_cipher_spec", "Change cipher spec value",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.heartbeat", "Heartbeat",
+                      FieldValueType::Protocol},
+      FieldDefinition{36, "tls.heartbeat.type", "Heartbeat message type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.heartbeat.length", "Heartbeat payload length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.heartbeat.payload", "Heartbeat payload",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.handshake", "Handshake message",
+                      FieldValueType::Protocol},
+      FieldDefinition{36, "tls.handshake.type", "Handshake type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.length", "Handshake length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.version", "Handshake legacy version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.random", "Random",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.handshake.session_id", "Legacy session ID",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.handshake.cipher_suites_length",
+                      "Cipher suites length", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.cipher_suite", "Cipher suite",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.compression_methods_length",
+                      "Compression methods length", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.compression_method",
+                      "Compression method", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.extensions_length",
+                      "Extensions length", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.extension", "Handshake extension",
+                      FieldValueType::Protocol},
+      FieldDefinition{36, "tls.extension.type", "Extension type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.extension.length", "Extension length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.extension.data", "Extension data",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.handshake.server_name_type", "Server name type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.server_name", "Server name",
+                      FieldValueType::String},
+      FieldDefinition{36, "tls.handshake.alpn", "ALPN protocol",
+                      FieldValueType::String},
+      FieldDefinition{36, "tls.handshake.supported_group", "Supported group",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.signature_algorithm",
+                      "Signature algorithm", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.supported_version",
+                      "Supported version", FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.handshake.body", "Handshake body",
+                      FieldValueType::Bytes},
+      FieldDefinition{36, "tls.handshake.reassembled",
+                      "Handshake reassembled across records",
+                      FieldValueType::Unsigned},
+      FieldDefinition{36, "tls.trailing", "Incomplete TLS record data",
+                      FieldValueType::Bytes},
+      FieldDefinition{37, "quic.packet", "QUIC packet",
+                      FieldValueType::Protocol},
+      FieldDefinition{37, "quic.packet_type", "Packet type",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.packet_length", "Packet length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.coalesced_index", "Coalesced packet index",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.header_form", "Header form",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.fixed_bit", "Fixed bit",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.long_packet_type_bits", "Long packet type bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.type_specific_bits",
+                      "Protected or type-specific bits",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.version", "Version", FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.destination_connection_id_length",
+                      "Destination connection ID length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.destination_connection_id",
+                      "Destination connection ID", FieldValueType::Bytes},
+      FieldDefinition{37, "quic.source_connection_id_length",
+                      "Source connection ID length", FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.source_connection_id", "Source connection ID",
+                      FieldValueType::Bytes},
+      FieldDefinition{37, "quic.token_length", "Token length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.token", "Token", FieldValueType::Bytes},
+      FieldDefinition{37, "quic.length",
+                      "Protected packet number and payload length",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.protected_payload",
+                      "Protected packet number and payload",
+                      FieldValueType::Bytes},
+      FieldDefinition{37, "quic.supported_version", "Supported version",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.retry_token", "Retry token",
+                      FieldValueType::Bytes},
+      FieldDefinition{37, "quic.retry_integrity_tag", "Retry integrity tag",
+                      FieldValueType::Bytes},
+      FieldDefinition{37, "quic.spin_bit", "Latency spin bit",
+                      FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.short_protected_bits",
+                      "Protected short-header bits", FieldValueType::Unsigned},
+      FieldDefinition{37, "quic.version_specific_data", "Version-specific data",
+                      FieldValueType::Bytes},
+  };
+  for (const auto &field : fields) {
+    auto result = builder.register_field(
+        protocol_ids[field.protocol_index], std::string(field.key),
+        std::string(field.display_name), field.value_type);
+    if (const auto *failure = std::get_if<RegistryError>(&result)) {
+      return *failure;
     }
-    return builder.freeze();
+  }
+  return builder.freeze();
 }
 
 } // namespace pruftnet::parsing

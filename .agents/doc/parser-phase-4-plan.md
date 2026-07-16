@@ -102,16 +102,30 @@ src/parsing/
   dissector_context.hpp
   dissector_catalog.cpp
   dissector_catalog.hpp
+  catalog/
+    catalog_registrar.cpp/.hpp
+    catalog_sections.hpp
+    core_catalog.cpp
+    link_catalog.cpp
+    network_catalog.cpp
+    transport_catalog.cpp
+    application_catalog.cpp
+    tunnel_catalog.cpp
   dissectors/
-    frame_dissector.cpp
-    ethernet_dissector.cpp
-    ipv4_dissector.cpp
-    udp_dissector.cpp
-    vlan_dissector.cpp
-    tcp_dissector.cpp
+    link/
+      frame_dissector.cpp
+      ethernet_dissector.cpp
+      vlan_dissector.cpp
+    network/
+      ipv4_dissector.cpp
+    transport/
+      udp_dissector.cpp
+      tcp_dissector.cpp
 ```
 
 Keep public headers limited to stable parsing data contracts. Catalog and dissector implementation details remain internal until plugin requirements are specified.
+The maintained current architecture is documented in
+[`dissector-architecture.md`](dissector-architecture.md).
 
 ## Implementation Steps
 

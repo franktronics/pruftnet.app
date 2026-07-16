@@ -192,3 +192,33 @@ On the same Apple M1 Pro Release environment with IPO:
 - Parser allocations after warm-up: 0 allocations and 0 allocated bytes per packet.
 
 The existing hot path improves slightly relative to Phase 4 and clears the 5% regression gate. The mixed result is a deterministic parser regression guard, not a representative production traffic distribution or a 10 Gbit/s capacity claim.
+
+## 2026-07-16 Dissector Expansion Revalidation
+
+The full built-in dissector expansion was compared with a clean `HEAD` archive
+using the same Apple M1 Pro, AppleClang 21.1.2, Release configuration, and IPO.
+Five baseline/current runs were interleaved to reduce scheduling bias.
+
+The 47-byte IPv4/UDP fixture now emits 31 nodes instead of 27 because IPv4
+exposes the reserved, Don't Fragment, More Fragments, and encoded fragment
+offset fields in addition to the existing aggregate flags and byte offset.
+Five-run medians were:
+
+- Parse only: approximately 1.44 million packets/s versus 1.67 million for the
+  27-node baseline.
+- Parse work normalized by emitted output: approximately 44.58 million nodes/s
+  versus 45.03 million nodes/s, a 1.0% decrease.
+- Parse + encode + verify + traversal: approximately 675,000 packets/s versus
+  763,000 for the baseline.
+- Full pipeline normalized by emitted output: approximately 20.93 million
+  nodes/s versus 20.61 million nodes/s, a 1.6% increase.
+- The unchanged mixed corpus: approximately 1.60 million packets/s versus
+  1.66 million packets/s, a 3.7% decrease.
+- Parser allocations after warm-up: 0 allocations and 0 allocated bytes per
+  packet.
+
+The historical packet-rate gate is not directly comparable after intentionally
+enriching the reference tree. The normalized work rate and the unchanged mixed
+corpus remain within the 5% gate, so no underlying parser regression was
+observed. `packet_parser_benchmark` now reports both packets/s and nodes/s to
+make future tree-shape changes explicit.
