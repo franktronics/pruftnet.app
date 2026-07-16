@@ -1,4 +1,4 @@
-#include "parsing/dissectors/ntp_dissector.hpp"
+#include "parsing/dissectors/application/ntp_dissector.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -6,7 +6,6 @@
 #include <cstdint>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {

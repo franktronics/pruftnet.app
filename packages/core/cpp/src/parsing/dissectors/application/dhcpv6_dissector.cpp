@@ -1,10 +1,9 @@
-#include "parsing/dissectors/dhcpv6_dissector.hpp"
+#include "parsing/dissectors/application/dhcpv6_dissector.hpp"
 
 #include <cstddef>
 #include <cstdint>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 #include "parsing/dissectors/shared/dissector_utils.hpp"
 
 namespace pruftnet::parsing::internal {

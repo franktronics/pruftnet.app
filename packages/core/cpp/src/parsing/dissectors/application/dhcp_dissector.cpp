@@ -1,4 +1,4 @@
-#include "parsing/dissectors/dhcp_dissector.hpp"
+#include "parsing/dissectors/application/dhcp_dissector.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -7,7 +7,6 @@
 #include <span>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 #include "parsing/dissectors/shared/dissector_utils.hpp"
 
 namespace pruftnet::parsing::internal {
