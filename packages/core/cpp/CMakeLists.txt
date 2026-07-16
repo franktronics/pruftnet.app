@@ -120,9 +120,9 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/dhcpv6_dissector.cpp
     src/parsing/dissectors/dns_dissector.cpp
     src/parsing/dissectors/shared/dissector_utils.cpp
-    src/parsing/dissectors/ethernet_dissector.cpp
-    src/parsing/dissectors/ethernet_payload.cpp
-    src/parsing/dissectors/frame_dissector.cpp
+    src/parsing/dissectors/link/ethernet_dissector.cpp
+    src/parsing/dissectors/link/ethernet_payload.cpp
+    src/parsing/dissectors/link/frame_dissector.cpp
     src/parsing/dissectors/geneve_dissector.cpp
     src/parsing/dissectors/gre_dissector.cpp
     src/parsing/dissectors/http_dissector.cpp
@@ -132,21 +132,21 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/icmpv6_dissector.cpp
     src/parsing/dissectors/ipv4_dissector.cpp
     src/parsing/dissectors/ipv6_dissector.cpp
-    src/parsing/dissectors/linux_cooked_dissector.cpp
-    src/parsing/dissectors/llc_dissector.cpp
-    src/parsing/dissectors/lldp_dissector.cpp
+    src/parsing/dissectors/link/linux_cooked_dissector.cpp
+    src/parsing/dissectors/link/llc_dissector.cpp
+    src/parsing/dissectors/link/lldp_dissector.cpp
     src/parsing/dissectors/mld_dissector.cpp
     src/parsing/dissectors/mpls_dissector.cpp
-    src/parsing/dissectors/null_loopback_dissector.cpp
+    src/parsing/dissectors/link/null_loopback_dissector.cpp
     src/parsing/dissectors/ntp_dissector.cpp
     src/parsing/dissectors/quic_dissector.cpp
-    src/parsing/dissectors/raw_dissector.cpp
-    src/parsing/dissectors/snap_dissector.cpp
-    src/parsing/dissectors/stp_dissector.cpp
+    src/parsing/dissectors/link/raw_dissector.cpp
+    src/parsing/dissectors/link/snap_dissector.cpp
+    src/parsing/dissectors/link/stp_dissector.cpp
     src/parsing/dissectors/tcp_dissector.cpp
     src/parsing/dissectors/tls_dissector.cpp
     src/parsing/dissectors/udp_dissector.cpp
-    src/parsing/dissectors/vlan_dissector.cpp
+    src/parsing/dissectors/link/vlan_dissector.cpp
     src/parsing/dissectors/vxlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp
     src/parsing/packet_parser.cpp

@@ -12,6 +12,7 @@ namespace pruftnet::parsing::internal {
 
 class DissectorContext;
 
+// Shared by Ethernet and VLAN because both dispatch the same payload format.
 [[nodiscard]] bool dissect_ethernet_payload(DissectorContext &context,
                                             std::uint16_t type_or_length,
                                             const PacketView &payload,

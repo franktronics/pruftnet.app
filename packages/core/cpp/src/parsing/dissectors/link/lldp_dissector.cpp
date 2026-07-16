@@ -1,4 +1,4 @@
-#include "parsing/dissectors/lldp_dissector.hpp"
+#include "parsing/dissectors/link/lldp_dissector.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -6,7 +6,6 @@
 #include <string_view>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 #include "parsing/utf8.hpp"
 
 namespace pruftnet::parsing::internal {

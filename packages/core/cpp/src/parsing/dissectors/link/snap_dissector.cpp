@@ -1,9 +1,8 @@
-#include "parsing/dissectors/snap_dissector.hpp"
+#include "parsing/dissectors/link/snap_dissector.hpp"
 
 #include <cstddef>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {

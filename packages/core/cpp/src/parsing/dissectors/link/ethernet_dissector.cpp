@@ -1,8 +1,7 @@
-#include "parsing/dissectors/ethernet_dissector.hpp"
+#include "parsing/dissectors/link/ethernet_dissector.hpp"
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
-#include "parsing/dissectors/ethernet_payload.hpp"
+#include "parsing/dissectors/link/ethernet_payload.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {

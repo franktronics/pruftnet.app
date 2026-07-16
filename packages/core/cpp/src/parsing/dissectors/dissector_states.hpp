@@ -6,22 +6,6 @@
 
 namespace pruftnet::parsing::internal {
 
-struct CommonDissectorState {
-  FieldId root_frame;
-  FieldId root_captured_length;
-  FieldId root_reported_length;
-  FieldId root_link_type;
-  FieldId unknown_data;
-};
-
-struct EthernetDissectorState {
-  FieldId frame;
-  FieldId destination;
-  FieldId source;
-  FieldId type;
-  FieldId trailer;
-};
-
 struct Ipv4DissectorState {
   FieldId packet;
   FieldId version;
@@ -54,15 +38,6 @@ struct UdpDissectorState {
   FieldId length;
   FieldId checksum;
   FieldId payload;
-};
-
-struct VlanDissectorState {
-  FieldId tag;
-  FieldId priority;
-  FieldId drop_eligible;
-  FieldId id;
-  FieldId type;
-  FieldId trailer;
 };
 
 struct TcpDissectorState {
@@ -653,120 +628,6 @@ struct Icmpv6DissectorState {
   FieldId extended_flags;
   IcmpExtensionDissectorState extension;
   MldDissectorState mld;
-};
-
-struct LinuxCookedDissectorState {
-  FieldId packet;
-  FieldId version_field;
-  FieldId protocol;
-  FieldId packet_type;
-  FieldId hardware_type;
-  FieldId address_length;
-  FieldId address;
-  FieldId address_padding;
-  FieldId interface_index;
-  FieldId reserved;
-  std::uint8_t version;
-};
-
-struct NullLoopbackDissectorState {
-  FieldId packet;
-  FieldId family;
-  FieldId type;
-  bool network_byte_order;
-};
-
-struct RawDissectorState {
-  FieldId packet;
-};
-
-struct LlcDissectorState {
-  FieldId packet;
-  FieldId dsap;
-  FieldId ssap;
-  FieldId control;
-  FieldId control_length;
-};
-
-struct SnapDissectorState {
-  FieldId packet;
-  FieldId oui;
-  FieldId pid;
-  bool information_frame;
-};
-
-struct LldpDissectorState {
-  FieldId packet;
-  FieldId tlv;
-  FieldId tlv_type;
-  FieldId tlv_length;
-  FieldId tlv_value;
-  FieldId chassis_subtype;
-  FieldId chassis_id;
-  FieldId port_subtype;
-  FieldId port_id;
-  FieldId address_family;
-  FieldId ttl;
-  FieldId port_description;
-  FieldId system_name;
-  FieldId system_description;
-  FieldId system_capabilities;
-  FieldId enabled_capabilities;
-  FieldId management_address_length;
-  FieldId management_address_subtype;
-  FieldId management_address;
-  FieldId management_interface_subtype;
-  FieldId management_interface_number;
-  FieldId management_oid;
-  FieldId organization_oui;
-  FieldId organization_subtype;
-  FieldId organization_data;
-};
-
-struct MstpDissectorState {
-  FieldId extension;
-  FieldId version_3_length;
-  FieldId config_format_selector;
-  FieldId config_name;
-  FieldId config_revision;
-  FieldId config_digest;
-  FieldId cist_internal_root_path_cost;
-  FieldId cist_bridge_priority;
-  FieldId cist_bridge_system_id_extension;
-  FieldId cist_bridge_mac;
-  FieldId cist_remaining_hops;
-  FieldId instance;
-  FieldId instance_flags;
-  FieldId instance_root_priority;
-  FieldId instance_id;
-  FieldId instance_regional_root_mac;
-  FieldId instance_internal_root_path_cost;
-  FieldId instance_bridge_priority;
-  FieldId instance_port_priority;
-  FieldId instance_remaining_hops;
-};
-
-struct StpDissectorState {
-  FieldId packet;
-  FieldId protocol_identifier;
-  FieldId version;
-  FieldId type;
-  FieldId flags;
-  FieldId root_priority;
-  FieldId root_system_id_extension;
-  FieldId root_mac;
-  FieldId root_path_cost;
-  FieldId bridge_priority;
-  FieldId bridge_system_id_extension;
-  FieldId bridge_mac;
-  FieldId port_id;
-  FieldId message_age;
-  FieldId max_age;
-  FieldId hello_time;
-  FieldId forward_delay;
-  FieldId version_1_length;
-  FieldId body;
-  MstpDissectorState mstp;
 };
 
 } // namespace pruftnet::parsing::internal

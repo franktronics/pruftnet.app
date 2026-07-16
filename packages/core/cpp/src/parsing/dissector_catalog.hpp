@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "parsing/dissector.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
+#include "parsing/dissectors/link/frame_dissector.hpp"
 #include "parsing/network_types.hpp"
 #include "pruftnet/parsing/registry.hpp"
 

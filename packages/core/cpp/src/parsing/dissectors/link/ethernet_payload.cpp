@@ -1,4 +1,4 @@
-#include "parsing/dissectors/ethernet_payload.hpp"
+#include "parsing/dissectors/link/ethernet_payload.hpp"
 
 #include <algorithm>
 #include <cstddef>
