@@ -123,6 +123,23 @@ void bootstrap_registry_has_stable_parser_descriptors() {
   const auto &core = std::get<RegistrySnapshot>(core_result);
   assert(core.protocols().size() == 38);
   assert(core.fields().size() == 649);
+  assert(core.revision() == RegistryRevision{9138740466261038128ULL});
+  assert(value(core.protocol("root")).get().id == ProtocolId{1});
+  assert(value(core.protocol("eth")).get().id == ProtocolId{4});
+  assert(value(core.protocol("ipv4")).get().id == ProtocolId{5});
+  assert(value(core.protocol("tcp")).get().id == ProtocolId{8});
+  assert(value(core.protocol("dns")).get().id == ProtocolId{22});
+  assert(value(core.protocol("quic")).get().id == ProtocolId{38});
+  assert(value(core.field("root.frame")).get().id == FieldId{1});
+  assert(value(core.field("eth.frame")).get().id == FieldId{7});
+  assert(value(core.field("ipv4.packet")).get().id == FieldId{11});
+  assert(value(core.field("udp.datagram")).get().id == FieldId{33});
+  assert(value(core.field("tcp.segment")).get().id == FieldId{44});
+  assert(value(core.field("ipv6.packet")).get().id == FieldId{72});
+  assert(value(core.field("dns.message")).get().id == FieldId{258});
+  assert(value(core.field("quic.packet")).get().id == FieldId{627});
+  assert(value(core.field("quic.version_specific_data")).get().id ==
+         FieldId{649});
   assert(value(core.protocol("root")).get().display_name == "Root");
   assert(value(core.field("root.frame")).get().value_type ==
          FieldValueType::Protocol);
