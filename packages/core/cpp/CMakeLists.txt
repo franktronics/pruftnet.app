@@ -115,6 +115,7 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/catalog/catalog_registrar.cpp
     src/parsing/catalog/core_catalog.cpp
     src/parsing/catalog/link_catalog.cpp
+    src/parsing/catalog/network_catalog.cpp
     src/parsing/core_link_types.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
