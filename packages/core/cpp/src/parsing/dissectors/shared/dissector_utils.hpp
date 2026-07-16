@@ -6,6 +6,7 @@
 
 namespace pruftnet::parsing::internal {
 
+// Helpers shared across otherwise independent protocol families.
 [[nodiscard]] std::string escaped_ascii(std::span<const std::byte> bytes);
 [[nodiscard]] bool
 internet_checksum_valid(std::span<const std::byte> bytes) noexcept;

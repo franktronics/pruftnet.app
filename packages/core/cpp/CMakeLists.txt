@@ -119,7 +119,7 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/dhcp_dissector.cpp
     src/parsing/dissectors/dhcpv6_dissector.cpp
     src/parsing/dissectors/dns_dissector.cpp
-    src/parsing/dissectors/dissector_utils.cpp
+    src/parsing/dissectors/shared/dissector_utils.cpp
     src/parsing/dissectors/ethernet_dissector.cpp
     src/parsing/dissectors/ethernet_payload.cpp
     src/parsing/dissectors/frame_dissector.cpp

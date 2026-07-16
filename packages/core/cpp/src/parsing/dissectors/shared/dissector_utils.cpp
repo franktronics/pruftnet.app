@@ -1,4 +1,4 @@
-#include "parsing/dissectors/dissector_utils.hpp"
+#include "parsing/dissectors/shared/dissector_utils.hpp"
 
 #include <cstdint>
 

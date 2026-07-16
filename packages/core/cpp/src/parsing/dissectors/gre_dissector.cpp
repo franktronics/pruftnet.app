@@ -6,7 +6,7 @@
 
 #include "parsing/dissector_context.hpp"
 #include "parsing/dissectors/dissector_states.hpp"
-#include "parsing/dissectors/dissector_utils.hpp"
+#include "parsing/dissectors/shared/dissector_utils.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {
