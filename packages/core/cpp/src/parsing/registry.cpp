@@ -242,6 +242,8 @@ RegistryResult<RegistrySnapshot> RegistryBuilder::freeze() {
 RegistryResult<RegistrySnapshot> make_core_registry() {
   RegistryBuilder builder;
 
+  // This is an append-only identity ledger. Reordering existing protocols or
+  // fields changes stable IDs and the registry revision.
   struct ProtocolDefinition {
     std::string_view key;
     std::string_view display_name;

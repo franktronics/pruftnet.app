@@ -1,8 +1,6 @@
 #include "parsing/catalog/catalog_sections.hpp"
 
-#include <memory>
 #include <string_view>
-#include <utility>
 
 #include "parsing/dissectors/application/dhcp_dissector.hpp"
 #include "parsing/dissectors/application/dhcpv6_dissector.hpp"
@@ -14,10 +12,6 @@
 
 namespace pruftnet::parsing::internal {
 namespace {
-
-template <typename State> std::shared_ptr<const State> state(State value) {
-  return std::make_shared<const State>(std::move(value));
-}
 
 DnsDissectorState dns_state(const CatalogRegistrar &registrar,
                             std::string_view message_key, DnsFlavor flavor,
@@ -88,21 +82,24 @@ DnsDissectorState dns_state(const CatalogRegistrar &registrar,
 } // namespace
 
 void register_application_catalog(CatalogRegistrar &registrar) {
-  const auto dns_udp =
-      state(dns_state(registrar, "dns.message", DnsFlavor::Dns, false));
-  const auto dns_tcp =
-      state(dns_state(registrar, "dns.message", DnsFlavor::Dns, true));
-  const auto mdns_udp =
-      state(dns_state(registrar, "mdns.message", DnsFlavor::Mdns, false));
-  const auto llmnr_udp =
-      state(dns_state(registrar, "llmnr.message", DnsFlavor::Llmnr, false));
-  const auto llmnr_tcp =
-      state(dns_state(registrar, "llmnr.message", DnsFlavor::Llmnr, true));
-  registrar.bind_udp_port(53, registrar.add(dissect_dns, dns_udp));
-  registrar.bind_tcp_port(53, registrar.add(dissect_dns, dns_tcp));
-  registrar.bind_udp_port(5353, registrar.add(dissect_dns, mdns_udp));
-  registrar.bind_udp_port(5355, registrar.add(dissect_dns, llmnr_udp));
-  registrar.bind_tcp_port(5355, registrar.add(dissect_dns, llmnr_tcp));
+  registrar.bind_udp_port(
+      53, registrar.add_state(dissect_dns, dns_state(registrar, "dns.message",
+                                                     DnsFlavor::Dns, false)));
+  registrar.bind_tcp_port(
+      53, registrar.add_state(dissect_dns, dns_state(registrar, "dns.message",
+                                                     DnsFlavor::Dns, true)));
+  registrar.bind_udp_port(
+      5353,
+      registrar.add_state(dissect_dns, dns_state(registrar, "mdns.message",
+                                                 DnsFlavor::Mdns, false)));
+  registrar.bind_udp_port(
+      5355,
+      registrar.add_state(dissect_dns, dns_state(registrar, "llmnr.message",
+                                                 DnsFlavor::Llmnr, false)));
+  registrar.bind_tcp_port(
+      5355,
+      registrar.add_state(dissect_dns, dns_state(registrar, "llmnr.message",
+                                                 DnsFlavor::Llmnr, true)));
 
   registrar.bind_tcp_port(
       80, registrar.add_state(dissect_http,
