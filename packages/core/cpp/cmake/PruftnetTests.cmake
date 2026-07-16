@@ -46,6 +46,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
     pruftnet_add_sniffing_test(parsed_tree_tests tests/unit/parsed_tree_tests.cpp)
     add_test(NAME unit.parsed_tree COMMAND parsed_tree_tests)
 
+    pruftnet_add_sniffing_test(reassembly_store_tests tests/unit/reassembly_store_tests.cpp)
+    add_test(NAME unit.reassembly_store COMMAND reassembly_store_tests)
+
     pruftnet_add_sniffing_test(parsed_tree_allocation_tests tests/unit/parsed_tree_allocation_tests.cpp)
     target_include_directories(parsed_tree_allocation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_test(NAME unit.parsed_tree_allocations COMMAND parsed_tree_allocation_tests)
@@ -69,6 +72,51 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
 
     pruftnet_add_sniffing_test(dissector_catalog_tests tests/unit/dissector_catalog_tests.cpp)
     add_test(NAME unit.dissector_catalog COMMAND dissector_catalog_tests)
+
+    pruftnet_add_sniffing_test(link_layer_dissector_tests tests/unit/link_layer_dissector_tests.cpp)
+    add_test(NAME unit.link_layer_dissectors COMMAND link_layer_dissector_tests)
+
+    pruftnet_add_sniffing_test(llc_snap_dissector_tests tests/unit/llc_snap_dissector_tests.cpp)
+    add_test(NAME unit.llc_snap_dissectors COMMAND llc_snap_dissector_tests)
+
+    pruftnet_add_sniffing_test(discovery_bridge_dissector_tests tests/unit/discovery_bridge_dissector_tests.cpp)
+    add_test(NAME unit.discovery_bridge_dissectors COMMAND discovery_bridge_dissector_tests)
+
+    pruftnet_add_sniffing_test(icmp_dissector_tests tests/unit/icmp_dissector_tests.cpp)
+    add_test(NAME unit.icmp_dissectors COMMAND icmp_dissector_tests)
+
+    pruftnet_add_sniffing_test(fragmentation_dissector_tests tests/unit/fragmentation_dissector_tests.cpp)
+    add_test(NAME unit.fragmentation_dissectors COMMAND fragmentation_dissector_tests)
+
+    pruftnet_add_sniffing_test(dns_dissector_tests tests/unit/dns_dissector_tests.cpp)
+    add_test(NAME unit.dns_dissectors COMMAND dns_dissector_tests)
+
+    pruftnet_add_sniffing_test(http_dissector_tests tests/unit/http_dissector_tests.cpp)
+    add_test(NAME unit.http_dissectors COMMAND http_dissector_tests)
+
+    pruftnet_add_sniffing_test(tls_dissector_tests tests/unit/tls_dissector_tests.cpp)
+    add_test(NAME unit.tls_dissectors COMMAND tls_dissector_tests)
+
+    pruftnet_add_sniffing_test(quic_dissector_tests tests/unit/quic_dissector_tests.cpp)
+    add_test(NAME unit.quic_dissectors COMMAND quic_dissector_tests)
+
+    pruftnet_add_sniffing_test(dhcp_dissector_tests tests/unit/dhcp_dissector_tests.cpp)
+    add_test(NAME unit.dhcp_dissectors COMMAND dhcp_dissector_tests)
+
+    pruftnet_add_sniffing_test(dhcpv6_dissector_tests tests/unit/dhcpv6_dissector_tests.cpp)
+    add_test(NAME unit.dhcpv6_dissectors COMMAND dhcpv6_dissector_tests)
+
+    pruftnet_add_sniffing_test(multicast_membership_dissector_tests tests/unit/multicast_membership_dissector_tests.cpp)
+    add_test(NAME unit.multicast_membership_dissectors COMMAND multicast_membership_dissector_tests)
+
+    pruftnet_add_sniffing_test(ntp_dissector_tests tests/unit/ntp_dissector_tests.cpp)
+    add_test(NAME unit.ntp_dissectors COMMAND ntp_dissector_tests)
+
+    pruftnet_add_sniffing_test(tunnel_mpls_dissector_tests tests/unit/tunnel_mpls_dissector_tests.cpp)
+    add_test(NAME unit.tunnel_mpls_dissectors COMMAND tunnel_mpls_dissector_tests)
+
+    pruftnet_add_sniffing_test(arp_variant_dissector_tests tests/unit/arp_variant_dissector_tests.cpp)
+    add_test(NAME unit.arp_variant_dissectors COMMAND arp_variant_dissector_tests)
 
     pruftnet_add_sniffing_test(phase5_dissector_tests tests/unit/phase5_dissector_tests.cpp)
     add_test(NAME unit.phase5_dissectors COMMAND phase5_dissector_tests)

@@ -112,22 +112,47 @@ add_custom_target(packet_tree_ts_codegen
 add_library(pruftnet_sniffing STATIC
     src/capture/pcapng_format.cpp
     src/capture/pcapng_spool.cpp
+    src/parsing/core_link_types.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
     src/parsing/dissectors/arp_dissector.cpp
+    src/parsing/dissectors/dhcp_dissector.cpp
+    src/parsing/dissectors/dhcpv6_dissector.cpp
+    src/parsing/dissectors/dns_dissector.cpp
+    src/parsing/dissectors/dissector_utils.cpp
     src/parsing/dissectors/ethernet_dissector.cpp
+    src/parsing/dissectors/ethernet_payload.cpp
     src/parsing/dissectors/frame_dissector.cpp
+    src/parsing/dissectors/geneve_dissector.cpp
+    src/parsing/dissectors/gre_dissector.cpp
+    src/parsing/dissectors/http_dissector.cpp
+    src/parsing/dissectors/igmp_dissector.cpp
+    src/parsing/dissectors/icmp_extension.cpp
     src/parsing/dissectors/icmpv4_dissector.cpp
     src/parsing/dissectors/icmpv6_dissector.cpp
     src/parsing/dissectors/ipv4_dissector.cpp
     src/parsing/dissectors/ipv6_dissector.cpp
+    src/parsing/dissectors/linux_cooked_dissector.cpp
+    src/parsing/dissectors/llc_dissector.cpp
+    src/parsing/dissectors/lldp_dissector.cpp
+    src/parsing/dissectors/mld_dissector.cpp
+    src/parsing/dissectors/mpls_dissector.cpp
+    src/parsing/dissectors/null_loopback_dissector.cpp
+    src/parsing/dissectors/ntp_dissector.cpp
+    src/parsing/dissectors/quic_dissector.cpp
+    src/parsing/dissectors/raw_dissector.cpp
+    src/parsing/dissectors/snap_dissector.cpp
+    src/parsing/dissectors/stp_dissector.cpp
     src/parsing/dissectors/tcp_dissector.cpp
+    src/parsing/dissectors/tls_dissector.cpp
     src/parsing/dissectors/udp_dissector.cpp
     src/parsing/dissectors/vlan_dissector.cpp
+    src/parsing/dissectors/vxlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp
     src/parsing/packet_parser.cpp
     src/parsing/packet_view.cpp
     src/parsing/parsed_tree.cpp
+    src/parsing/reassembly_store.cpp
     src/parsing/registry.cpp
     src/parsing/summary_extractor.cpp
     src/replay/replay_store.cpp

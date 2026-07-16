@@ -54,6 +54,12 @@ dispatch in the parsing catalog, then add truncation, malformed-length,
 resource-budget, and protocol-path tests. Do not add parsing to capture
 callbacks, the writer, Node, or React.
 
+The current catalog contains 38 protocols and 649 fields, including bounded
+IP/TCP reassembly, core LAN/control protocols, DNS/DHCP/NTP, common tunnels,
+HTTP/1.x, TLS cleartext handshake metadata, and protected QUIC v1/v2 header
+metadata. See `../../../.agents/doc/dissector-coverage.md` for the exact
+coverage and next implementation order.
+
 ## Build and test
 
 Requirements are CMake 3.24+, C++20, and libpcap on Linux/macOS or the Npcap
@@ -87,4 +93,6 @@ cmake --build packages/core/cpp/build
 Optional targets are owned by `cmake/PruftnetTests.cmake`,
 `cmake/PruftnetBenchmarks.cmake`, and `cmake/PruftnetFuzzers.cmake`.
 Compare benchmarks only with the same compiler, build type, storage, fixture,
-and flush policy.
+and flush policy. When a parser change alters the number of emitted nodes,
+compare both packets per second and nodes per second; packet rate alone is no
+longer an equivalent-work measurement.
