@@ -1,11 +1,10 @@
-#include "parsing/dissectors/icmpv6_dissector.hpp"
+#include "parsing/dissectors/network/icmpv6_dissector.hpp"
 
 #include <algorithm>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
-#include "parsing/dissectors/icmp_extension.hpp"
-#include "parsing/dissectors/mld_dissector.hpp"
+#include "parsing/dissectors/network/icmp_extension.hpp"
+#include "parsing/dissectors/network/mld_dissector.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {

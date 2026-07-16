@@ -1,10 +1,9 @@
-#include "parsing/dissectors/ipv6_dissector.hpp"
+#include "parsing/dissectors/network/ipv6_dissector.hpp"
 
 #include <algorithm>
 #include <optional>
 
 #include "parsing/dissector_context.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {

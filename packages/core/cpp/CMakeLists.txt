@@ -115,7 +115,6 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/core_link_types.cpp
     src/parsing/dissector_catalog.cpp
     src/parsing/dissector_context.cpp
-    src/parsing/dissectors/arp_dissector.cpp
     src/parsing/dissectors/dhcp_dissector.cpp
     src/parsing/dissectors/dhcpv6_dissector.cpp
     src/parsing/dissectors/dns_dissector.cpp
@@ -126,17 +125,18 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/geneve_dissector.cpp
     src/parsing/dissectors/gre_dissector.cpp
     src/parsing/dissectors/http_dissector.cpp
-    src/parsing/dissectors/igmp_dissector.cpp
-    src/parsing/dissectors/icmp_extension.cpp
-    src/parsing/dissectors/icmpv4_dissector.cpp
-    src/parsing/dissectors/icmpv6_dissector.cpp
-    src/parsing/dissectors/ipv4_dissector.cpp
-    src/parsing/dissectors/ipv6_dissector.cpp
     src/parsing/dissectors/link/linux_cooked_dissector.cpp
     src/parsing/dissectors/link/llc_dissector.cpp
     src/parsing/dissectors/link/lldp_dissector.cpp
-    src/parsing/dissectors/mld_dissector.cpp
     src/parsing/dissectors/mpls_dissector.cpp
+    src/parsing/dissectors/network/arp_dissector.cpp
+    src/parsing/dissectors/network/icmp_extension.cpp
+    src/parsing/dissectors/network/icmpv4_dissector.cpp
+    src/parsing/dissectors/network/icmpv6_dissector.cpp
+    src/parsing/dissectors/network/igmp_dissector.cpp
+    src/parsing/dissectors/network/ipv4_dissector.cpp
+    src/parsing/dissectors/network/ipv6_dissector.cpp
+    src/parsing/dissectors/network/mld_dissector.cpp
     src/parsing/dissectors/link/null_loopback_dissector.cpp
     src/parsing/dissectors/ntp_dissector.cpp
     src/parsing/dissectors/quic_dissector.cpp

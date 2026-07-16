@@ -6,31 +6,6 @@
 
 namespace pruftnet::parsing::internal {
 
-struct Ipv4DissectorState {
-  FieldId packet;
-  FieldId version;
-  FieldId header_length;
-  FieldId dscp_ecn;
-  FieldId total_length;
-  FieldId identification;
-  FieldId flags;
-  FieldId reserved_flag;
-  FieldId dont_fragment;
-  FieldId more_fragments;
-  FieldId fragment_offset_encoded;
-  FieldId fragment_offset;
-  FieldId reassembled;
-  FieldId reassembled_length;
-  FieldId reassembled_fragment_count;
-  FieldId fragment_overlap;
-  FieldId ttl;
-  FieldId protocol;
-  FieldId checksum;
-  FieldId source;
-  FieldId destination;
-  FieldId options;
-};
-
 struct UdpDissectorState {
   FieldId datagram;
   FieldId source_port;
@@ -59,67 +34,6 @@ struct TcpDissectorState {
   FieldId reassembled_segment_count;
   FieldId reassembly_overlap;
   FieldId reassembly_conflict;
-};
-
-struct ArpDissectorState {
-  FieldId packet;
-  FieldId reverse_packet;
-  FieldId inverse_packet;
-  FieldId hardware_type;
-  FieldId protocol_type;
-  FieldId hardware_length;
-  FieldId protocol_length;
-  FieldId operation;
-  FieldId sender_hardware;
-  FieldId sender_protocol;
-  FieldId target_hardware;
-  FieldId target_protocol;
-};
-
-struct Ipv6DissectorState {
-  FieldId packet;
-  FieldId version;
-  FieldId traffic_class;
-  FieldId flow_label;
-  FieldId payload_length;
-  FieldId next_header;
-  FieldId hop_limit;
-  FieldId source;
-  FieldId destination;
-  FieldId extension;
-  FieldId extension_next_header;
-  FieldId extension_length;
-  FieldId extension_type;
-  FieldId extension_data;
-  FieldId fragment_offset_encoded;
-  FieldId fragment_offset;
-  FieldId fragment_reserved_octet;
-  FieldId fragment_reserved;
-  FieldId fragment_more;
-  FieldId fragment_atomic;
-  FieldId fragment_identification;
-  FieldId reassembled;
-  FieldId reassembled_length;
-  FieldId reassembled_fragment_count;
-  FieldId fragment_overlap;
-};
-
-struct IcmpExtensionDissectorState {
-  FieldId structure;
-  FieldId version;
-  FieldId reserved;
-  FieldId checksum;
-  FieldId checksum_valid;
-  FieldId object;
-  FieldId object_length;
-  FieldId object_class;
-  FieldId object_ctype;
-  FieldId object_data;
-  FieldId mpls_entry;
-  FieldId mpls_label;
-  FieldId mpls_traffic_class;
-  FieldId mpls_bottom_of_stack;
-  FieldId mpls_ttl;
 };
 
 enum class DnsFlavor : std::uint8_t {
@@ -375,58 +289,6 @@ struct Dhcpv6DissectorState {
   FieldId trailing;
 };
 
-struct IgmpDissectorState {
-  FieldId packet;
-  FieldId type;
-  FieldId version;
-  FieldId max_response_code;
-  FieldId max_response_time;
-  FieldId checksum;
-  FieldId checksum_valid;
-  FieldId group_address;
-  FieldId reserved;
-  FieldId suppress;
-  FieldId qrv;
-  FieldId qqic;
-  FieldId query_interval;
-  FieldId source_count;
-  FieldId source_address;
-  FieldId record_count;
-  FieldId record;
-  FieldId record_type;
-  FieldId aux_data_length;
-  FieldId record_source_count;
-  FieldId record_multicast_address;
-  FieldId record_source_address;
-  FieldId aux_data;
-  FieldId trailing;
-};
-
-struct MldDissectorState {
-  FieldId message;
-  FieldId version;
-  FieldId maximum_response_code;
-  FieldId maximum_response_delay;
-  FieldId reserved;
-  FieldId multicast_address;
-  FieldId flags;
-  FieldId suppress;
-  FieldId qrv;
-  FieldId qqic;
-  FieldId query_interval;
-  FieldId source_count;
-  FieldId source_address;
-  FieldId record_count;
-  FieldId record;
-  FieldId record_type;
-  FieldId aux_data_length;
-  FieldId record_source_count;
-  FieldId record_multicast_address;
-  FieldId record_source_address;
-  FieldId aux_data;
-  FieldId trailing;
-};
-
 struct NtpDissectorState {
   FieldId message;
   FieldId flags;
@@ -561,73 +423,6 @@ struct MplsDissectorState {
   FieldId gach_reserved;
   FieldId gach_channel_type;
   FieldId payload;
-};
-
-struct Icmpv4DissectorState {
-  FieldId message;
-  FieldId type;
-  FieldId code;
-  FieldId checksum;
-  FieldId identifier;
-  FieldId sequence;
-  FieldId gateway;
-  FieldId pointer;
-  FieldId mtu;
-  FieldId body;
-  FieldId quoted;
-  FieldId original_datagram_length_words;
-  FieldId original_datagram_length;
-  FieldId extended_sequence;
-  FieldId extended_flags;
-  FieldId originate_timestamp;
-  FieldId receive_timestamp;
-  FieldId transmit_timestamp;
-  FieldId address_mask;
-  FieldId router_address_count;
-  FieldId router_entry_size;
-  FieldId router_lifetime;
-  FieldId router_entry;
-  FieldId router_address;
-  FieldId router_preference;
-  IcmpExtensionDissectorState extension;
-};
-
-struct Icmpv6DissectorState {
-  FieldId message;
-  FieldId type;
-  FieldId code;
-  FieldId checksum;
-  FieldId informational;
-  FieldId identifier;
-  FieldId sequence;
-  FieldId mtu;
-  FieldId pointer;
-  FieldId target;
-  FieldId destination;
-  FieldId flags;
-  FieldId current_hop_limit;
-  FieldId router_lifetime;
-  FieldId reachable_time;
-  FieldId retrans_timer;
-  FieldId body;
-  FieldId quoted;
-  FieldId option;
-  FieldId option_type;
-  FieldId option_length;
-  FieldId option_body;
-  FieldId redirected_packet;
-  FieldId link_layer_address;
-  FieldId prefix_length;
-  FieldId prefix_flags;
-  FieldId valid_lifetime;
-  FieldId preferred_lifetime;
-  FieldId prefix;
-  FieldId original_datagram_length_words;
-  FieldId original_datagram_length;
-  FieldId extended_sequence;
-  FieldId extended_flags;
-  IcmpExtensionDissectorState extension;
-  MldDissectorState mld;
 };
 
 } // namespace pruftnet::parsing::internal
