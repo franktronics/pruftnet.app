@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "parsing/catalog/catalog_registrar.hpp"
+#include "parsing/catalog/catalog_sections.hpp"
 #include "parsing/core_link_types.hpp"
 #include "parsing/dissectors/application/dhcp_dissector.hpp"
 #include "parsing/dissectors/application/dhcpv6_dissector.hpp"
@@ -15,7 +16,6 @@
 #include "parsing/dissectors/application/quic_dissector.hpp"
 #include "parsing/dissectors/application/tls_dissector.hpp"
 #include "parsing/dissectors/link/ethernet_dissector.hpp"
-#include "parsing/dissectors/link/frame_dissector.hpp"
 #include "parsing/dissectors/link/linux_cooked_dissector.hpp"
 #include "parsing/dissectors/link/llc_dissector.hpp"
 #include "parsing/dissectors/link/lldp_dissector.hpp"
@@ -174,14 +174,7 @@ DissectorCatalog::DissectorCatalog(RegistrySnapshotPtr registry)
   }
   handles_.push_back({});
   CatalogRegistrar registrar(*this);
-  common_ = state(CommonDissectorState{
-      registrar.field("root.frame"),
-      registrar.field("root.captured_length"),
-      registrar.field("root.reported_length"),
-      registrar.field("root.link_type"),
-      registrar.field("unknown.data"),
-  });
-  registrar.assign_root(registrar.add(dissect_frame, common_));
+  register_core_catalog(registrar);
 
   const auto ethernet = state(EthernetDissectorState{
       registrar.field("eth.frame"),
@@ -1105,8 +1098,12 @@ const RegistrySnapshotPtr &DissectorCatalog::registry() const noexcept {
   return registry_;
 }
 
-const CommonDissectorState &DissectorCatalog::common() const noexcept {
-  return *common_;
+FieldId DissectorCatalog::root_frame_field() const noexcept {
+  return root_frame_;
+}
+
+FieldId DissectorCatalog::unknown_data_field() const noexcept {
+  return unknown_data_;
 }
 
 DissectorHandle DissectorCatalog::root() const noexcept {

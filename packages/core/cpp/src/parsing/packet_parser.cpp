@@ -73,7 +73,7 @@ ParsedPacketTree PacketParser::parse(const sniffing::RawPacketView &packet) {
   const auto root_view =
       PacketView::from_capture(captured, packet.metadata.wire_len, *source);
   const auto root =
-      context.add_protocol(catalog_->common().root_frame, kNoParentIndex,
+      context.add_protocol(catalog_->root_frame_field(), kNoParentIndex,
                            root_view, root_view.captured_length());
   if (!root) {
     throw std::runtime_error("PacketParser budget cannot hold the root node.");

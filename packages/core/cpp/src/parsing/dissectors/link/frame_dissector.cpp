@@ -6,7 +6,7 @@ namespace pruftnet::parsing::internal {
 
 DissectionResult dissect_frame(DissectorContext &context, const void *opaque,
                                const PacketView &view, std::uint32_t parent) {
-  const auto &state = *static_cast<const CommonDissectorState *>(opaque);
+  const auto &state = *static_cast<const FrameDissectorState *>(opaque);
   const auto &metadata = context.packet().metadata;
   if (!context.add_unsigned(state.root_captured_length, parent, view, 0, 0,
                             metadata.captured_len, ParsedNodeFlagGenerated) ||

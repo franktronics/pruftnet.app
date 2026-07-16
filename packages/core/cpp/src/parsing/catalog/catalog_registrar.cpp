@@ -28,8 +28,11 @@ CatalogHandleIndex CatalogRegistrar::add(DissectorFunction function,
   return catalog_.add_handle(function, std::move(state));
 }
 
-void CatalogRegistrar::assign_root(CatalogHandleIndex handle) {
+void CatalogRegistrar::assign_root(CatalogHandleIndex handle,
+                                   FieldId root_frame, FieldId unknown_data) {
   catalog_.root_ = handle;
+  catalog_.root_frame_ = root_frame;
+  catalog_.unknown_data_ = unknown_data;
 }
 
 void CatalogRegistrar::assign_ethernet(CatalogHandleIndex handle) {

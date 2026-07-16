@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "parsing/dissector.hpp"
-#include "parsing/dissectors/link/frame_dissector.hpp"
 #include "parsing/network_types.hpp"
 #include "pruftnet/parsing/registry.hpp"
 
@@ -23,7 +22,8 @@ public:
   DissectorCatalog &operator=(const DissectorCatalog &) = delete;
 
   [[nodiscard]] const RegistrySnapshotPtr &registry() const noexcept;
-  [[nodiscard]] const CommonDissectorState &common() const noexcept;
+  [[nodiscard]] FieldId root_frame_field() const noexcept;
+  [[nodiscard]] FieldId unknown_data_field() const noexcept;
   [[nodiscard]] DissectorHandle root() const noexcept;
   [[nodiscard]] DissectorHandle dlt(std::uint32_t value) const noexcept;
   [[nodiscard]] DissectorHandle ethernet() const noexcept;
@@ -61,9 +61,10 @@ private:
   [[nodiscard]] DissectorHandle handle(std::uint16_t index) const noexcept;
 
   RegistrySnapshotPtr registry_;
-  std::shared_ptr<const CommonDissectorState> common_;
   std::vector<std::shared_ptr<const void>> states_;
   std::vector<DissectorHandle> handles_;
+  FieldId root_frame_{};
+  FieldId unknown_data_{};
   std::uint16_t root_ = 0;
   std::uint16_t ethernet_ = 0;
   std::vector<std::pair<std::uint32_t, std::uint16_t>> dlt_;

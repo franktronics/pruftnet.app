@@ -45,6 +45,8 @@ template <typename Operation> void assert_logic_error(Operation operation) {
 
 void core_catalog_has_typed_dispatch_paths() {
   const auto catalog = make_core_dissector_catalog(core_registry());
+  assert(catalog->root_frame_field().is_valid());
+  assert(catalog->unknown_data_field().is_valid());
   assert(catalog->root());
   assert(catalog->ethernet());
   assert(catalog->llc());

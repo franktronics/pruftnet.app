@@ -104,7 +104,6 @@ public:
   void mark_resource_limit();
   [[nodiscard]] bool stopped() const noexcept;
   [[nodiscard]] const sniffing::RawPacketView &packet() const noexcept;
-  [[nodiscard]] const CommonDissectorState &common() const noexcept;
 
   [[nodiscard]] DissectionResult dispatch_root(const PacketView &view,
                                                std::uint32_t parent) {

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <string_view>
+#include <utility>
 
 #include "parsing/dissector.hpp"
 #include "parsing/network_types.hpp"
@@ -21,8 +22,14 @@ public:
   [[nodiscard]] FieldId field(std::string_view key) const;
   [[nodiscard]] CatalogHandleIndex add(DissectorFunction function,
                                        std::shared_ptr<const void> state);
+  template <typename State>
+  [[nodiscard]] CatalogHandleIndex add_state(DissectorFunction function,
+                                             State state) {
+    return add(function, std::make_shared<const State>(std::move(state)));
+  }
 
-  void assign_root(CatalogHandleIndex handle);
+  void assign_root(CatalogHandleIndex handle, FieldId root_frame,
+                   FieldId unknown_data);
   void assign_ethernet(CatalogHandleIndex handle);
   void assign_llc(CatalogHandleIndex handle);
   void assign_snap(CatalogHandleIndex information,

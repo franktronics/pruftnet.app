@@ -94,7 +94,7 @@ bool DissectorContext::add_unknown(std::uint32_t parent, const PacketView &view,
   }
   const auto available =
       std::min(logical_length, view.captured_length() - offset);
-  return add_bytes(common().unknown_data, parent, view, offset,
+  return add_bytes(catalog_.unknown_data_field(), parent, view, offset,
                    view.captured().subspan(offset, available));
 }
 
@@ -340,10 +340,6 @@ bool DissectorContext::stopped() const noexcept { return stopped_; }
 
 const sniffing::RawPacketView &DissectorContext::packet() const noexcept {
   return packet_;
-}
-
-const CommonDissectorState &DissectorContext::common() const noexcept {
-  return catalog_.common();
 }
 
 ParsedPacketTree DissectorContext::finalize() {
