@@ -143,9 +143,9 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/link/raw_dissector.cpp
     src/parsing/dissectors/link/snap_dissector.cpp
     src/parsing/dissectors/link/stp_dissector.cpp
-    src/parsing/dissectors/tcp_dissector.cpp
     src/parsing/dissectors/tls_dissector.cpp
-    src/parsing/dissectors/udp_dissector.cpp
+    src/parsing/dissectors/transport/tcp_dissector.cpp
+    src/parsing/dissectors/transport/udp_dissector.cpp
     src/parsing/dissectors/link/vlan_dissector.cpp
     src/parsing/dissectors/vxlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp

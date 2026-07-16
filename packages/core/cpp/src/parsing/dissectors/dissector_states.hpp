@@ -6,36 +6,6 @@
 
 namespace pruftnet::parsing::internal {
 
-struct UdpDissectorState {
-  FieldId datagram;
-  FieldId source_port;
-  FieldId destination_port;
-  FieldId length;
-  FieldId checksum;
-  FieldId payload;
-};
-
-struct TcpDissectorState {
-  FieldId segment;
-  FieldId source_port;
-  FieldId destination_port;
-  FieldId sequence_number;
-  FieldId acknowledgment_number;
-  FieldId header_length;
-  FieldId reserved;
-  FieldId flags;
-  FieldId window;
-  FieldId checksum;
-  FieldId urgent_pointer;
-  FieldId options;
-  FieldId payload;
-  FieldId reassembled;
-  FieldId reassembled_length;
-  FieldId reassembled_segment_count;
-  FieldId reassembly_overlap;
-  FieldId reassembly_conflict;
-};
-
 enum class DnsFlavor : std::uint8_t {
   Dns,
   Mdns,

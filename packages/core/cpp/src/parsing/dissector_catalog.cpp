@@ -36,9 +36,9 @@
 #include "parsing/dissectors/network/mld_dissector.hpp"
 #include "parsing/dissectors/ntp_dissector.hpp"
 #include "parsing/dissectors/quic_dissector.hpp"
-#include "parsing/dissectors/tcp_dissector.hpp"
 #include "parsing/dissectors/tls_dissector.hpp"
-#include "parsing/dissectors/udp_dissector.hpp"
+#include "parsing/dissectors/transport/tcp_dissector.hpp"
+#include "parsing/dissectors/transport/udp_dissector.hpp"
 #include "parsing/dissectors/vxlan_dissector.hpp"
 
 namespace pruftnet::parsing::internal {
