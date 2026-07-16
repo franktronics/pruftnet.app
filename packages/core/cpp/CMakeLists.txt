@@ -126,12 +126,9 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/link/ethernet_dissector.cpp
     src/parsing/dissectors/link/ethernet_payload.cpp
     src/parsing/dissectors/link/frame_dissector.cpp
-    src/parsing/dissectors/geneve_dissector.cpp
-    src/parsing/dissectors/gre_dissector.cpp
     src/parsing/dissectors/link/linux_cooked_dissector.cpp
     src/parsing/dissectors/link/llc_dissector.cpp
     src/parsing/dissectors/link/lldp_dissector.cpp
-    src/parsing/dissectors/mpls_dissector.cpp
     src/parsing/dissectors/network/arp_dissector.cpp
     src/parsing/dissectors/network/icmp_extension.cpp
     src/parsing/dissectors/network/icmpv4_dissector.cpp
@@ -146,8 +143,11 @@ add_library(pruftnet_sniffing STATIC
     src/parsing/dissectors/link/stp_dissector.cpp
     src/parsing/dissectors/transport/tcp_dissector.cpp
     src/parsing/dissectors/transport/udp_dissector.cpp
+    src/parsing/dissectors/tunnel/geneve_dissector.cpp
+    src/parsing/dissectors/tunnel/gre_dissector.cpp
+    src/parsing/dissectors/tunnel/mpls_dissector.cpp
+    src/parsing/dissectors/tunnel/vxlan_dissector.cpp
     src/parsing/dissectors/link/vlan_dissector.cpp
-    src/parsing/dissectors/vxlan_dissector.cpp
     src/parsing/packet_tree_codec.cpp
     src/parsing/packet_parser.cpp
     src/parsing/packet_view.cpp

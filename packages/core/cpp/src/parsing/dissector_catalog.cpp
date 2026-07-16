@@ -16,8 +16,6 @@
 #include "parsing/dissectors/application/quic_dissector.hpp"
 #include "parsing/dissectors/application/tls_dissector.hpp"
 #include "parsing/dissectors/dissector_states.hpp"
-#include "parsing/dissectors/geneve_dissector.hpp"
-#include "parsing/dissectors/gre_dissector.hpp"
 #include "parsing/dissectors/link/ethernet_dissector.hpp"
 #include "parsing/dissectors/link/frame_dissector.hpp"
 #include "parsing/dissectors/link/linux_cooked_dissector.hpp"
@@ -28,7 +26,6 @@
 #include "parsing/dissectors/link/snap_dissector.hpp"
 #include "parsing/dissectors/link/stp_dissector.hpp"
 #include "parsing/dissectors/link/vlan_dissector.hpp"
-#include "parsing/dissectors/mpls_dissector.hpp"
 #include "parsing/dissectors/network/arp_dissector.hpp"
 #include "parsing/dissectors/network/icmp_extension.hpp"
 #include "parsing/dissectors/network/icmpv4_dissector.hpp"
@@ -39,7 +36,10 @@
 #include "parsing/dissectors/network/mld_dissector.hpp"
 #include "parsing/dissectors/transport/tcp_dissector.hpp"
 #include "parsing/dissectors/transport/udp_dissector.hpp"
-#include "parsing/dissectors/vxlan_dissector.hpp"
+#include "parsing/dissectors/tunnel/geneve_dissector.hpp"
+#include "parsing/dissectors/tunnel/gre_dissector.hpp"
+#include "parsing/dissectors/tunnel/mpls_dissector.hpp"
+#include "parsing/dissectors/tunnel/vxlan_dissector.hpp"
 
 namespace pruftnet::parsing::internal {
 namespace {
