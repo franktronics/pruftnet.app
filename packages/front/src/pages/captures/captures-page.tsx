@@ -187,7 +187,7 @@ export function CapturesPage() {
                 <Table>
                     <TableHeader className="bg-muted/40 sticky top-0 z-10">
                         <TableRow>
-                            <TableHead className="w-44">Capture</TableHead>
+                            <TableHead className="w-12">No.</TableHead>
                             <TableHead>State</TableHead>
                             <TableHead>Started</TableHead>
                             <TableHead>Ended / duration</TableHead>
@@ -204,7 +204,7 @@ export function CapturesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {visibleCaptures.map((capture) => (
+                        {visibleCaptures.map((capture, index) => (
                             <TableRow
                                 key={capture.captureId}
                                 tabIndex={0}
@@ -221,10 +221,11 @@ export function CapturesPage() {
                                         : ''
                                 }`}
                             >
-                                <TableCell>
-                                    <span className="font-mono text-xs" title={capture.captureId}>
-                                        {capture.captureId.slice(0, 12)}
-                                    </span>
+                                <TableCell
+                                    className="text-muted-foreground font-mono tabular-nums"
+                                    title={capture.captureId}
+                                >
+                                    {index + 1}
                                 </TableCell>
                                 <TableCell>
                                     <StateBadge capture={capture} />
