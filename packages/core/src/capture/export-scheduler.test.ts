@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { CreateExportRequest, ServerExportDestination } from '@repo/shared/capture'
-import { Deferred, Effect, Fiber, Layer } from 'effect'
+import { Deferred, Effect, Layer } from 'effect'
 import { afterEach, describe, expect, test } from 'vitest'
 
 import { CaptureCatalog } from './catalog'
@@ -12,7 +12,7 @@ import { CaptureSessionRepository } from './capture-session-repository'
 import { ExportDestination } from './export-destination'
 import { ExportEncoder } from './export-encoder'
 import { ExportArtifactRepository, type CachedExportArtifact } from './export-repository'
-import { ExportScheduler } from './export-scheduler'
+import { ExportScheduler, type ExportSchedulerService } from './export-scheduler'
 import { CaptureSessionManager } from './manager'
 import { Capture } from './service'
 
@@ -20,6 +20,20 @@ const roots: Array<string> = []
 
 afterEach(async () => {
     await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
+})
+
+const waitForJob = Effect.fn('test.waitForExportJob')(function* (
+    scheduler: ExportSchedulerService,
+    exportId: string,
+    state: 'completed' | 'failed',
+) {
+    while (true) {
+        const job = (yield* scheduler.list()).exports.find(
+            (candidate) => candidate.exportId === exportId,
+        )
+        if (job?.state === state) return job
+        yield* Effect.sleep('5 millis')
+    }
 })
 
 describe('ExportScheduler', () => {
@@ -48,6 +62,8 @@ describe('ExportScheduler', () => {
                             captureId,
                             state: 'stopped',
                             interfaceNames: ['en0'],
+                            startedAtNs: '1',
+                            retainedBytes: '64',
                         } as never),
                 } as never),
             ),
@@ -86,6 +102,7 @@ describe('ExportScheduler', () => {
                 ExportDestination,
                 ExportDestination.of({
                     cachePaths: () => Effect.succeed({ artifactPath, partialPath }),
+                    resolve: () => Effect.succeed({ kind: 'server' }),
                     deliver: () =>
                         Effect.sync(() => {
                             deliveryCount += 1
@@ -121,34 +138,76 @@ describe('ExportScheduler', () => {
             captureId,
             format: 'pcapng',
             destination: new ServerExportDestination(),
+            destinationLabel: 'Server PCAPNG download',
+        })
+        const concurrentRequest = new CreateExportRequest({
+            ...request,
+            destinationLabel: 'Second server PCAPNG download',
         })
 
         const results = await Effect.runPromise(
             Effect.gen(function* () {
                 const scheduler = yield* ExportScheduler
-                const firstFiber = yield* Effect.fork(scheduler.create(request))
+                const first = yield* scheduler.create(request)
                 yield* Deferred.await(encodingStarted)
-                const activeProgress = yield* scheduler.progress(captureId)
+                const concurrent = yield* scheduler.create(concurrentRequest)
+                const activeJobs = (yield* scheduler.list()).exports.filter(
+                    (job) => job.state === 'running',
+                )
                 yield* Deferred.succeed(continueEncoding, undefined)
-                const first = yield* Fiber.join(firstFiber)
+                const firstCompleted = yield* waitForJob(scheduler, first.exportId, 'completed')
+                const concurrentCompleted = yield* waitForJob(
+                    scheduler,
+                    concurrent.exportId,
+                    'completed',
+                )
                 const repeated = yield* scheduler.create(request)
+                const repeatedCompleted = yield* waitForJob(
+                    scheduler,
+                    repeated.exportId,
+                    'completed',
+                )
                 committedBytes = '65'
                 const advanced = yield* scheduler.create(request)
-                const inactiveProgress = yield* scheduler.progress(captureId)
-                return { first, repeated, advanced, activeProgress, inactiveProgress }
+                const advancedCompleted = yield* waitForJob(
+                    scheduler,
+                    advanced.exportId,
+                    'completed',
+                )
+                const finalJobs = yield* scheduler.list()
+                return {
+                    firstCompleted,
+                    concurrentCompleted,
+                    repeatedCompleted,
+                    advancedCompleted,
+                    activeJobs,
+                    finalJobs,
+                }
             }).pipe(Effect.provide(layer), Effect.scoped),
         )
 
         expect(encodeCount).toBe(2)
-        expect(deliveryCount).toBe(3)
-        expect(results.activeProgress).toMatchObject({
-            captureId,
-            phase: 'encoding',
-            packetsTotal: '1',
-        })
-        expect(results.inactiveProgress).toBeNull()
-        expect(results.first.downloadPath).toBe(`/exports/${captureId}/pcapng/download`)
-        expect(results.repeated).toEqual(results.first)
-        expect(results.advanced).toEqual(results.first)
+        expect(deliveryCount).toBe(4)
+        expect(results.activeJobs).toHaveLength(2)
+        expect(results.activeJobs).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    captureId,
+                    phase: 'encoding',
+                    packetsTotal: '1',
+                }),
+                expect.objectContaining({
+                    captureId,
+                    phase: 'encoding',
+                    packetsTotal: '1',
+                }),
+            ]),
+        )
+        expect(results.firstCompleted.downloadPath).toBe(`/exports/${captureId}/pcapng/download`)
+        expect(results.concurrentCompleted.downloadPath).toBe(results.firstCompleted.downloadPath)
+        expect(results.repeatedCompleted.downloadPath).toBe(results.firstCompleted.downloadPath)
+        expect(results.advancedCompleted.downloadPath).toBe(results.firstCompleted.downloadPath)
+        expect(results.finalJobs.exports).toHaveLength(4)
+        expect(results.finalJobs.exports.every((job) => job.state === 'completed')).toBe(true)
     })
 })

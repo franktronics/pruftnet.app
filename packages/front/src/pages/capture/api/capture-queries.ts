@@ -29,8 +29,7 @@ export const captureKeys = {
         ] as const,
     history: () => [...captureKeys.all, 'history'] as const,
     active: () => [...captureKeys.all, 'active'] as const,
-    exportProgress: (captureId: string) =>
-        [...captureKeys.all, captureId, 'export-progress'] as const,
+    exportJobs: () => [...captureKeys.all, 'export-jobs'] as const,
 }
 
 export const captureInterfacesOptions = () =>
@@ -92,9 +91,10 @@ export const activeCaptureOptions = () =>
         refetchInterval: 2_000,
     })
 
-export const exportProgressOptions = (captureId: string) =>
+export const exportJobsOptions = () =>
     queryOptions({
-        queryKey: captureKeys.exportProgress(captureId),
-        queryFn: () => captureClient.exportProgress(captureId),
-        refetchInterval: 400,
+        queryKey: captureKeys.exportJobs(),
+        queryFn: captureClient.exportJobs,
+        refetchInterval: (query) =>
+            query.state.data?.exports.some((job) => job.state === 'running') ? 400 : 2_000,
     })

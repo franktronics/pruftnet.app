@@ -47,11 +47,17 @@ export const captureClient = {
     activeCapture: () => call((client) => client.GetActiveCapture()),
     openCapture: (captureId: string) => call((client) => client.OpenCapture({ captureId })),
     deleteCapture: (captureId: string) => call((client) => client.DeleteCapture({ captureId })),
-    createExport: (input: { captureId: string; format: ExportFormat; destinationToken?: string }) =>
+    createExport: (input: {
+        captureId: string
+        format: ExportFormat
+        destinationLabel: string
+        destinationToken?: string
+    }) =>
         call((client) =>
             client.CreateExport({
                 captureId: input.captureId,
                 format: input.format,
+                destinationLabel: input.destinationLabel,
                 destination: input.destinationToken
                     ? new DesktopExportDestination({
                           destinationToken: input.destinationToken,
@@ -59,6 +65,5 @@ export const captureClient = {
                     : new ServerExportDestination(),
             }),
         ),
-    exportProgress: (captureId: string) =>
-        call((client) => client.GetExportProgress({ captureId })),
+    exportJobs: () => call((client) => client.ListExportJobs()),
 }

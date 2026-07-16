@@ -16,13 +16,8 @@ import { FileOutput, LoaderCircle, Plus, Trash2 } from 'lucide-react'
 import { useState, type ComponentPropsWithoutRef } from 'react'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
-import {
-    activeCaptureOptions,
-    captureKeys,
-    exportProgressOptions,
-} from '#front/pages/capture/api/capture-queries'
-import { CaptureExportDialog } from '#front/pages/captures/export-dialog'
-import { exportProgressLabel, exportProgressPercent } from '#front/pages/captures/export-progress'
+import { activeCaptureOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
+import { useExportManager } from '#front/pages/captures/export-manager'
 import { cn } from '@repo/utils'
 
 const terminalStates = new Set(['stopped', 'completed', 'failed'])
@@ -52,6 +47,7 @@ export function CaptureTitlebarActions({
 }: CaptureTitlebarActionsProps) {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const { activeExports, aggregatePercent, openExportManager } = useExportManager()
     const routeCaptureId = captureIdFromPath(pathname)
     const active = useQuery(activeCaptureOptions())
     const routeCapture = useQuery({
@@ -61,15 +57,9 @@ export function CaptureTitlebarActions({
         refetchInterval: 2_000,
     })
     const [newCaptureOpen, setNewCaptureOpen] = useState(false)
-    const [exportOpen, setExportOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const currentCapture = routeCapture.data ?? active.data ?? undefined
     const exportCapture = routeCapture.data ?? active.data ?? undefined
-    const exportProgress = useQuery({
-        ...exportProgressOptions(exportCapture?.captureId ?? ''),
-        enabled: Boolean(exportCapture),
-    })
-    const exportPercent = exportProgressPercent(exportProgress.data)
     const routeIsTerminal = Boolean(
         routeCapture.data && terminalStates.has(routeCapture.data.state),
     )
@@ -143,27 +133,32 @@ export function CaptureTitlebarActions({
                 variant="outline"
                 size="default"
                 className="relative overflow-hidden"
-                onClick={() => setExportOpen(true)}
-                disabled={!exportCapture}
+                onClick={() => openExportManager(exportCapture)}
+                disabled={!exportCapture && activeExports.length === 0}
                 aria-label={
-                    exportProgress.data
-                        ? `Export in progress: ${exportProgressLabel(exportProgress.data)}${exportPercent === null ? '' : `, ${exportPercent}%`}`
+                    activeExports.length > 0
+                        ? `${activeExports.length} export${activeExports.length === 1 ? '' : 's'} in progress${aggregatePercent === null ? '' : `, ${aggregatePercent}% overall`}`
                         : 'Export capture'
                 }
             >
-                {exportProgress.data ? <LoaderCircle className="animate-spin" /> : <FileOutput />}
+                {activeExports.length > 0 ? (
+                    <LoaderCircle className="animate-spin" />
+                ) : (
+                    <FileOutput />
+                )}
                 <span className={compact ? 'hidden md:inline' : 'hidden xl:inline'}>Export</span>
-                {exportProgress.data ? (
+                {activeExports.length > 0 ? (
                     <span className="text-[10px] leading-none font-semibold tabular-nums">
-                        {exportPercent === null ? '…' : `${exportPercent}%`}
+                        {activeExports.length > 1 ? `${activeExports.length} · ` : ''}
+                        {aggregatePercent === null ? '…' : `${aggregatePercent}%`}
                     </span>
                 ) : null}
-                {exportProgress.data ? (
+                {activeExports.length > 0 ? (
                     <span
                         aria-hidden
                         className="bg-primary absolute inset-x-0 bottom-0 h-0.5 origin-left transition-transform duration-300"
                         style={{
-                            transform: `scaleX(${Math.max(0, exportPercent ?? 4) / 100})`,
+                            transform: `scaleX(${Math.max(0, aggregatePercent ?? 4) / 100})`,
                         }}
                     />
                 ) : null}
@@ -180,13 +175,6 @@ export function CaptureTitlebarActions({
                 </Button>
             ) : null}
 
-            {exportCapture ? (
-                <CaptureExportDialog
-                    capture={exportCapture}
-                    open={exportOpen}
-                    onOpenChange={setExportOpen}
-                />
-            ) : null}
             <AlertDialog open={newCaptureOpen} onOpenChange={setNewCaptureOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

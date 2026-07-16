@@ -30,14 +30,21 @@ export interface ExportDestinationOptions {
     readonly resolveDesktopDestination?: DesktopDestinationResolver
 }
 
+export type ResolvedExportDestination =
+    | { readonly kind: 'desktop'; readonly path: string }
+    | { readonly kind: 'server' }
+
 export interface ExportDestinationService {
     readonly cachePaths: (
         captureId: string,
         format: ExportFormat,
     ) => Effect.Effect<ExportCachePaths, ExportDestinationError>
-    readonly deliver: (
+    readonly resolve: (
         format: ExportFormat,
         destination: ExportDestinationRequest,
+    ) => Effect.Effect<ResolvedExportDestination, ExportDestinationError>
+    readonly deliver: (
+        destination: ResolvedExportDestination,
         sourcePath: string,
     ) => Effect.Effect<'desktop' | 'server', ExportDestinationError>
 }
@@ -79,8 +86,9 @@ export class ExportDestination extends Context.Tag('@repo/core/capture/ExportDes
                                     cause,
                                 }),
                         }),
-                    deliver: (format, destination, sourcePath) => {
-                        if (destination._tag === 'Server') return Effect.succeed('server' as const)
+                    resolve: (format, destination) => {
+                        if (destination._tag === 'Server')
+                            return Effect.succeed({ kind: 'server' } as const)
                         return Effect.tryPromise({
                             try: async () => {
                                 if (
@@ -113,6 +121,24 @@ export class ExportDestination extends Context.Tag('@repo/core/capture/ExportDes
                                 ) {
                                     artifactPath += expectedExtension(format)
                                 }
+                                return { kind: 'desktop', path: artifactPath } as const
+                            },
+                            catch: (cause) =>
+                                cause instanceof ExportDestinationError
+                                    ? cause
+                                    : new ExportDestinationError({
+                                          code: 'Unavailable',
+                                          message:
+                                              'Unable to resolve the desktop export destination.',
+                                          cause,
+                                      }),
+                        })
+                    },
+                    deliver: (destination, sourcePath) => {
+                        if (destination.kind === 'server') return Effect.succeed('server' as const)
+                        return Effect.tryPromise({
+                            try: async () => {
+                                const artifactPath = destination.path
                                 const partialPath = `${artifactPath}.partial`
                                 try {
                                     await rm(partialPath, { force: true })
@@ -128,13 +154,11 @@ export class ExportDestination extends Context.Tag('@repo/core/capture/ExportDes
                                 return 'desktop' as const
                             },
                             catch: (cause) =>
-                                cause instanceof ExportDestinationError
-                                    ? cause
-                                    : new ExportDestinationError({
-                                          code: 'Unavailable',
-                                          message: 'Unable to deliver the desktop export.',
-                                          cause,
-                                      }),
+                                new ExportDestinationError({
+                                    code: 'Unavailable',
+                                    message: 'Unable to deliver the desktop export.',
+                                    cause,
+                                }),
                         })
                     },
                 })

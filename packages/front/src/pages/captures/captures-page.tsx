@@ -29,7 +29,8 @@ import { BasicErrorAlert } from '#front/components/error-renderer'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureHistoryOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
 
-import { CaptureExportDialog } from './export-dialog'
+import { useExportManager } from './export-manager'
+import { formatBytes } from './format-bytes'
 
 function timestamp(value: string | null) {
     if (!value) return '—'
@@ -53,18 +54,6 @@ function duration(capture: CaptureRecord) {
         : `${minutes.toString()}m ${remainder.toString()}s`
 }
 
-function bytes(value: string) {
-    const amount = BigInt(value)
-    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
-    let scaled = amount
-    let unit = 0
-    while (scaled >= 1024n && unit < units.length - 1) {
-        scaled /= 1024n
-        unit += 1
-    }
-    return `${scaled.toLocaleString()} ${units[unit]}`
-}
-
 function StateBadge({ capture }: { readonly capture: CaptureRecord }) {
     if (capture.state === 'capturing' || capture.state === 'stopping') {
         return (
@@ -86,8 +75,8 @@ function StateBadge({ capture }: { readonly capture: CaptureRecord }) {
 export function CapturesPage() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const { openExportManager } = useExportManager()
     const captures = useQuery(captureHistoryOptions())
-    const [exportCapture, setExportCapture] = useState<CaptureRecord>()
     const [deleteCapture, setDeleteCapture] = useState<CaptureRecord>()
     const [search, setSearch] = useState('')
     const [state, setState] = useState('all')
@@ -247,7 +236,7 @@ export function CapturesPage() {
                                     {BigInt(capture.packetCount).toLocaleString()}
                                 </TableCell>
                                 <TableCell className="hidden text-right font-mono xl:table-cell">
-                                    {bytes(capture.retainedBytes)}
+                                    {formatBytes(capture.retainedBytes)}
                                 </TableCell>
                                 <TableCell className="hidden uppercase xl:table-cell">
                                     {capture.sourceFormat}
@@ -286,7 +275,7 @@ export function CapturesPage() {
                                             size="icon-sm"
                                             variant="ghost"
                                             aria-label="Export capture"
-                                            onClick={() => setExportCapture(capture)}
+                                            onClick={() => openExportManager(capture)}
                                         >
                                             <FileOutput />
                                         </Button>
@@ -342,13 +331,6 @@ export function CapturesPage() {
                 ) : null}
             </div>
 
-            {exportCapture ? (
-                <CaptureExportDialog
-                    capture={exportCapture}
-                    open
-                    onOpenChange={(next) => !next && setExportCapture(undefined)}
-                />
-            ) : null}
             <AlertDialog
                 open={Boolean(deleteCapture)}
                 onOpenChange={(next) => !next && setDeleteCapture(undefined)}

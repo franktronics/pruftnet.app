@@ -7,6 +7,7 @@ import { router } from './pages/router'
 import './styles/main.css'
 import { syncDocumentWindowControlsOverlayClass } from './config/window-controls-overlay'
 import { queryClient } from './config/query-client'
+import { ExportManagerProvider } from './pages/captures/export-manager'
 
 export function App() {
     useEffect(() => {
@@ -21,7 +22,9 @@ export function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
-                <RouterProvider router={router} />
+                <ExportManagerProvider>
+                    <RouterProvider router={router} />
+                </ExportManagerProvider>
             </ThemeProvider>
         </QueryClientProvider>
     )

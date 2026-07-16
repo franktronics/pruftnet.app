@@ -34,7 +34,7 @@ export const CaptureHandlers = CaptureRpcs.toLayer(
             OpenCapture: ({ captureId }) => catalog.open(captureId),
             DeleteCapture: ({ captureId }) => mutation(catalog.delete(captureId)),
             CreateExport: (request) => mutation(exports.create(request)),
-            GetExportProgress: ({ captureId }) => exports.progress(captureId),
+            ListExportJobs: exports.list,
         }
     }),
 )

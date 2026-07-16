@@ -135,7 +135,7 @@ describe('capture RPC contract', () => {
             'OpenCapture',
             'DeleteCapture',
             'CreateExport',
-            'GetExportProgress',
+            'ListExportJobs',
         ])
     })
 
@@ -145,8 +145,10 @@ describe('capture RPC contract', () => {
         const readPacketSummaries = requests.find(
             (request) => request._tag === 'ReadPacketSummaries',
         )
+        const createExport = requests.find((request) => request._tag === 'CreateExport')
         expect(startCapture).toBeDefined()
         expect(readPacketSummaries).toBeDefined()
+        expect(createExport).toBeDefined()
 
         expectRejected(startCapture!.payloadSchema, { source: { _tag: 'Live', interfaces: [] } })
         expectRejected(readPacketSummaries!.payloadSchema, { captureId: 'invalid', limit: 100 })
@@ -154,6 +156,11 @@ describe('capture RPC contract', () => {
             captureId,
             afterCursor: Number('9007199254740993'),
             limit: 100,
+        })
+        expectRejected(createExport!.payloadSchema, {
+            captureId,
+            format: 'pcapng',
+            destination: { _tag: 'Server' },
         })
     })
 
