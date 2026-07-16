@@ -15,7 +15,6 @@
 #include "parsing/dissectors/application/ntp_dissector.hpp"
 #include "parsing/dissectors/application/quic_dissector.hpp"
 #include "parsing/dissectors/application/tls_dissector.hpp"
-#include "parsing/dissectors/dissector_states.hpp"
 #include "parsing/dissectors/link/ethernet_dissector.hpp"
 #include "parsing/dissectors/link/frame_dissector.hpp"
 #include "parsing/dissectors/link/linux_cooked_dissector.hpp"
