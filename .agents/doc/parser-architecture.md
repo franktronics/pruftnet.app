@@ -82,6 +82,10 @@ Phase 2 implements `ProtocolId`, `FieldId`, `RegistryRevision`, `RegistryBuilder
 
 `PacketParser` owns packet-session setup, source clipping, root creation, capture-scoped reassembly state, and finalization. An immutable `DissectorCatalog` dispatches numeric DLT, EtherType, LLC/SNAP, family-qualified IP protocol, UDP port, and TCP port selectors through function-pointer handles with immutable resolved field IDs. Parent dissectors know selector tables, not child implementations.
 
+The physical family layout, registrar contract, registry append rules, and
+new-dissector checklist are documented in
+[`dissector-architecture.md`](dissector-architecture.md).
+
 The built-in set currently covers:
 
 - Frame, Ethernet II/IEEE 802.3, VLAN, Linux SLL/SLL2, NULL/LOOP, RAW, LLC, and SNAP.

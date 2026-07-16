@@ -12,6 +12,7 @@ server mode.
 - Runtime state machine: `src/sniffing/sniffer_runtime.cpp`
 - Detailed contributor map: `../../../.agents/doc/cpp-architecture.md`
 - Capture invariants: `../../../.agents/doc/capture-architecture.md`
+- Dissector architecture: `../../../.agents/doc/dissector-architecture.md`
 
 Only headers under `include/pruftnet/` are C++ library API. Files under `src/`
 and `tools/` are implementation details. The framed worker protocol is an
@@ -41,7 +42,9 @@ by packet count and bytes, and every rejection has an exact counter.
 - `src/capture`: pcapng format encoding/recovery and spool commit/retention.
 - `src/parsing`: registry, bounded tree construction, dissector dispatch,
   summaries, and PRT2 encoding/verification.
-- `src/parsing/dissectors`: protocol-specific parsing.
+- `src/parsing/catalog`: deterministic family registration and selector
+  binding.
+- `src/parsing/dissectors`: protocol-specific parsing grouped by family.
 - `src/replay`: bounded summary and event journals.
 - `tools`: worker executable, protocol framing, and command endpoints.
 - `tests`, `benchmarks`, `fuzz`: correctness, lifecycle, allocation,
@@ -49,10 +52,12 @@ by packet count and bytes, and every rejection has an exact counter.
 
 ## Adding protocol support
 
-Add the dissector under `src/parsing/dissectors`, register its fields and
-dispatch in the parsing catalog, then add truncation, malformed-length,
-resource-budget, and protocol-path tests. Do not add parsing to capture
-callbacks, the writer, Node, or React.
+Add the dissector under the matching `src/parsing/dissectors/<family>`
+directory, append its fields, and register dispatch in the matching catalog
+section. Follow the
+[`Adding a New Dissector`](../../../.agents/doc/dissector-architecture.md#adding-a-new-dissector)
+checklist. Do not add parsing to capture callbacks, the writer, Node, or
+React.
 
 The current catalog contains 38 protocols and 649 fields, including bounded
 IP/TCP reassembly, core LAN/control protocols, DNS/DHCP/NTP, common tunnels,

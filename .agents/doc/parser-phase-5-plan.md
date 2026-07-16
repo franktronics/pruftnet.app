@@ -253,23 +253,22 @@ SEND, MLD, RPL, Mobile IPv6, SLAAC state mutation, duplicate-address detection, 
 10. Add protocol-specific unit files, mixed PCAP coverage, fuzz seeds, allocation checks, and benchmarks.
 11. Update parser, capture, registry, and benchmark documentation.
 
-## Target File Structure
+## Implemented File Structure
 
 ```text
-src/parsing/dissectors/
+src/parsing/dissectors/network/
   arp_dissector.cpp/.hpp
   ipv6_dissector.cpp/.hpp
-  ipv6_extension_dissector.cpp/.hpp
+  icmp_extension.cpp/.hpp
   icmpv4_dissector.cpp/.hpp
   icmpv6_dissector.cpp/.hpp
 ```
 
-Protocol-specific tests should move into dedicated files instead of continuing to grow `packet_parser_tests.cpp`:
+Protocol-specific coverage is kept out of `packet_parser_tests.cpp` in:
 
 ```text
 tests/unit/
-  arp_dissector_tests.cpp
-  ipv6_dissector_tests.cpp
+  phase5_dissector_tests.cpp
   icmp_dissector_tests.cpp
 ```
 

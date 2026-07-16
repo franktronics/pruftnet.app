@@ -2,6 +2,9 @@
 
 Status: implemented and validated on 2026-07-16.
 
+Architecture and contribution rules are documented in
+[`dissector-architecture.md`](dissector-architecture.md).
+
 ## Implemented
 
 - Link layers: Frame, Ethernet II, IEEE 802.3 length handling, VLAN, Linux SLL/SLL2, NULL/LOOP, RAW, LLC, and SNAP.
