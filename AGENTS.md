@@ -54,7 +54,7 @@ agents:
 - Effect-smol: https://github.com/Effect-TS/effect-smol.git
 
 ### How to use them
-- These repositories are not tracked by Git. If they do not already exist, you must use the links mentioned above to clone them before continuing.
+- These repositories are not tracked by Git. If they do not already exist, you must use the links mentioned above to clone them(--depth 1) before continuing.
 - Prefer examples and patterns from the vendored source code over generated guesses or web search results.
 - Do not edit files under `.repos/` unless explicitly asked.
 - Do not import from `.repos/`; application code must continue importing from normal package dependencies.
