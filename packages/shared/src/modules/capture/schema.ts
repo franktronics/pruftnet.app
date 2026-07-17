@@ -106,6 +106,7 @@ export class OpenCaptureResult extends Schema.Class<OpenCaptureResult>('OpenCapt
 
 export const ExportFormat = Schema.Literal('pcapng', 'pcap')
 export type ExportFormat = Schema.Schema.Type<typeof ExportFormat>
+export const ExportId = Schema.String.pipe(Schema.pattern(/^[0-9a-f]{32}$/))
 
 export const ExportProgressPhase = Schema.Literal(
     'preparing',
@@ -116,13 +117,39 @@ export const ExportProgressPhase = Schema.Literal(
 )
 export type ExportProgressPhase = Schema.Schema.Type<typeof ExportProgressPhase>
 
-export class ExportProgress extends Schema.Class<ExportProgress>('ExportProgress')({
+export const ExportJobState = Schema.Literal('running', 'completed', 'failed')
+export type ExportJobState = Schema.Schema.Type<typeof ExportJobState>
+
+export class ExportJobFailure extends Schema.Class<ExportJobFailure>('ExportJobFailure')({
+    title: Schema.String,
+    message: Schema.String,
+    retryable: Schema.Boolean,
+}) {}
+
+export class ExportJob extends Schema.Class<ExportJob>('ExportJob')({
+    exportId: ExportId,
     captureId: CaptureId,
+    captureStartedAtNs: DecimalString,
     format: ExportFormat,
+    destinationKind: Schema.Literal('desktop', 'server'),
+    destinationLabel: Schema.NonEmptyString.pipe(Schema.maxLength(4096)),
+    state: ExportJobState,
     phase: ExportProgressPhase,
     packetsTotal: DecimalString,
     packetsWritten: DecimalString,
     bytesWritten: DecimalString,
+    estimatedBytes: DecimalString,
+    retainedPortionOnly: Schema.NullOr(Schema.Boolean),
+    checksumSha256: Schema.NullOr(Schema.String),
+    finalSize: Schema.NullOr(DecimalString),
+    downloadPath: Schema.NullOr(Schema.String),
+    failure: Schema.NullOr(ExportJobFailure),
+    startedAtNs: DecimalString,
+    finishedAtNs: Schema.NullOr(DecimalString),
+}) {}
+
+export class ExportJobList extends Schema.Class<ExportJobList>('ExportJobList')({
+    exports: Schema.Array(ExportJob),
 }) {}
 
 export class DesktopExportDestination extends Schema.TaggedClass<DesktopExportDestination>()(
@@ -138,20 +165,11 @@ export class ServerExportDestination extends Schema.TaggedClass<ServerExportDest
 export const ExportDestination = Schema.Union(DesktopExportDestination, ServerExportDestination)
 export type ExportDestination = Schema.Schema.Type<typeof ExportDestination>
 
-export class PreparedExport extends Schema.Class<PreparedExport>('PreparedExport')({
-    captureId: CaptureId,
-    format: ExportFormat,
-    destinationKind: Schema.Literal('desktop', 'server'),
-    retainedPortionOnly: Schema.Boolean,
-    checksumSha256: Schema.String,
-    finalSize: DecimalString,
-    downloadPath: Schema.NullOr(Schema.String),
-}) {}
-
 export class CreateExportRequest extends Schema.Class<CreateExportRequest>('CreateExportRequest')({
     captureId: CaptureId,
     format: ExportFormat,
     destination: ExportDestination,
+    destinationLabel: Schema.NonEmptyString.pipe(Schema.maxLength(4096)),
 }) {}
 
 export class StartCaptureRequest extends Schema.Class<StartCaptureRequest>('StartCaptureRequest')({

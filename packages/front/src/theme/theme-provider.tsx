@@ -3,12 +3,19 @@ import { createContext, use, useEffect, useState, type ReactNode } from 'react'
 import { isTheme, type Theme } from './theme'
 
 declare global {
+    interface DesktopExportDestinationSelection {
+        readonly destinationToken: string
+        readonly path: string
+    }
+
     interface Window {
         readonly pruftnet?: {
             readonly platform: string
             readonly rpcUrl: string
             readonly setTheme: (theme: Theme) => Promise<'dark' | 'light'>
-            readonly selectExportDestination: (format: 'pcapng' | 'pcap') => Promise<string | null>
+            readonly selectExportDestination: (
+                format: 'pcapng' | 'pcap',
+            ) => Promise<DesktopExportDestinationSelection | null>
         }
     }
 }

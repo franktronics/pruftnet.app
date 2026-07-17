@@ -14,14 +14,18 @@ In Electron, interface selection, settings, and Start/Stop are portaled into a d
 
 The history route uses full-row keyboard and pointer navigation, a stable inset live-state marker that does not disturb column alignment, and simple text/state filters. Row actions stop event propagation so Open, Export, and Delete remain independent of row navigation. The history surface has only a top boundary; it does not stretch a decorative bottom border across empty page space.
 
-The export dialog is a single preparation action, not an export ledger. Desktop selects a native save
-destination and receives the prepared artifact; Server shows a download action when preparation
-completes. Repeated requests reuse the current artifact when the committed capture snapshot has not
-changed.
+The application owns one global export manager rather than one dialog per capture page. Desktop
+first selects a native save destination, then returns to the manager to review the path, format, and
+estimated retained size before explicitly starting the export. Server presents the same confirmation
+step with a server-download destination. Repeated requests reuse the current artifact when the
+committed capture snapshot has not changed.
 
-While an export is active, the dialog shows its backend phase, packet counters, bytes written, and
-percentage. The titlebar Export button mirrors that state with a compact percentage and bottom-edge
-progress rail; both surfaces share the same polled query.
+The manager lists all running exports across routes and captures, plus bounded recent results.
+Independent exports may run concurrently; requests for the same capture and format share backend
+artifact preparation. Each running row shows its destination, backend phase, packet counters, bytes
+written, and percentage. The titlebar Export button remains global, reopens the manager from every
+route, and displays estimated-size-weighted progress across all running jobs with a compact
+bottom-edge rail.
 
 The application sidebar uses off-canvas collapse on desktop. Closing it removes the complete sidebar instead of retaining an icon rail. The titlebar or web-header trigger and `Cmd/Ctrl+B` remain available to reopen it. Electron titlebar offsets preserve native controls on macOS, Windows, and Linux.
 

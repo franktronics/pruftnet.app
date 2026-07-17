@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { extname } from 'node:path'
 
 import { BrowserWindow, dialog, type SaveDialogOptions } from 'electron'
 
@@ -32,10 +33,14 @@ export class DesktopExportDestinations {
             ? await dialog.showSaveDialog(window, options)
             : await dialog.showSaveDialog(options)
         if (result.canceled || !result.filePath) return null
+        const path =
+            extname(result.filePath).toLowerCase() === `.${extension}`
+                ? result.filePath
+                : `${result.filePath}.${extension}`
         this.#discardExpired()
         const token = randomBytes(32).toString('hex')
-        this.#pending.set(token, { path: result.filePath, format, createdAt: Date.now() })
-        return token
+        this.#pending.set(token, { path, format, createdAt: Date.now() })
+        return { destinationToken: token, path }
     }
 
     async consume(token: string, format: ExportFormat) {

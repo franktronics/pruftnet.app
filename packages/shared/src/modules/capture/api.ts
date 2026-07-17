@@ -11,8 +11,8 @@ import {
     CaptureRecord,
     CaptureRecordList,
     CreateExportRequest,
-    ExportProgress,
-    PreparedExport,
+    ExportJob,
+    ExportJobList,
     ListCaptureStatSamplesRequest,
     OpenCaptureResult,
     CaptureStats,
@@ -100,12 +100,11 @@ export class CaptureRpcs extends RpcGroup.make(
     }),
     Rpc.make('CreateExport', {
         payload: CreateExportRequest,
-        success: PreparedExport,
+        success: ExportJob,
         error: CaptureRpcError,
     }),
-    Rpc.make('GetExportProgress', {
-        payload: CaptureIdRequest,
-        success: Schema.NullOr(ExportProgress),
+    Rpc.make('ListExportJobs', {
+        success: ExportJobList,
         error: CaptureRpcError,
     }),
 ) {}

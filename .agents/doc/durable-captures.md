@@ -2,8 +2,8 @@
 
 ## Ownership
 
-Capture sessions are application-scoped backend resources. Export requests produce or reuse a cached
-artifact; they are not retained as user-visible jobs or history.
+Capture sessions are application-scoped backend resources. Export requests run as application-scoped
+transient jobs that produce or reuse a cached artifact. Jobs are not persisted as durable history.
 
 `AppDataPaths` is the path authority. The durable layout is:
 
@@ -48,14 +48,15 @@ truncates only an interrupted partial tail, preserves unknown files, and never r
 
 ## Exports
 
-An export request snapshots committed segment offsets and computes a source fingerprint. A matching
+An export job snapshots committed segment offsets and computes a source fingerprint. A matching
 artifact is reused; otherwise the current artifact for that capture and format is atomically replaced.
-There is no export history, retry record, or completed-job ledger. Concurrent requests for the same
-capture and format share one preparation fiber.
+Concurrent jobs run independently, while jobs for the same capture and format share one preparation
+fiber before delivering to their own destinations.
 
-Progress is transient in-memory state exposed through `GetExportProgress`. It reports preparation,
-encoding, cache reuse, finalization, and delivery with decimal-string packet and byte counters. The
-state disappears when the request finishes and is never written as export history.
+`ListExportJobs` exposes transient in-memory running jobs and a bounded set of recent terminal
+results. It reports preparation, encoding, cache reuse, finalization, and delivery with
+decimal-string packet and byte counters. This list is never written as export history and is cleared
+on backend restart.
 
 Database segment leases protect a snapshot while it is encoded. During an active ring capture, C++
 also leases the selected generations so retention cannot evict them. These leases are transient and
@@ -65,9 +66,11 @@ startup clears any counts left by a crashed process.
   section is written; segments are never blindly concatenated.
 - pcap supports exactly one interface and preserves timestamp precision, captured/wire lengths, and
   link type.
-- Desktop consumes a one-use opaque token created by Electron's native save dialog. It copies the
-  cached artifact beside the selected destination as `.partial`, syncs, and atomically renames it
-  without exposing arbitrary filesystem access to React.
+- Desktop returns from Electron's native save dialog with an opaque one-use token plus the
+  user-visible selected path. Choosing the path does not start work. When the user confirms, the
+  backend consumes and validates the token before starting the job, then copies the cached artifact
+  beside the selected destination as `.partial`, syncs, and atomically renames it without exposing
+  arbitrary filesystem access to React.
 - Server serves the cached artifact below `dataRoot/exports`. The loopback-only HTTP endpoint supports GET, HEAD,
   single byte ranges, resumption, length, disposition, and SHA-256 metadata. Remote binding remains
   disabled until application authentication exists.

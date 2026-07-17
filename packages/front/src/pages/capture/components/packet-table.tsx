@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
-import { Pause, Play } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
 import { Button } from '@repo/ui/atoms'
 
 import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
@@ -97,6 +97,16 @@ export function PacketTable({
         }
     }
 
+    function scrollToTop() {
+        if (following) onPauseFollowing()
+        virtualizer.scrollToIndex(0, { align: 'start' })
+    }
+
+    function followTail() {
+        onFollowingChange(true)
+        if (rows.length > 0) virtualizer.scrollToIndex(rows.length - 1, { align: 'end' })
+    }
+
     const gridStyle = {
         gridTemplateColumns: columnWidths.map((width) => `${width}px`).join(' '),
     }
@@ -184,15 +194,27 @@ export function PacketTable({
                             </span>
                         ))}
                     </div>
-                    <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
+                    <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center gap-0.5 border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
                         <Button
                             size="sm"
                             variant="ghost"
                             className="h-7 normal-case"
-                            onClick={() => onFollowingChange(!following)}
+                            onClick={scrollToTop}
+                            disabled={rows.length === 0}
                         >
-                            {following ? <Pause /> : <Play />}
-                            {following ? 'Pause tail' : 'Follow tail'}
+                            <ArrowUpToLine />
+                            Top
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant={following ? 'secondary' : 'ghost'}
+                            className="h-7 normal-case"
+                            onClick={followTail}
+                            disabled={rows.length === 0}
+                            aria-pressed={following}
+                        >
+                            <ArrowDownToLine />
+                            {following ? 'Following tail' : 'Follow tail'}
                         </Button>
                     </div>
                 </div>
