@@ -80,7 +80,7 @@ export function CaptureTitlebarActions({
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: captureKeys.history() })
             setDeleteOpen(false)
-            await navigate({ to: '/captures' })
+            await navigate({ to: '/' })
         },
     })
 
