@@ -45,21 +45,49 @@ The packet, statistics, structure, and bytes panes do not repeat their titles in
 content, table columns, and mobile tabs provide the context. Packet counts and filter state live in the
 display-filter toolbar.
 
-The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests. The display-filter toolbar performs deferred, case-insensitive text matching and can apply advanced client-side filters to retained summaries: relative time, protocol, interface, wire length, parse status, source, and destination. Advanced filters are edited in a draft modal and only become active after Apply filters; protocol-expression parsing remains deferred.
+The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail is available only for an active capture, controls scrolling, and never selects packets or triggers detail requests. Retained captures stay at the user's current position and request the next summary page when the virtual pagination row enters the viewport. The display-filter toolbar performs deferred, case-insensitive text matching and can apply advanced client-side filters to loaded summaries: relative time, protocol, interface, wire length, parse status, source, and destination. While more retained pages are available, packet counts are explicitly labeled as loaded counts. Advanced filters are edited in a draft modal and only become active after Apply filters; protocol-expression parsing remains deferred.
 
 ## Summary State
 
-Summaries are read from `ReadPacketSummaries` in batches of at most 1,024. TanStack Query owns one bounded state object per capture:
+Summaries are read from `ReadPacketSummaries` in batches of at most 1,024. TanStack Query owns one state object per capture with:
 
-- up to 50,000 packet summaries;
+- up to 50,000 recent packet summaries for an active capture;
+- cursor-paginated loaded pages for a retained capture;
 - exclusive last cursor;
 - stable first timestamp for relative time;
 - terminal completion state;
 - a persistent gap marker when backend or client retention loses earlier rows.
 
-Incoming cursor-ordered batches are merged incrementally. A full batch is drained immediately; a partial batch waits before polling again. Packet identity and selection always use complete `CaptureId + PacketId`, never visible row indexes.
+An active capture drains all currently available full pages into a local accumulator and publishes
+one atomic cache update; a partial page then waits for the next capture-stream cursor watermark.
+A retained capture reads one initial page and only reads another when its virtual pagination row
+becomes visible. Historical pages are never installed one by one during initial navigation, so
+opening a retained capture cannot look like packet replay. Packet identity and selection always use
+complete `CaptureId + PacketId`, never visible row indexes.
 
-Registry snapshots are immutable and cached by revision. Session and stats polling stop after a final terminal read. Events retain a bounded recent cursor window and surface warnings in the toolbar.
+Registry snapshots are immutable and cached by revision. Session, statistics, samples, summaries,
+events, history, active capture, titlebar state, and export progress do not poll. Events retain a
+bounded recent cursor window and surface warnings in the toolbar.
+
+## Realtime synchronization
+
+The frontend uses Effect RPC over HTTP with NDJSON streaming:
+
+- one application stream carries capture-record and export-job changes;
+- one capture-scoped stream is open only for a non-terminal capture workspace;
+- both streams send a ready marker first, a heartbeat every 20 seconds, and monotonic decimal-string
+  sequences;
+- reconnect uses capped exponential backoff with jitter.
+
+On every initial connection, reconnection, backend-instance change, or sequence gap, the client
+subscribes first and then reads authoritative snapshots. Events received during reconciliation are
+buffered and applied after the snapshot. SQLite-backed queries remain authoritative; stream messages
+are bounded, idempotent invalidation hints.
+
+Reloading the renderer destroys only its stream scopes. The application-scoped backend capture and
+export fibers continue, and the replacement renderer rebuilds state from backend snapshots plus
+durable summary/event cursors. Transient selection, filters, scroll, and pane state are intentionally
+not restored.
 
 ## Selected Packet Detail
 
@@ -85,7 +113,7 @@ The byte pane virtualizes 16-byte rows, renders synchronized hex and ASCII, and 
 
 ## Statistics
 
-The statistics pane is a capture ledger, not one aggregate loss number. It stores at most 120 adjacent one-second snapshots and charts observed, persisted, and analyzed rates plus maximum packet-or-byte queue pressure. This is a rolling client-side window: a new sample replaces the oldest sample after the 120-sample limit, so it represents roughly the latest two minutes rather than the complete capture lifetime.
+The statistics pane is a capture ledger, not one aggregate loss number. It stores at most 1,000 adjacent one-second snapshots and charts observed, persisted, and analyzed rates plus maximum packet-or-byte queue pressure. This is a rolling client-side window: a new sample replaces the oldest sample after the 1,000-sample limit, so it represents roughly the latest 17 minutes rather than the complete capture lifetime.
 
 The compact dashboard uses sparklines and opens the same ledger component in an expanded statistics dialog. The expanded throughput chart adds time and packet-rate axes, hover values, and monotone curves. Metric help controls stay hidden until their complete field row is hovered or the control receives keyboard focus. Statistics sections use spacing rather than decorative left borders.
 
@@ -108,6 +136,5 @@ Capture-specific components, hooks, models, and query policies stay under `packa
 - optional OS-specific MAC address enrichment;
 - explicit DLT and timestamp selection in the frontend;
 - packaged privilege installation and helper signing on Linux, macOS, and Windows;
-- persistent compact-summary storage beyond the bounded live journal;
 - remote authentication and authorization;
 - user capture-file import and history.

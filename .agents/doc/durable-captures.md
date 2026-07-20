@@ -60,7 +60,8 @@ on backend restart.
 
 Database segment leases protect a snapshot while it is encoded. During an active ring capture, C++
 also leases the selected generations so retention cannot evict them. These leases are transient and
-startup clears any counts left by a crashed process.
+startup clears any counts left by a crashed process. Deferred capture deletion is finalized only
+after every artifact preparation and destination delivery for that capture has ended.
 
 - pcapng supports one or multiple interfaces. Segment headers are validated and a single canonical
   section is written; segments are never blindly concatenated.
@@ -80,13 +81,17 @@ startup clears any counts left by a crashed process.
 The shutdown coordinator first rejects new mutations. Desktop confirms stopping an active capture
 and cancelling active artifact preparation; a failure keeps the app open. Server stops the active
 capture and interrupts artifact preparation. Workers have a 30-second coordinated shutdown bound.
-HTTP and files close before SQLite checkpoints and closes; the instance lock is released last by the
-Effect scope.
+After successful capture/export finalization, HTTP stops accepting new connections without awaiting
+open responses. The realtime hub then publishes shutdown and closes its bounded subscriptions, open
+NDJSON responses end, and HTTP closure is awaited. Files then close before SQLite checkpoints and
+closes; the instance lock is released last by the Effect scope.
 
 ## UI recovery
 
 `/captures` is the retained-session ledger. `/` redirects to an active capture when one exists, and
 `/capture/:captureId` reloads backend state. Stored summaries, events, final statistics, and compact
-statistics samples rebuild the workspace independently of polling frequency. Packet detail requests
+statistics samples rebuild the workspace after renderer reload or stream reconnection. The client
+subscribes before snapshot reconciliation, buffers concurrent notifications, and re-reads durable
+cursors after a sequence gap. Packet detail requests
 for inactive sessions stream the requested packet from the validated pcapng segment and run the same
 native parser used during live capture, including after a full backend restart.

@@ -18,6 +18,7 @@ import {
 } from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
+import { useCaptureRealtime } from './hooks/use-capture-realtime'
 import {
     countAdvancedPacketFilters,
     emptyPacketDisplayFilters,
@@ -35,9 +36,17 @@ export function CapturePage() {
 
 function CaptureWorkspace({ captureId }: { captureId: string }) {
     const session = useCaptureSession(captureId)
-    const stats = useCaptureStats(captureId, session.data?.state)
-    const statSamples = useCaptureStatSamples(captureId, session.data?.state)
-    const summaries = usePacketSummaries(captureId)
+    const terminal =
+        session.data?.state === 'stopped' ||
+        session.data?.state === 'completed' ||
+        session.data?.state === 'failed'
+    useCaptureRealtime(captureId, session.isSuccess && !terminal)
+    const stats = useCaptureStats(captureId)
+    const statSamples = useCaptureStatSamples(captureId)
+    const summaries = usePacketSummaries(captureId, {
+        enabled: session.isSuccess,
+        mode: terminal ? 'history' : 'live',
+    })
     const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
     const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
     const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
@@ -86,13 +95,17 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         [session.data],
     )
     const hasActiveFilter = filters.search.trim() !== '' || countAdvancedPacketFilters(filters) > 0
-    const emptyMessage = summaries.isPending
-        ? 'Waiting for packet summaries...'
-        : hasActiveFilter && visiblePacketCount === 0
-          ? 'No packets match the current filters.'
-          : session.data?.state === 'running' || session.data?.state === 'starting'
-            ? 'Waiting for packets...'
-            : 'No packets were captured.'
+    const emptyMessage = summaries.error
+        ? 'Packet summaries could not be loaded.'
+        : summaries.isInitialLoading
+          ? 'Waiting for packet summaries...'
+          : summaries.isLoadingMore && visiblePacketCount === 0
+            ? 'Loading more packet summaries...'
+            : hasActiveFilter && visiblePacketCount === 0
+              ? 'No packets match the current filters.'
+              : session.data?.state === 'running' || session.data?.state === 'starting'
+                ? 'Waiting for packets...'
+                : 'No packets were captured.'
 
     if (session.isPending) {
         return (
@@ -155,6 +168,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 maxTimeSeconds={maxTimeSeconds}
                 visibleCount={visiblePacketCount}
                 totalCount={totalPacketCount}
+                partialCount={terminal && summaries.hasMore}
             />
             <div className="hidden min-h-0 flex-1 md:block">
                 <ResizablePanelGroup orientation="vertical">
@@ -166,9 +180,16 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                                     originTimestampNs={summaries.originTimestampNs}
                                     selectedKey={selectedKey}
                                     onSelect={handleSelect}
-                                    following={following}
+                                    following={!terminal && following}
+                                    canFollow={!terminal}
                                     onFollowingChange={setFollowing}
                                     onPauseFollowing={() => setFollowing(false)}
+                                    hasMore={terminal && summaries.hasMore}
+                                    isLoadingMore={
+                                        summaries.isInitialLoading || summaries.isLoadingMore
+                                    }
+                                    loadMoreError={summaries.error}
+                                    onLoadMore={summaries.loadMore}
                                     emptyMessage={emptyMessage}
                                 />
                             </ResizablePanel>
@@ -215,9 +236,14 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         originTimestampNs={summaries.originTimestampNs}
                         selectedKey={selectedKey}
                         onSelect={handleSelect}
-                        following={following}
+                        following={!terminal && following}
+                        canFollow={!terminal}
                         onFollowingChange={setFollowing}
                         onPauseFollowing={() => setFollowing(false)}
+                        hasMore={terminal && summaries.hasMore}
+                        isLoadingMore={summaries.isInitialLoading || summaries.isLoadingMore}
+                        loadMoreError={summaries.error}
+                        onLoadMore={summaries.loadMore}
                         emptyMessage={emptyMessage}
                     />
                 </div>

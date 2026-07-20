@@ -50,24 +50,18 @@ export const captureSessionOptions = (captureId: string) =>
     queryOptions({
         queryKey: captureKeys.session(captureId),
         queryFn: () => captureClient.session(captureId),
-        refetchInterval: (query) =>
-            query.state.data?.state === 'running' || query.state.data?.state === 'starting'
-                ? 1_000
-                : false,
     })
 
-export const captureStatsOptions = (captureId: string, terminal: boolean) =>
+export const captureStatsOptions = (captureId: string) =>
     queryOptions({
         queryKey: captureKeys.stats(captureId),
         queryFn: () => captureClient.stats(captureId),
-        refetchInterval: terminal ? false : 1_000,
     })
 
-export const captureStatSamplesOptions = (captureId: string, terminal: boolean) =>
+export const captureStatSamplesOptions = (captureId: string) =>
     queryOptions({
         queryKey: captureKeys.statSamples(captureId),
         queryFn: () => captureClient.statSamples(captureId),
-        refetchInterval: terminal ? false : 5_000,
     })
 
 export const registryOptions = (revision: string) =>
@@ -81,20 +75,16 @@ export const captureHistoryOptions = () =>
     queryOptions({
         queryKey: captureKeys.history(),
         queryFn: captureClient.captures,
-        refetchInterval: 2_000,
     })
 
 export const activeCaptureOptions = () =>
     queryOptions({
         queryKey: captureKeys.active(),
         queryFn: captureClient.activeCapture,
-        refetchInterval: 2_000,
     })
 
 export const exportJobsOptions = () =>
     queryOptions({
         queryKey: captureKeys.exportJobs(),
         queryFn: captureClient.exportJobs,
-        refetchInterval: (query) =>
-            query.state.data?.exports.some((job) => job.state === 'running') ? 400 : 2_000,
     })

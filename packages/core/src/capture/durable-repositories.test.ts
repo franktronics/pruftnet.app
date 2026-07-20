@@ -8,6 +8,7 @@ import { Effect, Layer } from 'effect'
 import { afterEach, describe, expect, test } from 'vitest'
 
 import { AppDataPaths, Database, InstanceLock } from '#core/storage'
+import { RealtimeHub } from '#core/realtime/hub'
 
 import { CaptureSessionRepository } from './capture-session-repository'
 import { CaptureCatalog } from './catalog'
@@ -29,8 +30,9 @@ async function durableLayer() {
     const database = Database.layerWith({ migrationsFolder }).pipe(Layer.provideMerge(lock))
     const captures = CaptureSessionRepository.layer.pipe(Layer.provideMerge(database))
     const artifacts = ExportArtifactRepository.layer.pipe(Layer.provideMerge(database))
-    const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(captures))
-    return Layer.mergeAll(paths, captures, artifacts, catalog)
+    const realtime = RealtimeHub.layer
+    const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(Layer.merge(captures, realtime)))
+    return Layer.mergeAll(paths, captures, artifacts, catalog, realtime)
 }
 
 const stopCapture = Effect.fn('test.stopCapture')(function* (captureId: string) {

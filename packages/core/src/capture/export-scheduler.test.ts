@@ -15,6 +15,7 @@ import { ExportArtifactRepository, type CachedExportArtifact } from './export-re
 import { ExportScheduler, type ExportSchedulerService } from './export-scheduler'
 import { CaptureSessionManager } from './manager'
 import { Capture } from './service'
+import { RealtimeHub } from '#core/realtime/hub'
 
 const roots: Array<string> = []
 
@@ -49,6 +50,7 @@ describe('ExportScheduler', () => {
         let cached: CachedExportArtifact | undefined
         let encodeCount = 0
         let deliveryCount = 0
+        const deferredFinalizations: number[] = []
         let committedBytes = '64'
         const encodingStarted = await Effect.runPromise(Deferred.make<void>())
         const continueEncoding = await Effect.runPromise(Deferred.make<void>())
@@ -65,6 +67,14 @@ describe('ExportScheduler', () => {
                             startedAtNs: '1',
                             retainedBytes: '64',
                         } as never),
+                    finalizeDeferred: () =>
+                        Effect.sync(() => {
+                            deferredFinalizations.push(deliveryCount)
+                            return {
+                                captureId,
+                                state: 'stopped',
+                            } as never
+                        }),
                 } as never),
             ),
             Layer.succeed(
@@ -132,6 +142,7 @@ describe('ExportScheduler', () => {
             ),
             Layer.succeed(Capture, Capture.of({} as never)),
             Layer.succeed(CaptureSessionManager, CaptureSessionManager.of({} as never)),
+            RealtimeHub.layer,
         )
         const layer = ExportScheduler.layer.pipe(Layer.provide(dependencies))
         const request = new CreateExportRequest({
@@ -188,6 +199,7 @@ describe('ExportScheduler', () => {
 
         expect(encodeCount).toBe(2)
         expect(deliveryCount).toBe(4)
+        expect(deferredFinalizations).toEqual([2, 3, 4])
         expect(results.activeJobs).toHaveLength(2)
         expect(results.activeJobs).toEqual(
             expect.arrayContaining([

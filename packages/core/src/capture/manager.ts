@@ -12,13 +12,15 @@ import {
     type CaptureInterfaceCapabilities,
     type CaptureRpcError,
     type CaptureSource,
+    type CaptureStatSample,
     type CaptureStatSampleList,
     type CaptureStats,
     type RegistrySnapshot,
 } from '@repo/shared/capture'
-import { Context, Duration, Effect, Fiber, Layer, Schedule, Schema } from 'effect'
+import { Clock, Context, Duration, Effect, Fiber, Layer, Schedule, Schema } from 'effect'
 
 import { AppDataPaths } from '#core/storage'
+import { RealtimeHub } from '#core/realtime/hub'
 
 import {
     CaptureRepositoryError,
@@ -71,6 +73,11 @@ function asSession(record: {
     })
 }
 
+function hasCursorGap(afterCursor: string | undefined, firstCursor: string | undefined) {
+    if (!firstCursor) return false
+    return BigInt(firstCursor) > (afterCursor ? BigInt(afterCursor) + 1n : 1n)
+}
+
 export interface CaptureSessionManagerService {
     readonly listInterfaces: () => Effect.Effect<ReadonlyArray<CaptureInterface>, ManagerError>
     readonly capabilities: (
@@ -115,11 +122,13 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
             const repository = yield* CaptureSessionRepository
             const paths = yield* AppDataPaths
             const recovery = yield* CaptureRecovery
+            const realtime = yield* RealtimeHub
             const applicationScope = yield* Effect.scope
             const lifecycle = yield* Effect.makeSemaphore(1)
             const supervisors = new Map<string, Fiber.RuntimeFiber<void, never>>()
             const summaryCursors = new Map<string, string>()
             const eventCursors = new Map<string, string>()
+            const lastMetadataSyncMs = new Map<string, number>()
 
             yield* repository.reconcileInterrupted().pipe(Effect.mapError(managerError))
             yield* recovery.recoverInterrupted()
@@ -136,6 +145,7 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
             const persistAvailableSummaries = Effect.fn(
                 'CaptureSessionManager.persistAvailableSummaries',
             )(function* (captureId: string) {
+                const previousCursor = summaryCursors.get(captureId)
                 while (true) {
                     const summaries = yield* capture.summaries(
                         captureId,
@@ -150,62 +160,163 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                     yield* repository
                         .persistSummaries(captureId, summaries.summaries)
                         .pipe(Effect.mapError(managerError))
-                    if (!summaries.lastCursor) return
+                    if (!summaries.lastCursor)
+                        return {
+                            cursor: summaryCursors.get(captureId) ?? null,
+                            changed: summaryCursors.get(captureId) !== previousCursor,
+                        }
                     summaryCursors.set(captureId, summaries.lastCursor)
                     if (
                         summaries.lastCursor === summaries.newestAvailableCursor ||
                         summaries.summaries.length < 1024
                     )
-                        return
+                        return {
+                            cursor: summaries.lastCursor,
+                            changed: summaries.lastCursor !== previousCursor,
+                        }
+                }
+            })
+
+            const persistAvailableEvents = Effect.fn(
+                'CaptureSessionManager.persistAvailableEvents',
+            )(function* (captureId: string) {
+                const previousCursor = eventCursors.get(captureId)
+                while (true) {
+                    const events = yield* capture.events(
+                        captureId,
+                        eventCursors.get(captureId),
+                        512,
+                    )
+                    if (events.gapBeforeFirst) {
+                        yield* Effect.logError(
+                            `Capture ${captureId} event journal overran before persistence.`,
+                        )
+                    }
+                    yield* repository
+                        .persistEvents(captureId, events.events)
+                        .pipe(Effect.mapError(managerError))
+                    const lastEvent = events.events.at(-1)
+                    if (!lastEvent)
+                        return {
+                            cursor: eventCursors.get(captureId) ?? null,
+                            changed: eventCursors.get(captureId) !== previousCursor,
+                        }
+                    eventCursors.set(captureId, lastEvent.cursor)
+                    if (events.events.length < 512)
+                        return {
+                            cursor: lastEvent.cursor,
+                            changed: lastEvent.cursor !== previousCursor,
+                        }
                 }
             })
 
             const synchronize = Effect.fn('CaptureSessionManager.synchronize')(function* (
                 captureId: string,
+                forceMetadata = false,
             ) {
-                const stats = yield* capture.stats(captureId)
-                yield* repository.persistStats(captureId, stats).pipe(Effect.mapError(managerError))
-                yield* persistSegments(captureId)
-                yield* persistAvailableSummaries(captureId)
-                const events = yield* capture.events(captureId, eventCursors.get(captureId), 512)
-                yield* repository
-                    .persistEvents(captureId, events.events)
-                    .pipe(Effect.mapError(managerError))
-                const lastEvent = events.events.at(-1)
-                if (lastEvent) eventCursors.set(captureId, lastEvent.cursor)
-                return yield* capture.session(captureId)
+                const now = yield* Clock.currentTimeMillis
+                const refreshMetadata =
+                    forceMetadata || now - (lastMetadataSyncMs.get(captureId) ?? 0) >= 1_000
+                let stats: CaptureStats | null = null
+                let statSample: CaptureStatSample | null = null
+                if (refreshMetadata) {
+                    stats = yield* capture.stats(captureId)
+                    statSample = yield* repository
+                        .persistStats(captureId, stats)
+                        .pipe(Effect.mapError(managerError))
+                    yield* persistSegments(captureId)
+                    lastMetadataSyncMs.set(captureId, now)
+                }
+                const summaries = yield* persistAvailableSummaries(captureId)
+                const events = yield* persistAvailableEvents(captureId)
+                const session = yield* capture.session(captureId)
+                if (summaries.changed || events.changed) {
+                    yield* realtime.publishCaptureDataAvailable({
+                        captureId,
+                        summaryCursor: summaries.cursor,
+                        eventCursor: events.cursor,
+                    })
+                }
+                if (
+                    refreshMetadata &&
+                    (session.state === 'running' || session.state === 'starting')
+                ) {
+                    const record = yield* stored(repository.get(captureId))
+                    yield* realtime.publishCaptureRecord(record)
+                    yield* realtime.publishCaptureSnapshot({
+                        captureId,
+                        session: new CaptureSession({ ...session, source: record.source }),
+                        stats,
+                        statSample,
+                        summaryCursor: summaries.cursor,
+                        eventCursor: events.cursor,
+                        terminal: false,
+                    })
+                }
+                return { session, stats, statSample, summaries, events }
             })
 
             const supervise = (captureId: string) =>
                 synchronize(captureId).pipe(
-                    Effect.tap((session) =>
-                        session.state === 'running' || session.state === 'starting'
+                    Effect.tap((synchronized) =>
+                        synchronized.session.state === 'running' ||
+                        synchronized.session.state === 'starting'
                             ? Effect.void
-                            : Effect.gen(function* () {
-                                  const current = yield* stored(repository.get(captureId))
-                                  if (session.state === 'failed') {
-                                      yield* stored(
-                                          repository.transition(captureId, 'failed', {
-                                              stoppedAtNs: session.stoppedAtNs ?? undefined,
-                                              failureCode: 'CaptureFailed',
-                                              failureMessage:
-                                                  session.failure ?? 'The capture worker failed.',
-                                          }),
-                                      )
-                                  } else {
-                                      if (current.state === 'capturing') {
-                                          yield* stored(
-                                              repository.transition(captureId, 'stopping'),
+                            : lifecycle.withPermits(1)(
+                                  Effect.gen(function* () {
+                                      const final =
+                                          synchronized.stats === null
+                                              ? yield* synchronize(captureId, true)
+                                              : synchronized
+                                      const { session, stats, statSample, summaries, events } =
+                                          final
+                                      const current = yield* stored(repository.get(captureId))
+                                      if (session.state === 'failed') {
+                                          const record = yield* stored(
+                                              repository.transition(captureId, 'failed', {
+                                                  stoppedAtNs: session.stoppedAtNs ?? undefined,
+                                                  failureCode: 'CaptureFailed',
+                                                  failureMessage:
+                                                      session.failure ??
+                                                      'The capture worker failed.',
+                                              }),
                                           )
+                                          yield* realtime.publishCaptureRecord(record)
+                                          yield* realtime.publishCaptureSnapshot({
+                                              captureId,
+                                              session: asSession(record),
+                                              stats,
+                                              statSample,
+                                              summaryCursor: summaries.cursor,
+                                              eventCursor: events.cursor,
+                                              terminal: true,
+                                          })
+                                      } else {
+                                          if (current.state === 'capturing') {
+                                              const stopping = yield* stored(
+                                                  repository.transition(captureId, 'stopping'),
+                                              )
+                                              yield* realtime.publishCaptureRecord(stopping)
+                                          }
+                                          const record = yield* stored(
+                                              repository.transition(captureId, 'stopped', {
+                                                  stoppedAtNs: session.stoppedAtNs ?? undefined,
+                                              }),
+                                          )
+                                          yield* realtime.publishCaptureRecord(record)
+                                          yield* realtime.publishCaptureSnapshot({
+                                              captureId,
+                                              session: asSession(record),
+                                              stats,
+                                              statSample,
+                                              summaryCursor: summaries.cursor,
+                                              eventCursor: events.cursor,
+                                              terminal: true,
+                                          })
                                       }
-                                      yield* stored(
-                                          repository.transition(captureId, 'stopped', {
-                                              stoppedAtNs: session.stoppedAtNs ?? undefined,
-                                          }),
-                                      )
-                                  }
-                                  return yield* Effect.fail('terminal' as const)
-                              }),
+                                      return yield* Effect.fail('terminal' as const)
+                                  }),
+                              ),
                     ),
                     Effect.catchAll((error) => {
                         if (error === 'terminal') return Effect.fail(error)
@@ -213,21 +324,40 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             error._tag === 'CaptureWorkerCrashed' ||
                             error._tag === 'CaptureWorkerUnavailable'
                         ) {
-                            return repository
-                                .transition(captureId, 'failed', {
-                                    failureCode: error._tag,
-                                    failureMessage: error.message ?? error.title,
-                                })
-                                .pipe(
-                                    Effect.ignore,
-                                    Effect.zipRight(Effect.fail('terminal' as const)),
-                                )
+                            return lifecycle.withPermits(1)(
+                                repository
+                                    .transition(captureId, 'failed', {
+                                        failureCode: error._tag,
+                                        failureMessage: error.message ?? error.title,
+                                    })
+                                    .pipe(
+                                        Effect.tap((record) =>
+                                            realtime.publishCaptureRecord(record).pipe(
+                                                Effect.zipRight(
+                                                    realtime.publishCaptureSnapshot({
+                                                        captureId,
+                                                        session: asSession(record),
+                                                        stats: null,
+                                                        statSample: null,
+                                                        summaryCursor:
+                                                            summaryCursors.get(captureId) ?? null,
+                                                        eventCursor:
+                                                            eventCursors.get(captureId) ?? null,
+                                                        terminal: true,
+                                                    }),
+                                                ),
+                                            ),
+                                        ),
+                                        Effect.ignore,
+                                        Effect.zipRight(Effect.fail('terminal' as const)),
+                                    ),
+                            )
                         }
                         return Effect.logWarning(
                             `Capture ${captureId} synchronization failed: ${error.title}`,
                         )
                     }),
-                    Effect.repeat(Schedule.spaced(Duration.seconds(1))),
+                    Effect.repeat(Schedule.spaced(Duration.millis(500))),
                     Effect.ignore,
                     Effect.ensuring(
                         Effect.sync(() => {
@@ -240,7 +370,10 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                 captureId: string,
             ) {
                 if (supervisors.has(captureId)) return
-                const fiber = yield* Effect.forkIn(supervise(captureId), applicationScope)
+                const fiber = yield* Effect.forkIn(
+                    Effect.interruptible(supervise(captureId)),
+                    applicationScope,
+                )
                 supervisors.set(captureId, fiber)
             })
 
@@ -272,7 +405,10 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                                           })
                                         : requestedSource
                                 const captureId = randomBytes(16).toString('hex')
-                                yield* stored(repository.create(captureId, source))
+                                const preparing = yield* stored(
+                                    repository.create(captureId, source),
+                                )
+                                yield* realtime.publishCaptureRecord(preparing)
                                 const prepared = {
                                     captureId,
                                     spoolDirectory: paths.captureSegmentsRoot(captureId),
@@ -288,7 +424,10 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                                                 failureCode: error._tag,
                                                 failureMessage: error.title,
                                             })
-                                            .pipe(Effect.ignore),
+                                            .pipe(
+                                                Effect.tap(realtime.publishCaptureRecord),
+                                                Effect.ignore,
+                                            ),
                                     ),
                                 )
                                 if (started.captureId !== captureId) {
@@ -299,7 +438,10 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                                             failureMessage:
                                                 'The capture worker did not use the durable capture identity.',
                                         })
-                                        .pipe(Effect.ignore)
+                                        .pipe(
+                                            Effect.tap(realtime.publishCaptureRecord),
+                                            Effect.ignore,
+                                        )
                                     return yield* new CaptureStorageUnavailable({
                                         title: 'Capture identity mismatch',
                                         message:
@@ -311,6 +453,7 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                                         registryRevision: started.registryRevision,
                                     }),
                                 )
+                                yield* realtime.publishCaptureRecord(record)
                                 yield* startSupervisor(captureId)
                                 return asSession(record)
                             }),
@@ -320,9 +463,20 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                     lifecycle.withPermits(1)(
                         Effect.uninterruptible(
                             Effect.gen(function* () {
-                                yield* stored(repository.transition(captureId, 'stopping'))
+                                const supervisor = supervisors.get(captureId)
+                                if (supervisor) yield* Fiber.interrupt(supervisor)
+                                const current = yield* stored(repository.get(captureId))
+                                if (!activeCaptureStates.includes(current.state)) {
+                                    return asSession(current)
+                                }
+                                if (current.state !== 'stopping') {
+                                    const stopping = yield* stored(
+                                        repository.transition(captureId, 'stopping'),
+                                    )
+                                    yield* realtime.publishCaptureRecord(stopping)
+                                }
                                 const stopped = yield* capture.stop(captureId)
-                                yield* synchronize(captureId).pipe(Effect.ignore)
+                                const synchronized = yield* synchronize(captureId, true)
                                 const record = yield* stored(
                                     repository.transition(
                                         captureId,
@@ -336,6 +490,16 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                                         },
                                     ),
                                 )
+                                yield* realtime.publishCaptureRecord(record)
+                                yield* realtime.publishCaptureSnapshot({
+                                    captureId,
+                                    session: asSession(record),
+                                    stats: synchronized.stats,
+                                    statSample: synchronized.statSample,
+                                    summaryCursor: synchronized.summaries.cursor,
+                                    eventCursor: synchronized.events.cursor,
+                                    terminal: true,
+                                })
                                 return asSession(record)
                             }),
                         ),
@@ -351,25 +515,21 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                 summaries: Effect.fn('CaptureSessionManager.summaries')(
                     function* (captureId, cursor, limit) {
                         const record = yield* stored(repository.get(captureId))
-                        if (activeCaptureStates.includes(record.state)) {
-                            const batch = yield* capture.summaries(captureId, cursor, limit)
-                            yield* repository
-                                .persistSummaries(captureId, batch.summaries)
-                                .pipe(Effect.mapError(managerError))
-                            return batch
-                        }
                         const summaries = yield* repository
-                            .readSummaries(captureId, cursor, limit)
+                            .readSummaries(captureId, cursor, limit + 1)
                             .pipe(Effect.mapError(managerError))
+                        const hasMore = summaries.length > limit
+                        const page = hasMore ? summaries.slice(0, limit) : summaries
                         return new PacketSummaryBatch({
                             captureId,
-                            firstCursor: summaries.at(0)?.cursor ?? null,
-                            lastCursor: summaries.at(-1)?.cursor ?? null,
-                            oldestAvailableCursor: summaries.at(0)?.cursor ?? null,
-                            newestAvailableCursor: summaries.at(-1)?.cursor ?? null,
-                            gapBeforeFirst: false,
-                            captureComplete: true,
-                            summaries,
+                            firstCursor: page.at(0)?.cursor ?? null,
+                            lastCursor: page.at(-1)?.cursor ?? null,
+                            oldestAvailableCursor: page.at(0)?.cursor ?? null,
+                            newestAvailableCursor: page.at(-1)?.cursor ?? null,
+                            gapBeforeFirst: hasCursorGap(cursor, page.at(0)?.cursor),
+                            captureComplete:
+                                !activeCaptureStates.includes(record.state) && !hasMore,
+                            summaries: page,
                         })
                     },
                 ),
@@ -397,17 +557,17 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                 ),
                 stats: Effect.fn('CaptureSessionManager.stats')(function* (captureId) {
                     const record = yield* stored(repository.get(captureId))
-                    if (activeCaptureStates.includes(record.state)) {
-                        const stats = yield* capture.stats(captureId)
-                        yield* repository
-                            .persistStats(captureId, stats)
-                            .pipe(Effect.mapError(managerError))
-                        return stats
-                    }
                     const stats = yield* repository
                         .latestStats(captureId)
                         .pipe(Effect.mapError(managerError))
                     if (stats) return stats
+                    if (activeCaptureStates.includes(record.state)) {
+                        const liveStats = yield* capture.stats(captureId)
+                        yield* repository
+                            .persistStats(captureId, liveStats)
+                            .pipe(Effect.mapError(managerError))
+                        return liveStats
+                    }
                     return yield* new CaptureStorageUnavailable({
                         title: 'Capture statistics are unavailable',
                     })
@@ -418,18 +578,15 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                         .pipe(Effect.mapError(managerError)),
                 events: Effect.fn('CaptureSessionManager.events')(
                     function* (captureId, cursor, limit) {
-                        const record = yield* stored(repository.get(captureId))
-                        if (activeCaptureStates.includes(record.state)) {
-                            const batch = yield* capture.events(captureId, cursor, limit)
-                            yield* repository
-                                .persistEvents(captureId, batch.events)
-                                .pipe(Effect.mapError(managerError))
-                            return batch
-                        }
+                        yield* stored(repository.get(captureId))
                         const events = yield* repository
                             .readEvents(captureId, cursor, limit)
                             .pipe(Effect.mapError(managerError))
-                        return new CaptureEventBatch({ captureId, gapBeforeFirst: false, events })
+                        return new CaptureEventBatch({
+                            captureId,
+                            gapBeforeFirst: hasCursorGap(cursor, events.at(0)?.cursor),
+                            events,
+                        })
                     },
                 ),
             })

@@ -8,6 +8,7 @@ import './styles/main.css'
 import { syncDocumentWindowControlsOverlayClass } from './config/window-controls-overlay'
 import { queryClient } from './config/query-client'
 import { ExportManagerProvider } from './pages/captures/export-manager'
+import { ApplicationRealtimeProvider } from './realtime/application-realtime-provider'
 
 export function App() {
     useEffect(() => {
@@ -21,11 +22,13 @@ export function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-                <ExportManagerProvider>
-                    <RouterProvider router={router} />
-                </ExportManagerProvider>
-            </ThemeProvider>
+            <ApplicationRealtimeProvider>
+                <ThemeProvider>
+                    <ExportManagerProvider>
+                        <RouterProvider router={router} />
+                    </ExportManagerProvider>
+                </ThemeProvider>
+            </ApplicationRealtimeProvider>
         </QueryClientProvider>
     )
 }

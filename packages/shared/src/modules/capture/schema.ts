@@ -119,6 +119,7 @@ export type ExportProgressPhase = Schema.Schema.Type<typeof ExportProgressPhase>
 
 export const ExportJobState = Schema.Literal('running', 'completed', 'failed')
 export type ExportJobState = Schema.Schema.Type<typeof ExportJobState>
+export const MAX_RECENT_EXPORT_JOBS = 8
 
 export class ExportJobFailure extends Schema.Class<ExportJobFailure>('ExportJobFailure')({
     title: Schema.String,

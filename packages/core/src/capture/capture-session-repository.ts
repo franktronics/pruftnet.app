@@ -141,7 +141,7 @@ export interface CaptureSessionRepositoryService {
     readonly persistStats: (
         captureId: string,
         stats: CaptureStats,
-    ) => Effect.Effect<void, CaptureRepositoryError>
+    ) => Effect.Effect<CaptureStatSample, CaptureRepositoryError>
     readonly persistSummaries: (
         captureId: string,
         summaries: ReadonlyArray<PacketSummary>,
@@ -369,6 +369,7 @@ export class CaptureSessionRepository extends Context.Tag(
                                     repositoryError('persist capture stats', cause),
                                 ),
                             )
+                        return new CaptureStatSample({ sampledAtNs: now, stats })
                     },
                 ),
                 persistSummaries: Effect.fn('CaptureSessionRepository.persistSummaries')(

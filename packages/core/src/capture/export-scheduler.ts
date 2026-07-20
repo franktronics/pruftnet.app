@@ -9,10 +9,13 @@ import {
     ExportJobList,
     ExportOptionsInvalid,
     ExportUnavailable,
+    MAX_RECENT_EXPORT_JOBS,
     type CaptureRpcError,
     type CreateExportRequest,
 } from '@repo/shared/capture'
 import { Cause, Clock, Context, Deferred, Effect, Fiber, Layer, Option, Schema } from 'effect'
+
+import { RealtimeHub } from '#core/realtime/hub'
 
 import { CaptureCatalog } from './catalog'
 import {
@@ -46,8 +49,6 @@ interface ArtifactProgress {
     readonly packetsWritten: string
     readonly bytesWritten: string
 }
-
-const MAX_RECENT_EXPORTS = 8
 
 function repositoryFailure(
     error: ExportRepositoryError | CaptureRepositoryError | StoredCaptureNotFound,
@@ -128,9 +129,11 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
             const destination = yield* ExportDestination
             const encoder = yield* ExportEncoder
             const captureService = yield* Capture
+            const realtime = yield* RealtimeHub
             yield* CaptureSessionManager
             const applicationScope = yield* Effect.scope
             const registryLock = yield* Effect.makeSemaphore(1)
+            const publicationLock = yield* Effect.makeSemaphore(1)
             const artifactFibers = new Map<
                 string,
                 Fiber.RuntimeFiber<CachedExportArtifact, SchedulerError>
@@ -140,6 +143,26 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
             const artifactProgress = new Map<string, ArtifactProgress>()
             const artifactSubscribers = new Map<string, Set<string>>()
             const terminalOrder: Array<string> = []
+            const lastPublishedJobs = new Map<string, ExportJob>()
+
+            const finalizeDeferredIfIdle = (captureId: string): Effect.Effect<void> =>
+                Effect.suspend(() => {
+                    const hasJob = [...jobFibers.keys()].some(
+                        (exportId) => jobs.get(exportId)?.captureId === captureId,
+                    )
+                    const hasArtifact = [...artifactFibers.keys()].some((key) =>
+                        key.startsWith(`${captureId}:`),
+                    )
+                    if (hasJob || hasArtifact) return Effect.void
+                    return catalog.finalizeDeferred(captureId).pipe(
+                        Effect.catchAll((error) =>
+                            Effect.logWarning(
+                                `Deferred capture deletion could not be finalized: ${error.title}`,
+                            ),
+                        ),
+                        Effect.asVoid,
+                    )
+                })
 
             const stored = <A>(
                 effect: Effect.Effect<
@@ -148,18 +171,68 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                 >,
             ) => effect.pipe(Effect.mapError(repositoryFailure))
 
+            let progressVersion = 0
+            const progressWaiters = new Set<() => void>()
+            const notifyProgress = () => {
+                progressVersion += 1
+                for (const wake of progressWaiters) wake()
+                progressWaiters.clear()
+            }
+            const awaitProgressAfter = (version: number) =>
+                Effect.async<number>((resume) => {
+                    if (progressVersion !== version) {
+                        resume(Effect.succeed(progressVersion))
+                        return
+                    }
+                    const wake = () => resume(Effect.succeed(progressVersion))
+                    progressWaiters.add(wake)
+                    return Effect.sync(() => {
+                        progressWaiters.delete(wake)
+                    })
+                })
+
             const updateJob = (exportId: string, patch: Partial<ExportJobFields>) => {
                 const current = jobs.get(exportId)
                 if (!current) return
                 jobs.set(exportId, new ExportJob({ ...current, ...patch } as ExportJobFields))
+                notifyProgress()
             }
 
             const pruneTerminalJobs = () => {
-                while (terminalOrder.length > MAX_RECENT_EXPORTS) {
+                while (terminalOrder.length > MAX_RECENT_EXPORT_JOBS) {
                     const exportId = terminalOrder.shift()
-                    if (exportId && jobs.get(exportId)?.state !== 'running') jobs.delete(exportId)
+                    if (exportId && jobs.get(exportId)?.state !== 'running') {
+                        jobs.delete(exportId)
+                        lastPublishedJobs.delete(exportId)
+                    }
                 }
             }
+
+            const publishJob = (exportId: string) =>
+                publicationLock.withPermits(1)(
+                    Effect.suspend(() => {
+                        const job = jobs.get(exportId)
+                        if (!job || lastPublishedJobs.get(exportId) === job) return Effect.void
+                        lastPublishedJobs.set(exportId, job)
+                        return realtime.publishExportJob(job)
+                    }),
+                )
+
+            const publishChangedJobs = Effect.suspend(() =>
+                Effect.forEach([...jobs.keys()], publishJob, { discard: true }),
+            )
+            yield* Effect.forkIn(
+                Effect.gen(function* () {
+                    let publishedVersion = progressVersion
+                    while (true) {
+                        yield* awaitProgressAfter(publishedVersion)
+                        yield* Effect.sleep('250 millis')
+                        publishedVersion = progressVersion
+                        yield* publishChangedJobs
+                    }
+                }),
+                applicationScope,
+            )
 
             const setArtifactProgress = (key: string, value: ArtifactProgress) => {
                 artifactProgress.set(key, value)
@@ -405,7 +478,9 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                                         artifactFibers.delete(key)
                                         if (!artifactSubscribers.has(key))
                                             artifactProgress.delete(key)
-                                    }),
+                                    }).pipe(
+                                        Effect.zipRight(finalizeDeferredIfIdle(request.captureId)),
+                                    ),
                                 ),
                             ),
                             applicationScope,
@@ -441,6 +516,7 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                 })
                 terminalOrder.push(exportId)
                 pruneTerminalJobs()
+                yield* publishJob(exportId)
             })
 
             const failJob = Effect.fn('ExportScheduler.failJob')(function* (
@@ -459,6 +535,7 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                 })
                 terminalOrder.push(exportId)
                 pruneTerminalJobs()
+                yield* publishJob(exportId)
             })
 
             const runJob = Effect.fn('ExportScheduler.runJob')(function* (
@@ -508,7 +585,7 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                         Effect.sync(() => {
                             jobFibers.delete(exportId)
                             unsubscribeFromArtifact(artifactKey(request), exportId)
-                        }),
+                        }).pipe(Effect.zipRight(finalizeDeferredIfIdle(request.captureId))),
                     ),
                 )
 
@@ -558,6 +635,7 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                     })
                     jobs.set(exportId, initial)
                     subscribeToArtifact(key, exportId)
+                    yield* publishJob(exportId)
 
                     const gate = yield* Deferred.make<void>()
                     const fiber = yield* Effect.forkIn(

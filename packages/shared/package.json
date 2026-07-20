@@ -7,6 +7,7 @@
         ".": "./src/index.ts",
         "./capture": "./src/modules/capture/index.ts",
         "./network-interface": "./src/modules/network-interface/index.ts",
+        "./realtime": "./src/modules/realtime/index.ts",
         "./settings": "./src/modules/settings/index.ts",
         "./utils": "./src/utils/index.ts"
     },

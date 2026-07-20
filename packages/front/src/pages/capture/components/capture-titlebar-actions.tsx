@@ -54,7 +54,6 @@ export function CaptureTitlebarActions({
         queryKey: ['capture', routeCaptureId, 'titlebar-record'],
         queryFn: () => captureClient.capture(routeCaptureId!),
         enabled: Boolean(routeCaptureId),
-        refetchInterval: 2_000,
     })
     const [newCaptureOpen, setNewCaptureOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)

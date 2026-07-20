@@ -25,14 +25,20 @@ const columns = [
 
 const initialColumnWidths: number[] = columns.map((column) => column.width)
 const initialTableWidth = initialColumnWidths.reduce((total, width) => total + width, 0)
+const noop = () => undefined
 
 export function PacketTable({
     rows,
     selectedKey,
     onSelect,
     following,
+    canFollow = true,
     onFollowingChange,
     onPauseFollowing,
+    hasMore = false,
+    isLoadingMore = false,
+    loadMoreError,
+    onLoadMore = noop,
     originTimestampNs,
     emptyMessage,
 }: {
@@ -40,8 +46,13 @@ export function PacketTable({
     selectedKey?: string
     onSelect: (row: Extract<SummaryRow, { kind: 'packet' }>) => void
     following: boolean
+    canFollow?: boolean
     onFollowingChange: (following: boolean) => void
     onPauseFollowing: () => void
+    hasMore?: boolean
+    isLoadingMore?: boolean
+    loadMoreError?: unknown
+    onLoadMore?: () => void
     originTimestampNs?: string
     emptyMessage?: string
 }) {
@@ -58,17 +69,25 @@ export function PacketTable({
     const [columnWidths, setColumnWidths] = useState(initialColumnWidths)
     const packetCount = rows.filter((row) => row.kind === 'packet').length
     const virtualizer = useVirtualizer({
-        count: rows.length,
+        count: rows.length + (hasMore ? 1 : 0),
         getScrollElement: () => scrollRef.current,
         estimateSize: () => PACKET_ROW_HEIGHT,
         overscan: 12,
-        getItemKey: (index) =>
-            rows[index]?.kind === 'packet' ? packetKey(rows[index].summary) : `gap-${index}`,
+        getItemKey: (index) => {
+            if (index === rows.length) return 'packet-summary-pagination'
+            return rows[index]?.kind === 'packet' ? packetKey(rows[index].summary) : `gap-${index}`
+        },
     })
+    const virtualItems = virtualizer.getVirtualItems()
+    const lastVirtualIndex = virtualItems.at(-1)?.index
     useEffect(() => {
         if (following && rows.length > 0)
             virtualizer.scrollToIndex(rows.length - 1, { align: 'end' })
     }, [following, rows.length, virtualizer])
+    useEffect(() => {
+        if (hasMore && !isLoadingMore && !loadMoreError && lastVirtualIndex === rows.length)
+            onLoadMore()
+    }, [hasMore, isLoadingMore, lastVirtualIndex, loadMoreError, onLoadMore, rows.length])
     useEffect(() => {
         const table = tableRef.current
         if (!table) return
@@ -175,8 +194,10 @@ export function PacketTable({
                                         aria-orientation="vertical"
                                         aria-label={`Resize ${column.label} column`}
                                         tabIndex={0}
-                                        className="group absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-border after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] hover:after:bg-primary focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:after:bg-primary"
-                                        onPointerDown={(event) => handleColumnPointerDown(index, event)}
+                                        className="group after:bg-border hover:after:bg-primary focus-visible:ring-ring focus-visible:after:bg-primary absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-inset"
+                                        onPointerDown={(event) =>
+                                            handleColumnPointerDown(index, event)
+                                        }
                                         onPointerMove={handleColumnPointerMove}
                                         onPointerUp={finishColumnResize}
                                         onPointerCancel={finishColumnResize}
@@ -205,17 +226,19 @@ export function PacketTable({
                             <ArrowUpToLine />
                             Top
                         </Button>
-                        <Button
-                            size="sm"
-                            variant={following ? 'secondary' : 'ghost'}
-                            className="h-7 normal-case"
-                            onClick={followTail}
-                            disabled={rows.length === 0}
-                            aria-pressed={following}
-                        >
-                            <ArrowDownToLine />
-                            {following ? 'Following tail' : 'Follow tail'}
-                        </Button>
+                        {canFollow ? (
+                            <Button
+                                size="sm"
+                                variant={following ? 'secondary' : 'ghost'}
+                                className="h-7 normal-case"
+                                onClick={followTail}
+                                disabled={rows.length === 0}
+                                aria-pressed={following}
+                            >
+                                <ArrowDownToLine />
+                                {following ? 'Following tail' : 'Follow tail'}
+                            </Button>
+                        ) : null}
                     </div>
                 </div>
                 <div
@@ -254,70 +277,105 @@ export function PacketTable({
                         className="relative w-full"
                         style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
                     >
-                    {packetCount === 0 && emptyMessage ? (
-                        <div
-                            className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
-                            role="status"
-                        >
-                            {emptyMessage}
-                        </div>
-                    ) : null}
-                    {virtualizer.getVirtualItems().map((item) => {
-                        const row = rows[item.index]
-                        if (!row) return null
-                        if (row.kind === 'gap')
+                        {packetCount === 0 && emptyMessage ? (
+                            <div
+                                className="text-muted-foreground absolute inset-x-0 top-14 text-center text-xs"
+                                role="status"
+                            >
+                                {emptyMessage}
+                            </div>
+                        ) : null}
+                        {virtualItems.map((item) => {
+                            if (item.index === rows.length && hasMore)
+                                return (
+                                    <div
+                                        key={item.key}
+                                        role="status"
+                                        className="text-muted-foreground absolute top-0 left-0 flex w-full items-center justify-center border-b border-dashed px-3 text-xs"
+                                        style={{
+                                            height: item.size,
+                                            transform: `translateY(${item.start}px)`,
+                                        }}
+                                    >
+                                        {loadMoreError ? (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 normal-case"
+                                                onClick={onLoadMore}
+                                            >
+                                                Retry loading packets
+                                            </Button>
+                                        ) : isLoadingMore ? (
+                                            'Loading more packets...'
+                                        ) : (
+                                            'Scroll to load more packets'
+                                        )}
+                                    </div>
+                                )
+                            const row = rows[item.index]
+                            if (!row) return null
+                            if (row.kind === 'gap')
+                                return (
+                                    <div
+                                        key={item.key}
+                                        className="text-muted-foreground absolute top-0 left-0 flex w-full items-center border-b border-dashed px-3 text-xs italic"
+                                        style={{
+                                            height: item.size,
+                                            transform: `translateY(${item.start}px)`,
+                                        }}
+                                    >
+                                        Earlier packets are no longer retained
+                                    </div>
+                                )
+                            const summary = row.summary
+                            const selected = packetKey(summary) === selectedKey
                             return (
                                 <div
                                     key={item.key}
-                                    className="text-muted-foreground absolute top-0 left-0 flex w-full items-center border-b border-dashed px-3 text-xs italic"
+                                    id={`packet-row-${packetKey(summary)}`}
+                                    role="row"
+                                    aria-selected={selected}
+                                    onClick={() => onSelect(row)}
+                                    className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
                                     style={{
+                                        ...gridStyle,
                                         height: item.size,
                                         transform: `translateY(${item.start}px)`,
                                     }}
                                 >
-                                    Earlier packets are no longer retained
+                                    <span role="gridcell" className="truncate px-2">
+                                        {summary.key.packetId}
+                                    </span>
+                                    <span role="gridcell" className="truncate px-2">
+                                        {originTimestampNs
+                                            ? relativePacketTime(
+                                                  summary.timestampNs,
+                                                  originTimestampNs,
+                                              )
+                                            : '0.000000'}
+                                    </span>
+                                    <span role="gridcell" className="truncate px-2">
+                                        {summaryColumn(summary, 'source')}
+                                    </span>
+                                    <span role="gridcell" className="truncate px-2">
+                                        {summaryColumn(summary, 'destination')}
+                                    </span>
+                                    <span
+                                        role="gridcell"
+                                        className="truncate px-2 font-sans font-medium"
+                                    >
+                                        {summaryColumn(summary, 'protocol')}
+                                    </span>
+                                    <span role="gridcell" className="truncate px-2 text-right">
+                                        {summaryColumn(summary, 'length') || summary.capturedLength}
+                                    </span>
+                                    <span role="gridcell" className="truncate px-2 font-sans">
+                                        {summaryColumn(summary, 'info')}
+                                    </span>
                                 </div>
                             )
-                        const summary = row.summary
-                        const selected = packetKey(summary) === selectedKey
-                        return (
-                            <div
-                                key={item.key}
-                                id={`packet-row-${packetKey(summary)}`}
-                                role="row"
-                                aria-selected={selected}
-                                onClick={() => onSelect(row)}
-                                className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
-                                style={{
-                                    ...gridStyle,
-                                    height: item.size,
-                                    transform: `translateY(${item.start}px)`,
-                                }}
-                            >
-                                <span role="gridcell" className="truncate px-2">{summary.key.packetId}</span>
-                                <span role="gridcell" className="truncate px-2">
-                                    {originTimestampNs
-                                        ? relativePacketTime(summary.timestampNs, originTimestampNs)
-                                        : '0.000000'}
-                                </span>
-                                <span role="gridcell" className="truncate px-2">
-                                    {summaryColumn(summary, 'source')}
-                                </span>
-                                <span role="gridcell" className="truncate px-2">
-                                    {summaryColumn(summary, 'destination')}
-                                </span>
-                                <span role="gridcell" className="truncate px-2 font-sans font-medium">
-                                    {summaryColumn(summary, 'protocol')}
-                                </span>
-                                <span role="gridcell" className="truncate px-2 text-right">
-                                    {summaryColumn(summary, 'length') || summary.capturedLength}
-                                </span>
-                                <span role="gridcell" className="truncate px-2 font-sans">
-                                    {summaryColumn(summary, 'info')}
-                                </span>
-                            </div>
-                        )
-                    })}
+                        })}
                     </div>
                 </div>
             </div>

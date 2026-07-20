@@ -4,7 +4,12 @@ import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { makeAppNodeHandlers, type ShutdownError, type ShutdownStatus } from '@repo/core'
+import {
+    beginNodeServerClose,
+    makeAppNodeHandlers,
+    type ShutdownError,
+    type ShutdownStatus,
+} from '@repo/core'
 import { Effect, Exit, Scope } from 'effect'
 import { app } from 'electron'
 
@@ -14,7 +19,7 @@ type StartedDesktopRpcServer = {
     readonly rpcUrl: string
     readonly shutdownStatus: Effect.Effect<ShutdownStatus, ShutdownError>
     readonly shutdown: Effect.Effect<void, Error>
-    readonly close: Effect.Effect<void>
+    readonly close: Effect.Effect<void, Error>
 }
 
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url))
@@ -33,17 +38,6 @@ function listen(server: NodeServer) {
         server.once('error', onError)
         server.once('listening', onListening)
         server.listen({ host: '127.0.0.1', port: 0 })
-    })
-}
-
-function close(server: NodeServer) {
-    return Effect.async<void>((resume) => {
-        if (!server.listening) {
-            resume(Effect.void)
-            return
-        }
-
-        server.close(() => resume(Effect.void))
     })
 }
 
@@ -142,9 +136,16 @@ export function startDesktopRpcServer(
                 shutdown: handlers.shutdown
                     .shutdownDesktop()
                     .pipe(Effect.mapError((error) => new Error(error.message, { cause: error }))),
-                close: close(server).pipe(
-                    Effect.zipRight(Scope.close(scope, Exit.succeed(undefined))),
-                ),
+                close: Effect.gen(function* () {
+                    const httpClose = yield* Effect.sync(() => beginNodeServerClose(server))
+                    yield* handlers.shutdown.closeRealtime()
+                    yield* Effect.tryPromise({
+                        try: () => httpClose,
+                        catch: (cause) =>
+                            new Error('Desktop RPC server shutdown failed.', { cause }),
+                    })
+                    yield* Scope.close(scope, Exit.succeed(undefined))
+                }),
             }
         }).pipe(Effect.onError((cause) => Scope.close(scope, Exit.failCause(cause))))
     })
