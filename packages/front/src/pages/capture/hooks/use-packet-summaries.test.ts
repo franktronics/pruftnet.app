@@ -5,6 +5,7 @@ import {
     emptySummaryState,
     mergeSummaryBatch,
     PACKET_SUMMARY_PAGE_SIZE,
+    packetSummaryPageStarts,
     readPacketSummaryState,
 } from './use-packet-summaries'
 
@@ -133,5 +134,21 @@ describe('readPacketSummaryState', () => {
                 new AbortController().signal,
             ),
         ).rejects.toThrow('Packet summary cursor did not advance')
+    })
+})
+
+describe('packetSummaryPageStarts', () => {
+    test('requests a deep visible range directly with adjacent prefetch pages', () => {
+        expect(packetSummaryPageStarts(149_000, 149_020, 149_742)).toEqual([
+            144 * PACKET_SUMMARY_PAGE_SIZE,
+            145 * PACKET_SUMMARY_PAGE_SIZE,
+            146 * PACKET_SUMMARY_PAGE_SIZE,
+        ])
+    })
+
+    test('clamps prefetch at the beginning and end of a capture', () => {
+        expect(packetSummaryPageStarts(0, 20, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
+        expect(packetSummaryPageStarts(1_490, 1_499, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
+        expect(packetSummaryPageStarts(0, 0, 0)).toEqual([])
     })
 })

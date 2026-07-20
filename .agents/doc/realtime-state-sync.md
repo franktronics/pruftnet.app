@@ -22,8 +22,13 @@ at 250 ms, capped at 10 seconds, with jitter.
 
 ## Convergence
 
-SQLite capture records, summaries, events, statistics, and cursor-based queries are authoritative.
+SQLite capture records, summaries, events, statistics, and finite queries are authoritative.
 Realtime messages are idempotent snapshots or invalidation hints.
+
+Active summary catch-up uses durable cursors because new packets append continuously. Terminal
+history uses `GetPacketSummaryManifest` plus absolute `ReadPacketSummaryRange` reads instead.
+Opening a retained capture does not replay every summary through the realtime stream, and jumping
+to an arbitrary virtual row does not require reading preceding ranges.
 
 The client follows this order:
 

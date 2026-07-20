@@ -10,9 +10,11 @@ import {
     CaptureStatSampleList,
     CaptureStats,
     PacketSummary,
+    PacketSummaryFilter,
+    PacketSummaryManifest,
     type DurableCaptureState,
 } from '@repo/shared/capture'
-import { and, asc, desc, eq, inArray, ne, sql, type AnyColumn } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, ne, sql, type AnyColumn, type SQL } from 'drizzle-orm'
 import { Clock, Context, Data, Effect, Layer, Schema } from 'effect'
 
 import {
@@ -25,6 +27,7 @@ import {
     Database,
     exportArtifacts,
     type DatabaseError,
+    type DrizzleDatabase,
 } from '#core/storage'
 
 export class CaptureRepositoryError extends Data.TaggedError('CaptureRepositoryError')<{
@@ -39,6 +42,10 @@ export class StoredCaptureNotFound extends Data.TaggedError('StoredCaptureNotFou
 
 type RepositoryError = CaptureRepositoryError | StoredCaptureNotFound
 type CaptureRow = typeof captureSessions.$inferSelect
+type SummaryResultIndex = Uint32Array | Float64Array
+
+const MAX_SUMMARY_RESULT_INDEX_BYTES = 16 * 1024 * 1024
+const MAX_SUMMARY_RESULT_INDEXES = 16
 
 export interface StoredSegment {
     readonly generation: number
@@ -73,6 +80,144 @@ function repositoryError(operation: string, cause: DatabaseError | unknown) {
 
 function decimalGreaterThan(column: AnyColumn, value: string) {
     return sql`(length(${column}) > length(${value}) or (length(${column}) = length(${value}) and ${column} > ${value}))`
+}
+
+function decimalAtLeast(expression: SQL, value: string) {
+    return sql`(length(${expression}) > length(${value}) or (length(${expression}) = length(${value}) and ${expression} >= ${value}))`
+}
+
+function decimalAtMost(expression: SQL, value: string) {
+    return sql`(length(${expression}) < length(${value}) or (length(${expression}) = length(${value}) and ${expression} <= ${value}))`
+}
+
+function normalizedFilterText(value: string) {
+    return value.trim().toLowerCase()
+}
+
+function summaryColumnContains(key: string | undefined, value: string) {
+    const keyPredicate = key ? sql`json_extract(summary_column.value, '$.key') = ${key} and` : sql``
+    return sql`exists (
+        select 1
+        from json_each(${captureSummaries.summaryJson}, '$.columns') as summary_column
+        where ${keyPredicate}
+            instr(
+                lower(cast(json_extract(summary_column.value, '$.value') as text)),
+                ${normalizedFilterText(value)}
+            ) > 0
+    )`
+}
+
+function summaryFilterPredicates(
+    filter: PacketSummaryFilter | null,
+    originTimestampNs: string | null,
+): ReadonlyArray<SQL> {
+    if (!filter) return []
+    const predicates: SQL[] = []
+    const timestamp = sql`cast(json_extract(${captureSummaries.summaryJson}, '$.timestampNs') as text)`
+    const search = normalizedFilterText(filter.search)
+    const source = normalizedFilterText(filter.source)
+    const destination = normalizedFilterText(filter.destination)
+    if (search) predicates.push(summaryColumnContains(undefined, search))
+    if (source) predicates.push(summaryColumnContains('source', source))
+    if (destination) predicates.push(summaryColumnContains('destination', destination))
+    if (originTimestampNs && filter.minRelativeTimestampNs !== null) {
+        predicates.push(
+            decimalAtLeast(
+                timestamp,
+                (BigInt(originTimestampNs) + BigInt(filter.minRelativeTimestampNs)).toString(),
+            ),
+        )
+    }
+    if (originTimestampNs && filter.maxRelativeTimestampNs !== null) {
+        predicates.push(
+            decimalAtMost(
+                timestamp,
+                (BigInt(originTimestampNs) + BigInt(filter.maxRelativeTimestampNs)).toString(),
+            ),
+        )
+    }
+    if (filter.protocolIds.length > 0) {
+        predicates.push(sql`exists (
+            select 1
+            from json_each(${captureSummaries.summaryJson}, '$.protocolPath') as summary_protocol
+            where cast(summary_protocol.value as integer) in (
+                ${sql.join(
+                    filter.protocolIds.map((protocolId) => sql`${protocolId}`),
+                    sql`, `,
+                )}
+            )
+        )`)
+    }
+    if (filter.interfaceIds.length > 0) {
+        predicates.push(
+            sql`cast(json_extract(${captureSummaries.summaryJson}, '$.interfaceId') as integer) in (
+                ${sql.join(
+                    filter.interfaceIds.map((interfaceId) => sql`${interfaceId}`),
+                    sql`, `,
+                )}
+            )`,
+        )
+    }
+    if (filter.minWireLength !== null) {
+        predicates.push(
+            sql`cast(json_extract(${captureSummaries.summaryJson}, '$.wireLength') as integer) >= ${filter.minWireLength}`,
+        )
+    }
+    if (filter.maxWireLength !== null) {
+        predicates.push(
+            sql`cast(json_extract(${captureSummaries.summaryJson}, '$.wireLength') as integer) <= ${filter.maxWireLength}`,
+        )
+    }
+    if (filter.parseConditions.length === 0) {
+        predicates.push(sql`0`)
+    } else if (filter.parseConditions.length < 4) {
+        predicates.push(
+            sql`cast(json_extract(${captureSummaries.summaryJson}, '$.parseCondition') as text) in (
+                ${sql.join(
+                    filter.parseConditions.map((condition) => sql`${condition}`),
+                    sql`, `,
+                )}
+            )`,
+        )
+    }
+    return predicates
+}
+
+function safeSummaryRowCount(value: string) {
+    const count = BigInt(value)
+    if (count > BigInt(Number.MAX_SAFE_INTEGER))
+        throw new RangeError('Packet summary row count exceeds the supported virtual table range.')
+    return Number(count)
+}
+
+function summaryResultIndexKey(captureId: string, revision: string, filter: PacketSummaryFilter) {
+    return `${captureId}:${revision}:${JSON.stringify(filter)}`
+}
+
+function buildSummaryResultIndex(
+    db: DrizzleDatabase,
+    captureId: string,
+    filter: PacketSummaryFilter,
+    originTimestampNs: string | null,
+): SummaryResultIndex {
+    const rows = db
+        .select({ rowIndex: captureSummaries.rowIndex })
+        .from(captureSummaries)
+        .where(
+            and(
+                eq(captureSummaries.captureId, captureId),
+                ...summaryFilterPredicates(filter, originTimestampNs),
+            ),
+        )
+        .orderBy(asc(captureSummaries.rowIndex))
+        .all()
+    const maximum = Number(rows.at(-1)?.rowIndex ?? 0)
+    if (!Number.isSafeInteger(maximum))
+        throw new RangeError('Packet summary row index exceeds the supported virtual table range.')
+    const indexes =
+        maximum <= 0xffffffff ? new Uint32Array(rows.length) : new Float64Array(rows.length)
+    for (let index = 0; index < rows.length; index++) indexes[index] = Number(rows[index]!.rowIndex)
+    return indexes
 }
 
 function interfaceNames(source: CaptureSource) {
@@ -171,6 +316,17 @@ export interface CaptureSessionRepositoryService {
         afterCursor: string | undefined,
         limit: number,
     ) => Effect.Effect<ReadonlyArray<PacketSummary>, CaptureRepositoryError>
+    readonly summaryManifest: (
+        captureId: string,
+        filter: PacketSummaryFilter | null,
+    ) => Effect.Effect<PacketSummaryManifest, RepositoryError>
+    readonly readSummaryRange: (
+        captureId: string,
+        revision: string,
+        filter: PacketSummaryFilter | null,
+        startIndex: number,
+        limit: number,
+    ) => Effect.Effect<ReadonlyArray<PacketSummary>, CaptureRepositoryError>
     readonly latestStats: (
         captureId: string,
     ) => Effect.Effect<CaptureStats | undefined, CaptureRepositoryError>
@@ -193,6 +349,38 @@ export class CaptureSessionRepository extends Context.Tag(
         Effect.gen(function* () {
             const database = yield* Database
             const paths = yield* AppDataPaths
+            const summaryResultIndexes = new Map<string, SummaryResultIndex>()
+            let summaryResultIndexBytes = 0
+
+            const getSummaryResultIndex = (key: string) => {
+                const index = summaryResultIndexes.get(key)
+                if (!index) return undefined
+                summaryResultIndexes.delete(key)
+                summaryResultIndexes.set(key, index)
+                return index
+            }
+
+            const cacheSummaryResultIndex = (key: string, index: SummaryResultIndex) => {
+                const previous = summaryResultIndexes.get(key)
+                if (previous) {
+                    summaryResultIndexBytes -= previous.byteLength
+                    summaryResultIndexes.delete(key)
+                }
+                if (index.byteLength > MAX_SUMMARY_RESULT_INDEX_BYTES) return
+                while (
+                    (summaryResultIndexBytes + index.byteLength > MAX_SUMMARY_RESULT_INDEX_BYTES ||
+                        summaryResultIndexes.size >= MAX_SUMMARY_RESULT_INDEXES) &&
+                    summaryResultIndexes.size > 0
+                ) {
+                    const oldestKey = summaryResultIndexes.keys().next().value
+                    if (oldestKey === undefined) break
+                    const oldest = summaryResultIndexes.get(oldestKey)
+                    summaryResultIndexes.delete(oldestKey)
+                    if (oldest) summaryResultIndexBytes -= oldest.byteLength
+                }
+                summaryResultIndexes.set(key, index)
+                summaryResultIndexBytes += index.byteLength
+            }
 
             const enrich = Effect.fn('CaptureSessionRepository.enrich')(function* (
                 row: CaptureRow,
@@ -378,21 +566,59 @@ export class CaptureSessionRepository extends Context.Tag(
                         yield* database
                             .write('persist capture summaries', (db) =>
                                 db.transaction((transaction) => {
+                                    const stored = transaction
+                                        .select({
+                                            cursor: captureSessions.summaryCursor,
+                                            count: captureSessions.summaryCount,
+                                        })
+                                        .from(captureSessions)
+                                        .where(eq(captureSessions.id, captureId))
+                                        .get()
+                                    if (!stored)
+                                        throw new Error(
+                                            `Capture ${captureId} disappeared while persisting summaries.`,
+                                        )
+                                    const storedCursor = BigInt(stored.cursor)
+                                    const fresh = summaries
+                                        .filter((summary) => BigInt(summary.cursor) > storedCursor)
+                                        .sort((left, right) => {
+                                            const leftCursor = BigInt(left.cursor)
+                                            const rightCursor = BigInt(right.cursor)
+                                            return leftCursor < rightCursor
+                                                ? -1
+                                                : leftCursor > rightCursor
+                                                  ? 1
+                                                  : 0
+                                        })
+                                        .filter(
+                                            (summary, index, ordered) =>
+                                                index === 0 ||
+                                                summary.cursor !== ordered[index - 1]!.cursor,
+                                        )
+                                    if (fresh.length === 0) return
+                                    const firstRowIndex = safeSummaryRowCount(stored.count)
+                                    if (firstRowIndex + fresh.length > Number.MAX_SAFE_INTEGER)
+                                        throw new RangeError(
+                                            'Packet summary row index exceeds the supported virtual table range.',
+                                        )
                                     transaction
                                         .insert(captureSummaries)
                                         .values(
-                                            summaries.map((summary) => ({
+                                            fresh.map((summary, offset) => ({
                                                 captureId,
                                                 cursor: summary.cursor,
+                                                rowIndex: firstRowIndex + offset,
                                                 packetId: summary.key.packetId,
                                                 summaryJson: summary,
                                             })),
                                         )
-                                        .onConflictDoNothing()
                                         .run()
                                     transaction
                                         .update(captureSessions)
-                                        .set({ summaryCursor: summaries.at(-1)!.cursor })
+                                        .set({
+                                            summaryCursor: fresh.at(-1)!.cursor,
+                                            summaryCount: String(firstRowIndex + fresh.length),
+                                        })
                                         .where(eq(captureSessions.id, captureId))
                                         .run()
                                 }),
@@ -767,6 +993,149 @@ export class CaptureSessionRepository extends Context.Tag(
                                     Schema.decodeUnknownSync(PacketSummary)(row.value),
                                 ),
                             catch: (cause) => repositoryError('decode capture summaries', cause),
+                        })
+                    },
+                ),
+                summaryManifest: Effect.fn('CaptureSessionRepository.summaryManifest')(
+                    function* (captureId, filter) {
+                        const stored = yield* database
+                            .read('read packet summary manifest', (db) => {
+                                const session = db
+                                    .select({
+                                        state: captureSessions.state,
+                                        revision: captureSessions.summaryCursor,
+                                        totalRowCount: captureSessions.summaryCount,
+                                    })
+                                    .from(captureSessions)
+                                    .where(eq(captureSessions.id, captureId))
+                                    .get()
+                                if (!session) return undefined
+                                const first = db
+                                    .select({ value: captureSummaries.summaryJson })
+                                    .from(captureSummaries)
+                                    .where(eq(captureSummaries.captureId, captureId))
+                                    .orderBy(asc(captureSummaries.rowIndex))
+                                    .limit(1)
+                                    .get()
+                                const last = db
+                                    .select({ value: captureSummaries.summaryJson })
+                                    .from(captureSummaries)
+                                    .where(eq(captureSummaries.captureId, captureId))
+                                    .orderBy(desc(captureSummaries.rowIndex))
+                                    .limit(1)
+                                    .get()
+                                const origin = first
+                                    ? Schema.decodeUnknownSync(PacketSummary)(first.value)
+                                    : undefined
+                                const tail = last
+                                    ? Schema.decodeUnknownSync(PacketSummary)(last.value)
+                                    : undefined
+                                const totalRowCount = safeSummaryRowCount(session.totalRowCount)
+                                const filteredIndex =
+                                    filter === null
+                                        ? undefined
+                                        : buildSummaryResultIndex(
+                                              db,
+                                              captureId,
+                                              filter,
+                                              origin?.timestampNs ?? null,
+                                          )
+                                if (filter && filteredIndex) {
+                                    cacheSummaryResultIndex(
+                                        summaryResultIndexKey(captureId, session.revision, filter),
+                                        filteredIndex,
+                                    )
+                                }
+                                return new PacketSummaryManifest({
+                                    captureId,
+                                    revision: session.revision,
+                                    rowCount: filteredIndex?.length ?? totalRowCount,
+                                    totalRowCount,
+                                    originTimestampNs: origin?.timestampNs ?? null,
+                                    lastTimestampNs: tail?.timestampNs ?? null,
+                                    hasGaps:
+                                        totalRowCount > 0 &&
+                                        BigInt(session.revision) !== BigInt(totalRowCount),
+                                    captureComplete: !activeCaptureStates.includes(
+                                        session.state as (typeof activeCaptureStates)[number],
+                                    ),
+                                })
+                            })
+                            .pipe(
+                                Effect.mapError((cause) =>
+                                    repositoryError('read packet summary manifest', cause),
+                                ),
+                            )
+                        if (!stored) return yield* new StoredCaptureNotFound({ captureId })
+                        return stored
+                    },
+                ),
+                readSummaryRange: Effect.fn('CaptureSessionRepository.readSummaryRange')(
+                    function* (captureId, revision, filter, startIndex, limit) {
+                        const rows = yield* database
+                            .read('read packet summary range', (db) => {
+                                if (filter === null) {
+                                    return db
+                                        .select({ value: captureSummaries.summaryJson })
+                                        .from(captureSummaries)
+                                        .where(
+                                            and(
+                                                eq(captureSummaries.captureId, captureId),
+                                                gte(captureSummaries.rowIndex, startIndex),
+                                            ),
+                                        )
+                                        .orderBy(asc(captureSummaries.rowIndex))
+                                        .limit(limit)
+                                        .all()
+                                }
+                                const indexKey = summaryResultIndexKey(captureId, revision, filter)
+                                let resultIndex = getSummaryResultIndex(indexKey)
+                                if (!resultIndex) {
+                                    const first = db
+                                        .select({ value: captureSummaries.summaryJson })
+                                        .from(captureSummaries)
+                                        .where(eq(captureSummaries.captureId, captureId))
+                                        .orderBy(asc(captureSummaries.rowIndex))
+                                        .limit(1)
+                                        .get()
+                                    const origin = first
+                                        ? Schema.decodeUnknownSync(PacketSummary)(first.value)
+                                        : undefined
+                                    resultIndex = buildSummaryResultIndex(
+                                        db,
+                                        captureId,
+                                        filter,
+                                        origin?.timestampNs ?? null,
+                                    )
+                                    cacheSummaryResultIndex(indexKey, resultIndex)
+                                }
+                                const rowIndexes = Array.from(
+                                    resultIndex.slice(startIndex, startIndex + limit),
+                                )
+                                if (rowIndexes.length === 0) return []
+                                return db
+                                    .select({ value: captureSummaries.summaryJson })
+                                    .from(captureSummaries)
+                                    .where(
+                                        and(
+                                            eq(captureSummaries.captureId, captureId),
+                                            inArray(captureSummaries.rowIndex, rowIndexes),
+                                        ),
+                                    )
+                                    .orderBy(asc(captureSummaries.rowIndex))
+                                    .all()
+                            })
+                            .pipe(
+                                Effect.mapError((cause) =>
+                                    repositoryError('read packet summary range', cause),
+                                ),
+                            )
+                        return yield* Effect.try({
+                            try: () =>
+                                rows.map((row) =>
+                                    Schema.decodeUnknownSync(PacketSummary)(row.value),
+                                ),
+                            catch: (cause) => repositoryError('decode packet summary range', cause),
                         })
                     },
                 ),

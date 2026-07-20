@@ -28,6 +28,8 @@ function testLayer() {
             }),
         session: () => Effect.die('unused'),
         summaries: () => Effect.die('unused'),
+        summaryManifest: () => Effect.die('unused'),
+        summaryRange: () => Effect.die('unused'),
         registry: () => Effect.die('unused'),
         detail: () => Effect.die('unused'),
         stats: () => Effect.die('unused'),

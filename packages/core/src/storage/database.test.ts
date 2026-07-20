@@ -1,8 +1,9 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { DatabaseSync } from 'node:sqlite'
+import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
-import { count } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { Cause, Effect, Exit, Layer, Scope } from 'effect'
 import { afterEach, describe, expect, test } from 'vitest'
@@ -10,6 +11,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
     AppDataPaths,
     captureSessions,
+    captureSummaries,
     Database,
     InstanceLock,
     type AppDataPathsOptions,
@@ -22,15 +24,17 @@ const schemaMigrations = sqliteTable('schema_migrations', {
 })
 
 const roots: Array<string> = []
+const migrationsRoot = resolve(process.cwd(), 'drizzle')
+const summaryIndexMigration = '20260720072512_plain_serpent_society'
 
 afterEach(async () => {
     await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
 })
 
-function storageLayer(options: AppDataPathsOptions) {
+function storageLayer(options: AppDataPathsOptions, migrationsFolder?: string) {
     const paths = AppDataPaths.layer(options)
     const lock = InstanceLock.layer.pipe(Layer.provide(paths))
-    return Database.layer.pipe(Layer.provide(Layer.merge(paths, lock)))
+    return Database.layerWith({ migrationsFolder }).pipe(Layer.provide(Layer.merge(paths, lock)))
 }
 
 async function testRoot() {
@@ -40,6 +44,88 @@ async function testRoot() {
 }
 
 describe('Database', () => {
+    test('backfills dense summary indexes for captures created before virtual history', async () => {
+        const root = await testRoot()
+        const oldMigrations = join(root, 'old-migrations')
+        await mkdir(oldMigrations)
+        for (const entry of await readdir(migrationsRoot, { withFileTypes: true })) {
+            if (!entry.isDirectory() || entry.name >= summaryIndexMigration) continue
+            await cp(join(migrationsRoot, entry.name), join(oldMigrations, entry.name), {
+                recursive: true,
+            })
+        }
+        const options: AppDataPathsOptions = {
+            runtime: 'test',
+            environment: 'test',
+            dataRoot: root,
+        }
+        await Effect.runPromise(
+            Database.pipe(Effect.scoped, Effect.provide(storageLayer(options, oldMigrations))),
+        )
+        const captureId = 'b'.repeat(32)
+        const legacy = new DatabaseSync(join(root, 'pruftnet.sqlite'))
+        legacy
+            .prepare(
+                `insert into capture_sessions (
+                    id, state, source_json, interface_count, source_format, started_at_ns,
+                    stopped_at_ns, summary_cursor, created_at_ns, updated_at_ns
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            )
+            .run(
+                captureId,
+                'stopped',
+                JSON.stringify({ _tag: 'Replay', fileId: 'legacy' }),
+                1,
+                'pcapng',
+                '1',
+                '2',
+                '10',
+                '1',
+                '2',
+            )
+        const insertSummary = legacy.prepare(
+            `insert into capture_summaries (
+                capture_id, cursor, packet_id, summary_json
+            ) values (?, ?, ?, ?)`,
+        )
+        insertSummary.run(captureId, '10', '10', '{}')
+        insertSummary.run(captureId, '2', '2', '{}')
+        legacy.close()
+
+        const migrated = await Effect.runPromise(
+            Effect.gen(function* () {
+                const database = yield* Database
+                return yield* database.read('read migrated summary indexes', (connection) => ({
+                    session: connection
+                        .select({ summaryCount: captureSessions.summaryCount })
+                        .from(captureSessions)
+                        .where(eq(captureSessions.id, captureId))
+                        .get(),
+                    summaries: connection
+                        .select({
+                            cursor: captureSummaries.cursor,
+                            rowIndex: captureSummaries.rowIndex,
+                        })
+                        .from(captureSummaries)
+                        .where(eq(captureSummaries.captureId, captureId))
+                        .orderBy(captureSummaries.rowIndex)
+                        .all(),
+                }))
+            }).pipe(Effect.scoped, Effect.provide(storageLayer(options))),
+        )
+
+        expect(migrated.session?.summaryCount).toBe('2')
+        expect(
+            migrated.summaries.map((summary) => ({
+                cursor: summary.cursor,
+                rowIndex: Number(summary.rowIndex),
+            })),
+        ).toEqual([
+            { cursor: '2', rowIndex: 0 },
+            { cursor: '10', rowIndex: 1 },
+        ])
+    })
+
     test('migrates on first use and reopens without reapplying migrations', async () => {
         const root = await testRoot()
         const options: AppDataPathsOptions = {

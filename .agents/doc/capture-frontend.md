@@ -45,25 +45,51 @@ The packet, statistics, structure, and bytes panes do not repeat their titles in
 content, table columns, and mobile tabs provide the context. Packet counts and filter state live in the
 display-filter toolbar.
 
-The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail is available only for an active capture, controls scrolling, and never selects packets or triggers detail requests. Retained captures stay at the user's current position and request the next summary page when the virtual pagination row enters the viewport. The display-filter toolbar performs deferred, case-insensitive text matching and can apply advanced client-side filters to loaded summaries: relative time, protocol, interface, wire length, parse status, source, and destination. While more retained pages are available, packet counts are explicitly labeled as loaded counts. Advanced filters are edited in a draft modal and only become active after Apply filters; protocol-expression parsing remains deferred.
+The table uses `@tanstack/react-virtual` with fixed-height rows, a shared CSS grid for header and
+rows, keyboard selection, and explicit follow-tail behavior. Follow-tail is available only for an
+active capture, controls scrolling, and never selects packets or triggers detail requests.
+
+A retained capture exposes its complete logical row count to the virtualizer immediately. The
+scrollbar therefore represents the full result set without allocating every React row or loading
+every summary. Visible rows and one adjacent page in each direction are read by absolute index.
+Unloaded slots render inert placeholders until their range arrives. Top/Bottom controls and
+Home/End perform direct index jumps, including on captures with millions of packets; reaching the
+bottom never requires traversing preceding pages.
+
+Rows revisit the shared range cache directly instead of waiting for the range to become an active
+query again. A cached viewport therefore renders before paint without flashing loading placeholders;
+only an evicted or never-read page returns to the loading state.
+
+The display-filter toolbar performs deferred, case-insensitive text matching and supports relative
+time, protocol, interface, wire length, parse status, source, and destination. Active-capture
+filters run over the bounded live client window. Retained-capture filters are sent to the backend,
+so their count and virtual index cover the complete capture rather than only loaded pages. Advanced
+filters are edited in a draft modal and only become active after Apply filters;
+protocol-expression parsing remains deferred.
 
 ## Summary State
 
-Summaries are read from `ReadPacketSummaries` in batches of at most 1,024. TanStack Query owns one state object per capture with:
+Live and retained summary access deliberately use different read models.
 
-- up to 50,000 recent packet summaries for an active capture;
-- cursor-paginated loaded pages for a retained capture;
-- exclusive last cursor;
-- stable first timestamp for relative time;
-- terminal completion state;
-- a persistent gap marker when backend or client retention loses earlier rows.
+An active capture uses `ReadPacketSummaries` in cursor batches of at most 1,024. TanStack Query owns
+one bounded state object per capture with up to 50,000 recent summaries, an exclusive last cursor, a
+stable first timestamp, terminal completion state, and a persistent gap marker when backend or
+client retention loses earlier rows.
 
 An active capture drains all currently available full pages into a local accumulator and publishes
 one atomic cache update; a partial page then waits for the next capture-stream cursor watermark.
-A retained capture reads one initial page and only reads another when its virtual pagination row
-becomes visible. Historical pages are never installed one by one during initial navigation, so
-opening a retained capture cannot look like packet replay. Packet identity and selection always use
-complete `CaptureId + PacketId`, never visible row indexes.
+
+A retained capture first calls `GetPacketSummaryManifest`. The manifest supplies a revision, full
+and filtered row counts, timestamp bounds, completion, and gap state without transferring summary
+rows. `ReadPacketSummaryRange` then reads up to 1,024 rows by absolute result index. The visible page
+and adjacent pages are prefetched, obsolete reads receive an abort signal, and the frontend retains
+at most 12 historical range pages per active dataset. Evicted pages can be re-read directly; there
+is no sequential dependency.
+
+Historical filters receive their own backend result index and manifest. Changing a filter changes
+the dataset key, cancels stale reads, resets the virtual position, and prevents rows from different
+results from being combined. Packet identity and selection always use complete
+`CaptureId + PacketId`; virtual indexes only address presentation slots.
 
 Registry snapshots are immutable and cached by revision. Session, statistics, samples, summaries,
 events, history, active capture, titlebar state, and export progress do not poll. Events retain a

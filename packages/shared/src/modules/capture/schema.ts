@@ -236,6 +236,14 @@ export class PacketSummaryColumn extends Schema.Class<PacketSummaryColumn>('Pack
     value: Schema.String.pipe(Schema.maxLength(256)),
 }) {}
 
+export const PacketSummaryParseCondition = Schema.Literal(
+    'complete',
+    'partial',
+    'malformed',
+    'resourceLimit',
+)
+export type PacketSummaryParseCondition = Schema.Schema.Type<typeof PacketSummaryParseCondition>
+
 export class PacketSummary extends Schema.Class<PacketSummary>('PacketSummary')({
     cursor: DecimalString,
     key: PacketKey,
@@ -245,10 +253,45 @@ export class PacketSummary extends Schema.Class<PacketSummary>('PacketSummary')(
     wireLength: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
     linkType: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
     captureFlags: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
-    parseCondition: Schema.Literal('complete', 'partial', 'malformed', 'resourceLimit'),
+    parseCondition: PacketSummaryParseCondition,
     protocolPath: Schema.Array(Schema.Number.pipe(Schema.int(), Schema.positive())),
     columns: Schema.Array(PacketSummaryColumn),
     analysisRevision: DecimalString,
+}) {}
+
+const PacketSummaryFilterText = Schema.String.pipe(Schema.maxLength(256))
+const PacketSummaryRowIndex = Schema.Number.pipe(
+    Schema.int(),
+    Schema.between(0, Number.MAX_SAFE_INTEGER),
+)
+
+export class PacketSummaryFilter extends Schema.Class<PacketSummaryFilter>('PacketSummaryFilter')({
+    search: PacketSummaryFilterText,
+    minRelativeTimestampNs: Schema.NullOr(DecimalString),
+    maxRelativeTimestampNs: Schema.NullOr(DecimalString),
+    protocolIds: Schema.Array(Schema.Number.pipe(Schema.int(), Schema.positive())).pipe(
+        Schema.maxItems(256),
+    ),
+    interfaceIds: Schema.Array(Schema.Number.pipe(Schema.int(), Schema.nonNegative())).pipe(
+        Schema.maxItems(256),
+    ),
+    minWireLength: Schema.NullOr(
+        Schema.Number.pipe(
+            Schema.int(),
+            Schema.nonNegative(),
+            Schema.lessThanOrEqualTo(0xffffffff),
+        ),
+    ),
+    maxWireLength: Schema.NullOr(
+        Schema.Number.pipe(
+            Schema.int(),
+            Schema.nonNegative(),
+            Schema.lessThanOrEqualTo(0xffffffff),
+        ),
+    ),
+    parseConditions: Schema.Array(PacketSummaryParseCondition).pipe(Schema.maxItems(4)),
+    source: PacketSummaryFilterText,
+    destination: PacketSummaryFilterText,
 }) {}
 
 export class ReadPacketSummariesRequest extends Schema.Class<ReadPacketSummariesRequest>(
@@ -268,6 +311,43 @@ export class PacketSummaryBatch extends Schema.Class<PacketSummaryBatch>('Packet
     gapBeforeFirst: Schema.Boolean,
     captureComplete: Schema.Boolean,
     summaries: Schema.Array(PacketSummary),
+}) {}
+
+export class PacketSummaryManifestRequest extends Schema.Class<PacketSummaryManifestRequest>(
+    'PacketSummaryManifestRequest',
+)({
+    captureId: CaptureId,
+    filter: Schema.NullOr(PacketSummaryFilter),
+}) {}
+
+export class PacketSummaryManifest extends Schema.Class<PacketSummaryManifest>(
+    'PacketSummaryManifest',
+)({
+    captureId: CaptureId,
+    revision: DecimalString,
+    rowCount: PacketSummaryRowIndex,
+    totalRowCount: PacketSummaryRowIndex,
+    originTimestampNs: Schema.NullOr(DecimalString),
+    lastTimestampNs: Schema.NullOr(DecimalString),
+    hasGaps: Schema.Boolean,
+    captureComplete: Schema.Boolean,
+}) {}
+
+export class ReadPacketSummaryRangeRequest extends Schema.Class<ReadPacketSummaryRangeRequest>(
+    'ReadPacketSummaryRangeRequest',
+)({
+    captureId: CaptureId,
+    revision: DecimalString,
+    filter: Schema.NullOr(PacketSummaryFilter),
+    startIndex: PacketSummaryRowIndex,
+    limit: Schema.Number.pipe(Schema.int(), Schema.between(1, 2048)),
+}) {}
+
+export class PacketSummaryRange extends Schema.Class<PacketSummaryRange>('PacketSummaryRange')({
+    captureId: CaptureId,
+    revision: DecimalString,
+    startIndex: PacketSummaryRowIndex,
+    summaries: Schema.Array(PacketSummary).pipe(Schema.maxItems(2048)),
 }) {}
 
 export class RegistryRevisionRequest extends Schema.Class<RegistryRevisionRequest>(

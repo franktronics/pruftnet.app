@@ -3,6 +3,7 @@ import {
     ServerExportDestination,
     type ExportFormat,
     type LiveCaptureSource,
+    type PacketSummaryFilter,
     ReplayCaptureSource,
 } from '@repo/shared/capture'
 
@@ -22,6 +23,30 @@ export const captureClient = {
         callRpc((client) => client.ListCaptureStatSamples({ captureId, limit: 1_000 })),
     summaries: (captureId: string, afterCursor?: string) =>
         callRpc((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 })),
+    summaryManifest: (
+        captureId: string,
+        filter: PacketSummaryFilter | null,
+        signal?: AbortSignal,
+    ) => callRpc((client) => client.GetPacketSummaryManifest({ captureId, filter }), { signal }),
+    summaryRange: (
+        captureId: string,
+        revision: string,
+        filter: PacketSummaryFilter | null,
+        startIndex: number,
+        limit: number,
+        signal?: AbortSignal,
+    ) =>
+        callRpc(
+            (client) =>
+                client.ReadPacketSummaryRange({
+                    captureId,
+                    revision,
+                    filter,
+                    startIndex,
+                    limit,
+                }),
+            { signal },
+        ),
     events: (captureId: string, afterCursor?: string) =>
         callRpc((client) => client.ReadCaptureEvents({ captureId, afterCursor, limit: 512 })),
     registry: (registryRevision: string) =>

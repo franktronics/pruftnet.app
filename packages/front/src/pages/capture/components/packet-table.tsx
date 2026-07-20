@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
 import { Button } from '@repo/ui/atoms'
@@ -28,33 +28,39 @@ const initialTableWidth = initialColumnWidths.reduce((total, width) => total + w
 const noop = () => undefined
 
 export function PacketTable({
-    rows,
+    rowCount,
+    packetCount,
+    getRow,
     selectedKey,
+    selectedIndex,
     onSelect,
     following,
     canFollow = true,
     onFollowingChange,
     onPauseFollowing,
-    hasMore = false,
-    isLoadingMore = false,
-    loadMoreError,
-    onLoadMore = noop,
+    onVisibleRangeChange = noop,
+    loadError,
+    onRetry = noop,
     originTimestampNs,
     emptyMessage,
+    datasetKey,
 }: {
-    rows: readonly SummaryRow[]
+    rowCount: number
+    packetCount: number
+    getRow: (index: number) => SummaryRow | undefined
     selectedKey?: string
-    onSelect: (row: Extract<SummaryRow, { kind: 'packet' }>) => void
+    selectedIndex?: number
+    onSelect: (row: Extract<SummaryRow, { kind: 'packet' }>, index: number) => void
     following: boolean
     canFollow?: boolean
     onFollowingChange: (following: boolean) => void
     onPauseFollowing: () => void
-    hasMore?: boolean
-    isLoadingMore?: boolean
-    loadMoreError?: unknown
-    onLoadMore?: () => void
+    onVisibleRangeChange?: (startIndex: number, endIndex: number) => void
+    loadError?: unknown
+    onRetry?: () => void
     originTimestampNs?: string
     emptyMessage?: string
+    datasetKey: string
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const headerRef = useRef<HTMLDivElement>(null)
@@ -67,27 +73,34 @@ export function PacketTable({
         startWidth: number
     } | null>(null)
     const [columnWidths, setColumnWidths] = useState(initialColumnWidths)
-    const packetCount = rows.filter((row) => row.kind === 'packet').length
+    const pendingSelection = useRef<number | undefined>(undefined)
     const virtualizer = useVirtualizer({
-        count: rows.length + (hasMore ? 1 : 0),
+        count: rowCount,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => PACKET_ROW_HEIGHT,
         overscan: 12,
-        getItemKey: (index) => {
-            if (index === rows.length) return 'packet-summary-pagination'
-            return rows[index]?.kind === 'packet' ? packetKey(rows[index].summary) : `gap-${index}`
-        },
+        getItemKey: (index) => `packet-summary-row-${index}`,
     })
     const virtualItems = virtualizer.getVirtualItems()
-    const lastVirtualIndex = virtualItems.at(-1)?.index
     useEffect(() => {
-        if (following && rows.length > 0)
-            virtualizer.scrollToIndex(rows.length - 1, { align: 'end' })
-    }, [following, rows.length, virtualizer])
+        if (following && rowCount > 0) virtualizer.scrollToIndex(rowCount - 1, { align: 'end' })
+    }, [following, rowCount, virtualizer])
+    useLayoutEffect(() => {
+        const first = virtualItems.at(0)?.index
+        const last = virtualItems.at(-1)?.index
+        if (first !== undefined && last !== undefined) onVisibleRangeChange(first, last)
+    }, [onVisibleRangeChange, virtualItems])
     useEffect(() => {
-        if (hasMore && !isLoadingMore && !loadMoreError && lastVirtualIndex === rows.length)
-            onLoadMore()
-    }, [hasMore, isLoadingMore, lastVirtualIndex, loadMoreError, onLoadMore, rows.length])
+        virtualizer.scrollToIndex(0, { align: 'start' })
+    }, [datasetKey, virtualizer])
+    useEffect(() => {
+        const index = pendingSelection.current
+        if (index === undefined) return
+        const row = getRow(index)
+        if (row?.kind !== 'packet') return
+        pendingSelection.current = undefined
+        onSelect(row, index)
+    }, [getRow, onSelect])
     useEffect(() => {
         const table = tableRef.current
         if (!table) return
@@ -102,18 +115,23 @@ export function PacketTable({
     }, [])
 
     function moveSelection(delta: number) {
-        const current = rows.findIndex(
-            (row) => row.kind === 'packet' && packetKey(row.summary) === selectedKey,
-        )
-        const origin = current < 0 ? (delta > 0 ? -1 : rows.length) : current
-        let index = Math.max(0, Math.min(rows.length - 1, origin + delta))
-        while (rows[index]?.kind !== 'packet' && index >= 0 && index < rows.length)
+        if (rowCount === 0) return
+        const origin = selectedIndex ?? (delta > 0 ? -1 : rowCount)
+        let index = Math.max(0, Math.min(rowCount - 1, origin + delta))
+        let row = getRow(index)
+        while (row?.kind === 'gap' && index >= 0 && index < rowCount) {
             index += delta > 0 ? 1 : -1
-        const row = rows[index]
-        if (row?.kind === 'packet') {
-            onSelect(row)
-            virtualizer.scrollToIndex(index, { align: 'auto' })
+            row = getRow(index)
         }
+        if (index < 0 || index >= rowCount) return
+        if (row?.kind === 'packet') {
+            onSelect(row, index)
+            virtualizer.scrollToIndex(index, { align: 'auto' })
+            return
+        }
+        pendingSelection.current = index
+        virtualizer.scrollToIndex(index, { align: 'auto' })
+        onVisibleRangeChange(index, index)
     }
 
     function scrollToTop() {
@@ -123,7 +141,14 @@ export function PacketTable({
 
     function followTail() {
         onFollowingChange(true)
-        if (rows.length > 0) virtualizer.scrollToIndex(rows.length - 1, { align: 'end' })
+        if (rowCount > 0) virtualizer.scrollToIndex(rowCount - 1, { align: 'end' })
+    }
+
+    function scrollToBottom() {
+        const index = rowCount - 1
+        if (index < 0) return
+        virtualizer.scrollToIndex(index, { align: 'end' })
+        onVisibleRangeChange(index, index)
     }
 
     const gridStyle = {
@@ -221,7 +246,7 @@ export function PacketTable({
                             variant="ghost"
                             className="h-7 normal-case"
                             onClick={scrollToTop}
-                            disabled={rows.length === 0}
+                            disabled={rowCount === 0}
                         >
                             <ArrowUpToLine />
                             Top
@@ -232,25 +257,37 @@ export function PacketTable({
                                 variant={following ? 'secondary' : 'ghost'}
                                 className="h-7 normal-case"
                                 onClick={followTail}
-                                disabled={rows.length === 0}
+                                disabled={rowCount === 0}
                                 aria-pressed={following}
                             >
                                 <ArrowDownToLine />
                                 {following ? 'Following tail' : 'Follow tail'}
                             </Button>
-                        ) : null}
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 normal-case"
+                                onClick={scrollToBottom}
+                                disabled={rowCount === 0}
+                            >
+                                <ArrowDownToLine />
+                                Bottom
+                            </Button>
+                        )}
                     </div>
                 </div>
                 <div
                     ref={scrollRef}
                     className="focus-visible:ring-ring min-h-0 flex-1 overflow-auto focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                     role="grid"
+                    aria-rowcount={rowCount}
                     tabIndex={0}
                     aria-label="Captured packets"
                     aria-activedescendant={
                         selectedKey &&
                         virtualizer.getVirtualItems().some((item) => {
-                            const row = rows[item.index]
+                            const row = getRow(item.index)
                             return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
                         })
                             ? `packet-row-${selectedKey}`
@@ -270,6 +307,14 @@ export function PacketTable({
                         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                             event.preventDefault()
                             moveSelection(event.key === 'ArrowDown' ? 1 : -1)
+                        } else if (event.key === 'Home' || event.key === 'End') {
+                            event.preventDefault()
+                            const index = event.key === 'Home' ? 0 : Math.max(0, rowCount - 1)
+                            pendingSelection.current = index
+                            virtualizer.scrollToIndex(index, {
+                                align: event.key === 'Home' ? 'start' : 'end',
+                            })
+                            onVisibleRangeChange(index, index)
                         }
                     }}
                 >
@@ -286,35 +331,41 @@ export function PacketTable({
                             </div>
                         ) : null}
                         {virtualItems.map((item) => {
-                            if (item.index === rows.length && hasMore)
+                            const row = getRow(item.index)
+                            if (!row)
                                 return (
                                     <div
                                         key={item.key}
                                         role="status"
-                                        className="text-muted-foreground absolute top-0 left-0 flex w-full items-center justify-center border-b border-dashed px-3 text-xs"
+                                        aria-label={`Loading packet row ${item.index + 1}`}
+                                        className="text-muted-foreground absolute top-0 left-0 grid w-full items-center border-b px-2 text-xs"
                                         style={{
+                                            ...gridStyle,
                                             height: item.size,
                                             transform: `translateY(${item.start}px)`,
                                         }}
                                     >
-                                        {loadMoreError ? (
+                                        {loadError ? (
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                className="h-6 normal-case"
-                                                onClick={onLoadMore}
+                                                className="h-6 justify-self-start normal-case"
+                                                style={{ gridColumn: '1 / -1' }}
+                                                onClick={onRetry}
                                             >
-                                                Retry loading packets
+                                                Retry this packet range
                                             </Button>
-                                        ) : isLoadingMore ? (
-                                            'Loading more packets...'
                                         ) : (
-                                            'Scroll to load more packets'
+                                            columns.map((column, index) => (
+                                                <span
+                                                    key={column.id}
+                                                    aria-hidden="true"
+                                                    className={`bg-muted-foreground/10 h-2 rounded-sm ${index === columns.length - 1 ? 'w-3/5' : 'w-2/3'}`}
+                                                />
+                                            ))
                                         )}
                                     </div>
                                 )
-                            const row = rows[item.index]
-                            if (!row) return null
                             if (row.kind === 'gap')
                                 return (
                                     <div
@@ -335,8 +386,9 @@ export function PacketTable({
                                     key={item.key}
                                     id={`packet-row-${packetKey(summary)}`}
                                     role="row"
+                                    aria-rowindex={item.index + 1}
                                     aria-selected={selected}
-                                    onClick={() => onSelect(row)}
+                                    onClick={() => onSelect(row, item.index)}
                                     className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
                                     style={{
                                         ...gridStyle,

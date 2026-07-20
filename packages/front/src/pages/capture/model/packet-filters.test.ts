@@ -5,6 +5,7 @@ import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries
 import {
     emptyPacketDisplayFilters,
     filterPacketRows,
+    toPacketSummaryFilter,
     validatePacketDisplayFilters,
 } from './packet-filters'
 
@@ -116,5 +117,39 @@ describe('validatePacketDisplayFilters', () => {
                 minLength: 'abc',
             }),
         ).toBeTruthy()
+    })
+})
+
+describe('toPacketSummaryFilter', () => {
+    it('omits the server filter when every packet is selected', () => {
+        expect(toPacketSummaryFilter(emptyPacketDisplayFilters)).toBeNull()
+    })
+
+    it('normalizes a complete historical filter for a stable query key', () => {
+        expect(
+            toPacketSummaryFilter({
+                ...emptyPacketDisplayFilters,
+                search: '  DNS ',
+                timeRange: { minSeconds: '0.5', maxSeconds: '2' },
+                protocolIds: [2, 1, 2],
+                interfaceIds: [1, 0, 1],
+                minLength: '64',
+                maxLength: '512',
+                parseConditions: ['partial'],
+                source: ' HOST ',
+                destination: ' Peer ',
+            }),
+        ).toMatchObject({
+            search: 'dns',
+            minRelativeTimestampNs: '500000000',
+            maxRelativeTimestampNs: '2000000000',
+            protocolIds: [1, 2],
+            interfaceIds: [0, 1],
+            minWireLength: 64,
+            maxWireLength: 512,
+            parseConditions: ['partial'],
+            source: 'host',
+            destination: 'peer',
+        })
     })
 })

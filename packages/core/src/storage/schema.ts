@@ -35,6 +35,7 @@ export const captureSessions = sqliteTable(
         retainedBytes: text('retained_bytes').notNull().default('0'),
         registryRevision: text('registry_revision').notNull().default('0'),
         summaryCursor: text('summary_cursor').notNull().default('0'),
+        summaryCount: text('summary_count').notNull().default('0'),
         analysisCursor: text('analysis_cursor').notNull().default('0'),
         failureCode: text('failure_code'),
         failureMessage: text('failure_message'),
@@ -127,12 +128,15 @@ export const captureSummaries = sqliteTable(
             .notNull()
             .references(() => captureSessions.id, { onDelete: 'cascade' }),
         cursor: text().notNull(),
+        rowIndex: integer('row_index').notNull(),
         packetId: text('packet_id').notNull(),
         summaryJson: text('summary_json', { mode: 'json' }).notNull().$type<unknown>(),
     },
     (table) => [
         primaryKey({ columns: [table.captureId, table.cursor] }),
         index('capture_summaries_packet').on(table.captureId, table.packetId),
+        uniqueIndex('capture_summaries_row').on(table.captureId, table.rowIndex),
+        check('capture_summaries_row_index', sql`${table.rowIndex} >= 0`),
     ],
 )
 

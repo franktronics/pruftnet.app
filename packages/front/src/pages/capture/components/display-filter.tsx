@@ -22,7 +22,6 @@ export function DisplayFilter({
     maxTimeSeconds = 0,
     visibleCount = 0,
     totalCount = 0,
-    partialCount = false,
 }: {
     value: string
     onChange: (value: string) => void
@@ -33,7 +32,6 @@ export function DisplayFilter({
     maxTimeSeconds?: number
     visibleCount?: number
     totalCount?: number
-    partialCount?: boolean
 }) {
     const [advancedOpen, setAdvancedOpen] = useState(false)
     const activeCount = countAdvancedPacketFilters(filters)
@@ -54,7 +52,6 @@ export function DisplayFilter({
                     {filtering
                         ? `${visibleCount.toLocaleString()} / ${totalCount.toLocaleString()}`
                         : totalCount.toLocaleString()}
-                    {partialCount ? ' loaded' : ''}
                 </span>
             ) : null}
             {value ? (

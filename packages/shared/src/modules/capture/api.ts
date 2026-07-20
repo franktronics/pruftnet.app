@@ -18,8 +18,12 @@ import {
     CaptureStats,
     CaptureStatSampleList,
     PacketSummaryBatch,
+    PacketSummaryManifest,
+    PacketSummaryManifestRequest,
+    PacketSummaryRange,
     ReadCaptureEventsRequest,
     ReadPacketSummariesRequest,
+    ReadPacketSummaryRangeRequest,
     RegistryRevisionRequest,
     RegistrySnapshot,
     StartCaptureRequest,
@@ -53,6 +57,16 @@ export class CaptureRpcs extends RpcGroup.make(
     Rpc.make('ReadPacketSummaries', {
         payload: ReadPacketSummariesRequest,
         success: PacketSummaryBatch,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('GetPacketSummaryManifest', {
+        payload: PacketSummaryManifestRequest,
+        success: PacketSummaryManifest,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('ReadPacketSummaryRange', {
+        payload: ReadPacketSummaryRangeRequest,
+        success: PacketSummaryRange,
         error: CaptureRpcError,
     }),
     Rpc.make('GetRegistrySnapshot', {

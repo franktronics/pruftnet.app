@@ -8,6 +8,9 @@ import {
     CaptureStorageUnavailable,
     LiveCaptureSource,
     PacketSummaryBatch,
+    PacketSummaryRange,
+    type PacketSummaryFilter,
+    type PacketSummaryManifest,
     type CaptureInterface,
     type CaptureInterfaceCapabilities,
     type CaptureRpcError,
@@ -92,6 +95,17 @@ export interface CaptureSessionManagerService {
         cursor: string | undefined,
         limit: number,
     ) => Effect.Effect<PacketSummaryBatch, ManagerError>
+    readonly summaryManifest: (
+        captureId: string,
+        filter: PacketSummaryFilter | null,
+    ) => Effect.Effect<PacketSummaryManifest, ManagerError>
+    readonly summaryRange: (
+        captureId: string,
+        revision: string,
+        filter: PacketSummaryFilter | null,
+        startIndex: number,
+        limit: number,
+    ) => Effect.Effect<PacketSummaryRange, ManagerError>
     readonly registry: (revision: string) => Effect.Effect<RegistrySnapshot, ManagerError>
     readonly detail: (
         captureId: string,
@@ -530,6 +544,26 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             captureComplete:
                                 !activeCaptureStates.includes(record.state) && !hasMore,
                             summaries: page,
+                        })
+                    },
+                ),
+                summaryManifest: Effect.fn('CaptureSessionManager.summaryManifest')(
+                    function* (captureId, filter) {
+                        return yield* repository
+                            .summaryManifest(captureId, filter)
+                            .pipe(Effect.mapError(managerError))
+                    },
+                ),
+                summaryRange: Effect.fn('CaptureSessionManager.summaryRange')(
+                    function* (captureId, revision, filter, startIndex, limit) {
+                        const summaries = yield* repository
+                            .readSummaryRange(captureId, revision, filter, startIndex, limit)
+                            .pipe(Effect.mapError(managerError))
+                        return new PacketSummaryRange({
+                            captureId,
+                            revision,
+                            startIndex,
+                            summaries,
                         })
                     },
                 ),

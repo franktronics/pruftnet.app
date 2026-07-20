@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
+import type { PacketSummaryFilter } from '@repo/shared/capture'
 
 import { captureClient } from './capture-client'
 
@@ -12,6 +13,16 @@ export const captureKeys = {
     statSamples: (captureId: string) => [...captureKeys.all, captureId, 'stat-samples'] as const,
     events: (captureId: string) => [...captureKeys.all, captureId, 'events'] as const,
     summaries: (captureId: string) => [...captureKeys.all, captureId, 'summaries'] as const,
+    liveSummaries: (captureId: string) => [...captureKeys.summaries(captureId), 'live'] as const,
+    summaryManifest: (captureId: string, filter: PacketSummaryFilter | null) =>
+        [...captureKeys.summaries(captureId), 'manifest', filter] as const,
+    summaryRanges: (captureId: string) => [...captureKeys.summaries(captureId), 'ranges'] as const,
+    summaryRange: (
+        captureId: string,
+        revision: string,
+        filter: PacketSummaryFilter | null,
+        startIndex: number,
+    ) => [...captureKeys.summaryRanges(captureId), revision, filter, startIndex] as const,
     registry: (revision: string) => [...captureKeys.all, 'registry', revision] as const,
     detail: (
         captureId: string,

@@ -37,9 +37,10 @@ async function unwrapExit<A, E>(exit: Exit.Exit<A, E>): Promise<A> {
 
 export async function callRpc<A>(
     use: (client: AppRpcClient) => Effect.Effect<A, unknown>,
+    options?: { readonly signal?: AbortSignal },
 ): Promise<A> {
     const effect = Effect.flatMap(AppRpcClientService, use)
-    return unwrapExit(await runtime.runPromiseExit(effect))
+    return unwrapExit(await runtime.runPromiseExit(effect, options))
 }
 
 export interface RpcStreamSubscriptionOptions<A> {
