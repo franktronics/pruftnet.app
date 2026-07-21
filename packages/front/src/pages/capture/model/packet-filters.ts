@@ -1,9 +1,13 @@
-import type { PacketSummary } from '@repo/shared/capture'
+import {
+    PacketSummaryFilter,
+    type PacketSummary,
+    type PacketSummaryParseCondition,
+} from '@repo/shared/capture'
 
 import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
 
 export const parseConditions = ['complete', 'partial', 'malformed', 'resourceLimit'] as const
-export type PacketParseCondition = (typeof parseConditions)[number]
+export type PacketParseCondition = PacketSummaryParseCondition
 
 export interface PacketTimeRange {
     readonly minSeconds: string
@@ -88,6 +92,50 @@ export function countAdvancedPacketFilters(filters: PacketDisplayFilters): numbe
         Number(filters.source.trim() !== '') +
         Number(filters.destination.trim() !== '')
     )
+}
+
+export function toPacketSummaryFilter(filters: PacketDisplayFilters): PacketSummaryFilter | null {
+    if (validatePacketDisplayFilters(filters)) return null
+    const search = normalized(filters.search)
+    const source = normalized(filters.source)
+    const destination = normalized(filters.destination)
+    const minRelativeTimestampNs = filters.timeRange
+        ? parseSeconds(filters.timeRange.minSeconds)
+        : undefined
+    const maxRelativeTimestampNs = filters.timeRange
+        ? parseSeconds(filters.timeRange.maxSeconds)
+        : undefined
+    const minWireLength = filters.minLength ? parseLength(filters.minLength) : undefined
+    const maxWireLength = filters.maxLength ? parseLength(filters.maxLength) : undefined
+    const protocolIds = [...new Set(filters.protocolIds)].sort((left, right) => left - right)
+    const interfaceIds = [...new Set(filters.interfaceIds)].sort((left, right) => left - right)
+    const conditions = parseConditions.filter((condition) =>
+        filters.parseConditions.includes(condition),
+    )
+    const unfiltered =
+        !search &&
+        minRelativeTimestampNs === undefined &&
+        maxRelativeTimestampNs === undefined &&
+        protocolIds.length === 0 &&
+        interfaceIds.length === 0 &&
+        minWireLength === undefined &&
+        maxWireLength === undefined &&
+        conditions.length === parseConditions.length &&
+        !source &&
+        !destination
+    if (unfiltered) return null
+    return new PacketSummaryFilter({
+        search,
+        minRelativeTimestampNs: minRelativeTimestampNs?.toString() ?? null,
+        maxRelativeTimestampNs: maxRelativeTimestampNs?.toString() ?? null,
+        protocolIds,
+        interfaceIds,
+        minWireLength: minWireLength ?? null,
+        maxWireLength: maxWireLength ?? null,
+        parseConditions: conditions,
+        source,
+        destination,
+    })
 }
 
 export function relativePacketNanoseconds(timestampNs: string, originTimestampNs: string): bigint {

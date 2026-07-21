@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
 import type { CaptureEvent, CaptureEventBatch, LiveCaptureSource } from '@repo/shared/capture'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
@@ -14,21 +13,9 @@ import {
 
 export const useCaptureSession = (captureId: string) => useQuery(captureSessionOptions(captureId))
 export const useCaptureInterfaces = () => useQuery(captureInterfacesOptions())
-const isTerminal = (state: string | undefined) =>
-    state === 'stopped' || state === 'completed' || state === 'failed'
-export function useCaptureStats(captureId: string, state?: string) {
-    const query = useQuery(captureStatsOptions(captureId, isTerminal(state)))
-    const lastFinalState = useRef<string | undefined>(undefined)
-    const refetch = query.refetch
-    useEffect(() => {
-        if (!isTerminal(state) || lastFinalState.current === state) return
-        lastFinalState.current = state
-        void refetch()
-    }, [state, refetch])
-    return query
-}
-export const useCaptureStatSamples = (captureId: string, state?: string) =>
-    useQuery(captureStatSamplesOptions(captureId, isTerminal(state)))
+export const useCaptureStats = (captureId: string) => useQuery(captureStatsOptions(captureId))
+export const useCaptureStatSamples = (captureId: string) =>
+    useQuery(captureStatSamplesOptions(captureId))
 export const useCaptureRegistry = (revision: string | undefined) =>
     useQuery({ ...registryOptions(revision ?? ''), enabled: Boolean(revision) })
 
@@ -93,26 +80,23 @@ export function mergeCaptureEventBatch(
     }
 }
 
-export function useCaptureEvents(captureId: string, state?: string) {
+export function useCaptureEvents(captureId: string) {
     const queryClient = useQueryClient()
     const query = useQuery({
         queryKey: captureKeys.events(captureId),
-        queryFn: async ({ queryKey }) => {
-            const current = queryClient.getQueryData<CaptureEventState>(
+        queryFn: async ({ queryKey, signal }) => {
+            let current = queryClient.getQueryData<CaptureEventState>(
                 captureKeys.events(captureId),
             ) ?? { events: [], gap: false }
-            const batch = await captureClient.events(captureId, current.cursor)
-            if (batch.captureId !== queryKey[1]) throw new Error('Stale capture event batch')
-            return mergeCaptureEventBatch(captureId, current, batch)
+            while (!signal.aborted) {
+                const batch = await captureClient.events(captureId, current.cursor)
+                if (batch.captureId !== queryKey[1]) throw new Error('Stale capture event batch')
+                current = mergeCaptureEventBatch(captureId, current, batch)
+                queryClient.setQueryData(captureKeys.events(captureId), current)
+                if (batch.events.length < 512) break
+            }
+            return current
         },
-        refetchInterval: isTerminal(state) ? false : 1_000,
     })
-    const lastFinalState = useRef<string | undefined>(undefined)
-    const refetch = query.refetch
-    useEffect(() => {
-        if (!isTerminal(state) || lastFinalState.current === state) return
-        lastFinalState.current = state
-        void refetch()
-    }, [state, refetch])
     return query
 }

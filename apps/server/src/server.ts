@@ -1,8 +1,8 @@
 import type { IncomingMessage, Server as NodeServer, ServerResponse } from 'node:http'
 import { createServer } from 'node:http'
 
-import { Effect, Scope } from 'effect'
-import { makeAppNodeHandlers } from '@repo/core'
+import { Effect, Exit, Scope } from 'effect'
+import { beginNodeServerClose, makeAppNodeHandlers } from '@repo/core'
 
 import type { ServerConfig } from './config'
 import { serveStaticFrontend } from './http/static-files'
@@ -35,37 +35,34 @@ function listen(server: NodeServer, config: ServerConfig) {
     })
 }
 
-function close(server: NodeServer) {
-    return Effect.async<void>((resume) => {
-        if (!server.listening) {
-            resume(Effect.void)
-            return
-        }
-
-        server.close(() => resume(Effect.void))
-    })
-}
-
-export function startServer(
-    config: ServerConfig,
-): Effect.Effect<StartedServer, Error, Scope.Scope> {
-    return Effect.acquireRelease(
-        Effect.gen(function* () {
+export function startServer(config: ServerConfig): Effect.Effect<StartedServer, Error> {
+    return Effect.gen(function* () {
+        const backendScope = yield* Scope.make()
+        return yield* Effect.gen(function* () {
             const vite =
                 config.mode === 'development'
                     ? yield* Effect.promise(() => createViteDevServer(config))
                     : undefined
+            if (vite) {
+                yield* Scope.addFinalizer(
+                    backendScope,
+                    Effect.promise(() => vite.close()),
+                )
+            }
             const serveFrontend = vite
                 ? serveViteFrontend(vite, config)
                 : (request: IncomingMessage, response: ServerResponse) => {
                       void serveStaticFrontend(request, response, config.frontendDistPath)
                   }
-            const handlers = yield* makeAppNodeHandlers({
-                runtime: 'server',
-                environment: config.mode,
-                workspaceRoot: config.workspaceRoot,
-                migrationsFolder: config.migrationsFolder,
-            })
+            const handlers = yield* Scope.extend(
+                makeAppNodeHandlers({
+                    runtime: 'server',
+                    environment: config.mode,
+                    workspaceRoot: config.workspaceRoot,
+                    migrationsFolder: config.migrationsFolder,
+                }),
+                backendScope,
+            )
 
             const server = createServer((request, response) => {
                 const url = new URL(request.url ?? '/', 'http://localhost')
@@ -94,22 +91,26 @@ export function startServer(
             })
 
             yield* listen(server, config)
+            let closed = false
+            const closeServer = Effect.gen(function* () {
+                if (closed) return
+                yield* handlers.shutdown
+                    .shutdownServer()
+                    .pipe(Effect.mapError((error) => new Error(error.message, { cause: error })))
+                const httpClose = yield* Effect.sync(() => beginNodeServerClose(server))
+                yield* handlers.shutdown.closeRealtime()
+                yield* Effect.tryPromise({
+                    try: () => httpClose,
+                    catch: (cause) => new Error('HTTP server shutdown failed.', { cause }),
+                })
+                yield* Scope.close(backendScope, Exit.succeed(undefined))
+                closed = true
+            })
 
             return {
                 address: `http://${config.host}:${config.port}`,
-                close: Effect.gen(function* () {
-                    yield* handlers.shutdown
-                        .shutdownServer()
-                        .pipe(
-                            Effect.mapError((error) => new Error(error.message, { cause: error })),
-                        )
-                    yield* close(server)
-                    if (vite) {
-                        yield* Effect.promise(() => vite.close())
-                    }
-                }),
+                close: closeServer,
             }
-        }),
-        (server) => server.close.pipe(Effect.catchAll((error) => Effect.logError(error))),
-    )
+        }).pipe(Effect.onError((cause) => Scope.close(backendScope, Exit.failCause(cause))))
+    })
 }

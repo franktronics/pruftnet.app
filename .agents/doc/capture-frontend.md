@@ -45,21 +45,75 @@ The packet, statistics, structure, and bytes panes do not repeat their titles in
 content, table columns, and mobile tabs provide the context. Packet counts and filter state live in the
 display-filter toolbar.
 
-The table uses `@tanstack/react-virtual` with fixed-height rows, stable full packet keys, a shared CSS grid for header and rows, keyboard selection, and explicit follow-tail behavior. Follow-tail only controls scrolling; it never selects packets or triggers detail requests. The display-filter toolbar performs deferred, case-insensitive text matching and can apply advanced client-side filters to retained summaries: relative time, protocol, interface, wire length, parse status, source, and destination. Advanced filters are edited in a draft modal and only become active after Apply filters; protocol-expression parsing remains deferred.
+The table uses `@tanstack/react-virtual` with fixed-height rows, a shared CSS grid for header and
+rows, keyboard selection, and explicit follow-tail behavior. Follow-tail is available only for an
+active capture, controls scrolling, and never selects packets or triggers detail requests.
+
+A retained capture exposes its complete logical row count to the virtualizer immediately. The
+scrollbar therefore represents the full result set without allocating every React row or loading
+every summary. Visible rows and one adjacent page in each direction are read by absolute index.
+Unloaded slots render inert placeholders until their range arrives. Top/Bottom controls and
+Home/End perform direct index jumps, including on captures with millions of packets; reaching the
+bottom never requires traversing preceding pages.
+
+Rows revisit the shared range cache directly instead of waiting for the range to become an active
+query again. A cached viewport therefore renders before paint without flashing loading placeholders;
+only an evicted or never-read page returns to the loading state.
+
+The display-filter toolbar performs deferred, case-insensitive text matching and supports relative
+time, protocol, interface, wire length, parse status, source, and destination. Active-capture
+filters run over the bounded live client window. Retained-capture filters are sent to the backend,
+so their count and virtual index cover the complete capture rather than only loaded pages. Advanced
+filters are edited in a draft modal and only become active after Apply filters;
+protocol-expression parsing remains deferred.
 
 ## Summary State
 
-Summaries are read from `ReadPacketSummaries` in batches of at most 1,024. TanStack Query owns one bounded state object per capture:
+Live and retained summary access deliberately use different read models.
 
-- up to 50,000 packet summaries;
-- exclusive last cursor;
-- stable first timestamp for relative time;
-- terminal completion state;
-- a persistent gap marker when backend or client retention loses earlier rows.
+An active capture uses `ReadPacketSummaries` in cursor batches of at most 1,024. TanStack Query owns
+one bounded state object per capture with up to 50,000 recent summaries, an exclusive last cursor, a
+stable first timestamp, terminal completion state, and a persistent gap marker when backend or
+client retention loses earlier rows.
 
-Incoming cursor-ordered batches are merged incrementally. A full batch is drained immediately; a partial batch waits before polling again. Packet identity and selection always use complete `CaptureId + PacketId`, never visible row indexes.
+An active capture drains all currently available full pages into a local accumulator and publishes
+one atomic cache update; a partial page then waits for the next capture-stream cursor watermark.
 
-Registry snapshots are immutable and cached by revision. Session and stats polling stop after a final terminal read. Events retain a bounded recent cursor window and surface warnings in the toolbar.
+A retained capture first calls `GetPacketSummaryManifest`. The manifest supplies a revision, full
+and filtered row counts, timestamp bounds, completion, and gap state without transferring summary
+rows. `ReadPacketSummaryRange` then reads up to 1,024 rows by absolute result index. The visible page
+and adjacent pages are prefetched, obsolete reads receive an abort signal, and the frontend retains
+at most 12 historical range pages per active dataset. Evicted pages can be re-read directly; there
+is no sequential dependency.
+
+Historical filters receive their own backend result index and manifest. Changing a filter changes
+the dataset key, cancels stale reads, resets the virtual position, and prevents rows from different
+results from being combined. Packet identity and selection always use complete
+`CaptureId + PacketId`; virtual indexes only address presentation slots.
+
+Registry snapshots are immutable and cached by revision. Session, statistics, samples, summaries,
+events, history, active capture, titlebar state, and export progress do not poll. Events retain a
+bounded recent cursor window and surface warnings in the toolbar.
+
+## Realtime synchronization
+
+The frontend uses Effect RPC over HTTP with NDJSON streaming:
+
+- one application stream carries capture-record and export-job changes;
+- one capture-scoped stream is open only for a non-terminal capture workspace;
+- both streams send a ready marker first, a heartbeat every 20 seconds, and monotonic decimal-string
+  sequences;
+- reconnect uses capped exponential backoff with jitter.
+
+On every initial connection, reconnection, backend-instance change, or sequence gap, the client
+subscribes first and then reads authoritative snapshots. Events received during reconciliation are
+buffered and applied after the snapshot. SQLite-backed queries remain authoritative; stream messages
+are bounded, idempotent invalidation hints.
+
+Reloading the renderer destroys only its stream scopes. The application-scoped backend capture and
+export fibers continue, and the replacement renderer rebuilds state from backend snapshots plus
+durable summary/event cursors. Transient selection, filters, scroll, and pane state are intentionally
+not restored.
 
 ## Selected Packet Detail
 
@@ -85,7 +139,7 @@ The byte pane virtualizes 16-byte rows, renders synchronized hex and ASCII, and 
 
 ## Statistics
 
-The statistics pane is a capture ledger, not one aggregate loss number. It stores at most 120 adjacent one-second snapshots and charts observed, persisted, and analyzed rates plus maximum packet-or-byte queue pressure. This is a rolling client-side window: a new sample replaces the oldest sample after the 120-sample limit, so it represents roughly the latest two minutes rather than the complete capture lifetime.
+The statistics pane is a capture ledger, not one aggregate loss number. It stores at most 1,000 adjacent one-second snapshots and charts observed, persisted, and analyzed rates plus maximum packet-or-byte queue pressure. This is a rolling client-side window: a new sample replaces the oldest sample after the 1,000-sample limit, so it represents roughly the latest 17 minutes rather than the complete capture lifetime.
 
 The compact dashboard uses sparklines and opens the same ledger component in an expanded statistics dialog. The expanded throughput chart adds time and packet-rate axes, hover values, and monotone curves. Metric help controls stay hidden until their complete field row is hovered or the control receives keyboard focus. Statistics sections use spacing rather than decorative left borders.
 
@@ -108,6 +162,5 @@ Capture-specific components, hooks, models, and query policies stay under `packa
 - optional OS-specific MAC address enrichment;
 - explicit DLT and timestamp selection in the frontend;
 - packaged privilege installation and helper signing on Linux, macOS, and Windows;
-- persistent compact-summary storage beyond the bounded live journal;
 - remote authentication and authorization;
 - user capture-file import and history.

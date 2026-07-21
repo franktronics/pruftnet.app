@@ -1,7 +1,13 @@
 import type { PacketSummaryBatch } from '@repo/shared/capture'
 import { describe, expect, test } from 'vitest'
 
-import { emptySummaryState, mergeSummaryBatch } from './use-packet-summaries'
+import {
+    emptySummaryState,
+    mergeSummaryBatch,
+    PACKET_SUMMARY_PAGE_SIZE,
+    packetSummaryPageStarts,
+    readPacketSummaryState,
+} from './use-packet-summaries'
 
 const captureId = '0123456789abcdef0123456789abcdef'
 
@@ -72,5 +78,77 @@ describe('mergeSummaryBatch', () => {
         )
         expect(result.cursor).toBe('4')
         expect(result.rows.map((row) => row.kind)).toEqual(['gap', 'packet'])
+    })
+})
+
+describe('readPacketSummaryState', () => {
+    test('loads only the first page for retained history', async () => {
+        const firstPage = Array.from({ length: PACKET_SUMMARY_PAGE_SIZE }, (_, index) =>
+            String(index + 1),
+        )
+        let reads = 0
+        const result = await readPacketSummaryState(
+            captureId,
+            emptySummaryState,
+            'history',
+            async () => {
+                reads++
+                return batch(firstPage)
+            },
+            new AbortController().signal,
+        )
+
+        expect(reads).toBe(1)
+        expect(result.rows).toHaveLength(PACKET_SUMMARY_PAGE_SIZE)
+        expect(result.complete).toBe(false)
+    })
+
+    test('atomically catches up all currently available live pages', async () => {
+        const firstPage = Array.from({ length: PACKET_SUMMARY_PAGE_SIZE }, (_, index) =>
+            String(index + 1),
+        )
+        const secondPage = [String(PACKET_SUMMARY_PAGE_SIZE + 1)]
+        const pages = [batch(firstPage), batch(secondPage)]
+        let reads = 0
+        const result = await readPacketSummaryState(
+            captureId,
+            emptySummaryState,
+            'live',
+            async () => pages[reads++]!,
+            new AbortController().signal,
+        )
+
+        expect(reads).toBe(2)
+        expect(result.rows).toHaveLength(PACKET_SUMMARY_PAGE_SIZE + 1)
+        expect(result.cursor).toBe(secondPage[0])
+    })
+
+    test('rejects a full live page that does not advance the cursor', async () => {
+        const cursors = Array.from({ length: PACKET_SUMMARY_PAGE_SIZE }, () => '1')
+        await expect(
+            readPacketSummaryState(
+                captureId,
+                mergeSummaryBatch(captureId, emptySummaryState, batch(['1'])),
+                'live',
+                async () => batch(cursors),
+                new AbortController().signal,
+            ),
+        ).rejects.toThrow('Packet summary cursor did not advance')
+    })
+})
+
+describe('packetSummaryPageStarts', () => {
+    test('requests a deep visible range directly with adjacent prefetch pages', () => {
+        expect(packetSummaryPageStarts(149_000, 149_020, 149_742)).toEqual([
+            144 * PACKET_SUMMARY_PAGE_SIZE,
+            145 * PACKET_SUMMARY_PAGE_SIZE,
+            146 * PACKET_SUMMARY_PAGE_SIZE,
+        ])
+    })
+
+    test('clamps prefetch at the beginning and end of a capture', () => {
+        expect(packetSummaryPageStarts(0, 20, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
+        expect(packetSummaryPageStarts(1_490, 1_499, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
+        expect(packetSummaryPageStarts(0, 0, 0)).toEqual([])
     })
 })

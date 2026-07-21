@@ -13,13 +13,16 @@ libpcap/Npcap
   -> asynchronous analyzer
   -> bounded compact-summary journal
   -> framed worker control protocol
-  -> Effect capture service and RPC
+  -> Effect capture service, durable journal drainer, and RPC streams
   -> React capture ledger and binary packet-detail route
 ```
 
 The capture callback assigns a capture-scoped observation ID and copies the frame into its interface queue. It performs no parsing and allocates no heap memory after queue warm-up. The writer is the only consumer of loss-critical queues and the only pcapng block writer. A packet becomes committed only after its complete Enhanced Packet Block has been written and the configured buffered flush succeeds.
 
-The analyzer reads committed packet bytes back from the spool by committed ordinal. Parser latency, summary extraction, detail generation, UI polling, and UI disconnects cannot block capture threads or the writer. Multi-interface file order is writer service order, not a claim of strict timestamp order; original timestamps and interface IDs remain authoritative.
+The analyzer reads committed packet bytes back from the spool by committed ordinal. Parser latency,
+summary extraction, detail generation, UI consumers, and UI disconnects cannot block capture threads
+or the writer. Multi-interface file order is writer service order, not a claim of strict timestamp
+order; original timestamps and interface IDs remain authoritative.
 
 The current implementation separates writer and analyzer responsibilities into threads inside `pruftnet_capture_worker`. No Lua code runs in the worker. A separately sandboxed analyzer process and post-open privilege dropping remain platform-hardening work; see Platform notes.
 
@@ -51,7 +54,12 @@ Desktop and server allocate a capture row and permanent spool directory before s
 
 `CaptureId` changes on every successful start. `PacketId` is assigned at observation and may contain gaps when an observation is explicitly rejected. It is not an array index. Committed ordinal is dense file order and rebuildable from pcapng.
 
-Summary cursors are delivery-order cursors, independent from packet IDs and timestamps. The compact summary journal is bounded and UI polling does not drive analysis. A client behind summary retention receives `gapBeforeFirst`; missing summaries are never silently presented as a complete range. The raw packet can still be queried from the spool when summary retention has expired.
+Summary cursors are delivery-order cursors, independent from packet IDs and timestamps. The native
+compact-summary journal is bounded and frontend demand does not drive analysis. One application-owned
+Effect supervisor drains summaries and events into SQLite, so adding clients never adds native
+journal readers. Frontends consume durable batches after stream cursor watermarks. A backend drainer
+behind native retention records `gapBeforeFirst`; missing summaries are never silently presented as a
+complete range. The raw packet can still be queried from the spool when summary retention has expired.
 
 ## Worker and transport
 

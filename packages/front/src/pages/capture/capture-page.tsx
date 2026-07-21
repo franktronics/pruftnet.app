@@ -1,5 +1,5 @@
 import { useParams } from '@tanstack/react-router'
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/molecules'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@repo/ui/organisms'
@@ -18,11 +18,13 @@ import {
 } from './hooks/use-capture'
 import { packetDetailState, usePacketDetail } from './hooks/use-packet-detail'
 import { usePacketSummaries, type SummaryRow } from './hooks/use-packet-summaries'
+import { useCaptureRealtime } from './hooks/use-capture-realtime'
 import {
     countAdvancedPacketFilters,
     emptyPacketDisplayFilters,
     filterPacketRows,
     relativeSecondsNumber,
+    toPacketSummaryFilter,
     type PacketDisplayFilters,
 } from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
@@ -35,41 +37,67 @@ export function CapturePage() {
 
 function CaptureWorkspace({ captureId }: { captureId: string }) {
     const session = useCaptureSession(captureId)
-    const stats = useCaptureStats(captureId, session.data?.state)
-    const statSamples = useCaptureStatSamples(captureId, session.data?.state)
-    const summaries = usePacketSummaries(captureId)
-    const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
-    const [selected, setSelected] = useState<Extract<SummaryRow, { kind: 'packet' }>>()
-    const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
-    const [following, setFollowing] = useState(true)
+    const terminal =
+        session.data?.state === 'stopped' ||
+        session.data?.state === 'completed' ||
+        session.data?.state === 'failed'
+    useCaptureRealtime(captureId, session.isSuccess && !terminal)
+    const stats = useCaptureStats(captureId)
+    const statSamples = useCaptureStatSamples(captureId)
     const [filters, setFilters] = useState<PacketDisplayFilters>(emptyPacketDisplayFilters)
     const deferredFilters = useDeferredValue(filters)
+    const historicalFilter = useMemo(
+        () => (terminal ? toPacketSummaryFilter(deferredFilters) : null),
+        [deferredFilters, terminal],
+    )
+    const summaries = usePacketSummaries(captureId, {
+        enabled: session.isSuccess,
+        mode: terminal ? 'history' : 'live',
+        filter: historicalFilter,
+    })
+    const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
+    const [selected, setSelected] = useState<{
+        readonly row: Extract<SummaryRow, { kind: 'packet' }>
+        readonly index: number
+    }>()
+    const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
+    const [following, setFollowing] = useState(true)
     const detail = usePacketDetail(
         captureId,
-        selected?.summary.key.packetId,
-        selected?.summary.analysisRevision,
+        selected?.row.summary.key.packetId,
+        selected?.row.summary.analysisRevision,
         registry.data,
     )
     const detailModel = packetDetailState(
-        selected?.summary.key.packetId,
+        selected?.row.summary.key.packetId,
         detail.isPending,
         detail.data,
         detail.error,
     )
-    const visibleRows = useMemo(
-        () => filterPacketRows(summaries.rows, deferredFilters, summaries.originTimestampNs),
-        [deferredFilters, summaries.originTimestampNs, summaries.rows],
+    const visibleLiveRows = useMemo(
+        () =>
+            summaries.mode === 'live'
+                ? filterPacketRows(summaries.rows, deferredFilters, summaries.originTimestampNs)
+                : [],
+        [deferredFilters, summaries.mode, summaries.originTimestampNs, summaries.rows],
     )
-    const totalPacketCount = useMemo(
-        () => summaries.rows.filter((row) => row.kind === 'packet').length,
-        [summaries.rows],
+    const getTableRow = useCallback(
+        (index: number) =>
+            summaries.mode === 'history' ? summaries.getRow(index) : visibleLiveRows[index],
+        [summaries, visibleLiveRows],
     )
-    const visiblePacketCount = useMemo(
-        () => visibleRows.filter((row) => row.kind === 'packet').length,
-        [visibleRows],
-    )
+    const tableRowCount = summaries.mode === 'history' ? summaries.rowCount : visibleLiveRows.length
+    const totalPacketCount = summaries.totalRowCount
+    const visiblePacketCount =
+        summaries.mode === 'history'
+            ? summaries.packetRowCount
+            : visibleLiveRows.filter((row) => row.kind === 'packet').length
     const maxTimeSeconds = useMemo(() => {
         if (!summaries.originTimestampNs) return 0
+        if (summaries.mode === 'history')
+            return summaries.lastTimestampNs
+                ? relativeSecondsNumber(summaries.lastTimestampNs, summaries.originTimestampNs)
+                : 0
         return summaries.rows.reduce((maximum, row) => {
             if (row.kind === 'gap') return maximum
             return Math.max(
@@ -77,7 +105,7 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 relativeSecondsNumber(row.summary.timestampNs, summaries.originTimestampNs!),
             )
         }, 0)
-    }, [summaries.originTimestampNs, summaries.rows])
+    }, [summaries.lastTimestampNs, summaries.mode, summaries.originTimestampNs, summaries.rows])
     const displayInterfaces = useMemo(
         () =>
             session.data?.source._tag === 'Live'
@@ -86,13 +114,15 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         [session.data],
     )
     const hasActiveFilter = filters.search.trim() !== '' || countAdvancedPacketFilters(filters) > 0
-    const emptyMessage = summaries.isPending
-        ? 'Waiting for packet summaries...'
-        : hasActiveFilter && visiblePacketCount === 0
-          ? 'No packets match the current filters.'
-          : session.data?.state === 'running' || session.data?.state === 'starting'
-            ? 'Waiting for packets...'
-            : 'No packets were captured.'
+    const emptyMessage = summaries.error
+        ? 'Packet summaries could not be loaded.'
+        : summaries.isInitialLoading
+          ? 'Waiting for packet summaries...'
+          : hasActiveFilter && visiblePacketCount === 0
+            ? 'No packets match the current filters.'
+            : session.data?.state === 'running' || session.data?.state === 'starting'
+              ? 'Waiting for packets...'
+              : 'No packets were captured.'
 
     if (session.isPending) {
         return (
@@ -109,24 +139,44 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         )
     }
 
-    function handleSelect(row: Extract<SummaryRow, { kind: 'packet' }>) {
-        setSelected(row)
+    function handleSelect(row: Extract<SummaryRow, { kind: 'packet' }>, index: number) {
+        setSelected({ row, index })
         setFollowing(false)
     }
     function updateFilters(next: PacketDisplayFilters) {
         setFilters(next)
+        if (terminal) {
+            setSelected(undefined)
+            setNodeSelection(undefined)
+            return
+        }
         if (
             selected &&
             !filterPacketRows(summaries.rows, next, summaries.originTimestampNs).some(
                 (row) =>
-                    row.kind === 'packet' && packetKey(row.summary) === packetKey(selected.summary),
+                    row.kind === 'packet' &&
+                    packetKey(row.summary) === packetKey(selected.row.summary),
             )
         ) {
             setSelected(undefined)
             setNodeSelection(undefined)
         }
     }
-    const selectedKey = selected ? packetKey(selected.summary) : undefined
+    const selectedKey = selected ? packetKey(selected.row.summary) : undefined
+    const liveSelectedIndex =
+        selected && summaries.mode === 'live'
+            ? visibleLiveRows.findIndex(
+                  (row) =>
+                      row.kind === 'packet' &&
+                      packetKey(row.summary) === packetKey(selected.row.summary),
+              )
+            : -1
+    const selectedIndex =
+        summaries.mode === 'history'
+            ? selected?.index
+            : liveSelectedIndex >= 0
+              ? liveSelectedIndex
+              : undefined
     const selectedNode =
         selectedKey && nodeSelection?.packet === selectedKey ? nodeSelection.index : undefined
     const selectNode = (index: number) =>
@@ -162,14 +212,22 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                         <ResizablePanelGroup orientation="horizontal">
                             <ResizablePanel defaultSize="74%" minSize="45%">
                                 <PacketTable
-                                    rows={visibleRows}
+                                    rowCount={tableRowCount}
+                                    packetCount={visiblePacketCount}
+                                    getRow={getTableRow}
                                     originTimestampNs={summaries.originTimestampNs}
                                     selectedKey={selectedKey}
+                                    selectedIndex={selectedIndex}
                                     onSelect={handleSelect}
-                                    following={following}
+                                    following={!terminal && following}
+                                    canFollow={!terminal}
                                     onFollowingChange={setFollowing}
                                     onPauseFollowing={() => setFollowing(false)}
+                                    onVisibleRangeChange={summaries.requestRange}
+                                    loadError={summaries.error}
+                                    onRetry={() => void summaries.retry()}
                                     emptyMessage={emptyMessage}
+                                    datasetKey={summaries.datasetKey}
                                 />
                             </ResizablePanel>
                             <ResizableHandle />
@@ -211,14 +269,22 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
             <div className="flex min-h-0 flex-1 flex-col md:hidden">
                 <div className="min-h-0 flex-3">
                     <PacketTable
-                        rows={visibleRows}
+                        rowCount={tableRowCount}
+                        packetCount={visiblePacketCount}
+                        getRow={getTableRow}
                         originTimestampNs={summaries.originTimestampNs}
                         selectedKey={selectedKey}
+                        selectedIndex={selectedIndex}
                         onSelect={handleSelect}
-                        following={following}
+                        following={!terminal && following}
+                        canFollow={!terminal}
                         onFollowingChange={setFollowing}
                         onPauseFollowing={() => setFollowing(false)}
+                        onVisibleRangeChange={summaries.requestRange}
+                        loadError={summaries.error}
+                        onRetry={() => void summaries.retry()}
                         emptyMessage={emptyMessage}
+                        datasetKey={summaries.datasetKey}
                     />
                 </div>
                 <Tabs

@@ -10,7 +10,9 @@ const program = Effect.gen(function* () {
     yield* Effect.log(`Starting server in ${config.mode} mode on port ${config.port}`)
     const server = yield* startServer(config)
     yield* Effect.log(`Listening on ${server.address}`)
-    yield* Effect.never
+    yield* Effect.never.pipe(
+        Effect.ensuring(server.close.pipe(Effect.catchAll((error) => Effect.logError(error)))),
+    )
 })
 
-NodeRuntime.runMain(Effect.scoped(program))
+NodeRuntime.runMain(program)

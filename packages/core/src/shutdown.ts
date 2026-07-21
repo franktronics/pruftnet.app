@@ -4,6 +4,7 @@ import { Context, Data, Effect, Layer } from 'effect'
 import { CaptureCatalog } from './capture/catalog'
 import { ExportScheduler } from './capture/export-scheduler'
 import { CaptureSessionManager } from './capture/manager'
+import { RealtimeHub } from './realtime/hub'
 
 export class ShutdownError extends Data.TaggedError('ShutdownError')<{
     readonly message: string
@@ -21,6 +22,7 @@ export interface ShutdownCoordinatorService {
     readonly status: () => Effect.Effect<ShutdownStatus, ShutdownError>
     readonly shutdownDesktop: () => Effect.Effect<void, ShutdownError>
     readonly shutdownServer: () => Effect.Effect<void, ShutdownError>
+    readonly closeRealtime: () => Effect.Effect<void>
 }
 
 export class ShutdownCoordinator extends Context.Tag('@repo/core/ShutdownCoordinator')<
@@ -33,6 +35,7 @@ export class ShutdownCoordinator extends Context.Tag('@repo/core/ShutdownCoordin
             const catalog = yield* CaptureCatalog
             const manager = yield* CaptureSessionManager
             const exports = yield* ExportScheduler
+            const realtime = yield* RealtimeHub
             const mutex = yield* Effect.makeSemaphore(1)
             let shuttingDown = false
             let completed = false
@@ -100,6 +103,7 @@ export class ShutdownCoordinator extends Context.Tag('@repo/core/ShutdownCoordin
                 status,
                 shutdownDesktop: () => run('desktop'),
                 shutdownServer: () => run('server'),
+                closeRealtime: () => realtime.close,
             })
         }),
     )

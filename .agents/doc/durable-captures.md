@@ -30,8 +30,9 @@ foreign keys, and a five-second busy timeout, runs Drizzle migrations, checks da
 reconciles interrupted records with pcapng files, and only then exposes RPC/HTTP.
 
 SQLite contains capture sessions, committed segment generations and offsets, one export artifact
-cache record per capture and format, compact statistics samples, summary cursors, summaries, and
-events. Packet data remains in pcapng. UInt64 values are stored and compared as decimal text.
+cache record per capture and format, compact statistics samples, summary cursors, dense summary
+indexes, summaries, and events. Packet data remains in pcapng. UInt64 values are stored and compared
+as decimal text.
 
 Capture states are:
 
@@ -45,6 +46,27 @@ stopped|failed|interrupted -> deleting -> deleted
 The database row and permanent spool directories exist before C++ starts. The worker receives the
 capture ID and canonical segment directory explicitly. Recovery validates each complete pcapng block,
 truncates only an interrupted partial tail, preserves unknown files, and never restarts live capture.
+
+## Historical summary index
+
+Every persisted summary receives a zero-based, capture-local `row_index`. The repository assigns
+indexes transactionally with the summary cursor and `summary_count`, after sorting and removing
+overlapping or duplicate cursor batches. This keeps the index dense across normal ingestion,
+retries, shutdown synchronization, and recovery. The migration backfills existing captures in
+numeric cursor order and derives their stored summary counts.
+
+`GetPacketSummaryManifest` returns the immutable capture revision, logical row count, timestamp
+bounds, completion state, and gap state. `ReadPacketSummaryRange` addresses rows by absolute logical
+index. Unfiltered reads seek through the `(capture_id, row_index)` index and never use an
+increasing SQL `OFFSET`, so a final-page jump has the same access pattern as an initial-page read.
+
+A historical filter is materialized once as a compact ordered array of matching `row_index` values.
+Subsequent ranges slice that array and seek the primary summary index. These derived indexes are
+ephemeral and authoritative data remains in SQLite. The process keeps at most 16 indexes and 16 MiB
+of index data; eviction only causes a later filter to be rebuilt.
+
+Live capture synchronization remains cursor-based. Dense row indexes are the read model for
+terminal history navigation, not a replacement for durable ingestion cursors.
 
 ## Exports
 
@@ -60,7 +82,8 @@ on backend restart.
 
 Database segment leases protect a snapshot while it is encoded. During an active ring capture, C++
 also leases the selected generations so retention cannot evict them. These leases are transient and
-startup clears any counts left by a crashed process.
+startup clears any counts left by a crashed process. Deferred capture deletion is finalized only
+after every artifact preparation and destination delivery for that capture has ended.
 
 - pcapng supports one or multiple interfaces. Segment headers are validated and a single canonical
   section is written; segments are never blindly concatenated.
@@ -80,13 +103,17 @@ startup clears any counts left by a crashed process.
 The shutdown coordinator first rejects new mutations. Desktop confirms stopping an active capture
 and cancelling active artifact preparation; a failure keeps the app open. Server stops the active
 capture and interrupts artifact preparation. Workers have a 30-second coordinated shutdown bound.
-HTTP and files close before SQLite checkpoints and closes; the instance lock is released last by the
-Effect scope.
+After successful capture/export finalization, HTTP stops accepting new connections without awaiting
+open responses. The realtime hub then publishes shutdown and closes its bounded subscriptions, open
+NDJSON responses end, and HTTP closure is awaited. Files then close before SQLite checkpoints and
+closes; the instance lock is released last by the Effect scope.
 
 ## UI recovery
 
 `/captures` is the retained-session ledger. `/` redirects to an active capture when one exists, and
 `/capture/:captureId` reloads backend state. Stored summaries, events, final statistics, and compact
-statistics samples rebuild the workspace independently of polling frequency. Packet detail requests
+statistics samples rebuild the workspace after renderer reload or stream reconnection. The client
+subscribes before snapshot reconciliation, buffers concurrent notifications, and re-reads durable
+cursors after a sequence gap. Packet detail requests
 for inactive sessions stream the requested packet from the validated pcapng segment and run the same
 native parser used during live capture, including after a full backend restart.

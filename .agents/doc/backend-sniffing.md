@@ -4,7 +4,11 @@ The canonical capture architecture, failure model, statistics, retention, and sh
 
 `packages/core` owns the Effect service used by server and desktop layers. The service supervises `pruftnet_capture_worker`, keeps lifecycle handlers thin, validates complete 128-bit capture identities, and maps expected native failures into shared schema-backed errors. It does not use `Effect.runPromise` inside domain services.
 
-Effect RPC is the control/query plane for lifecycle, interfaces, capabilities, sessions, summaries, registry, statistics, and events. Selected packet detail uses the binary HTTP route:
+Effect RPC is the control/query plane for lifecycle, interfaces, capabilities, sessions, summaries,
+registry, statistics, and events. The same HTTP/NDJSON protocol exposes a bounded application stream
+and a capture-scoped stream; SQLite and cursor queries remain authoritative. The backend supervisor,
+not connected clients, is the sole native summary/event journal drainer. Selected packet detail uses
+the binary HTTP route:
 
 ```text
 GET /capture/:captureId/packets/:packetId

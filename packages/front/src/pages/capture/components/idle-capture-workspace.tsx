@@ -14,6 +14,7 @@ import {
 } from '#front/pages/capture/model/packet-filters'
 
 const ignorePacket = () => undefined
+const emptyPacketRow = () => undefined
 
 export function IdleCaptureWorkspace() {
     const [filters, setFilters] = useState<PacketDisplayFilters>(emptyPacketDisplayFilters)
@@ -32,12 +33,15 @@ export function IdleCaptureWorkspace() {
                         <ResizablePanelGroup orientation="horizontal">
                             <ResizablePanel defaultSize="74%" minSize="45%">
                                 <PacketTable
-                                    rows={[]}
+                                    rowCount={0}
+                                    packetCount={0}
+                                    getRow={emptyPacketRow}
                                     onSelect={ignorePacket}
                                     following
                                     onFollowingChange={ignorePacket}
                                     onPauseFollowing={ignorePacket}
                                     emptyMessage="Select an interface and start capture to collect packets."
+                                    datasetKey="idle"
                                 />
                             </ResizablePanel>
                             <ResizableHandle />
@@ -63,12 +67,15 @@ export function IdleCaptureWorkspace() {
             <div className="flex min-h-0 flex-1 flex-col md:hidden">
                 <div className="min-h-0 flex-[3]">
                     <PacketTable
-                        rows={[]}
+                        rowCount={0}
+                        packetCount={0}
+                        getRow={emptyPacketRow}
                         onSelect={ignorePacket}
                         following
                         onFollowingChange={ignorePacket}
                         onPauseFollowing={ignorePacket}
                         emptyMessage="Select an interface and start capture."
+                        datasetKey="idle"
                     />
                 </div>
                 <Tabs

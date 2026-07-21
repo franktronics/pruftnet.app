@@ -1,59 +1,68 @@
-import { RpcClient } from '@effect/rpc'
 import {
-    CaptureRpcs,
     DesktopExportDestination,
     ServerExportDestination,
     type ExportFormat,
     type LiveCaptureSource,
+    type PacketSummaryFilter,
     ReplayCaptureSource,
 } from '@repo/shared/capture'
-import { Effect } from 'effect'
 
-import { RpcClientLive } from '#front/config/rpc-client'
-import { runEffectPromise } from '#front/utils/run-effect-promise'
-
-const clientEffect = RpcClient.make(CaptureRpcs).pipe(Effect.provide(RpcClientLive))
-
-async function call<A>(
-    use: (client: Effect.Effect.Success<typeof clientEffect>) => Effect.Effect<A, unknown>,
-) {
-    const program = Effect.flatMap(clientEffect, use).pipe(
-        Effect.scoped,
-        Effect.provide(RpcClientLive),
-    )
-    return runEffectPromise(program)
-}
+import { callRpc } from '#front/config/effect-runtime'
 
 export const captureClient = {
-    interfaces: () => call((client) => client.ListCaptureInterfaces()),
+    interfaces: () => callRpc((client) => client.ListCaptureInterfaces()),
     capabilities: (name: string, monitorMode: boolean) =>
-        call((client) => client.GetCaptureInterfaceCapabilities({ name, monitorMode })),
-    session: (captureId: string) => call((client) => client.GetCaptureSession({ captureId })),
+        callRpc((client) => client.GetCaptureInterfaceCapabilities({ name, monitorMode })),
+    session: (captureId: string) => callRpc((client) => client.GetCaptureSession({ captureId })),
     startReplay: (fileId: string) =>
-        call((client) => client.StartCapture({ source: new ReplayCaptureSource({ fileId }) })),
-    startLive: (source: LiveCaptureSource) => call((client) => client.StartCapture({ source })),
-    stop: (captureId: string) => call((client) => client.StopCapture({ captureId })),
-    stats: (captureId: string) => call((client) => client.GetCaptureStats({ captureId })),
+        callRpc((client) => client.StartCapture({ source: new ReplayCaptureSource({ fileId }) })),
+    startLive: (source: LiveCaptureSource) => callRpc((client) => client.StartCapture({ source })),
+    stop: (captureId: string) => callRpc((client) => client.StopCapture({ captureId })),
+    stats: (captureId: string) => callRpc((client) => client.GetCaptureStats({ captureId })),
     statSamples: (captureId: string) =>
-        call((client) => client.ListCaptureStatSamples({ captureId, limit: 1_000 })),
+        callRpc((client) => client.ListCaptureStatSamples({ captureId, limit: 1_000 })),
     summaries: (captureId: string, afterCursor?: string) =>
-        call((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 })),
+        callRpc((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 })),
+    summaryManifest: (
+        captureId: string,
+        filter: PacketSummaryFilter | null,
+        signal?: AbortSignal,
+    ) => callRpc((client) => client.GetPacketSummaryManifest({ captureId, filter }), { signal }),
+    summaryRange: (
+        captureId: string,
+        revision: string,
+        filter: PacketSummaryFilter | null,
+        startIndex: number,
+        limit: number,
+        signal?: AbortSignal,
+    ) =>
+        callRpc(
+            (client) =>
+                client.ReadPacketSummaryRange({
+                    captureId,
+                    revision,
+                    filter,
+                    startIndex,
+                    limit,
+                }),
+            { signal },
+        ),
     events: (captureId: string, afterCursor?: string) =>
-        call((client) => client.ReadCaptureEvents({ captureId, afterCursor, limit: 512 })),
+        callRpc((client) => client.ReadCaptureEvents({ captureId, afterCursor, limit: 512 })),
     registry: (registryRevision: string) =>
-        call((client) => client.GetRegistrySnapshot({ registryRevision })),
-    captures: () => call((client) => client.ListCaptures()),
-    capture: (captureId: string) => call((client) => client.GetCapture({ captureId })),
-    activeCapture: () => call((client) => client.GetActiveCapture()),
-    openCapture: (captureId: string) => call((client) => client.OpenCapture({ captureId })),
-    deleteCapture: (captureId: string) => call((client) => client.DeleteCapture({ captureId })),
+        callRpc((client) => client.GetRegistrySnapshot({ registryRevision })),
+    captures: () => callRpc((client) => client.ListCaptures()),
+    capture: (captureId: string) => callRpc((client) => client.GetCapture({ captureId })),
+    activeCapture: () => callRpc((client) => client.GetActiveCapture()),
+    openCapture: (captureId: string) => callRpc((client) => client.OpenCapture({ captureId })),
+    deleteCapture: (captureId: string) => callRpc((client) => client.DeleteCapture({ captureId })),
     createExport: (input: {
         captureId: string
         format: ExportFormat
         destinationLabel: string
         destinationToken?: string
     }) =>
-        call((client) =>
+        callRpc((client) =>
             client.CreateExport({
                 captureId: input.captureId,
                 format: input.format,
@@ -65,5 +74,5 @@ export const captureClient = {
                     : new ServerExportDestination(),
             }),
         ),
-    exportJobs: () => call((client) => client.ListExportJobs()),
+    exportJobs: () => callRpc((client) => client.ListExportJobs()),
 }

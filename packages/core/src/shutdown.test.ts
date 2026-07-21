@@ -5,6 +5,7 @@ import { CaptureCatalog } from './capture/catalog'
 import { ExportScheduler } from './capture/export-scheduler'
 import { CaptureSessionManager } from './capture/manager'
 import { ShutdownCoordinator } from './shutdown'
+import { RealtimeHub } from './realtime/hub'
 
 function testLayer() {
     const calls = { stop: 0, cancelAll: 0, interruptAll: 0 }
@@ -27,6 +28,8 @@ function testLayer() {
             }),
         session: () => Effect.die('unused'),
         summaries: () => Effect.die('unused'),
+        summaryManifest: () => Effect.die('unused'),
+        summaryRange: () => Effect.die('unused'),
         registry: () => Effect.die('unused'),
         detail: () => Effect.die('unused'),
         stats: () => Effect.die('unused'),
@@ -50,6 +53,7 @@ function testLayer() {
         Layer.succeed(CaptureCatalog, catalog),
         Layer.succeed(CaptureSessionManager, manager),
         Layer.succeed(ExportScheduler, scheduler),
+        RealtimeHub.layer,
     )
     return { calls, layer: ShutdownCoordinator.layer.pipe(Layer.provide(dependencies)) }
 }

@@ -7,8 +7,11 @@ import {
     DecimalString,
     PacketSummaryBatch,
     PacketSummaryColumn,
+    PacketSummaryFilter,
+    PacketSummaryManifestRequest,
     ReplayCaptureSource,
     ReadPacketSummariesRequest,
+    ReadPacketSummaryRangeRequest,
     StartCaptureRequest,
 } from './schema'
 
@@ -108,6 +111,58 @@ describe('capture schemas', () => {
         }
     })
 
+    test('bounds virtual packet summary manifests and ranges', () => {
+        const filter = new PacketSummaryFilter({
+            search: '',
+            minRelativeTimestampNs: null,
+            maxRelativeTimestampNs: null,
+            protocolIds: [],
+            interfaceIds: [],
+            minWireLength: null,
+            maxWireLength: null,
+            parseConditions: ['complete'],
+            source: '',
+            destination: '',
+        })
+        expect(decode(PacketSummaryManifestRequest, { captureId, filter })).toMatchObject({
+            captureId,
+        })
+        expect(
+            decode(ReadPacketSummaryRangeRequest, {
+                captureId,
+                revision: precisionSafeDecimal,
+                filter,
+                startIndex: Number.MAX_SAFE_INTEGER,
+                limit: 2048,
+            }),
+        ).toMatchObject({
+            revision: precisionSafeDecimal,
+            startIndex: Number.MAX_SAFE_INTEGER,
+            limit: 2048,
+        })
+        expectRejected(ReadPacketSummaryRangeRequest, {
+            captureId,
+            revision: '0',
+            filter: null,
+            startIndex: -1,
+            limit: 1024,
+        })
+        expectRejected(ReadPacketSummaryRangeRequest, {
+            captureId,
+            revision: '0',
+            filter: null,
+            startIndex: 0,
+            limit: 2049,
+        })
+        expectRejected(PacketSummaryManifestRequest, {
+            captureId,
+            filter: {
+                ...filter,
+                protocolIds: Array.from({ length: 257 }, (_, index) => index + 1),
+            },
+        })
+    })
+
     test('bounds packet summary column values', () => {
         expect(
             decode(PacketSummaryColumn, { key: 'info', value: 'x'.repeat(256) }).value,
@@ -125,6 +180,8 @@ describe('capture RPC contract', () => {
             'StopCapture',
             'GetCaptureSession',
             'ReadPacketSummaries',
+            'GetPacketSummaryManifest',
+            'ReadPacketSummaryRange',
             'GetRegistrySnapshot',
             'GetCaptureStats',
             'ListCaptureStatSamples',

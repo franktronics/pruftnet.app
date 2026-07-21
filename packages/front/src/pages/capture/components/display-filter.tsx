@@ -35,6 +35,7 @@ export function DisplayFilter({
 }) {
     const [advancedOpen, setAdvancedOpen] = useState(false)
     const activeCount = countAdvancedPacketFilters(filters)
+    const filtering = value.trim() !== '' || activeCount > 0
     return (
         <div className="bg-background flex h-10 shrink-0 items-center gap-2.5 border-b px-3">
             <Search className="text-muted-foreground size-4" />
@@ -48,7 +49,9 @@ export function DisplayFilter({
             />
             {totalCount > 0 ? (
                 <span className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:inline">
-                    {visibleCount.toLocaleString()} / {totalCount.toLocaleString()}
+                    {filtering
+                        ? `${visibleCount.toLocaleString()} / ${totalCount.toLocaleString()}`
+                        : totalCount.toLocaleString()}
                 </span>
             ) : null}
             {value ? (

@@ -22,18 +22,20 @@ import {
     type DatabaseLayerOptions,
 } from './storage'
 import { ShutdownCoordinator } from './shutdown'
+import { RealtimeHandlers, RealtimeHub } from './realtime'
 
 export interface AppLayerOptions
     extends AppDataPathsOptions, ExportDestinationOptions, DatabaseLayerOptions {}
 
 export function makeAppLayer(options: AppLayerOptions) {
+    const realtime = RealtimeHub.layer
     const paths = AppDataPaths.layer(options)
     const lock = InstanceLock.layer.pipe(Layer.provideMerge(paths))
     const database = Database.layerWith(options).pipe(Layer.provideMerge(lock))
     const captureRepository = CaptureSessionRepository.layer.pipe(Layer.provideMerge(database))
     const exportRepository = ExportArtifactRepository.layer.pipe(Layer.provideMerge(database))
     const repositories = Layer.mergeAll(captureRepository, exportRepository)
-    const captureDomain = Layer.mergeAll(repositories, CaptureServiceLive)
+    const captureDomain = Layer.mergeAll(repositories, CaptureServiceLive, realtime)
     const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(captureDomain))
     const recovery = CaptureRecovery.layer.pipe(Layer.provideMerge(captureDomain))
     const manager = CaptureSessionManager.layer.pipe(
@@ -52,5 +54,6 @@ export function makeAppLayer(options: AppLayerOptions) {
     const handlers = CaptureHandlers.pipe(
         Layer.provide(Layer.mergeAll(manager, catalog, scheduler, shutdown)),
     )
-    return Layer.mergeAll(NetworkInterfaceLive, handlers, shutdown)
+    const realtimeHandlers = RealtimeHandlers.pipe(Layer.provide(Layer.merge(manager, realtime)))
+    return Layer.mergeAll(NetworkInterfaceLive, handlers, realtimeHandlers, shutdown, realtime)
 }

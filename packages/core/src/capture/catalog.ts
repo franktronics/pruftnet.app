@@ -13,6 +13,7 @@ import {
 import { Context, Effect, Layer, Schema } from 'effect'
 
 import { AppDataPaths } from '#core/storage'
+import { RealtimeHub } from '#core/realtime/hub'
 
 import {
     CaptureRepositoryError,
@@ -72,6 +73,7 @@ export class CaptureCatalog extends Context.Tag('@repo/core/capture/CaptureCatal
         Effect.gen(function* () {
             const repository = yield* CaptureSessionRepository
             const paths = yield* AppDataPaths
+            const realtime = yield* RealtimeHub
             const mapRepository = <A>(
                 effect: Effect.Effect<A, CaptureRepositoryError | StoredCaptureNotFound>,
             ) => effect.pipe(Effect.mapError(catalogError))
@@ -96,7 +98,9 @@ export class CaptureCatalog extends Context.Tag('@repo/core/capture/CaptureCatal
                             retryable: true,
                         }),
                 })
-                return yield* mapRepository(repository.finalizeDelete(captureId))
+                const deleted = yield* mapRepository(repository.finalizeDelete(captureId))
+                yield* realtime.publishCaptureDeleted(captureId)
+                return deleted
             })
             const retained = yield* repository.list().pipe(Effect.mapError(catalogError))
             for (const capture of retained.captures) {
@@ -125,6 +129,9 @@ export class CaptureCatalog extends Context.Tag('@repo/core/capture/CaptureCatal
                 }),
                 delete: Effect.fn('CaptureCatalog.delete')(function* (captureId) {
                     const capture = yield* mapRepository(repository.requestDelete(captureId))
+                    if (capture.state !== 'deleted') {
+                        yield* realtime.publishCaptureRecord(capture)
+                    }
                     return capture.state === 'deleting'
                         ? yield* finalizeDeferred(captureId)
                         : capture
