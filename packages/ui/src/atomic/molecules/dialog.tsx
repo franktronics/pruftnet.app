@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { cn } from '@repo/utils'
 import { Button } from '../atoms/button'
 import { X } from 'lucide-react'
+import { modalOverlayClassName } from './modal-overlay'
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
     return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -25,10 +26,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     return (
         <DialogPrimitive.Backdrop
             data-slot="dialog-overlay"
-            className={cn(
-                'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/80 duration-100 supports-backdrop-filter:backdrop-blur-xs',
-                className,
-            )}
+            className={cn(modalOverlayClassName, className)}
             {...props}
         />
     )
