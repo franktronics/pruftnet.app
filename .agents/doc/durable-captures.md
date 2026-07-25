@@ -65,8 +65,12 @@ Subsequent ranges slice that array and seek the primary summary index. These der
 ephemeral and authoritative data remains in SQLite. The process keeps at most 16 indexes and 16 MiB
 of index data; eviction only causes a later filter to be rebuilt.
 
-Live capture synchronization remains cursor-based. Dense row indexes are the read model for
-terminal history navigation, not a replacement for durable ingestion cursors.
+Live capture synchronization remains cursor-based at the API boundary. When the supplied cursor is
+present in durable storage, the repository resolves its dense row index through the
+`(capture_id, cursor)` primary key and continues through `(capture_id, row_index)`. This avoids
+sorting decimal-text cursors on every live page. An unknown cursor retains the decimal comparison
+fallback so gap and recovery callers preserve the existing exclusive-cursor semantics. Dense row
+indexes remain a read model, not a replacement for durable ingestion cursors.
 
 ## Exports
 

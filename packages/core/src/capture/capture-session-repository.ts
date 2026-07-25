@@ -14,7 +14,19 @@ import {
     PacketSummaryManifest,
     type DurableCaptureState,
 } from '@repo/shared/capture'
-import { and, asc, desc, eq, gte, inArray, ne, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    gt,
+    gte,
+    inArray,
+    ne,
+    sql,
+    type AnyColumn,
+    type SQL,
+} from 'drizzle-orm'
 import { Clock, Context, Data, Effect, Layer, Schema } from 'effect'
 
 import {
@@ -962,17 +974,39 @@ export class CaptureSessionRepository extends Context.Tag(
                 readSummaries: Effect.fn('CaptureSessionRepository.readSummaries')(
                     function* (captureId, afterCursor, limit) {
                         const rows = yield* database
-                            .read('read capture summaries', (db) =>
-                                db
+                            .read('read capture summaries', (db) => {
+                                const cursor = afterCursor ?? '0'
+                                const previous = db
+                                    .select({ rowIndex: captureSummaries.rowIndex })
+                                    .from(captureSummaries)
+                                    .where(
+                                        and(
+                                            eq(captureSummaries.captureId, captureId),
+                                            eq(captureSummaries.cursor, cursor),
+                                        ),
+                                    )
+                                    .get()
+                                if (previous) {
+                                    return db
+                                        .select({ value: captureSummaries.summaryJson })
+                                        .from(captureSummaries)
+                                        .where(
+                                            and(
+                                                eq(captureSummaries.captureId, captureId),
+                                                gt(captureSummaries.rowIndex, previous.rowIndex),
+                                            ),
+                                        )
+                                        .orderBy(asc(captureSummaries.rowIndex))
+                                        .limit(limit)
+                                        .all()
+                                }
+                                return db
                                     .select({ value: captureSummaries.summaryJson })
                                     .from(captureSummaries)
                                     .where(
                                         and(
                                             eq(captureSummaries.captureId, captureId),
-                                            decimalGreaterThan(
-                                                captureSummaries.cursor,
-                                                afterCursor ?? '0',
-                                            ),
+                                            decimalGreaterThan(captureSummaries.cursor, cursor),
                                         ),
                                     )
                                     .orderBy(
@@ -980,8 +1014,8 @@ export class CaptureSessionRepository extends Context.Tag(
                                         asc(captureSummaries.cursor),
                                     )
                                     .limit(limit)
-                                    .all(),
-                            )
+                                    .all()
+                            })
                             .pipe(
                                 Effect.mapError((cause) =>
                                     repositoryError('read capture summaries', cause),

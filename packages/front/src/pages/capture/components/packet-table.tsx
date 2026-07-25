@@ -1,15 +1,17 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { PointerEvent } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
 import { Button } from '@repo/ui/atoms'
 
-import type { SummaryRow } from '#front/pages/capture/hooks/use-packet-summaries'
+import {
+    PACKET_SUMMARY_PAGE_SIZE,
+    type SummaryRow,
+} from '#front/pages/capture/hooks/use-packet-summaries'
 import {
     PACKET_ROW_HEIGHT,
     packetKey,
     relativePacketTime,
-    summaryColumn,
 } from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 
@@ -26,6 +28,74 @@ const columns = [
 const initialColumnWidths: number[] = columns.map((column) => column.width)
 const initialTableWidth = initialColumnWidths.reduce((total, width) => total + width, 0)
 const noop = () => undefined
+
+const PacketDataRow = memo(function PacketDataRow({
+    summary,
+    index,
+    start,
+    size,
+    gridStyle,
+    selected,
+    originTimestampNs,
+    onSelect,
+}: {
+    summary: Extract<SummaryRow, { kind: 'packet' }>['summary']
+    index: number
+    start: number
+    size: number
+    gridStyle: CSSProperties
+    selected: boolean
+    originTimestampNs?: string
+    onSelect: (row: Extract<SummaryRow, { kind: 'packet' }>, index: number) => void
+}) {
+    const columnValues = useMemo(() => {
+        const values = new Map<string, string>()
+        for (const column of summary.columns) values.set(column.key, column.value)
+        return values
+    }, [summary])
+    const key = packetKey(summary)
+    const relativeTime = originTimestampNs
+        ? relativePacketTime(summary.timestampNs, originTimestampNs)
+        : '0.000000'
+
+    return (
+        <div
+            id={`packet-row-${key}`}
+            role="row"
+            aria-rowindex={index + 1}
+            aria-selected={selected}
+            onClick={() => onSelect({ kind: 'packet', summary }, index)}
+            className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
+            style={{
+                ...gridStyle,
+                height: size,
+                transform: `translateY(${start}px)`,
+            }}
+        >
+            <span role="gridcell" className="truncate px-2">
+                {summary.key.packetId}
+            </span>
+            <span role="gridcell" className="truncate px-2">
+                {relativeTime}
+            </span>
+            <span role="gridcell" className="truncate px-2">
+                {columnValues.get('source') ?? ''}
+            </span>
+            <span role="gridcell" className="truncate px-2">
+                {columnValues.get('destination') ?? ''}
+            </span>
+            <span role="gridcell" className="truncate px-2 font-sans font-medium">
+                {columnValues.get('protocol') ?? ''}
+            </span>
+            <span role="gridcell" className="truncate px-2 text-right">
+                {columnValues.get('length') || summary.capturedLength}
+            </span>
+            <span role="gridcell" className="truncate px-2 font-sans">
+                {columnValues.get('info') ?? ''}
+            </span>
+        </div>
+    )
+})
 
 export function PacketTable({
     rowCount,
@@ -74,6 +144,7 @@ export function PacketTable({
     } | null>(null)
     const [columnWidths, setColumnWidths] = useState(initialColumnWidths)
     const pendingSelection = useRef<number | undefined>(undefined)
+    const reportedPageRange = useRef('')
     const virtualizer = useVirtualizer({
         count: rowCount,
         getScrollElement: () => scrollRef.current,
@@ -88,8 +159,12 @@ export function PacketTable({
     useLayoutEffect(() => {
         const first = virtualItems.at(0)?.index
         const last = virtualItems.at(-1)?.index
-        if (first !== undefined && last !== undefined) onVisibleRangeChange(first, last)
-    }, [onVisibleRangeChange, virtualItems])
+        if (first === undefined || last === undefined) return
+        const pageRange = `${datasetKey}:${Math.floor(first / PACKET_SUMMARY_PAGE_SIZE)}:${Math.floor(last / PACKET_SUMMARY_PAGE_SIZE)}`
+        if (reportedPageRange.current === pageRange) return
+        reportedPageRange.current = pageRange
+        onVisibleRangeChange(first, last)
+    }, [datasetKey, onVisibleRangeChange, virtualItems])
     useEffect(() => {
         virtualizer.scrollToIndex(0, { align: 'start' })
     }, [datasetKey, virtualizer])
@@ -151,10 +226,16 @@ export function PacketTable({
         onVisibleRangeChange(index, index)
     }
 
-    const gridStyle = {
-        gridTemplateColumns: columnWidths.map((width) => `${width}px`).join(' '),
-    }
-    const tableWidth = columnWidths.reduce((total, width) => total + width, 0)
+    const gridStyle = useMemo<CSSProperties>(
+        () => ({
+            gridTemplateColumns: columnWidths.map((width) => `${width}px`).join(' '),
+        }),
+        [columnWidths],
+    )
+    const tableWidth = useMemo(
+        () => columnWidths.reduce((total, width) => total + width, 0),
+        [columnWidths],
+    )
 
     function resizeColumn(index: number, change: number) {
         setColumnWidths((current) =>
@@ -379,53 +460,18 @@ export function PacketTable({
                                         Earlier packets are no longer retained
                                     </div>
                                 )
-                            const summary = row.summary
-                            const selected = packetKey(summary) === selectedKey
                             return (
-                                <div
+                                <PacketDataRow
                                     key={item.key}
-                                    id={`packet-row-${packetKey(summary)}`}
-                                    role="row"
-                                    aria-rowindex={item.index + 1}
-                                    aria-selected={selected}
-                                    onClick={() => onSelect(row, item.index)}
-                                    className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
-                                    style={{
-                                        ...gridStyle,
-                                        height: item.size,
-                                        transform: `translateY(${item.start}px)`,
-                                    }}
-                                >
-                                    <span role="gridcell" className="truncate px-2">
-                                        {summary.key.packetId}
-                                    </span>
-                                    <span role="gridcell" className="truncate px-2">
-                                        {originTimestampNs
-                                            ? relativePacketTime(
-                                                  summary.timestampNs,
-                                                  originTimestampNs,
-                                              )
-                                            : '0.000000'}
-                                    </span>
-                                    <span role="gridcell" className="truncate px-2">
-                                        {summaryColumn(summary, 'source')}
-                                    </span>
-                                    <span role="gridcell" className="truncate px-2">
-                                        {summaryColumn(summary, 'destination')}
-                                    </span>
-                                    <span
-                                        role="gridcell"
-                                        className="truncate px-2 font-sans font-medium"
-                                    >
-                                        {summaryColumn(summary, 'protocol')}
-                                    </span>
-                                    <span role="gridcell" className="truncate px-2 text-right">
-                                        {summaryColumn(summary, 'length') || summary.capturedLength}
-                                    </span>
-                                    <span role="gridcell" className="truncate px-2 font-sans">
-                                        {summaryColumn(summary, 'info')}
-                                    </span>
-                                </div>
+                                    summary={row.summary}
+                                    index={item.index}
+                                    start={item.start}
+                                    size={item.size}
+                                    gridStyle={gridStyle}
+                                    selected={packetKey(row.summary) === selectedKey}
+                                    originTimestampNs={originTimestampNs}
+                                    onSelect={onSelect}
+                                />
                             )
                         })}
                     </div>

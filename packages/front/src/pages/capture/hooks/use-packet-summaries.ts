@@ -5,14 +5,17 @@ import type {
     PacketSummaryRange,
 } from '@repo/shared/capture'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureKeys } from '#front/pages/capture/api/capture-queries'
+import {
+    estimatePacketSummaryRangeBytes,
+    packetSummaryPageCache,
+} from '#front/pages/capture/model/packet-summary-cache'
 
 export const PACKET_SUMMARY_PAGE_SIZE = 1_024
 export const MAX_PACKET_SUMMARIES = 50_000
-export const MAX_CACHED_HISTORY_PAGES = 12
 export type SummaryReadMode = 'history' | 'live'
 
 export type SummaryRow =
@@ -96,7 +99,11 @@ export function mergeSummaryBatch(
     }
 }
 
-type PacketSummaryReader = (captureId: string, afterCursor?: string) => Promise<PacketSummaryBatch>
+type PacketSummaryReader = (
+    captureId: string,
+    afterCursor: string | undefined,
+    signal: AbortSignal,
+) => Promise<PacketSummaryBatch>
 
 function abortedSummaryRequest() {
     return new DOMException('Packet summary request aborted', 'AbortError')
@@ -112,7 +119,7 @@ export async function readPacketSummaryState(
     let next = state
     while (!signal.aborted) {
         const previousCursor = next.cursor
-        const batch = await readBatch(captureId, previousCursor)
+        const batch = await readBatch(captureId, previousCursor, signal)
         if (signal.aborted) throw abortedSummaryRequest()
         if (batch.captureId !== captureId) throw new Error('Stale packet summary batch')
         next = mergeSummaryBatch(
@@ -137,18 +144,19 @@ export function packetSummaryPageStarts(
     startIndex: number,
     endIndex: number,
     rowCount: number,
-    prefetchPages = 1,
+    prefetchBefore = 1,
+    prefetchAfter = prefetchBefore,
 ): ReadonlyArray<number> {
     if (rowCount <= 0) return []
     const firstVisible = Math.max(0, Math.min(rowCount - 1, startIndex))
     const lastVisible = Math.max(firstVisible, Math.min(rowCount - 1, endIndex))
     const firstPage = Math.max(
         0,
-        Math.floor(firstVisible / PACKET_SUMMARY_PAGE_SIZE) - prefetchPages,
+        Math.floor(firstVisible / PACKET_SUMMARY_PAGE_SIZE) - prefetchBefore,
     )
     const lastPage = Math.min(
         Math.ceil(rowCount / PACKET_SUMMARY_PAGE_SIZE) - 1,
-        Math.floor(lastVisible / PACKET_SUMMARY_PAGE_SIZE) + prefetchPages,
+        Math.floor(lastVisible / PACKET_SUMMARY_PAGE_SIZE) + prefetchAfter,
     )
     return Array.from(
         { length: lastPage - firstPage + 1 },
@@ -160,12 +168,14 @@ interface SummaryVisibleRange {
     readonly datasetKey: string
     readonly startIndex: number
     readonly endIndex: number
+    readonly direction: 'backward' | 'forward' | 'idle'
 }
 
 const initialVisibleRange: SummaryVisibleRange = {
     datasetKey: '',
     startIndex: 0,
     endIndex: PACKET_SUMMARY_PAGE_SIZE - 1,
+    direction: 'idle',
 }
 
 function useLivePacketSummaries(captureId: string, enabled: boolean) {
@@ -204,6 +214,7 @@ function useHistoricalPacketSummaries(
     enabled: boolean,
 ) {
     const queryClient = useQueryClient()
+    const cacheOwnerId = useId()
     const rangeDatasetKey = `${captureId}:${JSON.stringify(filter)}`
     const [storedVisibleRange, setVisibleRange] = useState<SummaryVisibleRange>(initialVisibleRange)
     const visibleRange =
@@ -221,73 +232,124 @@ function useHistoricalPacketSummaries(
     const virtualRowCount = packetRowCount + gapOffset
     const packetStartIndex = Math.max(0, visibleRange.startIndex - gapOffset)
     const packetEndIndex = Math.max(packetStartIndex, visibleRange.endIndex - gapOffset)
-    const pageStarts = useMemo(
-        () => packetSummaryPageStarts(packetStartIndex, packetEndIndex, packetRowCount),
+    const visiblePageStarts = useMemo(
+        () => packetSummaryPageStarts(packetStartIndex, packetEndIndex, packetRowCount, 0),
         [packetEndIndex, packetRowCount, packetStartIndex],
     )
-    const pages = useQueries({
+    const surroundingPageStarts = useMemo(() => {
+        const before = visibleRange.direction === 'backward' ? 2 : 1
+        const after = visibleRange.direction === 'forward' ? 2 : 1
+        const visible = new Set(visiblePageStarts)
+        return packetSummaryPageStarts(
+            packetStartIndex,
+            packetEndIndex,
+            packetRowCount,
+            before,
+            after,
+        ).filter((startIndex) => !visible.has(startIndex))
+    }, [
+        packetEndIndex,
+        packetRowCount,
+        packetStartIndex,
+        visiblePageStarts,
+        visibleRange.direction,
+    ])
+    const revision = manifest.data?.revision
+    const cacheDatasetKey = `${rangeDatasetKey}:${revision ?? 'loading'}`
+    const queryForStart = (startIndex: number) => ({
+        queryKey: captureKeys.summaryRange(captureId, revision!, filter, startIndex),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+            captureClient.summaryRange(
+                captureId,
+                revision!,
+                filter,
+                startIndex,
+                Math.min(PACKET_SUMMARY_PAGE_SIZE, packetRowCount - startIndex),
+                signal,
+            ),
+        staleTime: Infinity,
+        gcTime: Infinity,
+    })
+    const visiblePages = useQueries({
         queries:
-            enabled && manifest.data
-                ? pageStarts.map((startIndex) => ({
-                      queryKey: captureKeys.summaryRange(
-                          captureId,
-                          manifest.data.revision,
-                          filter,
-                          startIndex,
-                      ),
-                      queryFn: ({ signal }: { signal: AbortSignal }) =>
-                          captureClient.summaryRange(
-                              captureId,
-                              manifest.data!.revision,
-                              filter,
-                              startIndex,
-                              Math.min(PACKET_SUMMARY_PAGE_SIZE, packetRowCount - startIndex),
-                              signal,
-                          ),
-                      staleTime: Infinity,
-                      gcTime: 60_000,
-                  }))
+            enabled && revision
+                ? visiblePageStarts.map((startIndex) => queryForStart(startIndex))
                 : [],
     })
+    const visiblePagesReady =
+        visiblePageStarts.length === 0 ||
+        visiblePages.every((page) => page.data !== undefined || page.isError)
+    const surroundingPages = useQueries({
+        queries:
+            enabled && revision && visiblePagesReady
+                ? surroundingPageStarts.map((startIndex) => queryForStart(startIndex))
+                : [],
+    })
+    const pageStarts = useMemo(
+        () => [...visiblePageStarts, ...surroundingPageStarts],
+        [surroundingPageStarts, visiblePageStarts],
+    )
     const pageData = useMemo(() => {
         const byStart = new Map<number, PacketSummaryRange>()
-        for (let index = 0; index < pageStarts.length; index++) {
-            const page = pages[index]?.data
-            if (page) byStart.set(pageStarts[index]!, page)
+        for (let index = 0; index < visiblePageStarts.length; index++) {
+            const page = visiblePages[index]?.data
+            if (page) byStart.set(visiblePageStarts[index]!, page)
+        }
+        for (let index = 0; index < surroundingPageStarts.length; index++) {
+            const page = surroundingPages[index]?.data
+            if (page) byStart.set(surroundingPageStarts[index]!, page)
         }
         return byStart
-    }, [pageStarts, pages])
-    const getPage = useCallback(
-        (startIndex: number) => {
-            const activePage = pageData.get(startIndex)
-            if (activePage) return activePage
-            const revision = manifest.data?.revision
-            if (!revision) return undefined
-            return queryClient.getQueryData<PacketSummaryRange>(
-                captureKeys.summaryRange(captureId, revision, filter, startIndex),
-            )
+    }, [surroundingPageStarts, surroundingPages, visiblePageStarts, visiblePages])
+
+    useEffect(() => {
+        const pinned = new Set(
+            enabled && revision
+                ? pageStarts.map((startIndex) => `${cacheDatasetKey}:${startIndex}`)
+                : [],
+        )
+        packetSummaryPageCache.setPinned(cacheOwnerId, pinned)
+    }, [cacheDatasetKey, cacheOwnerId, enabled, pageStarts, revision])
+
+    useEffect(
+        () => () => {
+            packetSummaryPageCache.releasePins(cacheOwnerId)
         },
-        [captureId, filter, manifest.data?.revision, pageData, queryClient],
+        [cacheOwnerId],
     )
 
     useEffect(() => {
-        if (!enabled) return
-        const timeout = window.setTimeout(() => {
-            const cached = queryClient
-                .getQueryCache()
-                .findAll({ queryKey: captureKeys.summaryRanges(captureId) })
-            let excess = cached.length - MAX_CACHED_HISTORY_PAGES
-            if (excess <= 0) return
-            const inactive = cached
-                .filter((query) => !query.isActive())
-                .sort((left, right) => left.state.dataUpdatedAt - right.state.dataUpdatedAt)
-            for (const query of inactive) {
-                if (excess-- <= 0) break
-                queryClient.removeQueries({ queryKey: query.queryKey, exact: true })
+        if (!revision) return
+        for (const [startIndex, page] of pageData) {
+            const id = `${cacheDatasetKey}:${startIndex}`
+            const queryKey = captureKeys.summaryRange(captureId, revision, filter, startIndex)
+            packetSummaryPageCache.register({
+                id,
+                datasetKey: cacheDatasetKey,
+                bytes: estimatePacketSummaryRangeBytes(page),
+                hasData: () => queryClient.getQueryData<PacketSummaryRange>(queryKey) !== undefined,
+                remove: () => queryClient.removeQueries({ queryKey, exact: true }),
+            })
+        }
+    }, [cacheDatasetKey, captureId, filter, pageData, queryClient, revision])
+
+    const getPage = useCallback(
+        (startIndex: number) => {
+            const id = `${cacheDatasetKey}:${startIndex}`
+            const activePage = pageData.get(startIndex)
+            if (activePage) {
+                packetSummaryPageCache.touch(id)
+                return activePage
             }
-        }, 0)
-        return () => window.clearTimeout(timeout)
-    }, [captureId, enabled, pageStarts, queryClient])
+            if (!revision) return undefined
+            const cached = queryClient.getQueryData<PacketSummaryRange>(
+                captureKeys.summaryRange(captureId, revision, filter, startIndex),
+            )
+            if (cached) packetSummaryPageCache.touch(id)
+            return cached
+        },
+        [cacheDatasetKey, captureId, filter, pageData, queryClient, revision],
+    )
 
     const getRow = useCallback(
         (index: number): SummaryRow | undefined => {
@@ -307,29 +369,54 @@ function useHistoricalPacketSummaries(
     )
     const requestRange = useCallback(
         (startIndex: number, endIndex: number) => {
+            const firstPacket = Math.max(0, startIndex - gapOffset)
+            const lastPacket = Math.max(firstPacket, endIndex - gapOffset)
+            const firstPage =
+                Math.floor(firstPacket / PACKET_SUMMARY_PAGE_SIZE) * PACKET_SUMMARY_PAGE_SIZE
+            const lastPage =
+                Math.floor(lastPacket / PACKET_SUMMARY_PAGE_SIZE) * PACKET_SUMMARY_PAGE_SIZE
             const next = {
                 datasetKey: rangeDatasetKey,
-                startIndex: Math.max(0, startIndex),
-                endIndex: Math.max(startIndex, endIndex),
+                startIndex: firstPage + gapOffset,
+                endIndex: Math.min(
+                    virtualRowCount - 1,
+                    lastPage + PACKET_SUMMARY_PAGE_SIZE - 1 + gapOffset,
+                ),
+                direction:
+                    firstPage > Math.max(0, visibleRange.startIndex - gapOffset)
+                        ? ('forward' as const)
+                        : firstPage < Math.max(0, visibleRange.startIndex - gapOffset)
+                          ? ('backward' as const)
+                          : visibleRange.direction,
             }
             setVisibleRange((current) =>
                 current.datasetKey === next.datasetKey &&
                 current.startIndex === next.startIndex &&
-                current.endIndex === next.endIndex
+                current.endIndex === next.endIndex &&
+                current.direction === next.direction
                     ? current
                     : next,
             )
         },
-        [rangeDatasetKey],
+        [
+            gapOffset,
+            rangeDatasetKey,
+            virtualRowCount,
+            visibleRange.direction,
+            visibleRange.startIndex,
+        ],
     )
     const retry = useCallback(() => {
         if (manifest.error) {
             void manifest.refetch()
             return
         }
-        for (const page of pages) if (page.error) void page.refetch()
-    }, [manifest, pages])
-    const rangeError = pages.find((page) => page.error)?.error
+        for (const page of visiblePages) if (page.error) void page.refetch()
+        for (const page of surroundingPages) if (page.error) void page.refetch()
+    }, [manifest, surroundingPages, visiblePages])
+    const rangeError =
+        visiblePages.find((page) => page.error)?.error ??
+        surroundingPages.find((page) => page.error)?.error
     const firstPageLoaded = packetRowCount === 0 || getPage(0) !== undefined
     const isInitialLoading =
         enabled && (manifest.isPending || (manifest.isSuccess && !firstPageLoaded))
@@ -344,7 +431,9 @@ function useHistoricalPacketSummaries(
         requestRange,
         error: manifest.error ?? rangeError,
         isInitialLoading,
-        isLoadingMore: !isInitialLoading && pages.some((page) => page.isFetching),
+        isLoadingMore:
+            !isInitialLoading &&
+            [...visiblePages, ...surroundingPages].some((page) => page.isFetching),
         retry,
         datasetKey: `${rangeDatasetKey}:${manifest.data?.revision ?? 'loading'}`,
     }

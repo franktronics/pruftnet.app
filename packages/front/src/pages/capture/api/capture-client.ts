@@ -21,8 +21,10 @@ export const captureClient = {
     stats: (captureId: string) => callRpc((client) => client.GetCaptureStats({ captureId })),
     statSamples: (captureId: string) =>
         callRpc((client) => client.ListCaptureStatSamples({ captureId, limit: 1_000 })),
-    summaries: (captureId: string, afterCursor?: string) =>
-        callRpc((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 })),
+    summaries: (captureId: string, afterCursor?: string, signal?: AbortSignal) =>
+        callRpc((client) => client.ReadPacketSummaries({ captureId, afterCursor, limit: 1024 }), {
+            signal,
+        }),
     summaryManifest: (
         captureId: string,
         filter: PacketSummaryFilter | null,

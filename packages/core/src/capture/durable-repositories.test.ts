@@ -156,6 +156,31 @@ describe('durable repositories', () => {
         expect(result.filteredRange.map((item) => item.cursor)).toEqual(['5'])
     })
 
+    test('continues live summary reads through the dense row index', async () => {
+        const layer = await durableLayer()
+        const result = await Effect.runPromise(
+            Effect.gen(function* () {
+                const captures = yield* CaptureSessionRepository
+                const captureId = 'e'.repeat(32)
+                yield* captures.create(captureId, source)
+                yield* captures.transition(captureId, 'capturing')
+                yield* captures.persistSummaries(captureId, [
+                    summary(captureId, '1'),
+                    summary(captureId, '2'),
+                    summary(captureId, '10'),
+                    summary(captureId, '11'),
+                ])
+                return {
+                    exactCursor: yield* captures.readSummaries(captureId, '2', 2),
+                    missingCursor: yield* captures.readSummaries(captureId, '3', 2),
+                }
+            }).pipe(Effect.provide(layer), Effect.scoped),
+        )
+
+        expect(result.exactCursor.map((item) => item.cursor)).toEqual(['10', '11'])
+        expect(result.missingCursor.map((item) => item.cursor)).toEqual(['10', '11'])
+    })
+
     test('leases an export snapshot until deferred capture deletion completes', async () => {
         const layer = await durableLayer()
         const result = await Effect.runPromise(

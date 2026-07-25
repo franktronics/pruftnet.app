@@ -29,6 +29,10 @@ bottom-edge rail.
 
 The application sidebar uses off-canvas collapse on desktop. Closing it removes the complete sidebar instead of retaining an icon rail. The titlebar or web-header trigger and `Cmd/Ctrl+B` remain available to reopen it. Electron titlebar offsets preserve native controls on macOS, Windows, and Linux.
 
+`/settings` owns application-level preferences. The first implemented controls cover appearance and
+the packet-list memory policy. Settings are renderer-local, persist across reloads, synchronize
+between same-origin tabs, and never alter durable capture files.
+
 ## Workspace
 
 The desktop layout is a nested resizable workspace:
@@ -58,7 +62,21 @@ bottom never requires traversing preceding pages.
 
 Rows revisit the shared range cache directly instead of waiting for the range to become an active
 query again. A cached viewport therefore renders before paint without flashing loading placeholders;
-only an evicted or never-read page returns to the loading state.
+only an evicted or never-read page returns to the loading state. Visible pages load before
+surrounding prefetch pages. Forward and backward movement retain an extra page in the active
+direction.
+
+Historical range retention uses a global byte-budgeted LRU rather than a fixed page count. Reading a
+page refreshes its recency, and every page belonging to the current viewport and its prefetch
+neighborhood is pinned until the viewport moves. Pinned pages may temporarily exceed the budget
+rather than disappear underneath the table. The cache owns range-query garbage collection;
+immutable range queries use an infinite TanStack `gcTime` and are removed only by the cache or
+authoritative capture invalidation.
+
+The automatic memory policy derives a conservative, 16 MiB-aligned budget from the renderer heap
+limit and coarse device-memory signal. Desktop is bounded to 128–512 MiB and server/browser mode to
+64–256 MiB. Advanced users may select a fixed 64, 128, 256, 512, or 1,024 MiB maximum. The Settings
+page exposes estimated retained bytes, page and dataset counts, and session eviction count.
 
 The display-filter toolbar performs deferred, case-insensitive text matching and supports relative
 time, protocol, interface, wire length, parse status, source, and destination. Active-capture
@@ -81,10 +99,10 @@ one atomic cache update; a partial page then waits for the next capture-stream c
 
 A retained capture first calls `GetPacketSummaryManifest`. The manifest supplies a revision, full
 and filtered row counts, timestamp bounds, completion, and gap state without transferring summary
-rows. `ReadPacketSummaryRange` then reads up to 1,024 rows by absolute result index. The visible page
-and adjacent pages are prefetched, obsolete reads receive an abort signal, and the frontend retains
-at most 12 historical range pages per active dataset. Evicted pages can be re-read directly; there
-is no sequential dependency.
+rows. `ReadPacketSummaryRange` then reads up to 1,024 rows by absolute result index. Visible pages
+are requested first, adjacent pages are prefetched after visible data is ready, and obsolete reads
+receive an abort signal. Completed pages enter the byte-budgeted shared LRU. Evicted pages can be
+re-read directly; there is no sequential dependency.
 
 Historical filters receive their own backend result index and manifest. Changing a filter changes
 the dataset key, cancels stale reads, resets the virtual position, and prevents rows from different
