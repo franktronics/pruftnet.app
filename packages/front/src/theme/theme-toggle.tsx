@@ -6,6 +6,9 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from '@repo/ui/molecules'
 
 import { useTheme } from './theme-provider'
@@ -30,10 +33,20 @@ export function ThemeToggle() {
         <DropdownMenu>
             <DropdownMenuTrigger
                 render={
-                    <Button variant="outline" aria-label="Change theme" className="space-x-1">
-                        {theme[0].toUpperCase() + theme.slice(1)}
-                        <ActiveIcon />
-                    </Button>
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Change theme (current: ${activeTheme.label})`}
+                        >
+                            <ActiveIcon />
+                        </Button>
+                    }
+                />
+                <TooltipContent>Theme: {activeTheme.label}</TooltipContent>
+            </Tooltip>
                 }
             />
             <DropdownMenuContent align="end" className="w-36">

@@ -22,7 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@repo/ui'
-import { Clock3, FileOutput, FolderOpen, Radio, Search, Trash2 } from 'lucide-react'
+import { FileOutput, FolderOpen, Radio, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { BasicErrorAlert } from '#front/components/error-renderer'
@@ -118,18 +118,6 @@ export function CapturesPage() {
 
     return (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 py-4">
-            <div className="px-4">
-                <div>
-                    <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase">
-                        <Clock3 className="size-3.5" /> Retained packet ledger
-                    </p>
-                    <h1 className="mt-1 text-xl font-semibold tracking-tight">Capture history</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Durable sessions remain available until explicitly deleted.
-                    </p>
-                </div>
-            </div>
-
             <div className="flex flex-wrap items-center gap-2 px-4" aria-label="History filters">
                 <label className="relative min-w-56 flex-1 sm:max-w-sm">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />

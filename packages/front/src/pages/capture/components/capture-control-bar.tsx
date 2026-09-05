@@ -24,6 +24,9 @@ import {
     PopoverContent,
     PopoverTrigger,
     Switch,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from '@repo/ui'
 import { ChevronDown, RefreshCw, Settings2, Square } from 'lucide-react'
 import { useContext, useState, type ReactNode } from 'react'
@@ -42,6 +45,7 @@ import {
     buildLiveCaptureSource,
     type LiveInterfaceSettings,
 } from '#front/pages/home/live-capture-options'
+import { NewCaptureButton } from '#front/pages/capture/components/new-capture-button'
 
 const defaultInterfaceSettings: LiveInterfaceSettings = {
     promiscuous: true,
@@ -157,14 +161,21 @@ export function CaptureControlBar({
                 onToggle={toggleInterface}
                 onRefresh={() => void interfaces.refetch()}
             />
-            <Button
-                size="icon"
-                variant="outline"
-                aria-label="Capture settings"
-                onClick={() => setSettingsOpen(true)}
-            >
-                <Settings2 />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <Button
+                            size="icon"
+                            variant="outline"
+                            aria-label="Capture settings"
+                            onClick={() => setSettingsOpen(true)}
+                        >
+                            <Settings2 />
+                        </Button>
+                    }
+                />
+                <TooltipContent>Capture settings</TooltipContent>
+            </Tooltip>
             {active ? (
                 <Button
                     variant="destructive"
@@ -174,7 +185,9 @@ export function CaptureControlBar({
                     <Square />
                     {stop.isPending ? 'Stopping...' : 'Stop'}
                 </Button>
-            ) : session ? null : (
+            ) : session ? (
+                <NewCaptureButton />
+            ) : (
                 <Button
                     onClick={() => void startCapture()}
                     disabled={selectedNames.length === 0 || start.isPending}

@@ -11,8 +11,11 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     Button,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from '@repo/ui'
-import { FileOutput, LoaderCircle, Plus, Trash2 } from 'lucide-react'
+import { FileOutput, LoaderCircle, Trash2 } from 'lucide-react'
 import { useState, type ComponentPropsWithoutRef } from 'react'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
@@ -55,25 +58,12 @@ export function CaptureTitlebarActions({
         queryFn: () => captureClient.capture(routeCaptureId!),
         enabled: Boolean(routeCaptureId),
     })
-    const [newCaptureOpen, setNewCaptureOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const currentCapture = routeCapture.data ?? active.data ?? undefined
     const exportCapture = routeCapture.data ?? active.data ?? undefined
     const routeIsTerminal = Boolean(
         routeCapture.data && terminalStates.has(routeCapture.data.state),
     )
-    const reset = useMutation({
-        mutationFn: async (captureId: string) => {
-            await captureClient.stop(captureId)
-            await captureClient.deleteCapture(captureId)
-        },
-        onSuccess: async () => {
-            queryClient.setQueryData(captureKeys.active(), null)
-            await queryClient.invalidateQueries({ queryKey: captureKeys.history() })
-            setNewCaptureOpen(false)
-            await navigate({ to: '/' })
-        },
-    })
     const remove = useMutation({
         mutationFn: (captureId: string) => captureClient.deleteCapture(captureId),
         onSuccess: async () => {
@@ -82,11 +72,6 @@ export function CaptureTitlebarActions({
             await navigate({ to: '/' })
         },
     })
-
-    function requestNewCapture() {
-        if (active.data) setNewCaptureOpen(true)
-        else void navigate({ to: '/' })
-    }
 
     return (
         <div className={cn('flex items-center gap-1', className)} {...rest}>
@@ -118,15 +103,6 @@ export function CaptureTitlebarActions({
                 <span className={cn(compact ? 'hidden sm:inline' : undefined, 'uppercase')}>
                     {stateLabel(currentCapture)}
                 </span>
-            </Button>
-            <Button
-                variant="outline"
-                size="default"
-                onClick={requestNewCapture}
-                aria-label="New capture"
-            >
-                <Plus />
-                <span className={compact ? 'hidden md:inline' : 'hidden xl:inline'}>New</span>
             </Button>
             <Button
                 variant="outline"
@@ -163,46 +139,24 @@ export function CaptureTitlebarActions({
                 ) : null}
             </Button>
             {routeIsTerminal ? (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleteOpen(true)}
-                    aria-label="Delete capture"
-                >
-                    <Trash2 />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger
+                        render={
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteOpen(true)}
+                                aria-label="Delete capture"
+                            >
+                                <Trash2 />
+                            </Button>
+                        }
+                    />
+                    <TooltipContent>Delete capture</TooltipContent>
+                </Tooltip>
             ) : null}
 
-            <AlertDialog open={newCaptureOpen} onOpenChange={setNewCaptureOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Stop and discard the current capture?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            The running capture will stop and all of its retained packet data will
-                            be permanently deleted before a new capture workspace opens.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    {reset.error ? (
-                        <p className="text-destructive text-sm" role="alert">
-                            The current capture could not be discarded.
-                        </p>
-                    ) : null}
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Keep capturing</AlertDialogCancel>
-                        <AlertDialogAction
-                            variant="destructive"
-                            disabled={reset.isPending}
-                            onClick={(event) => {
-                                event.preventDefault()
-                                if (active.data) reset.mutate(active.data.captureId)
-                            }}
-                        >
-                            {reset.isPending ? 'Stopping...' : 'Stop and discard'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

@@ -1,8 +1,9 @@
-import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { History, Radar, Settings } from 'lucide-react'
+import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
+import { ArrowLeft, History, Radar, Settings } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
 
 import { Button, Separator } from '@repo/ui/atoms'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@repo/ui/molecules'
 import {
     Sidebar,
     SidebarContent,
@@ -49,6 +50,43 @@ function isActiveRoute(pathname: string, to: string) {
     return to === '/'
         ? pathname === '/' || pathname.startsWith('/capture/')
         : pathname.startsWith(to)
+}
+
+function pageTitle(pathname: string) {
+    if (pathname.startsWith('/settings')) return 'Settings'
+    if (pathname.startsWith('/captures')) return 'History'
+    return undefined
+}
+
+function TitlebarPageTitle({ pathname }: { readonly pathname: string }) {
+    const router = useRouter()
+    const navigate = useNavigate()
+    const title = pageTitle(pathname)
+    if (!title) return null
+
+    return (
+        <div className="no-drag-region flex shrink-0 items-center gap-1">
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Go back"
+                            onClick={() => {
+                                if (router.history.canGoBack()) router.history.back()
+                                else void navigate({ to: '/' })
+                            }}
+                        >
+                            <ArrowLeft />
+                        </Button>
+                    }
+                />
+                <TooltipContent>Back</TooltipContent>
+            </Tooltip>
+            <span className="text-sm font-semibold tracking-tight">{title}</span>
+        </div>
+    )
 }
 
 export function DashboardLayout() {
@@ -120,18 +158,27 @@ function DesktopTitleBar({
                     Pruftnet
                 </span>
             </div>
-            <SidebarTrigger
-                variant="ghost"
-                className="desktop-titlebar-trigger no-drag-region absolute z-10 active:translate-y-0"
-            />
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <SidebarTrigger
+                            variant="ghost"
+                            className="desktop-titlebar-trigger no-drag-region absolute z-10 active:translate-y-0"
+                        />
+                    }
+                />
+                <TooltipContent>Toggle sidebar</TooltipContent>
+            </Tooltip>
 
             <div
                 ref={captureControlsRef}
                 id="desktop-titlebar-capture-controls"
-                className="flex min-w-0 flex-1 items-center px-3"
-            />
+                className="flex min-w-0 flex-1 items-center gap-2 px-3"
+            >
+                <TitlebarPageTitle pathname={pathname} />
+            </div>
             <div
-                className={cn('desktop-titlebar-actions no-drag-region', 'flex items-center gap-8')}
+                className={cn('desktop-titlebar-actions no-drag-region', 'flex items-center gap-2')}
             >
                 <CaptureTitlebarActions pathname={pathname} />
 
@@ -151,7 +198,8 @@ function WebHeader({ pathname }: { readonly pathname: string }) {
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="my-1.5 mr-2" />
                 <span className="text-sm font-medium tracking-tight">Pruftnet</span>
-                <div className="ml-auto flex items-center gap-8">
+                <TitlebarPageTitle pathname={pathname} />
+                <div className="ml-auto flex items-center gap-2">
                     <CaptureTitlebarActions pathname={pathname} compact />
 
                     <div className="flex items-center gap-1">
@@ -166,15 +214,22 @@ function WebHeader({ pathname }: { readonly pathname: string }) {
 
 function SettingsButton() {
     return (
-        <Button
-            variant="outline"
-            size="icon"
-            aria-label="Open settings"
-            nativeButton={false}
-            render={<Link to="/settings" />}
-        >
-            <Settings />
-        </Button>
+        <Tooltip>
+            <TooltipTrigger
+                render={
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Open settings"
+                        nativeButton={false}
+                        render={<Link to="/settings" />}
+                    >
+                        <Settings />
+                    </Button>
+                }
+            />
+            <TooltipContent>Settings</TooltipContent>
+        </Tooltip>
     )
 }
 

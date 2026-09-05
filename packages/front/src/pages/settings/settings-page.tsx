@@ -1,14 +1,22 @@
 import { Database, Gauge, Palette, RotateCcw } from 'lucide-react'
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
     Button,
     Label,
     NativeSelect,
     NativeSelectOption,
     Progress,
     ProgressLabel,
-} from '@repo/ui/atoms'
+} from '@repo/ui'
 import {
     Card,
     CardAction,
@@ -69,32 +77,11 @@ export function SettingsPage() {
     const { theme, setTheme } = useTheme()
     const { settings, setPacketListCacheMode, setPacketListCacheMaximumMiB, resetSettings } =
         useAppSettings()
+    const [resetOpen, setResetOpen] = useState(false)
     const automaticCacheMiB = automaticPacketListCacheMiB(currentCacheBudgetEnvironment())
 
     return (
-        <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-10">
-            <header className="flex flex-wrap items-end justify-between gap-3 border-b py-5">
-                <div>
-                    <p className="text-muted-foreground font-mono text-[0.6875rem] tracking-widest uppercase">
-                        Application control
-                    </p>
-                    <h1 className="mt-1 text-xl font-semibold tracking-tight">Settings</h1>
-                    <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-                        Tune the inspection workspace without changing retained capture data.
-                    </p>
-                </div>
-                <Button
-                    variant="outline"
-                    onClick={() => {
-                        resetSettings()
-                        setTheme('system')
-                    }}
-                >
-                    <RotateCcw />
-                    Reset application settings
-                </Button>
-            </header>
-
+        <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 pt-5 pb-10">
             <div className="grid items-start gap-5 md:grid-cols-[11rem_minmax(0,1fr)]">
                 <nav
                     aria-label="Settings sections"
@@ -228,8 +215,50 @@ export function SettingsPage() {
                             </CardDescription>
                         </CardHeader>
                     </Card>
+
+                    <Card id="reset" className="border-destructive/40">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <RotateCcw className="text-muted-foreground size-4" />
+                                Reset settings
+                            </CardTitle>
+                            <CardDescription>
+                                Restore every application setting to its default value, including
+                                the theme. Captures are not affected.
+                            </CardDescription>
+                            <CardAction>
+                                <Button variant="outline" onClick={() => setResetOpen(true)}>
+                                    <RotateCcw />
+                                    Reset application settings
+                                </Button>
+                            </CardAction>
+                        </CardHeader>
+                    </Card>
                 </div>
             </div>
+
+            <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reset all application settings?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Every setting will return to its default value, including the theme.
+                            Retained captures are not affected.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                resetSettings()
+                                setTheme('system')
+                            }}
+                        >
+                            Reset settings
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </section>
     )
 }
