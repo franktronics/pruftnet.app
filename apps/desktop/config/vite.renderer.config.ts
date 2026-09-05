@@ -24,7 +24,7 @@ export default defineConfig({
                 replacement: resolve(workspaceRoot, 'packages/ui/src/styles/main.css'),
             },
             {
-                find: /^@repo\/ui\/(.*)$/,
+                find: /^@repo\/ui\/(atoms|molecules|organisms|templates)$/,
                 replacement: `${resolve(workspaceRoot, 'packages/ui/src/atomic')}/$1/index.ts`,
             },
             {

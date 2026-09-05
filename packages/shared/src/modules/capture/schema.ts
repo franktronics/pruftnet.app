@@ -302,7 +302,15 @@ export class ReadPacketSummariesRequest extends Schema.Class<ReadPacketSummaries
     limit: Schema.Number.pipe(Schema.int(), Schema.between(1, 1024)),
 }) {}
 
+export class StreamPacketSummariesRequest extends Schema.Class<StreamPacketSummariesRequest>(
+    'StreamPacketSummariesRequest',
+)({
+    captureId: CaptureId,
+    afterCursor: Schema.optional(DecimalString),
+}) {}
+
 export class PacketSummaryBatch extends Schema.Class<PacketSummaryBatch>('PacketSummaryBatch')({
+    originTimestampNs: Schema.optional(DecimalString),
     captureId: CaptureId,
     firstCursor: Schema.NullOr(DecimalString),
     lastCursor: Schema.NullOr(DecimalString),
@@ -323,6 +331,8 @@ export class PacketSummaryManifestRequest extends Schema.Class<PacketSummaryMani
 export class PacketSummaryManifest extends Schema.Class<PacketSummaryManifest>(
     'PacketSummaryManifest',
 )({
+    initialSummaries: Schema.optional(Schema.Array(PacketSummary)),
+    indexing: Schema.optional(Schema.Boolean),
     captureId: CaptureId,
     revision: DecimalString,
     rowCount: PacketSummaryRowIndex,

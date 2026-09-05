@@ -22,6 +22,7 @@ export function DisplayFilter({
     maxTimeSeconds = 0,
     visibleCount = 0,
     totalCount = 0,
+    counting = false,
 }: {
     value: string
     onChange: (value: string) => void
@@ -32,6 +33,7 @@ export function DisplayFilter({
     maxTimeSeconds?: number
     visibleCount?: number
     totalCount?: number
+    counting?: boolean
 }) {
     const [advancedOpen, setAdvancedOpen] = useState(false)
     const activeCount = countAdvancedPacketFilters(filters)
@@ -48,9 +50,17 @@ export function DisplayFilter({
                 className="border-0 bg-transparent px-0 font-mono shadow-none focus-visible:ring-0 dark:bg-transparent"
             />
             {totalCount > 0 ? (
-                <span className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:inline">
+                <span
+                    aria-live="polite"
+                    title={
+                        counting
+                            ? 'Showing the first matches. Counting remaining packets...'
+                            : undefined
+                    }
+                    className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:inline"
+                >
                     {filtering
-                        ? `${visibleCount.toLocaleString()} / ${totalCount.toLocaleString()}`
+                        ? `${visibleCount.toLocaleString()}${counting ? '+' : ''} / ${totalCount.toLocaleString()}`
                         : totalCount.toLocaleString()}
                 </span>
             ) : null}

@@ -1,6 +1,8 @@
 import { useParams } from '@tanstack/react-router'
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 
+import { useIsMobile } from '@repo/ui/hooks'
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/molecules'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@repo/ui/organisms'
 
@@ -36,6 +38,7 @@ export function CapturePage() {
 }
 
 function CaptureWorkspace({ captureId }: { captureId: string }) {
+    const isMobile = useIsMobile()
     const session = useCaptureSession(captureId)
     const terminal =
         session.data?.state === 'stopped' ||
@@ -50,9 +53,11 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         () => (terminal ? toPacketSummaryFilter(deferredFilters) : null),
         [deferredFilters, terminal],
     )
+    const [following, setFollowing] = useState(true)
     const summaries = usePacketSummaries(captureId, {
         enabled: session.isSuccess,
         mode: terminal ? 'history' : 'live',
+        paused: !following,
         filter: historicalFilter,
     })
     const registry = useCaptureRegistry(session.data?.registryRevision ?? '')
@@ -61,7 +66,6 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         readonly index: number
     }>()
     const [nodeSelection, setNodeSelection] = useState<{ packet: string; index: number }>()
-    const [following, setFollowing] = useState(true)
     const detail = usePacketDetail(
         captureId,
         selected?.row.summary.key.packetId,
@@ -91,21 +95,13 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
     const visiblePacketCount =
         summaries.mode === 'history'
             ? summaries.packetRowCount
-            : visibleLiveRows.filter((row) => row.kind === 'packet').length
+            : visibleLiveRows.length - Number(visibleLiveRows[0]?.kind === 'gap')
     const maxTimeSeconds = useMemo(() => {
         if (!summaries.originTimestampNs) return 0
-        if (summaries.mode === 'history')
-            return summaries.lastTimestampNs
-                ? relativeSecondsNumber(summaries.lastTimestampNs, summaries.originTimestampNs)
-                : 0
-        return summaries.rows.reduce((maximum, row) => {
-            if (row.kind === 'gap') return maximum
-            return Math.max(
-                maximum,
-                relativeSecondsNumber(row.summary.timestampNs, summaries.originTimestampNs!),
-            )
-        }, 0)
-    }, [summaries.lastTimestampNs, summaries.mode, summaries.originTimestampNs, summaries.rows])
+        return summaries.lastTimestampNs
+            ? relativeSecondsNumber(summaries.lastTimestampNs, summaries.originTimestampNs)
+            : 0
+    }, [summaries.lastTimestampNs, summaries.originTimestampNs])
     const displayInterfaces = useMemo(
         () =>
             session.data?.source._tag === 'Live'
@@ -124,6 +120,15 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
               ? 'Waiting for packets...'
               : 'No packets were captured.'
 
+    const handleSelect = useCallback(
+        (row: Extract<SummaryRow, { kind: 'packet' }>, index: number) => {
+            setSelected({ row, index })
+            setFollowing(false)
+        },
+        [],
+    )
+    const pauseFollowing = useCallback(() => setFollowing(false), [])
+
     if (session.isPending) {
         return (
             <div className="bg-background grid h-full place-items-center" role="status">
@@ -139,10 +144,6 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         )
     }
 
-    function handleSelect(row: Extract<SummaryRow, { kind: 'packet' }>, index: number) {
-        setSelected({ row, index })
-        setFollowing(false)
-    }
     function updateFilters(next: PacketDisplayFilters) {
         setFilters(next)
         if (terminal) {
@@ -205,124 +206,129 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
                 maxTimeSeconds={maxTimeSeconds}
                 visibleCount={visiblePacketCount}
                 totalCount={totalPacketCount}
+                counting={summaries.indexing}
             />
-            <div className="hidden min-h-0 flex-1 md:block">
-                <ResizablePanelGroup orientation="vertical">
-                    <ResizablePanel defaultSize="58%" minSize="30%">
-                        <ResizablePanelGroup orientation="horizontal">
-                            <ResizablePanel defaultSize="74%" minSize="45%">
-                                <PacketTable
-                                    rowCount={tableRowCount}
-                                    packetCount={visiblePacketCount}
-                                    getRow={getTableRow}
-                                    originTimestampNs={summaries.originTimestampNs}
-                                    selectedKey={selectedKey}
-                                    selectedIndex={selectedIndex}
-                                    onSelect={handleSelect}
-                                    following={!terminal && following}
-                                    canFollow={!terminal}
-                                    onFollowingChange={setFollowing}
-                                    onPauseFollowing={() => setFollowing(false)}
-                                    onVisibleRangeChange={summaries.requestRange}
-                                    loadError={summaries.error}
-                                    onRetry={() => void summaries.retry()}
-                                    emptyMessage={emptyMessage}
-                                    datasetKey={summaries.datasetKey}
-                                />
-                            </ResizablePanel>
-                            <ResizableHandle />
-                            <ResizablePanel defaultSize="26%" minSize="18%">
-                                <CaptureStatsPanel
-                                    stats={stats.data}
-                                    durableSamples={statSamples.data?.samples}
-                                    state={session.data?.state}
-                                />
-                            </ResizablePanel>
-                        </ResizablePanelGroup>
-                    </ResizablePanel>
-                    <ResizableHandle />
-                    <ResizablePanel defaultSize="42%" minSize="22%">
-                        <ResizablePanelGroup orientation="horizontal">
-                            <ResizablePanel defaultSize="44%" minSize="25%">
-                                <PacketTree
-                                    key={selectedKey}
-                                    detail={detail.data}
-                                    registry={registry.data}
-                                    detailState={detailModel}
-                                    selected={selectedNode}
-                                    onSelect={selectNode}
-                                />
-                            </ResizablePanel>
-                            <ResizableHandle />
-                            <ResizablePanel defaultSize="56%" minSize="30%">
-                                <PacketBytes
-                                    detail={detail.data}
-                                    detailState={detailModel}
-                                    range={range}
-                                    onSelectByte={selectByte}
-                                />
-                            </ResizablePanel>
-                        </ResizablePanelGroup>
-                    </ResizablePanel>
-                </ResizablePanelGroup>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col md:hidden">
-                <div className="min-h-0 flex-3">
-                    <PacketTable
-                        rowCount={tableRowCount}
-                        packetCount={visiblePacketCount}
-                        getRow={getTableRow}
-                        originTimestampNs={summaries.originTimestampNs}
-                        selectedKey={selectedKey}
-                        selectedIndex={selectedIndex}
-                        onSelect={handleSelect}
-                        following={!terminal && following}
-                        canFollow={!terminal}
-                        onFollowingChange={setFollowing}
-                        onPauseFollowing={() => setFollowing(false)}
-                        onVisibleRangeChange={summaries.requestRange}
-                        loadError={summaries.error}
-                        onRetry={() => void summaries.retry()}
-                        emptyMessage={emptyMessage}
-                        datasetKey={summaries.datasetKey}
-                    />
+            {!isMobile && (
+                <div className="hidden min-h-0 flex-1 md:block">
+                    <ResizablePanelGroup orientation="vertical">
+                        <ResizablePanel defaultSize="58%" minSize="30%">
+                            <ResizablePanelGroup orientation="horizontal">
+                                <ResizablePanel defaultSize="74%" minSize="45%">
+                                    <PacketTable
+                                        rowCount={tableRowCount}
+                                        packetCount={visiblePacketCount}
+                                        getRow={getTableRow}
+                                        originTimestampNs={summaries.originTimestampNs}
+                                        selectedKey={selectedKey}
+                                        selectedIndex={selectedIndex}
+                                        onSelect={handleSelect}
+                                        following={!terminal && following}
+                                        canFollow={!terminal}
+                                        onFollowingChange={setFollowing}
+                                        onPauseFollowing={pauseFollowing}
+                                        onVisibleRangeChange={summaries.requestRange}
+                                        loadError={summaries.error}
+                                        onRetry={() => void summaries.retry()}
+                                        emptyMessage={emptyMessage}
+                                        datasetKey={summaries.datasetKey}
+                                    />
+                                </ResizablePanel>
+                                <ResizableHandle />
+                                <ResizablePanel defaultSize="26%" minSize="18%">
+                                    <CaptureStatsPanel
+                                        stats={stats.data}
+                                        durableSamples={statSamples.data?.samples}
+                                        state={session.data?.state}
+                                    />
+                                </ResizablePanel>
+                            </ResizablePanelGroup>
+                        </ResizablePanel>
+                        <ResizableHandle />
+                        <ResizablePanel defaultSize="42%" minSize="22%">
+                            <ResizablePanelGroup orientation="horizontal">
+                                <ResizablePanel defaultSize="44%" minSize="25%">
+                                    <PacketTree
+                                        key={selectedKey}
+                                        detail={detail.data}
+                                        registry={registry.data}
+                                        detailState={detailModel}
+                                        selected={selectedNode}
+                                        onSelect={selectNode}
+                                    />
+                                </ResizablePanel>
+                                <ResizableHandle />
+                                <ResizablePanel defaultSize="56%" minSize="30%">
+                                    <PacketBytes
+                                        detail={detail.data}
+                                        detailState={detailModel}
+                                        range={range}
+                                        onSelectByte={selectByte}
+                                    />
+                                </ResizablePanel>
+                            </ResizablePanelGroup>
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
                 </div>
-                <Tabs
-                    defaultValue="structure"
-                    className="bg-background min-h-0 flex-2 gap-0 border-t"
-                >
-                    <TabsList className="h-9 w-full rounded-none border-b bg-transparent p-0">
-                        <TabsTrigger value="stats">Stats</TabsTrigger>
-                        <TabsTrigger value="structure">Structure</TabsTrigger>
-                        <TabsTrigger value="bytes">Bytes</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="stats" className="min-h-0 flex-1">
-                        <CaptureStatsPanel
-                            stats={stats.data}
-                            durableSamples={statSamples.data?.samples}
-                            state={session.data?.state}
+            )}
+            {isMobile && (
+                <div className="flex min-h-0 flex-1 flex-col md:hidden">
+                    <div className="min-h-0 flex-3">
+                        <PacketTable
+                            rowCount={tableRowCount}
+                            packetCount={visiblePacketCount}
+                            getRow={getTableRow}
+                            originTimestampNs={summaries.originTimestampNs}
+                            selectedKey={selectedKey}
+                            selectedIndex={selectedIndex}
+                            onSelect={handleSelect}
+                            following={!terminal && following}
+                            canFollow={!terminal}
+                            onFollowingChange={setFollowing}
+                            onPauseFollowing={pauseFollowing}
+                            onVisibleRangeChange={summaries.requestRange}
+                            loadError={summaries.error}
+                            onRetry={() => void summaries.retry()}
+                            emptyMessage={emptyMessage}
+                            datasetKey={summaries.datasetKey}
                         />
-                    </TabsContent>
-                    <TabsContent value="structure" className="min-h-0 flex-1">
-                        <PacketTree
-                            key={selectedKey}
-                            detail={detail.data}
-                            registry={registry.data}
-                            detailState={detailModel}
-                            selected={selectedNode}
-                            onSelect={selectNode}
-                        />
-                    </TabsContent>
-                    <TabsContent value="bytes" className="min-h-0 flex-1">
-                        <PacketBytes
-                            detail={detail.data}
-                            detailState={detailModel}
-                            range={range}
-                            onSelectByte={selectByte}
-                        />
-                    </TabsContent>
-                </Tabs>
-            </div>
+                    </div>
+                    <Tabs
+                        defaultValue="structure"
+                        className="bg-background min-h-0 flex-2 gap-0 border-t"
+                    >
+                        <TabsList className="h-9 w-full rounded-none border-b bg-transparent p-0">
+                            <TabsTrigger value="stats">Stats</TabsTrigger>
+                            <TabsTrigger value="structure">Structure</TabsTrigger>
+                            <TabsTrigger value="bytes">Bytes</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="stats" className="min-h-0 flex-1">
+                            <CaptureStatsPanel
+                                stats={stats.data}
+                                durableSamples={statSamples.data?.samples}
+                                state={session.data?.state}
+                            />
+                        </TabsContent>
+                        <TabsContent value="structure" className="min-h-0 flex-1">
+                            <PacketTree
+                                key={selectedKey}
+                                detail={detail.data}
+                                registry={registry.data}
+                                detailState={detailModel}
+                                selected={selectedNode}
+                                onSelect={selectNode}
+                            />
+                        </TabsContent>
+                        <TabsContent value="bytes" className="min-h-0 flex-1">
+                            <PacketBytes
+                                detail={detail.data}
+                                detailState={detailModel}
+                                range={range}
+                                onSelectByte={selectByte}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            )}
         </div>
     )
 }

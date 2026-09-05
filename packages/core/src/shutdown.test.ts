@@ -1,4 +1,4 @@
-import { Effect, Layer } from 'effect'
+import { Stream, Effect, Layer } from 'effect'
 import { describe, expect, test } from 'vitest'
 
 import { CaptureCatalog } from './capture/catalog'
@@ -27,6 +27,7 @@ function testLayer() {
                 return {} as never
             }),
         session: () => Effect.die('unused'),
+        streamSummaries: () => Stream.empty,
         summaries: () => Effect.die('unused'),
         summaryManifest: () => Effect.die('unused'),
         summaryRange: () => Effect.die('unused'),

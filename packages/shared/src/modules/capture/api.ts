@@ -27,6 +27,7 @@ import {
     RegistryRevisionRequest,
     RegistrySnapshot,
     StartCaptureRequest,
+    StreamPacketSummariesRequest,
 } from './schema'
 
 export class CaptureRpcs extends RpcGroup.make(
@@ -58,6 +59,12 @@ export class CaptureRpcs extends RpcGroup.make(
         payload: ReadPacketSummariesRequest,
         success: PacketSummaryBatch,
         error: CaptureRpcError,
+    }),
+    Rpc.make('StreamPacketSummaries', {
+        payload: StreamPacketSummariesRequest,
+        success: PacketSummaryBatch,
+        error: CaptureRpcError,
+        stream: true,
     }),
     Rpc.make('GetPacketSummaryManifest', {
         payload: PacketSummaryManifestRequest,

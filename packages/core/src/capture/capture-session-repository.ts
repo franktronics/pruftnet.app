@@ -54,10 +54,6 @@ export class StoredCaptureNotFound extends Data.TaggedError('StoredCaptureNotFou
 
 type RepositoryError = CaptureRepositoryError | StoredCaptureNotFound
 type CaptureRow = typeof captureSessions.$inferSelect
-type SummaryResultIndex = Uint32Array | Float64Array
-
-const MAX_SUMMARY_RESULT_INDEX_BYTES = 16 * 1024 * 1024
-const MAX_SUMMARY_RESULT_INDEXES = 16
 
 export interface StoredSegment {
     readonly generation: number
@@ -206,30 +202,25 @@ function summaryResultIndexKey(captureId: string, revision: string, filter: Pack
     return `${captureId}:${revision}:${JSON.stringify(filter)}`
 }
 
-function buildSummaryResultIndex(
+function summaryIndexQuery(
     db: DrizzleDatabase,
     captureId: string,
+    revision: string,
     filter: PacketSummaryFilter,
     originTimestampNs: string | null,
-): SummaryResultIndex {
-    const rows = db
+) {
+    return db
         .select({ rowIndex: captureSummaries.rowIndex })
         .from(captureSummaries)
         .where(
             and(
                 eq(captureSummaries.captureId, captureId),
+                decimalAtMost(sql`${captureSummaries.cursor}`, revision),
                 ...summaryFilterPredicates(filter, originTimestampNs),
             ),
         )
         .orderBy(asc(captureSummaries.rowIndex))
-        .all()
-    const maximum = Number(rows.at(-1)?.rowIndex ?? 0)
-    if (!Number.isSafeInteger(maximum))
-        throw new RangeError('Packet summary row index exceeds the supported virtual table range.')
-    const indexes =
-        maximum <= 0xffffffff ? new Uint32Array(rows.length) : new Float64Array(rows.length)
-    for (let index = 0; index < rows.length; index++) indexes[index] = Number(rows[index]!.rowIndex)
-    return indexes
+        .toSQL()
 }
 
 function interfaceNames(source: CaptureSource) {
@@ -361,38 +352,67 @@ export class CaptureSessionRepository extends Context.Tag(
         Effect.gen(function* () {
             const database = yield* Database
             const paths = yield* AppDataPaths
-            const summaryResultIndexes = new Map<string, SummaryResultIndex>()
-            let summaryResultIndexBytes = 0
-
-            const getSummaryResultIndex = (key: string) => {
-                const index = summaryResultIndexes.get(key)
-                if (!index) return undefined
-                summaryResultIndexes.delete(key)
-                summaryResultIndexes.set(key, index)
-                return index
-            }
-
-            const cacheSummaryResultIndex = (key: string, index: SummaryResultIndex) => {
-                const previous = summaryResultIndexes.get(key)
-                if (previous) {
-                    summaryResultIndexBytes -= previous.byteLength
-                    summaryResultIndexes.delete(key)
-                }
-                if (index.byteLength > MAX_SUMMARY_RESULT_INDEX_BYTES) return
-                while (
-                    (summaryResultIndexBytes + index.byteLength > MAX_SUMMARY_RESULT_INDEX_BYTES ||
-                        summaryResultIndexes.size >= MAX_SUMMARY_RESULT_INDEXES) &&
-                    summaryResultIndexes.size > 0
+            const readFilteredIndex = Effect.fn('CaptureSessionRepository.readFilteredIndex')(
+                function* (
+                    captureId: string,
+                    revision: string,
+                    filter: PacketSummaryFilter,
+                    originTimestampNs: string | null,
+                    startIndex: number,
+                    limit: number,
+                    preview = false,
                 ) {
-                    const oldestKey = summaryResultIndexes.keys().next().value
-                    if (oldestKey === undefined) break
-                    const oldest = summaryResultIndexes.get(oldestKey)
-                    summaryResultIndexes.delete(oldestKey)
-                    if (oldest) summaryResultIndexBytes -= oldest.byteLength
-                }
-                summaryResultIndexes.set(key, index)
-                summaryResultIndexBytes += index.byteLength
-            }
+                    const query = yield* database.read('prepare packet filter', (db) =>
+                        summaryIndexQuery(db, captureId, revision, filter, originTimestampNs),
+                    )
+                    return yield* database.summaryIndex({
+                        key: summaryResultIndexKey(captureId, revision, filter),
+                        sql: query.sql,
+                        params: query.params as import('node:sqlite').SQLInputValue[],
+                        startIndex,
+                        limit,
+                        preview,
+                    })
+                },
+            )
+
+            const readSummaryRows = Effect.fn('CaptureSessionRepository.readSummaryRows')(
+                function* (
+                    captureId: string,
+                    startIndex: number,
+                    limit: number,
+                    rowIndexes?: number[],
+                ) {
+                    if (rowIndexes?.length === 0) return []
+                    const rows = yield* database
+                        .read('read packet summary range', (db) =>
+                            db
+                                .select({ value: captureSummaries.summaryJson })
+                                .from(captureSummaries)
+                                .where(
+                                    and(
+                                        eq(captureSummaries.captureId, captureId),
+                                        rowIndexes
+                                            ? inArray(captureSummaries.rowIndex, rowIndexes)
+                                            : gte(captureSummaries.rowIndex, startIndex),
+                                    ),
+                                )
+                                .orderBy(asc(captureSummaries.rowIndex))
+                                .limit(limit)
+                                .all(),
+                        )
+                        .pipe(
+                            Effect.mapError((cause) =>
+                                repositoryError('read packet summary range', cause),
+                            ),
+                        )
+                    return yield* Effect.try({
+                        try: () =>
+                            rows.map((row) => Schema.decodeUnknownSync(PacketSummary)(row.value)),
+                        catch: (cause) => repositoryError('decode packet summary range', cause),
+                    })
+                },
+            )
 
             const enrich = Effect.fn('CaptureSessionRepository.enrich')(function* (
                 row: CaptureRow,
@@ -986,14 +1006,17 @@ export class CaptureSessionRepository extends Context.Tag(
                                         ),
                                     )
                                     .get()
-                                if (previous) {
+                                if (previous || cursor === '0') {
                                     return db
                                         .select({ value: captureSummaries.summaryJson })
                                         .from(captureSummaries)
                                         .where(
                                             and(
                                                 eq(captureSummaries.captureId, captureId),
-                                                gt(captureSummaries.rowIndex, previous.rowIndex),
+                                                gt(
+                                                    captureSummaries.rowIndex,
+                                                    previous?.rowIndex ?? -1,
+                                                ),
                                             ),
                                         )
                                         .orderBy(asc(captureSummaries.rowIndex))
@@ -1065,25 +1088,10 @@ export class CaptureSessionRepository extends Context.Tag(
                                     ? Schema.decodeUnknownSync(PacketSummary)(last.value)
                                     : undefined
                                 const totalRowCount = safeSummaryRowCount(session.totalRowCount)
-                                const filteredIndex =
-                                    filter === null
-                                        ? undefined
-                                        : buildSummaryResultIndex(
-                                              db,
-                                              captureId,
-                                              filter,
-                                              origin?.timestampNs ?? null,
-                                          )
-                                if (filter && filteredIndex) {
-                                    cacheSummaryResultIndex(
-                                        summaryResultIndexKey(captureId, session.revision, filter),
-                                        filteredIndex,
-                                    )
-                                }
                                 return new PacketSummaryManifest({
                                     captureId,
                                     revision: session.revision,
-                                    rowCount: filteredIndex?.length ?? totalRowCount,
+                                    rowCount: totalRowCount,
                                     totalRowCount,
                                     originTimestampNs: origin?.timestampNs ?? null,
                                     lastTimestampNs: tail?.timestampNs ?? null,
@@ -1101,76 +1109,72 @@ export class CaptureSessionRepository extends Context.Tag(
                                 ),
                             )
                         if (!stored) return yield* new StoredCaptureNotFound({ captureId })
-                        return stored
+                        if (!filter) return stored
+                        const index = yield* readFilteredIndex(
+                            captureId,
+                            stored.revision,
+                            filter,
+                            stored.originTimestampNs,
+                            0,
+                            256,
+                            true,
+                        ).pipe(
+                            Effect.mapError((cause) =>
+                                repositoryError('index packet summary filter', cause),
+                            ),
+                        )
+                        const initialSummaries = yield* readSummaryRows(
+                            captureId,
+                            0,
+                            256,
+                            index.indexes,
+                        )
+                        return new PacketSummaryManifest({
+                            ...stored,
+                            rowCount: index.count,
+                            initialSummaries,
+                            indexing: index.indexing,
+                        })
                     },
                 ),
                 readSummaryRange: Effect.fn('CaptureSessionRepository.readSummaryRange')(
                     function* (captureId, revision, filter, startIndex, limit) {
-                        const rows = yield* database
-                            .read('read packet summary range', (db) => {
-                                if (filter === null) {
-                                    return db
-                                        .select({ value: captureSummaries.summaryJson })
-                                        .from(captureSummaries)
-                                        .where(
-                                            and(
-                                                eq(captureSummaries.captureId, captureId),
-                                                gte(captureSummaries.rowIndex, startIndex),
-                                            ),
-                                        )
-                                        .orderBy(asc(captureSummaries.rowIndex))
-                                        .limit(limit)
-                                        .all()
-                                }
-                                const indexKey = summaryResultIndexKey(captureId, revision, filter)
-                                let resultIndex = getSummaryResultIndex(indexKey)
-                                if (!resultIndex) {
-                                    const first = db
+                        let rowIndexes: number[] | undefined
+                        if (filter) {
+                            const origin = yield* database
+                                .read('read summary origin', (db) =>
+                                    db
                                         .select({ value: captureSummaries.summaryJson })
                                         .from(captureSummaries)
                                         .where(eq(captureSummaries.captureId, captureId))
                                         .orderBy(asc(captureSummaries.rowIndex))
                                         .limit(1)
-                                        .get()
-                                    const origin = first
-                                        ? Schema.decodeUnknownSync(PacketSummary)(first.value)
-                                        : undefined
-                                    resultIndex = buildSummaryResultIndex(
-                                        db,
-                                        captureId,
-                                        filter,
-                                        origin?.timestampNs ?? null,
-                                    )
-                                    cacheSummaryResultIndex(indexKey, resultIndex)
-                                }
-                                const rowIndexes = Array.from(
-                                    resultIndex.slice(startIndex, startIndex + limit),
+                                        .get(),
                                 )
-                                if (rowIndexes.length === 0) return []
-                                return db
-                                    .select({ value: captureSummaries.summaryJson })
-                                    .from(captureSummaries)
-                                    .where(
-                                        and(
-                                            eq(captureSummaries.captureId, captureId),
-                                            inArray(captureSummaries.rowIndex, rowIndexes),
-                                        ),
-                                    )
-                                    .orderBy(asc(captureSummaries.rowIndex))
-                                    .all()
-                            })
-                            .pipe(
+                                .pipe(
+                                    Effect.mapError((cause) =>
+                                        repositoryError('read summary origin', cause),
+                                    ),
+                                )
+                            const index = yield* readFilteredIndex(
+                                captureId,
+                                revision,
+                                filter,
+                                origin
+                                    ? Schema.decodeUnknownSync(PacketSummary)(origin.value)
+                                          .timestampNs
+                                    : null,
+                                startIndex,
+                                limit,
+                            ).pipe(
                                 Effect.mapError((cause) =>
-                                    repositoryError('read packet summary range', cause),
+                                    repositoryError('read filtered summary index', cause),
                                 ),
                             )
-                        return yield* Effect.try({
-                            try: () =>
-                                rows.map((row) =>
-                                    Schema.decodeUnknownSync(PacketSummary)(row.value),
-                                ),
-                            catch: (cause) => repositoryError('decode packet summary range', cause),
-                        })
+                            rowIndexes = index.indexes
+                            if (rowIndexes.length === 0) return []
+                        }
+                        return yield* readSummaryRows(captureId, startIndex, limit, rowIndexes)
                     },
                 ),
                 latestStats: Effect.fn('CaptureSessionRepository.latestStats')(

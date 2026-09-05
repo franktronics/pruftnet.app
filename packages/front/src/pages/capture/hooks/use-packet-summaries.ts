@@ -1,11 +1,9 @@
-import type {
-    PacketSummary,
-    PacketSummaryBatch,
-    PacketSummaryFilter,
-    PacketSummaryRange,
-} from '@repo/shared/capture'
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { PacketSummary, PacketSummaryBatch, PacketSummaryFilter } from '@repo/shared/capture'
+import { PacketSummaryManifest, PacketSummaryRange } from '@repo/shared/capture'
+import { skipToken, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+
+import { subscribeRpcStream } from '#front/config/effect-runtime'
 
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureKeys } from '#front/pages/capture/api/capture-queries'
@@ -14,7 +12,7 @@ import {
     packetSummaryPageCache,
 } from '#front/pages/capture/model/packet-summary-cache'
 
-export const PACKET_SUMMARY_PAGE_SIZE = 1_024
+export const PACKET_SUMMARY_PAGE_SIZE = 256
 export const MAX_PACKET_SUMMARIES = 50_000
 export type SummaryReadMode = 'history' | 'live'
 
@@ -27,6 +25,7 @@ export interface SummaryState {
     readonly cursor?: string
     readonly complete: boolean
     readonly originTimestampNs?: string
+    readonly maximumTimestampNs?: string
 }
 
 export const emptySummaryState: SummaryState = { rows: [], complete: false }
@@ -38,6 +37,51 @@ export function mergeSummaryBatch(
     maximum = MAX_PACKET_SUMMARIES,
 ): SummaryState {
     if (batch.captureId !== captureId) return state
+    const originTimestampNs =
+        batch.originTimestampNs ?? state.originTimestampNs ?? batch.summaries[0]?.timestampNs
+    let maximumTimestampNs = state.maximumTimestampNs
+    for (const summary of batch.summaries) {
+        if (!maximumTimestampNs || BigInt(summary.timestampNs) > BigInt(maximumTimestampNs))
+            maximumTimestampNs = summary.timestampNs
+    }
+    if (batch.summaries.length === 0) {
+        return state.complete === batch.captureComplete &&
+            state.originTimestampNs === originTimestampNs
+            ? state
+            : { ...state, complete: batch.captureComplete, originTimestampNs, maximumTimestampNs }
+    }
+    const gapOffset = Number(state.rows[0]?.kind === 'gap')
+    const last = state.rows.at(-1)
+    if (
+        !last ||
+        (last.kind === 'packet' && BigInt(last.summary.cursor) < BigInt(batch.summaries[0]!.cursor))
+    ) {
+        const count = state.rows.length - gapOffset + batch.summaries.length
+        const trim = Math.max(0, count - maximum)
+        const skipIncoming = Math.max(0, trim - (state.rows.length - gapOffset))
+        const retained = state.rows.slice(gapOffset + trim)
+        const added = batch.summaries
+            .slice(skipIncoming)
+            .map((summary) => ({ kind: 'packet', summary }) as const)
+        const first = retained[0] ?? added[0]
+        const gap = gapOffset > 0 || trim > 0 || batch.gapBeforeFirst
+        return {
+            rows: gap
+                ? [
+                      {
+                          kind: 'gap',
+                          beforeCursor: first?.kind === 'packet' ? first.summary.cursor : null,
+                      },
+                      ...retained,
+                      ...added,
+                  ]
+                : retained.concat(added),
+            cursor: batch.lastCursor ?? state.cursor,
+            complete: batch.captureComplete,
+            originTimestampNs,
+            maximumTimestampNs,
+        }
+    }
     const existing = state.rows.filter(
         (row): row is Extract<SummaryRow, { kind: 'packet' }> => row.kind === 'packet',
     )
@@ -94,8 +138,8 @@ export function mergeSummaryBatch(
         ],
         cursor: batch.lastCursor ?? state.cursor,
         complete: batch.captureComplete,
-        originTimestampNs:
-            state.originTimestampNs ?? incoming[0]?.timestampNs ?? bounded[0]?.timestampNs,
+        originTimestampNs,
+        maximumTimestampNs,
     }
 }
 
@@ -128,12 +172,7 @@ export async function readPacketSummaryState(
             batch,
             mode === 'live' ? MAX_PACKET_SUMMARIES : Number.POSITIVE_INFINITY,
         )
-        if (
-            mode === 'history' ||
-            batch.captureComplete ||
-            batch.summaries.length < PACKET_SUMMARY_PAGE_SIZE
-        )
-            return next
+        if (batch.summaries.length === 0 || next.cursor !== previousCursor) return next
         if (!next.cursor || next.cursor === previousCursor)
             throw new Error('Packet summary cursor did not advance')
     }
@@ -180,31 +219,75 @@ const initialVisibleRange: SummaryVisibleRange = {
 
 function useLivePacketSummaries(captureId: string, enabled: boolean) {
     const queryClient = useQueryClient()
-    const query = useQuery({
+    const [error, setError] = useState<unknown>()
+    const [attempt, setAttempt] = useState(0)
+    const query = useQuery<SummaryState>({
         queryKey: captureKeys.liveSummaries(captureId),
-        queryFn: async ({ signal }) => {
-            const current =
-                queryClient.getQueryData<SummaryState>(captureKeys.liveSummaries(captureId)) ??
-                emptySummaryState
-            return readPacketSummaryState(
-                captureId,
-                current,
-                'live',
-                captureClient.summaries,
-                signal,
-            )
-        },
-        enabled,
-        placeholderData: emptySummaryState,
+        queryFn: skipToken,
+        enabled: false,
+        initialData: emptySummaryState,
         staleTime: Infinity,
         structuralSharing: false,
     })
+    useEffect(() => {
+        if (!enabled) return
+        let current =
+            queryClient.getQueryData<SummaryState>(captureKeys.liveSummaries(captureId)) ??
+            emptySummaryState
+        let snapshotPending = true
+        let frame: number | undefined
+        let unsubscribe: (() => void) | undefined
+        const publish = () => {
+            frame = undefined
+            queryClient.setQueryData(captureKeys.liveSummaries(captureId), current)
+        }
+        const subscribe = () => {
+            if (document.hidden || unsubscribe) return
+            unsubscribe = subscribeRpcStream<PacketSummaryBatch>({
+                stream: (client) =>
+                    client.StreamPacketSummaries({
+                        captureId,
+                        afterCursor: snapshotPending ? undefined : current.cursor,
+                    }),
+                restartOnEnd: true,
+                onValue: (batch) => {
+                    setError(undefined)
+                    current = mergeSummaryBatch(
+                        captureId,
+                        snapshotPending ? emptySummaryState : current,
+                        batch,
+                    )
+                    snapshotPending = false
+                    if (frame === undefined) frame = requestAnimationFrame(publish)
+                },
+                onDisconnect: setError,
+            })
+        }
+        const visibility = () => {
+            if (document.hidden) {
+                unsubscribe?.()
+                unsubscribe = undefined
+            } else {
+                snapshotPending = true
+                subscribe()
+            }
+        }
+        subscribe()
+        document.addEventListener('visibilitychange', visibility)
+        return () => {
+            document.removeEventListener('visibilitychange', visibility)
+            unsubscribe?.()
+            if (frame !== undefined) cancelAnimationFrame(frame)
+            publish()
+        }
+    }, [attempt, captureId, enabled, queryClient])
+    const state = query.data ?? emptySummaryState
     return {
-        state: query.data ?? emptySummaryState,
-        error: query.error,
-        isInitialLoading: enabled && query.isFetching && (query.data?.rows.length ?? 0) === 0,
-        isLoadingMore: enabled && query.isFetching && (query.data?.rows.length ?? 0) > 0,
-        retry: query.refetch,
+        state,
+        error,
+        isInitialLoading: enabled && state.rows.length === 0 && !state.complete,
+        isLoadingMore: false,
+        retry: () => setAttempt((value) => value + 1),
     }
 }
 
@@ -226,6 +309,7 @@ function useHistoricalPacketSummaries(
         queryFn: ({ signal }) => captureClient.summaryManifest(captureId, filter, signal),
         enabled,
         staleTime: Infinity,
+        refetchInterval: (query) => (query.state.data?.indexing ? 100 : false),
     })
     const gapOffset = manifest.data?.hasGaps ? 1 : 0
     const packetRowCount = manifest.data?.rowCount ?? 0
@@ -267,8 +351,18 @@ function useHistoricalPacketSummaries(
                 Math.min(PACKET_SUMMARY_PAGE_SIZE, packetRowCount - startIndex),
                 signal,
             ),
+        initialData:
+            startIndex === 0 && manifest.data?.initialSummaries
+                ? new PacketSummaryRange({
+                      captureId,
+                      revision: revision!,
+                      startIndex: 0,
+                      summaries: manifest.data.initialSummaries,
+                  })
+                : undefined,
         staleTime: Infinity,
         gcTime: Infinity,
+        structuralSharing: false,
     })
     const visiblePages = useQueries({
         queries:
@@ -285,6 +379,19 @@ function useHistoricalPacketSummaries(
                 ? surroundingPageStarts.map((startIndex) => queryForStart(startIndex))
                 : [],
     })
+    useEffect(() => {
+        if (!enabled || !manifest.data?.initialSummaries) return
+        // useQueries has seeded the visible first page. Keep summaries exclusively
+        // in the byte-budgeted range cache, not in every cached filter manifest.
+        queryClient.setQueryData<PacketSummaryManifest>(
+            captureKeys.summaryManifest(captureId, filter),
+            (current) =>
+                current?.initialSummaries
+                    ? new PacketSummaryManifest({ ...current, initialSummaries: undefined })
+                    : current,
+        )
+    }, [captureId, enabled, filter, manifest.data, queryClient])
+
     const pageStarts = useMemo(
         () => [...visiblePageStarts, ...surroundingPageStarts],
         [surroundingPageStarts, visiblePageStarts],
@@ -422,6 +529,7 @@ function useHistoricalPacketSummaries(
         enabled && (manifest.isPending || (manifest.isSuccess && !firstPageLoaded))
 
     return {
+        indexing: manifest.data?.indexing ?? false,
         rowCount: virtualRowCount,
         packetRowCount,
         totalRowCount: manifest.data?.totalRowCount ?? 0,
@@ -444,10 +552,14 @@ export function usePacketSummaries(
     options: {
         readonly enabled: boolean
         readonly mode: SummaryReadMode
+        readonly paused?: boolean
         readonly filter?: PacketSummaryFilter | null
     },
 ) {
-    const live = useLivePacketSummaries(captureId, options.enabled && options.mode === 'live')
+    const live = useLivePacketSummaries(
+        captureId,
+        options.enabled && options.mode === 'live' && !options.paused,
+    )
     const history = useHistoricalPacketSummaries(
         captureId,
         options.filter ?? null,
@@ -465,11 +577,12 @@ export function usePacketSummaries(
     const state = live.state
     return {
         mode: 'live' as const,
+        indexing: false,
         ...state,
         rowCount: state.rows.length,
-        packetRowCount: state.rows.filter((row) => row.kind === 'packet').length,
-        totalRowCount: state.rows.filter((row) => row.kind === 'packet').length,
-        lastTimestampNs: state.rows.findLast((row) => row.kind === 'packet')?.summary.timestampNs,
+        packetRowCount: state.rows.length - Number(state.rows[0]?.kind === 'gap'),
+        totalRowCount: state.rows.length - Number(state.rows[0]?.kind === 'gap'),
+        lastTimestampNs: state.maximumTimestampNs,
         getRow: (index: number) => state.rows[index],
         requestRange: () => undefined,
         error: live.error,

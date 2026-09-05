@@ -8,10 +8,14 @@ import { Context, Effect, Layer } from 'effect'
 import { AppDataPaths } from './app-data-paths'
 import { DatabaseError } from './errors'
 import { InstanceLock } from './instance-lock'
+import { SummaryQueryWorker, type SummaryIndexQuery, type SummaryIndexResult } from './query-worker'
 
 export type DrizzleDatabase = ReturnType<typeof drizzle>
 
 export interface DatabaseService {
+    readonly summaryIndex: (
+        query: SummaryIndexQuery,
+    ) => Effect.Effect<SummaryIndexResult, DatabaseError>
     readonly read: <A>(
         operation: string,
         use: (database: DrizzleDatabase) => A,
@@ -91,7 +95,19 @@ export class Database extends Context.Tag('@repo/core/storage/Database')<
                         try: () => use(database.database),
                         catch: (cause) => databaseFailure(operation, cause),
                     })
+                const queryWorker = yield* Effect.acquireRelease(
+                    Effect.sync(() => new SummaryQueryWorker(paths.databasePath)),
+                    (worker) => Effect.promise(() => worker.close()),
+                )
+                const queryPermit = yield* Effect.makeSemaphore(1)
                 return Database.of({
+                    summaryIndex: (query) =>
+                        queryPermit.withPermits(1)(
+                            Effect.tryPromise({
+                                try: (signal) => queryWorker.query(query, signal),
+                                catch: (cause) => databaseFailure('index packet summaries', cause),
+                            }),
+                        ),
                     read: run,
                     write: run,
                 })

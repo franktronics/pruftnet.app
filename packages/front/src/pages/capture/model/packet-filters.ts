@@ -156,13 +156,23 @@ export function secondsFromNumber(value: number): string {
     return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
+const filterMatches = new WeakMap<
+    PacketDisplayFilters,
+    {
+        origin: string | undefined
+        matches: WeakMap<PacketSummary, boolean>
+    }
+>()
+
 export function filterPacketRows(
     rows: readonly SummaryRow[],
     filters: PacketDisplayFilters,
     originTimestampNs?: string,
-): SummaryRow[] {
+): readonly SummaryRow[] {
     const error = validatePacketDisplayFilters(filters)
     if (error) return rows.filter((row) => row.kind === 'gap')
+
+    if (!filters.search.trim() && countAdvancedPacketFilters(filters) === 0) return rows
 
     const text = normalized(filters.search)
     const source = normalized(filters.source)
@@ -175,9 +185,12 @@ export function filterPacketRows(
     const interfaces = new Set(filters.interfaceIds)
     const statuses = new Set(filters.parseConditions)
 
-    return rows.filter((row) => {
-        if (row.kind === 'gap') return true
-        const summary = row.summary
+    let cached = filterMatches.get(filters)
+    if (!cached || cached.origin !== originTimestampNs) {
+        cached = { origin: originTimestampNs, matches: new WeakMap() }
+        filterMatches.set(filters, cached)
+    }
+    const matches = (summary: PacketSummary) => {
         if (text && !summary.columns.some((column) => normalized(column.value).includes(text)))
             return false
         if (filters.timeRange) {
@@ -195,5 +208,13 @@ export function filterPacketRows(
         if (destination && !normalized(columnValue(summary, 'destination')).includes(destination))
             return false
         return true
+    }
+    return rows.filter((row) => {
+        if (row.kind === 'gap') return true
+        const previous = cached.matches.get(row.summary)
+        if (previous !== undefined) return previous
+        const result = matches(row.summary)
+        cached.matches.set(row.summary, result)
+        return result
     })
 }

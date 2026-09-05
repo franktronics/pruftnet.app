@@ -45,6 +45,26 @@ std::unique_ptr<FakePacketSource> empty_waiting_source() {
   return source;
 }
 
+void isolated_packet_is_flushed_while_source_remains_open() {
+  auto source = empty_waiting_source();
+  source->packets.push_back(fake_packet(64));
+  auto options = base_options();
+  options.spool_flush_interval = std::chrono::milliseconds(20);
+  std::atomic<unsigned> callbacks{0};
+  SnifferRuntime runtime(
+      options, one_source(std::move(source)),
+      SnifferOptionsValidation{.require_interface_name = false},
+      [&](const auto &, const auto &) { callbacks.fetch_add(1); }, {});
+  assert(!runtime.start().has_value());
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+  while (callbacks.load() == 0 && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  assert(runtime.is_running());
+  assert(callbacks.load() == 1);
+  assert(runtime.stats().packets_persisted == 1);
+  runtime.stop();
+}
+
 void stop_before_start_and_repeated_stop_are_safe() {
   auto source = empty_waiting_source();
   SnifferRuntime runtime(
@@ -293,6 +313,7 @@ void rejected_observations_leave_packet_id_gaps() {
 } // namespace
 
 int main() {
+  isolated_packet_is_flushed_while_source_remains_open();
   stop_before_start_and_repeated_stop_are_safe();
   double_start_is_rejected();
   destructor_stops_running_runtime();

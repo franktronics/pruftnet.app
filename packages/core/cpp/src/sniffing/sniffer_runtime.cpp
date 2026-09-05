@@ -699,8 +699,11 @@ void SnifferRuntime::release_start_gate(bool success) noexcept {
 }
 
 void SnifferRuntime::notify_writer() noexcept {
-  writer_wakeup_generation_.fetch_add(1, std::memory_order_release);
-  writer_wakeup_generation_.notify_all();
+  {
+    std::lock_guard lock(writer_wakeup_mutex_);
+    writer_wakeup_generation_.fetch_add(1, std::memory_order_release);
+  }
+  writer_wakeup_condition_.notify_one();
 }
 
 void SnifferRuntime::notify_analyzer() noexcept {
@@ -871,10 +874,18 @@ void SnifferRuntime::writer_loop() noexcept {
       }
       publish_committed(
           std::get<std::vector<capture::CommittedPacket>>(committed));
+      const auto deadline = spool_->flush_deadline();
+      std::unique_lock lock(writer_wakeup_mutex_);
       const auto generation =
           writer_wakeup_generation_.load(std::memory_order_acquire);
-      if (!all_capture_done() && !any_ring_has_packets())
-        writer_wakeup_generation_.wait(generation, std::memory_order_acquire);
+      const auto ready = [&] {
+        return all_capture_done() || any_ring_has_packets() ||
+               writer_wakeup_generation_.load(std::memory_order_acquire) != generation;
+      };
+      if (deadline)
+        writer_wakeup_condition_.wait_until(lock, *deadline, ready);
+      else
+        writer_wakeup_condition_.wait(lock, ready);
     }
     if (!spool_failed_.load(std::memory_order_acquire)) {
       const auto finalized = spool_->finalize();

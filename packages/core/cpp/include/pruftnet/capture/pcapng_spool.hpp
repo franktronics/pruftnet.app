@@ -34,7 +34,7 @@ struct PcapngSpoolOptions {
   std::size_t max_segments = 0;
   bool ring_mode = false;
   bool temporary = true;
-  std::chrono::milliseconds flush_interval{50};
+  std::chrono::milliseconds flush_interval{8};
   std::size_t flush_bytes = 1024 * 1024;
 };
 
@@ -135,6 +135,8 @@ public:
   std::variant<std::vector<CommittedPacket>, SpoolError> flush() noexcept;
   std::variant<std::vector<CommittedPacket>, SpoolError>
   flush_if_due() noexcept;
+  [[nodiscard]] std::optional<std::chrono::steady_clock::time_point>
+  flush_deadline() const noexcept;
   std::variant<std::vector<CommittedPacket>, SpoolError> finalize() noexcept;
 
   [[nodiscard]] PacketSpoolLookup lookup(const sniffing::PacketKey &key) const;

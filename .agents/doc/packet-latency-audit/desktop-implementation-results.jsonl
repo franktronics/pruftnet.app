@@ -1,0 +1,3 @@
+{"environment": "desktop-development", "filter": "udp", "captureRows": 213741, "firstRowsMs": 333.3, "fullCountTwoFramesMs": 894.9, "longTasksMs": [71, 58, 124]}
+{"environment": "desktop-compiled", "filter": "udp", "captureRows": 213741, "firstRowsMs": 114.2, "firstRowsTwoFramesMs": 121.6, "fullCountMs": 722.5, "matches": 194812}
+{"environment": "desktop-compiled", "filter": "tcp", "captureRows": 213741, "firstRowsMs": 64.6, "firstRowsTwoFramesMs": 72.3, "fullCountMs": 837.1, "matches": 18272}

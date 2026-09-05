@@ -7,7 +7,7 @@ import {
     PacketEvicted,
     PacketNotFound,
 } from '@repo/shared/capture'
-import { Effect, Layer } from 'effect'
+import { Stream, Effect, Layer } from 'effect'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { makePacketDetailNodeHandler } from './detail-http'
@@ -36,6 +36,7 @@ const capture = CaptureSessionManager.of({
     start: () => Effect.die('unused'),
     stop: () => Effect.die('unused'),
     session: () => Effect.die('unused'),
+    streamSummaries: () => Stream.empty,
     summaries: () => Effect.die('unused'),
     summaryManifest: () => Effect.die('unused'),
     summaryRange: () => Effect.die('unused'),

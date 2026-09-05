@@ -56,7 +56,7 @@ struct SnifferOptions {
   bool spool_ring_mode = false;
   bool spool_temporary = true;
   std::chrono::milliseconds spool_flush_interval =
-      std::chrono::milliseconds(50);
+      std::chrono::milliseconds(8);
   std::size_t spool_flush_bytes = 1024 * 1024;
 };
 

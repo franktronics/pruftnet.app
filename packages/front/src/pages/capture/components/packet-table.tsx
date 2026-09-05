@@ -1,4 +1,4 @@
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { usePacketVirtualizer } from '#front/pages/capture/hooks/use-packet-virtualizer'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
@@ -8,11 +8,7 @@ import {
     PACKET_SUMMARY_PAGE_SIZE,
     type SummaryRow,
 } from '#front/pages/capture/hooks/use-packet-summaries'
-import {
-    PACKET_ROW_HEIGHT,
-    packetKey,
-    relativePacketTime,
-} from '#front/pages/capture/model/packet-view'
+import { packetKey, relativePacketTime } from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 
 const columns = [
@@ -145,17 +141,11 @@ export function PacketTable({
     const [columnWidths, setColumnWidths] = useState(initialColumnWidths)
     const pendingSelection = useRef<number | undefined>(undefined)
     const reportedPageRange = useRef('')
-    const virtualizer = useVirtualizer({
-        count: rowCount,
-        getScrollElement: () => scrollRef.current,
-        estimateSize: () => PACKET_ROW_HEIGHT,
-        overscan: 12,
-        getItemKey: (index) => `packet-summary-row-${index}`,
-    })
-    const virtualItems = virtualizer.getVirtualItems()
+    const virtualizer = usePacketVirtualizer(rowCount, scrollRef)
+    const { scrollToIndex, items: virtualItems } = virtualizer
     useEffect(() => {
-        if (following && rowCount > 0) virtualizer.scrollToIndex(rowCount - 1, { align: 'end' })
-    }, [following, rowCount, virtualizer])
+        if (following && rowCount > 0) scrollToIndex(rowCount - 1, { align: 'end' })
+    }, [following, rowCount, scrollToIndex])
     useLayoutEffect(() => {
         const first = virtualItems.at(0)?.index
         const last = virtualItems.at(-1)?.index
@@ -165,9 +155,10 @@ export function PacketTable({
         reportedPageRange.current = pageRange
         onVisibleRangeChange(first, last)
     }, [datasetKey, onVisibleRangeChange, virtualItems])
-    useEffect(() => {
-        virtualizer.scrollToIndex(0, { align: 'start' })
-    }, [datasetKey, virtualizer])
+    useLayoutEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = 0
+        pendingSelection.current = undefined
+    }, [datasetKey])
     useEffect(() => {
         const index = pendingSelection.current
         if (index === undefined) return
@@ -201,28 +192,28 @@ export function PacketTable({
         if (index < 0 || index >= rowCount) return
         if (row?.kind === 'packet') {
             onSelect(row, index)
-            virtualizer.scrollToIndex(index, { align: 'auto' })
+            scrollToIndex(index, { align: 'auto' })
             return
         }
         pendingSelection.current = index
-        virtualizer.scrollToIndex(index, { align: 'auto' })
+        scrollToIndex(index, { align: 'auto' })
         onVisibleRangeChange(index, index)
     }
 
     function scrollToTop() {
         if (following) onPauseFollowing()
-        virtualizer.scrollToIndex(0, { align: 'start' })
+        scrollToIndex(0, { align: 'start' })
     }
 
     function followTail() {
         onFollowingChange(true)
-        if (rowCount > 0) virtualizer.scrollToIndex(rowCount - 1, { align: 'end' })
+        if (rowCount > 0) scrollToIndex(rowCount - 1, { align: 'end' })
     }
 
     function scrollToBottom() {
         const index = rowCount - 1
         if (index < 0) return
-        virtualizer.scrollToIndex(index, { align: 'end' })
+        scrollToIndex(index, { align: 'end' })
         onVisibleRangeChange(index, index)
     }
 
@@ -367,7 +358,7 @@ export function PacketTable({
                     aria-label="Captured packets"
                     aria-activedescendant={
                         selectedKey &&
-                        virtualizer.getVirtualItems().some((item) => {
+                        virtualItems.some((item) => {
                             const row = getRow(item.index)
                             return row?.kind === 'packet' && packetKey(row.summary) === selectedKey
                         })
@@ -392,7 +383,7 @@ export function PacketTable({
                             event.preventDefault()
                             const index = event.key === 'Home' ? 0 : Math.max(0, rowCount - 1)
                             pendingSelection.current = index
-                            virtualizer.scrollToIndex(index, {
+                            scrollToIndex(index, {
                                 align: event.key === 'Home' ? 'start' : 'end',
                             })
                             onVisibleRangeChange(index, index)
@@ -401,7 +392,7 @@ export function PacketTable({
                 >
                     <div
                         className="relative w-full"
-                        style={{ height: virtualizer.getTotalSize(), minWidth: tableWidth }}
+                        style={{ height: virtualizer.totalSize, minWidth: tableWidth }}
                     >
                         {packetCount === 0 && emptyMessage ? (
                             <div
@@ -417,32 +408,47 @@ export function PacketTable({
                                 return (
                                     <div
                                         key={item.key}
-                                        role="status"
-                                        aria-label={`Loading packet row ${item.index + 1}`}
-                                        className="text-muted-foreground absolute top-0 left-0 grid w-full items-center border-b px-2 text-xs"
+                                        role="row"
+                                        aria-rowindex={item.index + 1}
+                                        aria-busy="true"
+                                        aria-label={`List position ${item.index + 1}, packet loading`}
+                                        className="text-muted-foreground absolute top-0 left-0 grid w-full items-center border-b font-mono text-xs tabular-nums"
                                         style={{
                                             ...gridStyle,
                                             height: item.size,
                                             transform: `translateY(${item.start}px)`,
                                         }}
                                     >
+                                        <span
+                                            role="gridcell"
+                                            className="truncate px-2"
+                                            title={`List position ${item.index + 1}. The original packet number appears when loaded.`}
+                                        >
+                                            {item.index + 1}
+                                            <sup aria-hidden="true">*</sup>
+                                        </span>
                                         {loadError ? (
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 className="h-6 justify-self-start normal-case"
-                                                style={{ gridColumn: '1 / -1' }}
+                                                style={{ gridColumn: '2 / -1' }}
                                                 onClick={onRetry}
                                             >
                                                 Retry this packet range
                                             </Button>
                                         ) : (
-                                            columns.map((column, index) => (
+                                            columns.slice(1).map((column) => (
                                                 <span
                                                     key={column.id}
-                                                    aria-hidden="true"
-                                                    className={`bg-muted-foreground/10 h-2 rounded-sm ${index === columns.length - 1 ? 'w-3/5' : 'w-2/3'}`}
-                                                />
+                                                    role="gridcell"
+                                                    className="px-2"
+                                                >
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className={`bg-muted-foreground/10 block h-2 rounded-sm ${column.id === 'info' ? 'w-3/5' : 'w-2/3'}`}
+                                                    />
+                                                </span>
                                             ))
                                         )}
                                     </div>
@@ -457,7 +463,7 @@ export function PacketTable({
                                             transform: `translateY(${item.start}px)`,
                                         }}
                                     >
-                                        Earlier packets are no longer retained
+                                        Earlier packets are outside this view
                                     </div>
                                 )
                             return (

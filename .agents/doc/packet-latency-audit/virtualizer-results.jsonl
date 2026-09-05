@@ -1,0 +1,4 @@
+{"count":50000,"stableKey":true,"medianMs":0.002,"p95Ms":0.004,"checksum":187000000}
+{"count":50000,"stableKey":false,"medianMs":4.871,"p95Ms":6.381,"checksum":187000000}
+{"count":213741,"stableKey":true,"medianMs":0.001,"p95Ms":0.001,"checksum":799391340}
+{"count":213741,"stableKey":false,"medianMs":31.891,"p95Ms":36.598,"checksum":799391340}

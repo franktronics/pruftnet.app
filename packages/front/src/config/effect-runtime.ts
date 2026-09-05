@@ -46,6 +46,7 @@ export async function callRpc<A>(
 export interface RpcStreamSubscriptionOptions<A> {
     readonly stream: (client: AppRpcClient) => Stream.Stream<A, unknown>
     readonly onValue: (value: A) => void
+    readonly restartOnEnd?: boolean
     readonly onDisconnect?: (cause: unknown) => void
 }
 
@@ -58,14 +59,19 @@ export function subscribeRpcStream<A>({
     stream,
     onValue,
     onDisconnect,
+    restartOnEnd = false,
 }: RpcStreamSubscriptionOptions<A>): () => void {
     const controller = new AbortController()
     const attempt = Stream.unwrap(
         Effect.map(AppRpcClientService, (client) =>
-            stream(client).pipe(Stream.concat(Stream.fail(new Error('RPC stream ended.')))),
+            restartOnEnd
+                ? stream(client)
+                : stream(client).pipe(Stream.concat(Stream.fail(new Error('RPC stream ended.')))),
         ),
     )
-    const reconnecting = attempt.pipe(
+    const reconnecting = (
+        restartOnEnd ? attempt.pipe(Stream.repeat(Schedule.forever)) : attempt
+    ).pipe(
         Stream.tapError((cause) =>
             Effect.sync(() => {
                 if (!controller.signal.aborted) onDisconnect?.(cause)

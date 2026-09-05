@@ -10,7 +10,7 @@ import {
     PacketSummaryBatch,
     PacketSummaryRange,
     type PacketSummaryFilter,
-    type PacketSummaryManifest,
+    PacketSummaryManifest,
     type CaptureInterface,
     type CaptureInterfaceCapabilities,
     type CaptureRpcError,
@@ -20,7 +20,18 @@ import {
     type CaptureStats,
     type RegistrySnapshot,
 } from '@repo/shared/capture'
-import { Clock, Context, Duration, Effect, Fiber, Layer, Schedule, Schema } from 'effect'
+import {
+    Clock,
+    Context,
+    Duration,
+    Effect,
+    Fiber,
+    Layer,
+    Schedule,
+    Schema,
+    Stream,
+    Option,
+} from 'effect'
 
 import { AppDataPaths } from '#core/storage'
 import { RealtimeHub } from '#core/realtime/hub'
@@ -32,6 +43,7 @@ import {
 } from './capture-session-repository'
 import { Capture } from './service'
 import { CaptureRecovery } from './recovery'
+import { SummaryDeliveryCache } from './summary-delivery-cache'
 
 type ManagerError = Schema.Schema.Type<typeof CaptureRpcError>
 
@@ -95,6 +107,10 @@ export interface CaptureSessionManagerService {
         cursor: string | undefined,
         limit: number,
     ) => Effect.Effect<PacketSummaryBatch, ManagerError>
+    readonly streamSummaries: (
+        captureId: string,
+        cursor?: string,
+    ) => Stream.Stream<PacketSummaryBatch, ManagerError>
     readonly summaryManifest: (
         captureId: string,
         filter: PacketSummaryFilter | null,
@@ -140,6 +156,7 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
             const applicationScope = yield* Effect.scope
             const lifecycle = yield* Effect.makeSemaphore(1)
             const supervisors = new Map<string, Fiber.RuntimeFiber<void, never>>()
+            const summaryDelivery = new SummaryDeliveryCache()
             const summaryCursors = new Map<string, string>()
             const eventCursors = new Map<string, string>()
             const lastMetadataSyncMs = new Map<string, number>()
@@ -158,7 +175,8 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
 
             const persistAvailableSummaries = Effect.fn(
                 'CaptureSessionManager.persistAvailableSummaries',
-            )(function* (captureId: string) {
+            )(function* (captureId: string, drainAll = false) {
+                const started = yield* Clock.currentTimeMillis
                 const previousCursor = summaryCursors.get(captureId)
                 while (true) {
                     const summaries = yield* capture.summaries(
@@ -179,8 +197,15 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             cursor: summaryCursors.get(captureId) ?? null,
                             changed: summaryCursors.get(captureId) !== previousCursor,
                         }
+                    summaryDelivery.append(captureId, summaries.summaries)
                     summaryCursors.set(captureId, summaries.lastCursor)
+                    yield* realtime.publishCaptureDataAvailable({
+                        captureId,
+                        summaryCursor: summaries.lastCursor,
+                        eventCursor: eventCursors.get(captureId) ?? null,
+                    })
                     if (
+                        (!drainAll && (yield* Clock.currentTimeMillis) - started >= 8) ||
                         summaries.lastCursor === summaries.newestAvailableCursor ||
                         summaries.summaries.length < 1024
                     )
@@ -193,7 +218,8 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
 
             const persistAvailableEvents = Effect.fn(
                 'CaptureSessionManager.persistAvailableEvents',
-            )(function* (captureId: string) {
+            )(function* (captureId: string, drainAll = false) {
+                const started = yield* Clock.currentTimeMillis
                 const previousCursor = eventCursors.get(captureId)
                 while (true) {
                     const events = yield* capture.events(
@@ -216,7 +242,10 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             changed: eventCursors.get(captureId) !== previousCursor,
                         }
                     eventCursors.set(captureId, lastEvent.cursor)
-                    if (events.events.length < 512)
+                    if (
+                        events.events.length < 512 ||
+                        (!drainAll && (yield* Clock.currentTimeMillis) - started >= 8)
+                    )
                         return {
                             cursor: lastEvent.cursor,
                             changed: lastEvent.cursor !== previousCursor,
@@ -241,8 +270,8 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                     yield* persistSegments(captureId)
                     lastMetadataSyncMs.set(captureId, now)
                 }
-                const summaries = yield* persistAvailableSummaries(captureId)
-                const events = yield* persistAvailableEvents(captureId)
+                const summaries = yield* persistAvailableSummaries(captureId, forceMetadata)
+                const events = yield* persistAvailableEvents(captureId, forceMetadata)
                 const session = yield* capture.session(captureId)
                 if (summaries.changed || events.changed) {
                     yield* realtime.publishCaptureDataAvailable({
@@ -278,10 +307,7 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             ? Effect.void
                             : lifecycle.withPermits(1)(
                                   Effect.gen(function* () {
-                                      const final =
-                                          synchronized.stats === null
-                                              ? yield* synchronize(captureId, true)
-                                              : synchronized
+                                      const final = yield* synchronize(captureId, true)
                                       const { session, stats, statSample, summaries, events } =
                                           final
                                       const current = yield* stored(repository.get(captureId))
@@ -371,7 +397,7 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                             `Capture ${captureId} synchronization failed: ${error.title}`,
                         )
                     }),
-                    Effect.repeat(Schedule.spaced(Duration.millis(500))),
+                    Effect.repeat(Schedule.spaced(Duration.millis(8))),
                     Effect.ignore,
                     Effect.ensuring(
                         Effect.sync(() => {
@@ -394,6 +420,31 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
             const stored = <A>(
                 effect: Effect.Effect<A, CaptureRepositoryError | StoredCaptureNotFound>,
             ) => effect.pipe(Effect.mapError(managerError))
+
+            const readSummaries = Effect.fn('CaptureSessionManager.summaries')(function* (
+                captureId: string,
+                cursor: string | undefined,
+                limit: number,
+            ) {
+                const record = yield* stored(repository.get(captureId))
+                const summaries =
+                    summaryDelivery.read(captureId, cursor, limit + 1) ??
+                    (yield* repository
+                        .readSummaries(captureId, cursor, limit + 1)
+                        .pipe(Effect.mapError(managerError)))
+                const hasMore = summaries.length > limit
+                const page = hasMore ? summaries.slice(0, limit) : summaries
+                return new PacketSummaryBatch({
+                    captureId,
+                    firstCursor: page.at(0)?.cursor ?? null,
+                    lastCursor: page.at(-1)?.cursor ?? null,
+                    oldestAvailableCursor: page.at(0)?.cursor ?? null,
+                    newestAvailableCursor: page.at(-1)?.cursor ?? null,
+                    gapBeforeFirst: hasCursorGap(cursor, page.at(0)?.cursor),
+                    captureComplete: !activeCaptureStates.includes(record.state) && !hasMore,
+                    summaries: page,
+                })
+            })
 
             return CaptureSessionManager.of({
                 listInterfaces: capture.listInterfaces,
@@ -526,32 +577,114 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                     }
                     return asSession(record)
                 }),
-                summaries: Effect.fn('CaptureSessionManager.summaries')(
-                    function* (captureId, cursor, limit) {
-                        const record = yield* stored(repository.get(captureId))
-                        const summaries = yield* repository
-                            .readSummaries(captureId, cursor, limit + 1)
-                            .pipe(Effect.mapError(managerError))
-                        const hasMore = summaries.length > limit
-                        const page = hasMore ? summaries.slice(0, limit) : summaries
-                        return new PacketSummaryBatch({
-                            captureId,
-                            firstCursor: page.at(0)?.cursor ?? null,
-                            lastCursor: page.at(-1)?.cursor ?? null,
-                            oldestAvailableCursor: page.at(0)?.cursor ?? null,
-                            newestAvailableCursor: page.at(-1)?.cursor ?? null,
-                            gapBeforeFirst: hasCursorGap(cursor, page.at(0)?.cursor),
-                            captureComplete:
-                                !activeCaptureStates.includes(record.state) && !hasMore,
-                            summaries: page,
-                        })
-                    },
-                ),
+                summaries: readSummaries,
+                streamSummaries: (captureId, afterCursor) =>
+                    Stream.unwrap(
+                        Effect.sync(() => {
+                            let cursor = afterCursor
+                            let originTimestampNs: string | undefined
+                            // Each HTTP response contains at most eight pages. Completing and reopening
+                            // after consumption supplies bounded application-level flow control on HTTP.
+                            return realtime.captureChanges(captureId).pipe(
+                                Stream.filter(
+                                    (change) =>
+                                        change._tag === 'CaptureStreamReady' ||
+                                        change._tag === 'CaptureHeartbeat' ||
+                                        (change._tag === 'CaptureLiveSnapshot' &&
+                                            change.terminal) ||
+                                        (change._tag === 'CaptureDataAvailable' &&
+                                            change.summaryCursor !== cursor),
+                                ),
+                                Stream.flatMap(() =>
+                                    Stream.unwrap(
+                                        Effect.gen(function* () {
+                                            const manifest = yield* repository
+                                                .summaryManifest(captureId, null)
+                                                .pipe(Effect.mapError(managerError))
+                                            originTimestampNs =
+                                                manifest.originTimestampNs ?? undefined
+                                            if (cursor === undefined) {
+                                                const start = Math.max(
+                                                    0,
+                                                    manifest.totalRowCount - 1024,
+                                                )
+                                                const rows = yield* repository
+                                                    .readSummaryRange(
+                                                        captureId,
+                                                        manifest.revision,
+                                                        null,
+                                                        start,
+                                                        Math.min(
+                                                            1024,
+                                                            manifest.totalRowCount - start,
+                                                        ),
+                                                    )
+                                                    .pipe(Effect.mapError(managerError))
+                                                cursor = rows.at(-1)?.cursor ?? '0'
+                                                return Stream.succeed(
+                                                    new PacketSummaryBatch({
+                                                        captureId,
+                                                        originTimestampNs,
+                                                        firstCursor: rows.at(0)?.cursor ?? null,
+                                                        lastCursor: rows.at(-1)?.cursor ?? null,
+                                                        oldestAvailableCursor:
+                                                            rows.at(0)?.cursor ?? null,
+                                                        newestAvailableCursor: manifest.revision,
+                                                        gapBeforeFirst:
+                                                            start > 0 || manifest.hasGaps,
+                                                        captureComplete: manifest.captureComplete,
+                                                        summaries: rows,
+                                                    }),
+                                                )
+                                            }
+                                            const watermark = BigInt(manifest.revision)
+                                            return Stream.paginateEffect(cursor, (previous) =>
+                                                Effect.gen(function* () {
+                                                    const batch = yield* readSummaries(
+                                                        captureId,
+                                                        previous,
+                                                        1024,
+                                                    )
+                                                    const rows = batch.summaries.filter(
+                                                        (row) => BigInt(row.cursor) <= watermark,
+                                                    )
+                                                    cursor = rows.at(-1)?.cursor ?? previous
+                                                    const more =
+                                                        rows.length > 0 &&
+                                                        BigInt(cursor) < watermark
+                                                    return [
+                                                        new PacketSummaryBatch({
+                                                            ...batch,
+                                                            summaries: rows,
+                                                            firstCursor: rows.at(0)?.cursor ?? null,
+                                                            lastCursor: rows.at(-1)?.cursor ?? null,
+                                                            newestAvailableCursor:
+                                                                manifest.revision,
+                                                            captureComplete:
+                                                                manifest.captureComplete && !more,
+                                                            originTimestampNs,
+                                                        }),
+                                                        more ? Option.some(cursor) : Option.none(),
+                                                    ] as const
+                                                }),
+                                            )
+                                        }),
+                                    ),
+                                ),
+                                Stream.take(8),
+                            )
+                        }),
+                    ),
                 summaryManifest: Effect.fn('CaptureSessionManager.summaryManifest')(
                     function* (captureId, filter) {
-                        return yield* repository
+                        const manifest = yield* repository
                             .summaryManifest(captureId, filter)
                             .pipe(Effect.mapError(managerError))
+                        if (manifest.initialSummaries) return manifest
+                        const initialSummaries = yield* repository
+                            .readSummaryRange(captureId, manifest.revision, filter, 0, 256)
+                            .pipe(Effect.mapError(managerError))
+                        return new PacketSummaryManifest({ ...manifest, initialSummaries })
                     },
                 ),
                 summaryRange: Effect.fn('CaptureSessionManager.summaryRange')(
@@ -610,19 +743,21 @@ export class CaptureSessionManager extends Context.Tag('@repo/core/capture/Captu
                     repository
                         .readStatSamples(captureId, limit)
                         .pipe(Effect.mapError(managerError)),
-                events: Effect.fn('CaptureSessionManager.events')(
-                    function* (captureId, cursor, limit) {
-                        yield* stored(repository.get(captureId))
-                        const events = yield* repository
-                            .readEvents(captureId, cursor, limit)
-                            .pipe(Effect.mapError(managerError))
-                        return new CaptureEventBatch({
-                            captureId,
-                            gapBeforeFirst: hasCursorGap(cursor, events.at(0)?.cursor),
-                            events,
-                        })
-                    },
-                ),
+                events: Effect.fn('CaptureSessionManager.events')(function* (
+                    captureId: string,
+                    cursor: string | undefined,
+                    limit: number,
+                ) {
+                    yield* stored(repository.get(captureId))
+                    const events = yield* repository
+                        .readEvents(captureId, cursor, limit)
+                        .pipe(Effect.mapError(managerError))
+                    return new CaptureEventBatch({
+                        captureId,
+                        gapBeforeFirst: hasCursorGap(cursor, events.at(0)?.cursor),
+                        events,
+                    })
+                }),
             })
         }),
     )

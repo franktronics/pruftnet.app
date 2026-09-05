@@ -129,6 +129,8 @@ private:
   bool stopping_ = false;
   std::atomic<PacketId> next_packet_id_{1};
   std::atomic<std::uint64_t> writer_wakeup_generation_{0};
+  std::mutex writer_wakeup_mutex_;
+  std::condition_variable writer_wakeup_condition_;
   std::atomic<std::uint64_t> analyzer_wakeup_generation_{0};
   std::atomic<std::uint64_t> packets_available_for_analysis_{0};
   std::atomic<std::uint64_t> packets_analyzed_{0};

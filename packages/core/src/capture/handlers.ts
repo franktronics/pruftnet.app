@@ -23,6 +23,8 @@ export const CaptureHandlers = CaptureRpcs.toLayer(
             GetCaptureSession: ({ captureId }) => capture.session(captureId),
             ReadPacketSummaries: ({ captureId, afterCursor, limit }) =>
                 capture.summaries(captureId, afterCursor, limit),
+            StreamPacketSummaries: ({ captureId, afterCursor }) =>
+                capture.streamSummaries(captureId, afterCursor),
             GetPacketSummaryManifest: ({ captureId, filter }) =>
                 capture.summaryManifest(captureId, filter),
             ReadPacketSummaryRange: ({ captureId, revision, filter, startIndex, limit }) =>

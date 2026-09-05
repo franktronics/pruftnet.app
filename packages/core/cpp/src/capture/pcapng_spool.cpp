@@ -87,6 +87,11 @@ struct PcapngSpool::IndexEntry {
   bool evicted = false;
 };
 
+struct SegmentReader {
+  std::mutex mutex;
+  std::ifstream input;
+};
+
 struct PcapngSpool::Segment {
   std::uint64_t id = 0;
   std::filesystem::path path;
@@ -98,6 +103,7 @@ struct PcapngSpool::Segment {
   std::uint64_t last_packet_id = 0;
   bool evicted = false;
   std::uint64_t lease_count = 0;
+  mutable std::shared_ptr<SegmentReader> reader;
 };
 
 PcapngSpool::PcapngSpool(PcapngSpoolOptions options,
@@ -178,7 +184,9 @@ std::optional<SpoolError> PcapngSpool::open_segment() noexcept {
     filename << options_.file_prefix << '-'
              << internal::capture_id_hex(capture_id_) << '-'
              << std::setfill('0') << std::setw(6) << segment_id << ".pcapng";
-    Segment segment{segment_id, options_.directory / filename.str()};
+    Segment segment{};
+    segment.id = segment_id;
+    segment.path = options_.directory / filename.str();
     SpoolError error;
     sink_ = sink_factory_(segment.path, error);
     if (!sink_)
@@ -280,12 +288,16 @@ std::optional<SpoolError> PcapngSpool::evict_oldest_segment() noexcept {
   auto candidate = std::find_if(
       segments_.begin(), segments_.end(), [current](const Segment &segment) {
         return !segment.evicted && segment.id != current &&
-               segment.lease_count == 0;
+               segment.lease_count == 0 &&
+               (!segment.reader || segment.reader.use_count() == 1);
       });
   if (candidate == segments_.end())
     return SpoolError{
         SpoolFailureReason::QuotaExceeded,
         "The active pcapng segment cannot be evicted to satisfy the quota.", 0};
+  // Close cached handles before deletion, including on Windows. Active reads
+  // retain a shared lease and are excluded from eviction above.
+  candidate->reader.reset();
   std::error_code error;
   std::filesystem::remove(candidate->path, error);
   if (error)
@@ -456,6 +468,14 @@ PcapngSpool::flush_if_due() noexcept {
   return committed;
 }
 
+std::optional<std::chrono::steady_clock::time_point>
+PcapngSpool::flush_deadline() const noexcept {
+  std::lock_guard lock(mutex_);
+  if (pending_indices_.empty())
+    return std::nullopt;
+  return last_flush_ + options_.flush_interval;
+}
+
 std::variant<std::vector<CommittedPacket>, SpoolError>
 PcapngSpool::finalize() noexcept {
   std::lock_guard lock(mutex_);
@@ -482,29 +502,56 @@ PcapngSpool::finalize() noexcept {
 }
 
 PacketSpoolLookup PcapngSpool::lookup(const sniffing::PacketKey &key) const {
-  std::lock_guard lock(mutex_);
-  if (key.capture_id != capture_id_)
-    return {};
-  const auto indexed = packet_index_.find(key.packet_id);
-  if (indexed == packet_index_.end())
-    return {};
-  const auto &entry = index_[indexed->second];
-  if (!entry.committed)
-    return {};
-  if (entry.evicted)
-    return {PacketSpoolLookupStatus::Evicted, std::nullopt};
-  const auto segment = std::find_if(
-      segments_.begin(), segments_.end(),
-      [&](const Segment &item) { return item.id == entry.packet.segment_id; });
-  if (segment == segments_.end() || segment->evicted)
-    return {PacketSpoolLookupStatus::Evicted, std::nullopt};
-  std::ifstream input(segment->path, std::ios::binary);
-  if (!input)
+  CommittedPacket committed;
+  std::filesystem::path path;
+  std::shared_ptr<SegmentReader> reader;
+  {
+    std::lock_guard lock(mutex_);
+    if (key.capture_id != capture_id_)
+      return {};
+    const auto indexed = packet_index_.find(key.packet_id);
+    if (indexed == packet_index_.end())
+      return {};
+    const auto &entry = index_[indexed->second];
+    if (!entry.committed)
+      return {};
+    if (entry.evicted)
+      return {PacketSpoolLookupStatus::Evicted, std::nullopt};
+    const auto segment = std::find_if(
+        segments_.begin(), segments_.end(),
+        [&](const Segment &item) { return item.id == entry.packet.segment_id; });
+    if (segment == segments_.end() || segment->evicted)
+      return {PacketSpoolLookupStatus::Evicted, std::nullopt};
+    committed = entry.packet;
+    path = segment->path;
+    if (!segment->reader) {
+      std::size_t cached_readers = 0;
+      for (const auto &item : segments_)
+        cached_readers += static_cast<bool>(item.reader);
+      for (const auto &item : segments_) {
+        if (cached_readers < 8)
+          break;
+        if (item.reader && item.reader.use_count() == 1) {
+          item.reader.reset();
+          --cached_readers;
+        }
+      }
+      segment->reader = std::make_shared<SegmentReader>();
+    }
+    reader = segment->reader;
+  }
+  // Reading and opening a file must not hold the writer's metadata lock.
+  std::lock_guard read_lock(reader->mutex);
+  auto &input = reader->input;
+  if (!input.is_open())
+    input.open(path, std::ios::binary);
+  if (!input.is_open())
     return {PacketSpoolLookupStatus::Corrupt, std::nullopt};
+  input.clear();
   PersistedPacket packet;
-  packet.metadata = entry.packet.metadata;
+  packet.metadata = committed.metadata;
   packet.bytes.resize(packet.metadata.captured_len);
-  input.seekg(static_cast<std::streamoff>(entry.packet.data_offset));
+  input.seekg(static_cast<std::streamoff>(committed.data_offset));
   input.read(reinterpret_cast<char *>(packet.bytes.data()),
              static_cast<std::streamsize>(packet.bytes.size()));
   if (!input)

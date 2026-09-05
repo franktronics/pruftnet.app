@@ -180,6 +180,7 @@ describe('capture RPC contract', () => {
             'StopCapture',
             'GetCaptureSession',
             'ReadPacketSummaries',
+            'StreamPacketSummaries',
             'GetPacketSummaryManifest',
             'ReadPacketSummaryRange',
             'GetRegistrySnapshot',

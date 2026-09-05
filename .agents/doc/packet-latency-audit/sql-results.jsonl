@@ -1,0 +1,7 @@
+{"node":"v26.4.0","platform":"darwin","arch":"arm64","rows":"213741"}
+{"name":"page_first","count":1024,"bytes":564504,"first_ms":5.7,"warm_median_ms":0.38,"warm_max_ms":0.78,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=? AND row_index>?)"]}
+{"name":"page_middle","count":1024,"bytes":568806,"first_ms":5.29,"warm_median_ms":0.41,"warm_max_ms":0.65,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=? AND row_index>?)"]}
+{"name":"page_last","count":749,"bytes":420234,"first_ms":3.29,"warm_median_ms":0.22,"warm_max_ms":0.42,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=? AND row_index>?)"]}
+{"name":"live_first_fallback","count":1024,"bytes":564504,"first_ms":547.22,"warm_median_ms":56.63,"warm_max_ms":57.72,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=?)","USE TEMP B-TREE FOR ORDER BY"]}
+{"name":"filter_tcp","count":18272,"bytes":0,"first_ms":536.25,"warm_median_ms":529.8,"warm_max_ms":535.79,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=?)","SCAN summary_column EXISTS VIRTUAL TABLE INDEX 3:"]}
+{"name":"filter_dns","count":0,"bytes":0,"first_ms":546.52,"warm_median_ms":548.26,"warm_max_ms":553.04,"plan":["SEARCH capture_summaries USING INDEX capture_summaries_row (capture_id=?)","SCAN summary_column EXISTS VIRTUAL TABLE INDEX 3:"]}

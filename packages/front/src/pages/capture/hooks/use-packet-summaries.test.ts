@@ -103,7 +103,7 @@ describe('readPacketSummaryState', () => {
         expect(result.complete).toBe(false)
     })
 
-    test('atomically catches up all currently available live pages', async () => {
+    test('publishes a full live page without waiting for the moving tail', async () => {
         const firstPage = Array.from({ length: PACKET_SUMMARY_PAGE_SIZE }, (_, index) =>
             String(index + 1),
         )
@@ -118,9 +118,9 @@ describe('readPacketSummaryState', () => {
             new AbortController().signal,
         )
 
-        expect(reads).toBe(2)
-        expect(result.rows).toHaveLength(PACKET_SUMMARY_PAGE_SIZE + 1)
-        expect(result.cursor).toBe(secondPage[0])
+        expect(reads).toBe(1)
+        expect(result.rows).toHaveLength(PACKET_SUMMARY_PAGE_SIZE)
+        expect(result.cursor).toBe(firstPage.at(-1))
     })
 
     test('rejects a full live page that does not advance the cursor', async () => {
@@ -140,15 +140,18 @@ describe('readPacketSummaryState', () => {
 describe('packetSummaryPageStarts', () => {
     test('requests a deep visible range directly with adjacent prefetch pages', () => {
         expect(packetSummaryPageStarts(149_000, 149_020, 149_742)).toEqual([
-            144 * PACKET_SUMMARY_PAGE_SIZE,
-            145 * PACKET_SUMMARY_PAGE_SIZE,
-            146 * PACKET_SUMMARY_PAGE_SIZE,
+            581 * PACKET_SUMMARY_PAGE_SIZE,
+            582 * PACKET_SUMMARY_PAGE_SIZE,
+            583 * PACKET_SUMMARY_PAGE_SIZE,
         ])
     })
 
     test('clamps prefetch at the beginning and end of a capture', () => {
         expect(packetSummaryPageStarts(0, 20, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
-        expect(packetSummaryPageStarts(1_490, 1_499, 1_500)).toEqual([0, PACKET_SUMMARY_PAGE_SIZE])
+        expect(packetSummaryPageStarts(1_490, 1_499, 1_500)).toEqual([
+            4 * PACKET_SUMMARY_PAGE_SIZE,
+            5 * PACKET_SUMMARY_PAGE_SIZE,
+        ])
         expect(packetSummaryPageStarts(0, 0, 0)).toEqual([])
     })
 })
