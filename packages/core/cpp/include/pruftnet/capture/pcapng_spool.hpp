@@ -48,6 +48,7 @@ enum class SpoolFailureReason {
   QuotaExceeded,
   InvalidPacket,
   CorruptData,
+  ReadCancelled,
 };
 
 struct SpoolError {
@@ -146,6 +147,8 @@ public:
   [[nodiscard]] std::uint64_t committed_count() const noexcept;
   [[nodiscard]] PcapngSpoolStats stats() const noexcept;
   [[nodiscard]] std::vector<std::filesystem::path> segment_paths() const;
+  [[nodiscard]] std::optional<std::filesystem::path>
+  segment_path(std::uint64_t segment_id) const;
   [[nodiscard]] std::vector<PcapngSegmentSnapshot> segment_snapshots() const;
   [[nodiscard]] std::vector<PcapngSegmentSnapshot> lease_snapshot();
   void release_leases(std::span<const std::uint64_t> segment_ids) noexcept;

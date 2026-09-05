@@ -1,6 +1,7 @@
 #include "pruftnet/capture/pcapng_spool.hpp"
 
 #include "capture/pcapng_format.hpp"
+#include "capture/packet_index.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -122,6 +123,7 @@ PcapngSpool::~PcapngSpool() {
   for (const auto &segment : segments_) {
     std::error_code error;
     std::filesystem::remove(segment.path, error);
+    std::filesystem::remove(internal::packet_index_path(segment.path), error);
   }
 }
 
@@ -305,6 +307,7 @@ std::optional<SpoolError> PcapngSpool::evict_oldest_segment() noexcept {
                       "Unable to evict pcapng segment: " +
                           candidate->path.string(),
                       error.value()};
+  std::filesystem::remove(internal::packet_index_path(candidate->path), error);
   candidate->evicted = true;
   bytes_retained_ -= candidate->bytes;
   evicted_bytes_ += candidate->bytes;
@@ -599,6 +602,15 @@ PcapngSpoolStats PcapngSpool::stats() const noexcept {
   return stats;
 }
 
+std::optional<std::filesystem::path>
+PcapngSpool::segment_path(std::uint64_t segment_id) const {
+  std::lock_guard lock(mutex_);
+  for (const auto &segment : segments_)
+    if (segment.id == segment_id && !segment.evicted)
+      return segment.path;
+  return std::nullopt;
+}
+
 std::vector<std::filesystem::path> PcapngSpool::segment_paths() const {
   std::lock_guard lock(mutex_);
   std::vector<std::filesystem::path> paths;
@@ -671,6 +683,8 @@ std::string to_string(SpoolFailureReason reason) {
     return "QuotaExceeded";
   case SpoolFailureReason::InvalidPacket:
     return "InvalidPacket";
+  case SpoolFailureReason::ReadCancelled:
+    return "ReadCancelled";
   case SpoolFailureReason::CorruptData:
     return "CorruptData";
   }

@@ -110,6 +110,7 @@ add_custom_target(packet_tree_ts_codegen
 )
 
 add_library(pruftnet_sniffing STATIC
+    src/capture/packet_index.cpp
     src/capture/pcapng_format.cpp
     src/capture/pcapng_spool.cpp
     src/parsing/catalog/catalog_registrar.cpp

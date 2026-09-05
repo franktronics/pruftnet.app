@@ -1,4 +1,5 @@
 let input = Buffer.alloc(0)
+const cancelled = []
 const { writeFileSync } = require('node:fs')
 
 function writeFrame(value) {
@@ -15,6 +16,10 @@ process.stdin.on('data', (chunk) => {
         if (input.byteLength < 4 + length) return
         const request = JSON.parse(input.subarray(4, 4 + length).toString('utf8'))
         input = input.subarray(4 + length)
+        if (request.op === 'cancel') {
+            cancelled.push(request.target)
+            continue
+        }
         if (request.op === 'detail') writeFileSync(request.testPath, 'PRT2')
         setTimeout(
             () =>
@@ -24,6 +29,8 @@ process.stdin.on('data', (chunk) => {
                     id: request.id,
                     ok: true,
                     op: request.op,
+                    cancelled,
+                    features: process.argv.includes('--legacy') ? [] : ['detailCancellation'],
                     ...(request.op === 'detail' ? { dataPath: request.testPath } : {}),
                 }),
             request.op === 'slow' || request.op === 'detail' ? 100 : 0,

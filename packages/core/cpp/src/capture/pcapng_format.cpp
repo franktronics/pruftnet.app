@@ -1,6 +1,7 @@
 #include "capture/pcapng_format.hpp"
 
 #include <array>
+#include <algorithm>
 #include <cerrno>
 #include <charconv>
 #include <fstream>
@@ -203,7 +204,9 @@ std::vector<std::byte> encode_enhanced_packet(
 }
 
 std::variant<PcapngSpool::RecoveryResult, SpoolError>
-recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
+scan_segment(const std::filesystem::path &path, bool truncate_partial_tail,
+             const PacketVisitor &visitor, std::stop_token stop,
+             std::optional<std::uint64_t> target_offset) {
   std::ifstream input(path, std::ios::binary);
   if (!input)
     return SpoolError{
@@ -221,20 +224,35 @@ recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
   bool have_section = false;
   std::vector<SpoolInterface> interfaces;
   std::uint64_t offset = 0;
+  bool jumped = false;
+  std::uint64_t ordinal = 0;
   while (offset + 12 <= file_size) {
+    if (stop.stop_requested())
+      return SpoolError{SpoolFailureReason::ReadCancelled,
+                        "Packet read was cancelled.", 0};
     std::array<std::byte, 8> header{};
-    input.seekg(static_cast<std::streamoff>(offset));
     input.read(reinterpret_cast<char *>(header.data()), header.size());
     if (!input)
       break;
     const auto type = read_u32(header.data());
     const auto length = read_u32(header.data() + 4);
+    if (target_offset && type == kEnhancedPacketBlock && !jumped) {
+      if (*target_offset < offset || *target_offset > file_size - 12)
+        break;
+      jumped = true;
+      offset = *target_offset;
+      input.seekg(static_cast<std::streamoff>(offset));
+      continue;
+    }
     if (length < 12 || length % 4 != 0 || length > kMaximumRecoveryBlock ||
         offset + length > file_size)
       break;
+    if (jumped && type != kEnhancedPacketBlock)
+      break;
     std::vector<std::byte> block(length);
-    input.seekg(static_cast<std::streamoff>(offset));
-    input.read(reinterpret_cast<char *>(block.data()), length);
+    std::copy(header.begin(), header.end(), block.begin());
+    input.read(reinterpret_cast<char *>(block.data() + header.size()),
+               length - header.size());
     if (!input || read_u32(block.data() + length - 4) != length)
       break;
 
@@ -249,6 +267,9 @@ recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
         return SpoolError{SpoolFailureReason::CorruptData,
                           "The pcapng section lacks a valid capture identity.",
                           0};
+      if (have_section)
+        return SpoolError{SpoolFailureReason::CorruptData,
+                          "Multiple sections are not supported in a capture spool.", 0};
       capture_id = *parsed_capture;
       result.capture_id = capture_id;
       have_section = true;
@@ -290,7 +311,7 @@ recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
       if (!comment || !parse_packet_comment(*comment, packet_id, flags))
         break;
       CommittedPacket packet;
-      packet.ordinal = result.packets.size();
+      packet.ordinal = ordinal++;
       packet.segment_id = 1;
       packet.block_offset = offset;
       packet.data_offset = offset + 28;
@@ -311,7 +332,14 @@ recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
       packet.metadata.wire_len = wire_length;
       packet.metadata.link_type = interfaces[interface_index].link_type;
       packet.metadata.flags = flags;
-      result.packets.push_back(packet);
+      if (visitor)
+        visitor(packet, std::span(block).subspan(28, captured_length));
+      else
+        result.packets.push_back(packet);
+      if (target_offset) {
+        result.valid_bytes = offset + length;
+        return result;
+      }
     }
     offset += length;
     result.valid_bytes = offset;
@@ -329,6 +357,11 @@ recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
                         resize_error.value()};
   }
   return result;
+}
+
+std::variant<PcapngSpool::RecoveryResult, SpoolError>
+recover_segment(const std::filesystem::path &path, bool truncate_partial_tail) {
+  return scan_segment(path, truncate_partial_tail, {});
 }
 
 } // namespace pruftnet::capture::internal

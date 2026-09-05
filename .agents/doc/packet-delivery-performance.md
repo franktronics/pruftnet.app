@@ -25,6 +25,10 @@ A new filter initially searches for up to 256 matches. The manifest returns thos
 
 Loading rows retain a numeric position in the first column; skeletons occupy the other columns. An asterisk and tooltip identify a temporary list position, which is replaced by the original packet number after loading. A filtered position cannot safely be inferred to equal a packet ID. Error rows retain this position alongside their retry action.
 
+## Stored packet details
+
+Saved captures now use bounded persistent packet-offset indexes and native request cancellation. Index writes run on a separate thread with a bounded queue, leaving capture and analysis free from index I/O. Older captures rebuild missing indexes lazily. See [stored packet detail performance](packet-detail-performance.md) for the implementation, measurements, storage overhead and validation limits.
+
 ## Shutdown
 
 After captures and exports have been finalized, HTTP connections receive five seconds to drain. Remaining connections are closed so an abandoned streaming response cannot prevent desktop or server shutdown. This does not bound or bypass capture finalization itself. Desktop shutdown was verified after using filtered history.

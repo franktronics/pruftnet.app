@@ -34,32 +34,44 @@ test('a timed-out response is drained and later requests remain usable', async (
     if (exits[0]._tag === 'Failure') expect(String(exits[0].cause)).toContain('timed out')
 })
 
-test('cancelling one request does not terminate or desynchronize the worker', async () => {
-    const fixture = new URL('./test-fixtures/late-worker.cjs', import.meta.url).pathname
-    const detailPath = join(tmpdir(), `detail-cancelled-${process.pid}.prt2`)
-    const next = await Effect.runPromise(
-        Effect.gen(function* () {
-            const worker = yield* ReplayWorker
-            const cancelled = yield* Effect.fork(
-                worker.request({ op: 'detail', testPath: detailPath }),
-            )
-            yield* Effect.sleep('2 millis')
-            yield* Fiber.interrupt(cancelled)
-            const response = yield* worker.request({ op: 'next' })
-            yield* Effect.sleep('120 millis')
-            return response
-        }).pipe(
-            Effect.provide(
-                ReplayWorker.layer({
-                    executablePath: process.execPath,
-                    replayFiles: {},
-                    responseTimeoutMs: 200,
-                    spawn: () => spawn(process.execPath, [fixture]),
-                }),
+test.each([true, false])(
+    'cancellation preserves worker synchronization (native support: %s)',
+    async (supportsCancellation) => {
+        const fixture = new URL('./test-fixtures/late-worker.cjs', import.meta.url).pathname
+        const detailPath = join(tmpdir(), `detail-cancelled-${process.pid}.prt2`)
+        const next = await Effect.runPromise(
+            Effect.gen(function* () {
+                const worker = yield* ReplayWorker
+                yield* worker.request({ op: 'hello' })
+                const cancelled = yield* Effect.fork(
+                    worker.request({ op: 'detail', testPath: detailPath }),
+                )
+                yield* Effect.sleep('2 millis')
+                yield* Fiber.interrupt(cancelled)
+                const response = yield* worker.request({ op: 'next' })
+                yield* Effect.sleep('120 millis')
+                return response
+            }).pipe(
+                Effect.provide(
+                    ReplayWorker.layer({
+                        executablePath: process.execPath,
+                        replayFiles: {},
+                        responseTimeoutMs: 200,
+                        spawn: () =>
+                            spawn(
+                                process.execPath,
+                                supportsCancellation ? [fixture] : [fixture, '--legacy'],
+                            ),
+                    }),
+                ),
             ),
-        ),
-    )
+        )
 
-    expect(next).toMatchObject({ ok: true, op: 'next' })
-    expect(existsSync(detailPath)).toBe(false)
-})
+        expect(next).toMatchObject({
+            ok: true,
+            op: 'next',
+            cancelled: supportsCancellation ? ['2'] : [],
+        })
+        expect(existsSync(detailPath)).toBe(false)
+    },
+)

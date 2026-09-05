@@ -34,6 +34,9 @@ if(PRUFTNET_SNIFFING_BUILD_TESTS)
     endif()
     add_test(NAME unit.capture_worker_protocol COMMAND capture_worker_protocol_tests)
 
+    pruftnet_add_sniffing_test(packet_index_tests tests/unit/packet_index_tests.cpp)
+    add_test(NAME unit.packet_index COMMAND packet_index_tests)
+
     pruftnet_add_sniffing_test(pcapng_spool_tests tests/unit/pcapng_spool_tests.cpp)
     add_test(NAME unit.pcapng_spool COMMAND pcapng_spool_tests)
 

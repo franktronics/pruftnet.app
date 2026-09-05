@@ -17,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <stop_token>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -25,6 +26,7 @@
 #include <io.h>
 #endif
 
+#include "capture/packet_index.hpp"
 #include "parsing/packet_parser.hpp"
 #include "pruftnet/parsing/packet_tree_codec.hpp"
 #include "pruftnet/replay/replay_store.hpp"
@@ -114,7 +116,7 @@ public:
       sniffer->stop();
   }
 
-  std::string handle(std::string_view request) {
+  std::string handle(std::string_view request, std::stop_token stop = {}) {
     const auto id = field(request, "id");
     const auto op = field(request, "op");
     const auto version = number(request, "v");
@@ -123,12 +125,14 @@ public:
     if (request.size() < 2 || request.front() != '{' || request.back() != '}' ||
         !id || !op || !version)
       return prefix + "\"ok\":false,\"error\":\"malformed_request\"}";
+    if (stop.stop_requested())
+      return prefix + "\"ok\":false,\"error\":\"cancelled\"}";
     if (*version != 2)
       return prefix + "\"ok\":false,\"error\":\"unsupported_version\"}";
     if (*op == "hello")
       return prefix + "\"ok\":true,\"protocolVersion\":2,\"features\":["
                       "\"live\",\"replay\",\"recovery\",\"packetDetail\","
-                      "\"framedControl\",\"detailFile\"]}";
+                      "\"framedControl\",\"detailFile\",\"detailCancellation\"]}";
     if (*op == "start") {
       const auto token = field(request, "token");
       if (!token || token->empty())
@@ -157,14 +161,14 @@ public:
     if (*op == "recoverSegments")
       return recover_segments(prefix, request);
     if (*op == "detailStored")
-      return detail_stored(prefix, request);
+      return detail_stored(prefix, request, stop);
 
     if (const auto error = validate_capture(prefix, request))
       return *error;
     if (*op == "status")
       return status(prefix);
     if (*op == "stop")
-      return stop(prefix);
+      return this->stop(prefix);
     if (*op == "summaries") {
       const auto cursor = number(request, "cursor");
       const auto limit = number(request, "limit");
@@ -912,7 +916,7 @@ private:
                          spool_paths.front().parent_path(), registry);
   }
   std::string detail_stored(const std::string &prefix,
-                            std::string_view request) {
+                            std::string_view request, std::stop_token stop) {
     const auto high = number(request, "captureHigh");
     const auto low = number(request, "captureLow");
     const auto packet_id = number(request, "packetId");
@@ -953,36 +957,19 @@ private:
     std::sort(segments.begin(), segments.end());
     const sniffing::CaptureId expected{*high, *low};
     for (const auto &path : segments) {
-      const auto recovered = capture::PcapngSpool::recover_segment(path, false);
-      const auto *result =
-          std::get_if<capture::PcapngSpool::RecoveryResult>(&recovered);
-      if (!result || result->capture_id != expected ||
-          result->truncated_bytes != 0)
-        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
-               "}";
-      const auto packet =
-          std::find_if(result->packets.begin(), result->packets.end(),
-                       [&](const capture::CommittedPacket &candidate) {
-                         return candidate.metadata.key.packet_id == *packet_id;
-                       });
-      if (packet == result->packets.end())
-        continue;
-      if (packet->data_offset > result->valid_bytes ||
-          packet->metadata.captured_len >
-              result->valid_bytes - packet->data_offset)
-        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
-               "}";
-      std::vector<std::byte> bytes(packet->metadata.captured_len);
-      std::ifstream input(path, std::ios::binary);
-      input.seekg(static_cast<std::streamoff>(packet->data_offset));
-      input.read(reinterpret_cast<char *>(bytes.data()),
-                 static_cast<std::streamsize>(bytes.size()));
-      if (!input ||
-          input.gcount() != static_cast<std::streamsize>(bytes.size()))
-        return prefix + "\"ok\":false,\"error\":\"corrupt_packet\"" + identity +
-               "}";
-      return encode_detail(prefix, identity, packet->metadata, bytes, canonical,
-                           registry);
+      const auto read = capture::internal::read_indexed_packet(
+          path, {expected, *packet_id}, stop);
+      if (const auto *error = std::get_if<capture::SpoolError>(&read)) {
+        const auto code = error->reason == capture::SpoolFailureReason::ReadCancelled
+                              ? "cancelled" : "corrupt_packet";
+        return prefix + "\"ok\":false,\"error\":" + json_string(code) + identity + "}";
+      }
+      const auto &result = std::get<capture::PacketSpoolLookup>(read);
+      if (!result.packet) continue;
+      if (stop.stop_requested())
+        return prefix + "\"ok\":false,\"error\":\"cancelled\"}";
+      return encode_detail(prefix, identity, result.packet->metadata,
+                           result.packet->bytes, canonical, registry);
     }
     return prefix + "\"ok\":false,\"error\":\"not_found\"" + identity + "}";
   }
@@ -1199,11 +1186,16 @@ int run(int argc, char **argv) {
   };
   std::mutex detail_mutex;
   std::condition_variable detail_ready;
-  std::deque<std::string> detail_requests;
+  struct DetailRequest {
+    std::string payload;
+    std::stop_source stop;
+  };
+  std::deque<std::shared_ptr<DetailRequest>> detail_requests;
+  std::unordered_map<std::string, std::shared_ptr<DetailRequest>> pending_details;
   bool detail_input_closed = false;
   std::jthread detail_executor([&] {
     while (true) {
-      std::string request;
+      std::shared_ptr<DetailRequest> request;
       {
         std::unique_lock lock(detail_mutex);
         detail_ready.wait(lock, [&] {
@@ -1217,7 +1209,9 @@ int run(int argc, char **argv) {
         request = std::move(detail_requests.front());
         detail_requests.pop_front();
       }
-      respond(worker.handle(request));
+      respond(worker.handle(request->payload, request->stop.get_token()));
+      std::lock_guard lock(detail_mutex);
+      pending_details.erase(field(request->payload, "id").value_or(""));
     }
   });
   std::string payload;
@@ -1228,13 +1222,36 @@ int run(int argc, char **argv) {
     if (frame_result == FrameRead::TooLarge)
       respond("{\"v\":2,\"kind\":\"response\",\"id\":\"\",\"ok\":false,"
               "\"error\":\"request_too_large\"}");
-    else if (const auto op = field(payload, "op");
+    else if (field(payload, "op") == "cancel" && number(payload, "v") == 2) {
+      // Cancellation is a one-way control message. The original request still
+      // gets exactly one response so the Node transport can drain its slot.
+      const auto target = field(payload, "target").value_or("");
+      std::shared_ptr<DetailRequest> removed;
+      {
+        std::lock_guard lock(detail_mutex);
+        const auto pending = pending_details.find(target);
+        if (pending != pending_details.end()) {
+          pending->second->stop.request_stop();
+          const auto queued = std::find(detail_requests.begin(), detail_requests.end(), pending->second);
+          if (queued != detail_requests.end()) {
+            removed = *queued;
+            detail_requests.erase(queued);
+            pending_details.erase(pending);
+          }
+        }
+      }
+      if (removed)
+        respond(worker.handle(removed->payload, removed->stop.get_token()));
+    } else if (const auto op = field(payload, "op");
              op == "detail" || op == "detailStored") {
       bool queued = false;
       {
         std::lock_guard lock(detail_mutex);
         if (detail_requests.size() < kMaxPendingDetailRequests) {
-          detail_requests.push_back(payload);
+          auto request = std::make_shared<DetailRequest>();
+          request->payload = payload;
+          pending_details[field(payload, "id").value_or("")] = request;
+          detail_requests.push_back(std::move(request));
           queued = true;
         }
       }
@@ -1246,6 +1263,11 @@ int run(int argc, char **argv) {
                 ",\"ok\":false,\"error\":\"detail_capacity\"}");
       }
     } else {
+      if (field(payload, "op") == "shutdown") {
+        std::lock_guard lock(detail_mutex);
+        for (const auto &[id, request] : pending_details)
+          request->stop.request_stop();
+      }
       respond(worker.handle(payload));
     }
     if (worker.shutdown())
@@ -1254,6 +1276,8 @@ int run(int argc, char **argv) {
   {
     std::lock_guard lock(detail_mutex);
     detail_input_closed = true;
+    for (const auto &[id, request] : pending_details)
+      request->stop.request_stop();
   }
   detail_ready.notify_one();
   return 0;

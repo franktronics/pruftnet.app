@@ -17,6 +17,7 @@ const WorkerResponseEnvelope = Schema.Struct({
     kind: Schema.Literal('response'),
     id: Schema.String,
     ok: Schema.Boolean,
+    features: Schema.optional(Schema.Array(Schema.String)),
 })
 const WorkerEventEnvelope = Schema.Struct({
     v: Schema.Literal(2),
@@ -182,6 +183,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                 child.stdin.on('error', (error) => {
                     terminate(new ReplayWorkerError({ reason: 'write', message: error.message }))
                 })
+                let supportsDetailCancellation = false
                 child.stdout.on('data', (chunk: Buffer) => {
                     if (terminal) return
                     stdout = Buffer.concat([stdout, chunk])
@@ -218,6 +220,8 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                             )
                             return
                         }
+                        if (decoded.right.features?.includes('detailCancellation'))
+                            supportsDetailCancellation = true
                         const response = pending.get(decoded.right.id)
                         if (!response) {
                             if (decoded.right.id.startsWith('shutdown-')) continue
@@ -245,6 +249,14 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                     }
                     const id = String(++sequence)
                     const payload = JSON.stringify({ v: 2, id, ...command })
+                    const cancelDetail = () => {
+                        if (!supportsDetailCancellation) return
+                        if (command.op !== 'detail' && command.op !== 'detailStored') return
+                        child.stdin.write(
+                            frame(JSON.stringify({ v: 2, op: 'cancel', target: id })),
+                            () => undefined,
+                        )
+                    }
                     if (Buffer.byteLength(payload) > MAX_COMMAND_BYTES) {
                         return yield* new ReplayWorkerError({
                             reason: 'protocol',
@@ -258,6 +270,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                             active = false
                             const response = pending.get(id)
                             if (response) response.resume = undefined
+                            cancelDetail()
                             resume(
                                 Effect.fail(
                                     new ReplayWorkerError({
@@ -297,6 +310,7 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                             clearTimeout(timeout)
                             const response = pending.get(id)
                             if (response) response.resume = undefined
+                            cancelDetail()
                         })
                     })
                 })

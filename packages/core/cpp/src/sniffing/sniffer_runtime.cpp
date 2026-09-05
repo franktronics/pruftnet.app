@@ -8,6 +8,7 @@
 #include <utility>
 #include <variant>
 
+#include "capture/packet_index.hpp"
 #include "sniffing/link_type.hpp"
 #include "sniffing/packet_identity.hpp"
 
@@ -114,6 +115,7 @@ SnifferErrorCode spool_error_code(capture::SpoolFailureReason reason) {
   case capture::SpoolFailureReason::ShortWrite:
   case capture::SpoolFailureReason::WriteFailed:
   case capture::SpoolFailureReason::InvalidPacket:
+  case capture::SpoolFailureReason::ReadCancelled:
   case capture::SpoolFailureReason::CorruptData:
     return SnifferErrorCode::SpoolWriteFailed;
   }
@@ -916,6 +918,8 @@ void SnifferRuntime::writer_loop() noexcept {
 void SnifferRuntime::analyzer_loop() noexcept {
   analyzer_running_.store(true, std::memory_order_release);
   std::uint64_t ordinal = 0;
+  std::uint64_t index_segment = 0;
+  capture::internal::AsyncPacketIndexWriter index_writer;
   try {
     if (!wait_for_start_gate()) {
       analyzer_running_.store(false, std::memory_order_release);
@@ -934,6 +938,12 @@ void SnifferRuntime::analyzer_loop() noexcept {
         continue;
       }
 
+      if (committed->segment_id != index_segment) {
+        index_segment = committed->segment_id;
+        index_writer.segment(spool_->segment_path(index_segment),
+                             committed->metadata.key.capture_id);
+      }
+      index_writer.append(*committed);
       const auto lookup = spool_->lookup_ordinal(ordinal);
       const auto complete_backlog_bytes = [&] {
         auto backlog_bytes =
@@ -997,6 +1007,7 @@ void SnifferRuntime::analyzer_loop() noexcept {
         SnifferErrorCode::AnalysisFailed, SnifferSeverity::Error,
         "Analyzer stopped after an unknown exception.", {}, 0, {}, true));
   }
+  index_writer.finish();
   analyzer_running_.store(false, std::memory_order_release);
   if (writer_done_.load(std::memory_order_acquire))
     running_.store(false, std::memory_order_release);

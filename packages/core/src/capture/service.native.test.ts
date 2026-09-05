@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdtemp, realpath, rm } from 'node:fs/promises'
+import { mkdtemp, realpath, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -45,16 +45,31 @@ test.runIf(existsSync(workerPath))(
                 return { session, summaries, detail, stats }
             }).pipe(Effect.provide(layer), Effect.scoped),
         )
+        const indexes = (await readdir(spoolDirectory)).filter((name) => name.endsWith('.pidx'))
+        expect(indexes.length).toBeGreaterThan(0)
         const first = result.summaries.summaries[0]!
         const storedDetail = await Effect.runPromise(
             Effect.gen(function* () {
-                return yield* (yield* Capture).storedDetail(
+                const capture = yield* Capture
+                const indexed = yield* capture.storedDetail(
                     result.session.captureId,
                     spoolDirectory,
                     first.key.packetId,
                     result.session.registryRevision,
                     first.analysisRevision,
                 )
+                yield* Effect.promise(() =>
+                    Promise.all(indexes.map((name) => rm(resolve(spoolDirectory, name)))),
+                )
+                const rebuilt = yield* capture.storedDetail(
+                    result.session.captureId,
+                    spoolDirectory,
+                    first.key.packetId,
+                    result.session.registryRevision,
+                    first.analysisRevision,
+                )
+                expect(rebuilt).toEqual(indexed)
+                return rebuilt
             }).pipe(Effect.provide(layer), Effect.scoped),
         ).finally(() => rm(spoolDirectory, { recursive: true, force: true }))
 

@@ -48,7 +48,12 @@ export const makePacketDetailNodeHandler = Effect.gen(function* () {
         }
 
         const controller = new AbortController()
-        request.once('aborted', () => controller.abort())
+        const abort = () => controller.abort()
+        const close = () => {
+            if (!response.writableEnded) abort()
+        }
+        request.once('aborted', abort)
+        response.once('close', close)
         void Effect.runPromiseExit(
             capture.detail(
                 decoded.right.captureId,
@@ -60,6 +65,8 @@ export const makePacketDetailNodeHandler = Effect.gen(function* () {
                 signal: controller.signal,
             },
         ).then((exit) => {
+            request.off('aborted', abort)
+            response.off('close', close)
             if (response.destroyed) return
             if (exit._tag === 'Success') {
                 response.writeHead(200, {
