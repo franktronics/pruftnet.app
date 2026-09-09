@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { ArrowLeft, History, Radar, Settings } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { Button, Separator } from '@repo/ui/atoms'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@repo/ui/molecules'
@@ -24,6 +25,9 @@ import { ThemeToggle } from '#front/theme/theme-toggle'
 import { cn } from '@repo/utils'
 import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
 import { CaptureTitlebarActions } from '#front/pages/capture/components/capture-titlebar-actions'
+import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import { requestCaptureSettings } from '#front/commands/capture-settings-request'
+import { activeCaptureOptions } from '#front/pages/capture/api/capture-queries'
 
 const mainNavigation = [
     {
@@ -101,6 +105,7 @@ export function DashboardLayout() {
     return (
         <SidebarProvider className={isDesktop ? 'flex-col' : undefined}>
             <DesktopTitlebarTarget.Provider value={titlebarTarget}>
+                <LayoutApplicationCommands pathname={pathname} />
                 {isDesktop && (
                     <DesktopTitleBar pathname={pathname} captureControlsRef={setTitlebarTarget} />
                 )}
@@ -125,6 +130,84 @@ export function DashboardLayout() {
             </DesktopTitlebarTarget.Provider>
         </SidebarProvider>
     )
+}
+
+function LayoutApplicationCommands({ pathname }: { readonly pathname: string }) {
+    const router = useRouter()
+    const navigate = useNavigate()
+    const { toggleSidebar } = useSidebar()
+    const active = useQuery(activeCaptureOptions())
+    const activeCaptureId = active.data?.captureId
+    const captureWorkspace = pathname === '/' || pathname.startsWith('/capture/')
+
+    useRegisterApplicationCommand('new-capture', {
+        enabled: !activeCaptureId,
+        disabledReason: activeCaptureId ? 'Stop the active capture first.' : undefined,
+        execute: () => navigate({ to: '/' }),
+    })
+    useRegisterApplicationCommand('capture-workspace', {
+        enabled: true,
+        execute: () =>
+            activeCaptureId
+                ? navigate({ to: '/capture/$captureId', params: { captureId: activeCaptureId } })
+                : navigate({ to: '/' }),
+    })
+    useRegisterApplicationCommand('active-capture', {
+        enabled: Boolean(activeCaptureId),
+        disabledReason: active.isPending
+            ? 'Checking for an active capture…'
+            : 'No capture is active.',
+        execute: () =>
+            activeCaptureId
+                ? navigate({ to: '/capture/$captureId', params: { captureId: activeCaptureId } })
+                : undefined,
+    })
+    useRegisterApplicationCommand('history', {
+        enabled: pathname !== '/captures',
+        disabledReason: pathname === '/captures' ? 'History is already open.' : undefined,
+        execute: () => navigate({ to: '/captures' }),
+    })
+    useRegisterApplicationCommand('settings', {
+        enabled: pathname !== '/settings',
+        disabledReason: pathname === '/settings' ? 'Settings are already open.' : undefined,
+        execute: () => navigate({ to: '/settings' }),
+    })
+    useRegisterApplicationCommand('keyboard-shortcuts', {
+        enabled: true,
+        execute: async () => {
+            await navigate({ to: '/settings', hash: 'keyboard' })
+            requestAnimationFrame(() => {
+                const target = document.getElementById('keyboard')
+                target?.scrollIntoView({ block: 'start' })
+                target?.focus({ preventScroll: true })
+            })
+        },
+    })
+    useRegisterApplicationCommand('back', {
+        enabled: router.history.canGoBack(),
+        disabledReason: 'There is no previous location.',
+        execute: () => router.history.back(),
+    })
+    useRegisterApplicationCommand('toggle-sidebar', {
+        enabled: true,
+        execute: toggleSidebar,
+    })
+    useRegisterApplicationCommand('capture-settings', {
+        enabled: true,
+        execute: async () => {
+            requestCaptureSettings()
+            if (!captureWorkspace) {
+                await (activeCaptureId
+                    ? navigate({
+                          to: '/capture/$captureId',
+                          params: { captureId: activeCaptureId },
+                      })
+                    : navigate({ to: '/' }))
+            }
+        },
+    })
+
+    return null
 }
 
 function DesktopTitleBar({

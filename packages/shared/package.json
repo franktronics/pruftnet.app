@@ -6,6 +6,7 @@
     "exports": {
         ".": "./src/index.ts",
         "./capture": "./src/modules/capture/index.ts",
+        "./app-command": "./src/modules/app-command/index.ts",
         "./network-interface": "./src/modules/network-interface/index.ts",
         "./realtime": "./src/modules/realtime/index.ts",
         "./settings": "./src/modules/settings/index.ts",

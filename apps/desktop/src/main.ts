@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog } from 'electron'
 import { Effect } from 'effect'
 
 import { createMainWindow } from './main/create-window'
+import { installApplicationMenu } from './main/application-menu'
 import { DesktopExportDestinations } from './main/export-destinations'
 import { registerIpcHandlers } from './main/ipc'
 import { startDesktopRpcServer } from './main/rpc-server'
@@ -13,6 +14,7 @@ async function bootstrap() {
     const rpcServer = await Effect.runPromise(startDesktopRpcServer(exportDestinations))
 
     registerIpcHandlers(exportDestinations)
+    installApplicationMenu()
     let mainWindow = await createMainWindow({ rpcUrl: rpcServer.rpcUrl })
     let allowQuit = false
     let quitInProgress = false

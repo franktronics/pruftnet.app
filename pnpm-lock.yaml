@@ -324,6 +324,9 @@ importers:
       '@repo/front':
         specifier: workspace:*
         version: link:../../packages/front
+      '@repo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       effect:
         specifier: 'catalog:'
         version: 3.21.3

@@ -11,6 +11,8 @@ import { ExportManagerProvider } from './pages/captures/export-manager'
 import { ApplicationRealtimeProvider } from './realtime/application-realtime-provider'
 import { useAppSettings } from './settings/app-settings-context'
 import { AppSettingsProvider } from './settings/app-settings-provider'
+import { ApplicationCommandProvider } from './commands/application-command-provider'
+import './config/desktop-api'
 import {
     packetSummaryCacheBytes,
     packetSummaryPageCache,
@@ -42,9 +44,11 @@ export function App() {
                 <PacketSummaryCacheBudgetSync />
                 <ApplicationRealtimeProvider>
                     <ThemeProvider>
-                        <ExportManagerProvider>
-                            <RouterProvider router={router} />
-                        </ExportManagerProvider>
+                        <ApplicationCommandProvider>
+                            <ExportManagerProvider>
+                                <RouterProvider router={router} />
+                            </ExportManagerProvider>
+                        </ApplicationCommandProvider>
                     </ThemeProvider>
                 </ApplicationRealtimeProvider>
             </AppSettingsProvider>

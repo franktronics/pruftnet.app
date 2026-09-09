@@ -49,6 +49,7 @@ export async function createMainWindow(options: MainWindowOptions) {
         minHeight: 640,
         title: 'Pruftnet',
         icon: getWindowIconPath(),
+        autoHideMenuBar: process.platform !== 'darwin',
         titleBarStyle: 'hidden',
         titleBarOverlay:
             process.platform === 'darwin'

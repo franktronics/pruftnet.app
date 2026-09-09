@@ -1,7 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { CaptureInterface, CaptureSession } from '@repo/shared/capture'
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
     Button,
     Checkbox,
     Command,
@@ -29,7 +37,7 @@ import {
     TooltipTrigger,
 } from '@repo/ui'
 import { ChevronDown, RefreshCw, Settings2, Square } from 'lucide-react'
-import { useContext, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { BasicErrorAlert } from '#front/components/error-renderer'
@@ -46,6 +54,12 @@ import {
     type LiveInterfaceSettings,
 } from '#front/pages/home/live-capture-options'
 import { NewCaptureButton } from '#front/pages/capture/components/new-capture-button'
+import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import {
+    consumeCaptureSettingsRequest,
+    subscribeToCaptureSettingsRequests,
+} from '#front/commands/capture-settings-request'
+import { captureClient } from '#front/pages/capture/api/capture-client'
 
 const defaultInterfaceSettings: LiveInterfaceSettings = {
     promiscuous: true,
@@ -69,11 +83,7 @@ function sourceSelection(session?: CaptureSession) {
     )
 }
 
-export function CaptureControlBar({
-    session,
-}: {
-    session?: CaptureSession
-}) {
+export function CaptureControlBar({ session }: { session?: CaptureSession }) {
     const navigate = useNavigate()
     const interfaces = useCaptureInterfaces()
     const start = useStartLiveCapture()
@@ -101,6 +111,31 @@ export function CaptureControlBar({
     const active = session?.state === 'starting' || session?.state === 'running'
     const locked = Boolean(session)
     const selectedNames = Object.keys(selected)
+    const [discardOpen, setDiscardOpen] = useState(false)
+    const discard = useMutation({
+        mutationFn: async () => {
+            if (!session) return
+            await captureClient.stop(session.captureId)
+            await captureClient.deleteCapture(session.captureId)
+        },
+        onSuccess: async () => {
+            setDiscardOpen(false)
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: captureKeys.active() }),
+                queryClient.invalidateQueries({ queryKey: captureKeys.history() }),
+            ])
+            await navigate({ to: '/' })
+        },
+    })
+
+    useEffect(() => {
+        const openSettings = () => {
+            consumeCaptureSettingsRequest()
+            setSettingsOpen(true)
+        }
+        if (consumeCaptureSettingsRequest()) queueMicrotask(() => setSettingsOpen(true))
+        return subscribeToCaptureSettingsRequests(openSettings)
+    }, [])
 
     function toggleInterface(name: string) {
         if (locked) return
@@ -144,6 +179,33 @@ export function CaptureControlBar({
             } else setSettingsOpen(true)
         }
     }
+
+    useRegisterApplicationCommand('start-capture', {
+        enabled: !session && selectedNames.length > 0 && !start.isPending,
+        pending: start.isPending,
+        label: start.isPending ? 'Starting Capture…' : undefined,
+        disabledReason: session
+            ? 'A capture session is already open.'
+            : selectedNames.length === 0
+              ? 'Select at least one network interface.'
+              : undefined,
+        execute: startCapture,
+    })
+    useRegisterApplicationCommand('stop-capture', {
+        enabled: active && !stop.isPending,
+        pending: stop.isPending,
+        label: stop.isPending ? 'Stopping Capture…' : undefined,
+        disabledReason: active ? undefined : 'No capture is currently running.',
+        execute: async () => {
+            await stop.mutateAsync()
+        },
+    })
+    useRegisterApplicationCommand('discard-active-capture', {
+        enabled: active && !stop.isPending && !discard.isPending,
+        pending: discard.isPending,
+        disabledReason: active ? undefined : 'No capture is currently running.',
+        execute: () => setDiscardOpen(true),
+    })
 
     const lifecycleControls = (
         <div
@@ -228,6 +290,32 @@ export function CaptureControlBar({
                 onInterfaceChange={updateInterface}
                 error={start.error ?? stop.error}
             />
+            <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Stop and discard current capture?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            The active capture will stop and its retained packet data will be
+                            permanently removed.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {discard.error ? (
+                        <p className="text-destructive text-sm" role="alert">
+                            The current capture could not be discarded.
+                        </p>
+                    ) : null}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Keep capturing</AlertDialogCancel>
+                        <AlertDialogAction
+                            variant="destructive"
+                            disabled={discard.isPending}
+                            onClick={() => discard.mutate()}
+                        >
+                            {discard.isPending ? 'Discarding…' : 'Stop and discard'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     )
 }

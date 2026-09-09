@@ -31,24 +31,24 @@ export function ThemeToggle() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger
-                render={
             <Tooltip>
                 <TooltipTrigger
                     render={
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            aria-label={`Change theme (current: ${activeTheme.label})`}
-                        >
-                            <ActiveIcon />
-                        </Button>
+                        <DropdownMenuTrigger
+                            render={
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label={`Change theme (current: ${activeTheme.label})`}
+                                >
+                                    <ActiveIcon />
+                                </Button>
+                            }
+                        />
                     }
                 />
                 <TooltipContent>Theme: {activeTheme.label}</TooltipContent>
             </Tooltip>
-                }
-            />
             <DropdownMenuContent align="end" className="w-36">
                 {themeOptions.map((option) => {
                     const Icon = option.icon

@@ -1,4 +1,4 @@
-import { Database, Gauge, Palette, RotateCcw } from 'lucide-react'
+import { Database, Gauge, Keyboard, Palette, RotateCcw } from 'lucide-react'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import {
@@ -37,6 +37,7 @@ import {
 import { useAppSettings } from '#front/settings/app-settings-context'
 import { themes, type Theme } from '#front/theme/theme'
 import { useTheme } from '#front/theme/theme-provider'
+import { KeyboardShortcutsSettings } from './keyboard-shortcuts-settings'
 
 const themeLabels: Record<Theme, string> = {
     system: 'System',
@@ -80,6 +81,14 @@ export function SettingsPage() {
     const [resetOpen, setResetOpen] = useState(false)
     const automaticCacheMiB = automaticPacketListCacheMiB(currentCacheBudgetEnvironment())
 
+    useEffect(() => {
+        const id = window.location.hash.slice(1)
+        if (!id) return
+        const target = document.getElementById(id)
+        target?.scrollIntoView({ block: 'start' })
+        target?.focus({ preventScroll: true })
+    }, [])
+
     return (
         <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 pt-5 pb-10">
             <div className="grid items-start gap-5 md:grid-cols-[11rem_minmax(0,1fr)]">
@@ -93,6 +102,13 @@ export function SettingsPage() {
                     >
                         <Palette className="size-3.5" />
                         Appearance
+                    </a>
+                    <a
+                        href="#keyboard"
+                        className="hover:bg-muted focus-visible:ring-ring flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium outline-none focus-visible:ring-2"
+                    >
+                        <Keyboard className="size-3.5" />
+                        Keyboard
                     </a>
                     <a
                         href="#performance"
@@ -135,6 +151,8 @@ export function SettingsPage() {
                             </CardAction>
                         </CardHeader>
                     </Card>
+
+                    <KeyboardShortcutsSettings />
 
                     <Card id="performance">
                         <CardHeader className="border-b">

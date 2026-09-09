@@ -22,6 +22,7 @@ import { captureClient } from '#front/pages/capture/api/capture-client'
 import { activeCaptureOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
 import { useExportManager } from '#front/pages/captures/export-manager'
 import { cn } from '@repo/utils'
+import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
 
 const terminalStates = new Set(['stopped', 'completed', 'failed'])
 
@@ -71,6 +72,12 @@ export function CaptureTitlebarActions({
             setDeleteOpen(false)
             await navigate({ to: '/' })
         },
+    })
+
+    useRegisterApplicationCommand('export-capture', {
+        enabled: Boolean(exportCapture),
+        disabledReason: 'No capture is available to export.',
+        execute: () => openExportManager(exportCapture),
     })
 
     return (
