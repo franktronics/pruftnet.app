@@ -29,21 +29,28 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - Code, documentation, and comments must always be written in English, regardless of the user's input language.
 - Always use the `effect-server` skill whenever you need to work on the server module/packages.
 - Always use the `frontend-design` skill whenever a task involves UI/UX design, visual design, layout, or frontend styling decisions.
+- Always use the `typescript-guidelines` skill whenever a task writes, reviews, or refactors TypeScript or TSX.
+- Always use the `tanstack-forms` skill whenever creating or editing a TanStack Form form or reusable form component.
+- Always use the `tanstack-query` skill whenever creating, editing, or reviewing frontend API modules, queries, mutations, query keys, or cache invalidation.
 
 ## External File Loading
+
+CRITICAL: When you encounter a file reference (e.g., @rules/general.md), use your Read tool to load it on a need-to-know basis. They're relevant to the SPECIFIC task at hand.
+
+Instructions:
 
 - Do NOT preemptively load all references - use lazy loading based on actual need
 - When loaded, treat content as mandatory instructions that override defaults
 - Follow references recursively when needed
-- CRITICAL: When you encounter a file reference (e.g., @rules/general.md), use your Read tool to load it on a need-to-know basis. They're relevant to the SPECIFIC task at hand.
 
-## Documentation
+Load the relevant doc file based on the task at hand:
 
-Always update documentations in `./.agents/doc/` for significant changes or new features, and remove outdated information.
-Load or create the relevant doc file based on the task at hand:
+- **Example title** → @.agents/doc/example.md
+- ...
 
-- **Release process** → @.agents/doc/release.md
-- **Coding style** → @.agents/doc/coding-style.md
+* Always update documentation for significant changes or new features, and remove outdated information.
+* All documentation files must be listed here.
+* Prefers short, concise documentation
 
 ## External repositories
 This project vendors external repositories under `.repos/` as read-only reference material for coding
