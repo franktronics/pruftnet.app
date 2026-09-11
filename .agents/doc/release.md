@@ -1,82 +1,36 @@
-# Release Process
+# Release process
 
-This project uses two long-lived branches and SemVer tags to separate preview and production desktop releases.
+## Branches and versions
 
-## Branches
+- `main`: principal beta release, starting at `0.2.0`.
+- `dev`: integration branch. Work in `feat/*` branches and merge PRs into `dev`.
+- `dev-archive`: committed state of the old main plus an archive README notice.
 
-- `develop`: preview development branch.
-- `main`: production branch.
+Root, desktop and server package versions identify the next principal release. Update them together before promotion. Patch versions fix bugs; minor versions introduce features or breaking beta changes. Existing `v0.1.*` tags remain historical.
 
-Feature work should land in `develop`. Production releases are created by merging `develop` into `main` and tagging the production commit.
+## CI and publication
 
-## CI
+PRs and pushes to `dev`/`main` validate types, lint, tests and packaging. A merged PR into `dev` publishes `0.x.y-nightly.YYYYMMDD.RUN` with an immutable commit and tag. Closed unmerged PRs and ordinary dev pushes never publish. There is no schedule.
 
-The `CI` workflow runs on pushes and pull requests targeting `develop` or `main`.
+A `v0.x.y` tag whose commit belongs to `main` publishes the principal release. The tag must match package.json. All five build targets must succeed before a draft release is uploaded and made public. Nightlies are GitHub prereleases and never replace Latest.
 
-It runs:
+Standard public GitHub runners: Ubuntu 24.04 x64/ARM64, macOS 15 Intel/Apple Silicon, Windows 2025 x64. Node is pinned in `.node-version`; downloadable server runtimes have checked-in SHA-256 digests. Native C++ builds use the system macOS SDK, Linux libpcap or the pinned Windows Npcap SDK.
 
-- dependency install
-- lint
-- typecheck
-- desktop build
+Native tests and replay fixtures run on Linux/macOS. Windows compiles all tests but executes only the driver-independent protocol test; capture requires a separately installed Npcap. Relocated server and packaged desktop startup are smoke-tested. Physical interfaces and permissions require real-machine release checks.
 
-The workflow uses the GitHub `preview` environment because CI artifacts are non-production validation builds.
+## Package repositories
 
-Desktop artifacts are produced with the root `pnpm build` command. That command runs the custom desktop build script, builds the Electron main process, preload script, and renderer with Vite, then packages the app with `electron-builder`. Electron fuses are applied during the `electron-builder` `afterPack` hook.
+After release, `repositories.yml` regenerates the Homebrew tap and an APT repository containing the newest main and nightly packages. GitHub Pages hosts the APT repository. The manual workflow can retry repository publication without republishing binaries.
 
-## Preview Releases
+Required secrets in the application repository:
 
-Preview releases are built from tags on `develop`.
+- `APT_SIGNING_KEY`: armored private repository signing key. Rotate before its expiration and publish the new public key before switching signing.
+- `HOMEBREW_DEPLOY_KEY`: SSH key with write access only to `franktronics/homebrew-pruftnet`.
 
-Tag format:
+GitHub Pages must use Actions deployment. No general-purpose PAT is stored in the workflow. Do not expose signing keys to unmerged PR builds.
 
-```text
-vX.Y.Z-preview.N
-```
+## Builds
 
-Example:
+`pnpm build` builds both distributions. `pnpm package:server` and `pnpm package:desktop` build one distribution. Outputs are in `release/`. Use `PRUFTNET_VERSION` for a nightly build; channel identity follows the version. `pnpm test:distribution` checks release identity validation.
 
-```bash
-git checkout develop
-git pull
-git tag v0.1.3-preview.1
-git push origin v0.1.3-preview.1
-```
-
-This creates a GitHub prerelease and uploads desktop installers for macOS, Windows, and Linux.
-
-## Production Releases
-
-Production releases are built from tags on `main`.
-
-Tag format:
-
-```text
-vX.Y.Z
-```
-
-Example:
-
-```bash
-git checkout main
-git pull
-git merge develop
-git push origin main
-git tag v0.1.3
-git push origin v0.1.3
-```
-
-This creates a normal GitHub Release and uploads desktop installers for macOS, Windows, and Linux.
-
-## GitHub Environments
-
-Create these environments in `Settings > Environments`:
-
-- `preview`: used by CI and preview releases.
-- `production`: used by production releases.
-
-Recommended production protection:
-
-- required reviewers
-- restricted deployment branches/tags if needed
-- signing secrets later, when macOS notarization and Windows code signing are enabled
+Initial macOS releases are ad-hoc signed and not notarized. Windows releases are unsigned. Developer ID, Windows signing and in-app updates are deferred. Installation and capture permissions are documented in [installation.md](installation.md).

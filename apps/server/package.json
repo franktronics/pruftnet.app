@@ -1,12 +1,12 @@
 {
     "name": "@repo/server",
     "private": true,
-    "version": "0.0.1",
+    "version": "0.2.0",
     "type": "module",
     "scripts": {
-        "dev": "tsx watch src/main.ts",
+        "dev": "tsx watch src/main.ts serve",
         "build": "vite build --config config/vite.server.config.ts",
-        "start": "node dist/main.js",
+        "start": "node dist/main.js serve",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit"
     },

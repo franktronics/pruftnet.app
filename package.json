@@ -1,19 +1,22 @@
 {
-    "version": "0.1.2",
+    "version": "0.2.0",
     "name": "pruftnet",
     "private": true,
     "type": "module",
     "description": "Network analysis software",
     "main": "index.js",
     "scripts": {
-        "build": "pnpm --filter @repo/desktop build",
+        "build": "node scripts/distribution/package.mjs",
         "build:cpp": "cmake -S packages/core/cpp -B packages/core/cpp/build && cmake --build packages/core/cpp/build --target pruftnet_capture_worker",
         "dev:server": "pnpm --filter @repo/server dev",
         "dev:desktop": "pnpm --filter @repo/desktop dev",
         "format": "prettier --write .",
         "lint": "pnpm -r lint",
         "typecheck": "pnpm -r typecheck",
-        "test:cpp": "cmake --build packages/core/cpp/build && ctest --test-dir packages/core/cpp/build --output-on-failure"
+        "test:cpp": "cmake --build packages/core/cpp/build && ctest --test-dir packages/core/cpp/build --output-on-failure",
+        "package:server": "node scripts/distribution/package.mjs server",
+        "package:desktop": "node scripts/distribution/package.mjs desktop",
+        "test:distribution": "node --test scripts/distribution/*.test.mjs"
     },
     "keywords": [],
     "author": "Franklin Tenepo",
@@ -24,6 +27,7 @@
     },
     "packageManager": "pnpm@11.7.0+sha512.19cc852c120c7125760f2443ee6be0ca5b40f9f50598de1a09a1f177503e010e57c23c77646e01e761de59bf874fb22a3398c33ab9691fc13eb946b6f0f4d620",
     "devDependencies": {
-        "prettier": "^3.8.4"
+        "prettier": "^3.8.4",
+        "yaml": "2.8.2"
     }
 }

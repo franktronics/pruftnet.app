@@ -1,57 +1,17 @@
 name: CI
-
 on:
     pull_request:
-        branches:
-            - develop
-            - main
+        branches: [dev, main]
     push:
-        branches:
-            - develop
-            - main
-
+        branches: [dev, main]
+    workflow_dispatch:
+permissions:
+    contents: read
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
+    group: ci-${{ github.ref }}
     cancel-in-progress: true
-
 jobs:
     validate:
-        name: Validate
-        runs-on: ubuntu-latest
-        environment: preview
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v7
-
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v6
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v6
-              with:
-                  node-version: 22
-                  cache: pnpm
-
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Lint
-              run: pnpm lint
-
-            - name: Typecheck
-              run: pnpm typecheck
-
-            - name: Build desktop app
-              run: pnpm build
-
-            - name: Upload preview artifacts
-              uses: actions/upload-artifact@v7
-              with:
-                  name: pruftnet-ci-linux
-                  path: |
-                      apps/desktop/release/*.AppImage
-                      apps/desktop/release/*.deb
-                      apps/desktop/release/*.rpm
-                      !apps/desktop/release/*-unpacked/**
-                      !apps/desktop/release/builder-debug.yml
-                  if-no-files-found: error
+        uses: ./.github/workflows/build.yml
+        with:
+            ref: ${{ github.sha }}

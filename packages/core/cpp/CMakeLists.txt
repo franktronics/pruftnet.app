@@ -216,6 +216,10 @@ target_link_libraries(pruftnet_capture_worker
         pruftnet_sniffing
 )
 pruftnet_enable_warnings(pruftnet_capture_worker)
+if(MSVC)
+    target_link_libraries(pruftnet_capture_worker PRIVATE delayimp)
+    target_link_options(pruftnet_capture_worker PRIVATE /DELAYLOAD:wpcap.dll /DELAYLOAD:Packet.dll)
+endif()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT PRUFTNET_IPO_SUPPORTED OUTPUT PRUFTNET_IPO_ERROR LANGUAGES CXX)

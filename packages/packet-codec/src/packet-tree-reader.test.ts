@@ -95,13 +95,16 @@ function parserFieldValueTags(): ReadonlyMap<number, number> {
     tags.set(1, PacketTreeValueTag.none)
     tags.set(2, PacketTreeValueTag.bytes)
     tags.set(3, PacketTreeValueTag.generatedText)
-    for (const id of [4, 5, 6, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 26, 27, 28, 29]) {
+    for (const id of [
+        4, 5, 6, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 34, 35,
+        36, 37,
+    ]) {
         tags.set(id, PacketTreeValueTag.unsigned)
     }
-    for (const id of [7, 11, 25]) {
+    for (const id of [7, 11, 33]) {
         tags.set(id, PacketTreeValueTag.none)
     }
-    for (const id of [8, 9, 22, 23, 24, 30]) {
+    for (const id of [8, 9, 30, 31, 32, 38]) {
         tags.set(id, PacketTreeValueTag.bytes)
     }
     return tags
@@ -131,12 +134,12 @@ test('reads the C++ fixture lazily with checksum parity', () => {
 })
 
 test('round-trips a real Ethernet IPv4 UDP parser tree from C++', () => {
-    expect(parserFixture.revision).toBe(16_961_375_687_554_593_336n)
+    expect(parserFixture.revision).toBe(9_138_740_466_261_038_128n)
     const reader = PacketTreeReader.open(parserFixture.bytes, {
         expectedRegistryRevision: parserFixture.revision,
         fieldValueTags: parserFieldValueTags(),
     })
-    expect(reader.nodeCount()).toBe(27)
+    expect(reader.nodeCount()).toBe(31)
     expect(reader.node(0)).toMatchObject({
         fieldId: 1,
         parentIndex: 0xffff_ffff,
@@ -148,14 +151,14 @@ test('round-trips a real Ethernet IPv4 UDP parser tree from C++', () => {
     expect(reader.node(7).valueLow).toBe(0x0800n)
     expect(reader.node(8)).toMatchObject({ fieldId: 11, parentIndex: 4, offset: 14, length: 33 })
     expect(reader.node(12).valueLow).toBe(33n)
-    expect(reader.node(17).valueLow).toBe(17n)
-    expect(reader.node(21)).toMatchObject({ fieldId: 25, parentIndex: 8, offset: 34, length: 13 })
-    expect(reader.node(22).valueLow).toBe(40_001n)
-    expect(reader.node(23).valueLow).toBe(5_001n)
-    expect(reader.node(24).valueLow).toBe(13n)
-    expect(reader.node(26)).toMatchObject({
-        fieldId: 30,
-        parentIndex: 21,
+    expect(reader.node(21).valueLow).toBe(17n)
+    expect(reader.node(25)).toMatchObject({ fieldId: 33, parentIndex: 8, offset: 34, length: 13 })
+    expect(reader.node(26).valueLow).toBe(40_001n)
+    expect(reader.node(27).valueLow).toBe(5_001n)
+    expect(reader.node(28).valueLow).toBe(13n)
+    expect(reader.node(30)).toMatchObject({
+        fieldId: 38,
+        parentIndex: 25,
         offset: 42,
         length: 5,
         flags: 2,
@@ -163,7 +166,7 @@ test('round-trips a real Ethernet IPv4 UDP parser tree from C++', () => {
         valueLength: 0,
     })
     const udpPayloadIndex = Array.from({ length: reader.nodeCount() }, (_, index) => index).find(
-        (index) => reader.node(index).fieldId === 30,
+        (index) => reader.node(index).fieldId === 38,
     )
     expect(udpPayloadIndex).toBeDefined()
     expect([...reader.nodeBytes(udpPayloadIndex!)]).toEqual([104, 101, 108, 108, 111])

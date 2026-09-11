@@ -1,0 +1,24 @@
+name: Build prerequisites
+description: Install pinned JS tools and native build dependencies
+runs:
+    using: composite
+    steps:
+        - uses: pnpm/action-setup@v6.1.0
+        - uses: actions/setup-node@v7.0.0
+          with:
+              node-version-file: .node-version
+              cache: pnpm
+        - shell: bash
+          run: pnpm install --frozen-lockfile
+        - if: runner.os == 'Linux'
+          shell: bash
+          run: sudo apt-get update && sudo apt-get install -y libpcap-dev rpm libarchive-tools xvfb
+        - if: runner.os == 'Windows'
+          shell: pwsh
+          run: |
+              $archive = Join-Path $env:RUNNER_TEMP 'npcap-sdk.zip'
+              Invoke-WebRequest https://npcap.com/dist/npcap-sdk-1.16.zip -OutFile $archive
+              if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne 'f0a8be7778ee3ae1b99bbbecb27a3ff0f6c111a4093f1c78c5c5a099607184db') { throw 'Npcap SDK checksum mismatch' }
+              $sdk = Join-Path $env:RUNNER_TEMP 'npcap-sdk'
+              Expand-Archive $archive -DestinationPath $sdk -Force
+              "NPCAP_SDK=$sdk" >> $env:GITHUB_ENV

@@ -1,5 +1,7 @@
 import { app, BrowserWindow, dialog } from 'electron'
 import { Effect } from 'effect'
+import { releaseName } from '@repo/core'
+import { join } from 'node:path'
 
 import { createMainWindow } from './main/create-window'
 import { installApplicationMenu } from './main/application-menu'
@@ -8,14 +10,36 @@ import { registerIpcHandlers } from './main/ipc'
 import { startDesktopRpcServer } from './main/rpc-server'
 
 async function bootstrap() {
+    const smoke = process.argv.includes('--smoke-test')
+    if (smoke) console.log('Smoke: bootstrap')
+    app.setName(releaseName)
+    if (app.isPackaged) {
+        app.setPath('userData', join(app.getPath('appData'), releaseName, 'electron'))
+        process.env.PRUFTNET_CAPTURE_WORKER_PATH = join(
+            process.resourcesPath,
+            'native',
+            process.platform === 'win32'
+                ? 'pruftnet_capture_worker.exe'
+                : 'pruftnet_capture_worker',
+        )
+    }
     await app.whenReady()
+    if (smoke) console.log('Smoke: Electron ready')
 
     const exportDestinations = new DesktopExportDestinations()
     const rpcServer = await Effect.runPromise(startDesktopRpcServer(exportDestinations))
+    if (smoke) console.log('Smoke: backend ready')
 
     registerIpcHandlers(exportDestinations)
     installApplicationMenu()
     let mainWindow = await createMainWindow({ rpcUrl: rpcServer.rpcUrl })
+    if (smoke) {
+        console.log('Smoke: renderer loaded')
+        await Effect.runPromise(rpcServer.shutdown)
+        await Effect.runPromise(rpcServer.close)
+        app.exit(0)
+        return
+    }
     let allowQuit = false
     let quitInProgress = false
 

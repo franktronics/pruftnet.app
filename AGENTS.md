@@ -45,22 +45,48 @@ Instructions:
 
 Load the relevant doc file based on the task at hand:
 
-- **Example title** → @.agents/doc/example.md
-- ...
+- [application-commands](.agents/doc/application-commands.md)
+- [application-settings](.agents/doc/application-settings.md)
+- [backend-sniffing](.agents/doc/backend-sniffing.md)
+- [capture-architecture](.agents/doc/capture-architecture.md)
+- [capture-benchmark](.agents/doc/capture-benchmark.md)
+- [capture-frontend](.agents/doc/capture-frontend.md)
+- [capture-pipeline-current](.agents/doc/capture-pipeline-current.md)
+- [capture-sniffing](.agents/doc/capture-sniffing.md)
+- [coding-style](.agents/doc/coding-style.md)
+- [cpp-architecture](.agents/doc/cpp-architecture.md)
+- [dissector-architecture](.agents/doc/dissector-architecture.md)
+- [dissector-coverage](.agents/doc/dissector-coverage.md)
+- [durable-captures](.agents/doc/durable-captures.md)
+- [frontend-design-system](.agents/doc/frontend-design-system.md)
+- [installation](.agents/doc/installation.md)
+- [packet-codec-benchmark](.agents/doc/packet-codec-benchmark.md)
+- [packet-delivery-performance](.agents/doc/packet-delivery-performance.md)
+- [packet-detail-performance](.agents/doc/packet-detail-performance.md)
+- [packet-latency-audit](.agents/doc/packet-latency-audit.md)
+- [parser-architecture](.agents/doc/parser-architecture.md)
+- [parser-phase-3-plan](.agents/doc/parser-phase-3-plan.md)
+- [parser-phase-4-plan](.agents/doc/parser-phase-4-plan.md)
+- [parser-phase-5-plan](.agents/doc/parser-phase-5-plan.md)
+- [realtime-state-sync](.agents/doc/realtime-state-sync.md)
+- [release](.agents/doc/release.md)
 
 * Always update documentation for significant changes or new features, and remove outdated information.
 * All documentation files must be listed here.
 * Prefers short, concise documentation
 
 ## External repositories
+
 This project vendors external repositories under `.repos/` as read-only reference material for coding
 agents:
 
 ### External repos to use:
+
 - Wireshark: https://gitlab.com/wireshark/wireshark.git
 - Effect-smol: https://github.com/Effect-TS/effect-smol.git
 
 ### How to use them
+
 - These repositories are not tracked by Git. If they do not already exist, you must use the links mentioned above to clone them(--depth 1) before continuing.
 - Prefer examples and patterns from the vendored source code over generated guesses or web search results.
 - Do not edit files under `.repos/` unless explicitly asked.

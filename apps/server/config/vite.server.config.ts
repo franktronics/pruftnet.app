@@ -7,6 +7,11 @@ import { defineConfig } from 'vite'
 const nodeBuiltins = builtinModules.flatMap((moduleName) => [moduleName, `node:${moduleName}`])
 
 export default defineConfig({
+    define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'process.env.PRUFTNET_CHANNEL': JSON.stringify(process.env.PRUFTNET_CHANNEL ?? 'main'),
+        'process.env.PRUFTNET_VERSION': JSON.stringify(process.env.PRUFTNET_VERSION ?? '0.2.0'),
+    },
     plugins: [
         {
             name: 'copy-drizzle-migrations',
@@ -18,7 +23,7 @@ export default defineConfig({
     ],
     build: {
         ssr: 'src/main.ts',
-        target: 'node22',
+        target: 'node24',
         outDir: 'dist',
         emptyOutDir: true,
         sourcemap: true,
@@ -31,6 +36,6 @@ export default defineConfig({
         },
     },
     ssr: {
-        noExternal: ['@repo/core', '@repo/shared'],
+        noExternal: true,
     },
 })

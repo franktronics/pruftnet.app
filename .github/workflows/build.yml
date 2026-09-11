@@ -1,0 +1,72 @@
+name: Build and test distributions
+on:
+    workflow_call:
+        inputs:
+            ref:
+                type: string
+                required: true
+            version:
+                type: string
+                default: '0.2.0'
+            channel:
+                type: string
+                default: main
+permissions:
+    contents: read
+jobs:
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - { runner: ubuntu-24.04, target: linux-x64 }
+                    - { runner: ubuntu-24.04-arm, target: linux-arm64 }
+                    - { runner: macos-15-intel, target: mac-x64 }
+                    - { runner: macos-15, target: mac-arm64 }
+                    - { runner: windows-2025, target: win-x64 }
+        runs-on: ${{ matrix.runner }}
+        timeout-minutes: 45
+        env:
+            PRUFTNET_VERSION: ${{ inputs.version }}
+            PRUFTNET_CHANNEL: ${{ inputs.channel }}
+            CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        steps:
+            - uses: actions/checkout@v7.0.1
+              with:
+                  ref: ${{ inputs.ref }}
+                  persist-credentials: false
+            - uses: ./.github/actions/setup
+            - name: Static checks
+              run: pnpm lint && pnpm typecheck && pnpm test:distribution
+            - name: Package desktop and server
+              run: pnpm build
+            - name: Native tests
+              if: runner.os != 'Windows'
+              run: ctest --test-dir packages/core/cpp/build --build-config Release --output-on-failure
+            - name: JavaScript tests
+              if: runner.os != 'Windows'
+              run: pnpm -r --if-present test
+            - name: Windows protocol tests (no Npcap redistribution)
+              if: runner.os == 'Windows'
+              run: packages/core/cpp/build/Release/capture_worker_protocol_tests.exe
+            - name: Relocated server smoke test
+              run: node scripts/distribution/smoke.mjs
+            - name: Desktop startup smoke test
+              if: runner.os != 'Linux'
+              run: node scripts/distribution/desktop-smoke.mjs
+            - name: Desktop startup smoke test (Xvfb)
+              if: runner.os == 'Linux'
+              run: xvfb-run --auto-servernum node scripts/distribution/desktop-smoke.mjs
+            - uses: actions/upload-artifact@v7.0.1
+              with:
+                  name: packages-${{ matrix.target }}
+                  path: |
+                      release/*.dmg
+                      release/*.zip
+                      release/*.exe
+                      release/*.AppImage
+                      release/*.deb
+                      release/*.rpm
+                      release/*.tar.gz
+                  if-no-files-found: error
+                  retention-days: 7

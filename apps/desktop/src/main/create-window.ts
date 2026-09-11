@@ -1,4 +1,5 @@
 import { BrowserWindow, nativeTheme } from 'electron'
+import { releaseName } from '@repo/core'
 import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -47,7 +48,7 @@ export async function createMainWindow(options: MainWindowOptions) {
         height: 1100,
         minWidth: 960,
         minHeight: 640,
-        title: 'Pruftnet',
+        title: releaseName,
         icon: getWindowIconPath(),
         autoHideMenuBar: process.platform !== 'darwin',
         titleBarStyle: 'hidden',

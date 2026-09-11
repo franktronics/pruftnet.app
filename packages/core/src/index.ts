@@ -3,6 +3,7 @@ import { makeAppLayer } from './app'
 import { makeAppNodeHandlers } from './rpc-http'
 
 export { AppRpcGroup, makeAppNodeHandlers }
+export { releaseChannel, releaseVersion, releaseName } from './distribution'
 export { makeAppLayer }
 export type { AppLayerOptions } from './app'
 export * from './capture'

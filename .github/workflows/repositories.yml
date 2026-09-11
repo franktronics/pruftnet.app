@@ -1,0 +1,66 @@
+name: Update package repositories
+on:
+    workflow_call:
+    workflow_dispatch:
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+concurrency:
+    group: package-repositories
+    cancel-in-progress: false
+jobs:
+    publish:
+        if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        runs-on: ubuntu-24.04
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - uses: actions/checkout@v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@v7.0.0
+              with:
+                  node-version-file: .node-version
+            - name: Prepare repository signing
+              env:
+                  APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+              run: |
+                  test -n "$APT_SIGNING_KEY"
+                  sudo apt-get update
+                  sudo apt-get install -y apt-utils
+                  mkdir -m 700 "$RUNNER_TEMP/pruftnet-gnupg"
+                  echo "GNUPGHOME=$RUNNER_TEMP/pruftnet-gnupg" >> "$GITHUB_ENV"
+                  printf '%s' "$APT_SIGNING_KEY" | gpg --homedir "$RUNNER_TEMP/pruftnet-gnupg" --batch --import
+            - name: Generate Homebrew and APT indexes
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: node scripts/distribution/repositories.mjs
+            - name: Checkout Homebrew tap
+              uses: actions/checkout@v7.0.1
+              with:
+                  repository: franktronics/homebrew-pruftnet
+                  path: build/homebrew
+                  ssh-key: ${{ secrets.HOMEBREW_DEPLOY_KEY }}
+            - name: Publish Homebrew packages
+              run: |
+                  cp -R build/tap/. build/homebrew/
+                  cd build/homebrew
+                  git config user.name github-actions[bot]
+                  git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+                  git add Formula Casks README.md
+                  if ! git diff --cached --quiet; then
+                    git commit -m "Update Pruftnet packages"
+                    git push
+                  fi
+            - uses: actions/configure-pages@v5
+            - uses: actions/upload-pages-artifact@v4
+              with:
+                  path: build/pages
+            - id: deployment
+              uses: actions/deploy-pages@v5.0.1
+            - name: Remove temporary signing material
+              if: always()
+              run: rm -rf "$RUNNER_TEMP/pruftnet-gnupg"

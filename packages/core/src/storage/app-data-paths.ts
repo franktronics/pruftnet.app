@@ -5,6 +5,7 @@ import { mkdir, realpath } from 'node:fs/promises'
 import { Context, Effect, Layer } from 'effect'
 
 import { AppDataPathError } from './errors'
+import { releaseName } from '#core/distribution'
 
 export type AppRuntime = 'desktop' | 'server' | 'test'
 export type AppEnvironment = 'development' | 'production' | 'test'
@@ -65,7 +66,7 @@ function defaultDataRoot(options: AppDataPathsOptions) {
         }
         return resolve(options.workspaceRoot, '.data', 'pruftnet')
     }
-    return platformDataRoot('Pruftnet')
+    return platformDataRoot(`${releaseName}/${options.runtime}`)
 }
 
 function isContained(root: string, candidate: string) {
