@@ -6,10 +6,11 @@ import { root, run } from './common.mjs'
 
 export async function stageRuntime(destination) {
     const version = (await readFile(join(root, '.node-version'), 'utf8')).trim()
-    const name = `node-v${version}-${process.platform}-${process.arch}`
+    const platform = process.platform === 'win32' ? 'win' : process.platform
+    const name = `node-v${version}-${platform}-${process.arch}`
     const archive = `${name}.${process.platform === 'win32' ? 'zip' : 'tar.gz'}`
     const expected = (await readFile(join(root, 'scripts/distribution/node-shasums.txt'), 'utf8'))
-        .split('\n')
+        .split(/\r?\n/)
         .find((line) => line.endsWith(`  ${archive}`))
         ?.split('  ')[0]
     if (!expected) throw new Error(`No pinned checksum for ${archive}`)
