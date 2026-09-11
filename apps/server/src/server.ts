@@ -108,7 +108,7 @@ export function startServer(config: ServerConfig): Effect.Effect<StartedServer, 
             })
 
             return {
-                address: `http://${config.host}:${config.port}`,
+                address: `http://${config.host === '::1' ? '[::1]' : config.host}:${config.port}`,
                 close: closeServer,
             }
         }).pipe(Effect.onError((cause) => Scope.close(backendScope, Exit.failCause(cause))))

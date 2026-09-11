@@ -14,7 +14,7 @@ PRs and pushes to `dev`/`main` validate types, lint, tests and packaging. A merg
 
 A `v0.x.y` tag whose commit belongs to `main` publishes the principal release. The tag must match package.json. All five build targets must succeed before a draft release is uploaded and made public. Nightlies are GitHub prereleases and never replace Latest.
 
-Standard public GitHub runners: Ubuntu 24.04 x64/ARM64, macOS 15 Intel/Apple Silicon, Windows 2025 x64. Node is pinned in `.node-version`; downloadable server runtimes have checked-in SHA-256 digests. Native C++ builds use the system macOS SDK, Linux libpcap or the pinned Windows Npcap SDK.
+[Standard GitHub runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) are free for this public repository: Ubuntu 24.04 x64/ARM64, macOS 26 Intel/Apple Silicon (macOS 15 minimum for installed packages), Windows 2025 x64. Node is pinned in `.node-version`; downloadable server runtimes have checked-in SHA-256 digests. Native C++ builds use the system macOS SDK, Linux libpcap or the pinned Windows Npcap SDK.
 
 Native tests and replay fixtures run on Linux/macOS. Windows compiles all tests but executes only the driver-independent protocol test; capture requires a separately installed Npcap. Relocated server and packaged desktop startup are smoke-tested. Physical interfaces and permissions require real-machine release checks.
 

@@ -12,7 +12,7 @@ export function run(command, args, options = {}) {
 }
 export function metadata(env = process.env) {
     const version =
-        env.PRUFTNET_VERSION ??
+        env.PRUFTNET_VERSION ||
         JSON.parse(readFileSync(new URL('../../package.json', import.meta.url))).version
     if (!/^0\.\d+\.\d+(?:-nightly\.\d{8}\.\d+)?$/.test(version))
         throw new Error(`Invalid release version: ${version}`)

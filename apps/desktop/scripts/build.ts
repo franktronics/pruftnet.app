@@ -1,13 +1,15 @@
 import { spawn } from 'node:child_process'
-import * as NodeOS from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const hostPlatform = NodeOS.platform()
 const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const desktopDir = resolve(scriptsDir, '..')
-const pnpmCommand = hostPlatform === 'win32' ? 'pnpm.cmd' : 'pnpm'
-const shouldUseShell = hostPlatform === 'win32'
+function getPnpmEntrypoint(): string {
+    const entrypoint = process.env.npm_execpath
+    if (!entrypoint) throw new Error('Run the desktop build through pnpm.')
+    return entrypoint
+}
+const pnpmEntrypoint = getPnpmEntrypoint()
 
 function createBuildEnv() {
     const buildEnv: NodeJS.ProcessEnv = { ...process.env }
@@ -31,10 +33,9 @@ function createBuildEnv() {
 
 function run(label: string, command: string, args: readonly string[], env: NodeJS.ProcessEnv) {
     return new Promise<void>((resolveRun, rejectRun) => {
-        const child = spawn(command, args, {
+        const child = spawn(command, [pnpmEntrypoint, ...args], {
             cwd: desktopDir,
             env,
-            shell: shouldUseShell,
             stdio: 'inherit',
         })
 
@@ -60,20 +61,25 @@ const builderArgs = process.argv.slice(2)
 
 await run(
     'build main process',
-    pnpmCommand,
+    process.execPath,
     ['exec', 'vite', 'build', '--config', 'config/vite.main.config.ts'],
     buildEnv,
 )
 await run(
     'build preload',
-    pnpmCommand,
+    process.execPath,
     ['exec', 'vite', 'build', '--config', 'config/vite.preload.config.ts'],
     buildEnv,
 )
 await run(
     'build renderer',
-    pnpmCommand,
+    process.execPath,
     ['exec', 'vite', 'build', '--config', 'config/vite.renderer.config.ts'],
     buildEnv,
 )
-await run('electron-builder', pnpmCommand, ['exec', 'electron-builder', ...builderArgs], buildEnv)
+await run(
+    'electron-builder',
+    process.execPath,
+    ['exec', 'electron-builder', ...builderArgs],
+    buildEnv,
+)

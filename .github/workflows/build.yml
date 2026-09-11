@@ -7,7 +7,7 @@ on:
                 required: true
             version:
                 type: string
-                default: '0.2.0'
+                default: ''
             channel:
                 type: string
                 default: main

@@ -61,14 +61,14 @@ for (const channel of ['main', 'nightly']) {
     const rubyClass = channel === 'main' ? 'PruftnetServer' : 'PruftnetServerNightly'
     await writeFile(
         join(tap, 'Formula', `${formulaName}.rb`),
-        `class ${rubyClass} < Formula\n  desc "Pruftnet local web server (beta)"\n  homepage "https://pruftnet.app"\n  version "${meta.version}"\n  license "MIT"\n  on_macos do\n    on_arm do\n${stanza(server('darwin', 'arm64'))}\n    end\n    on_intel do\n${stanza(server('darwin', 'x64'))}\n    end\n  end\n  on_linux do\n    depends_on "libpcap"\n    on_arm do\n${stanza(server('linux', 'arm64'))}\n    end\n    on_intel do\n${stanza(server('linux', 'x64'))}\n    end\n  end\n  def install\n    libexec.install Dir["*"]\n    (bin/"${meta.command}").write <<~SH\n      #!/bin/sh\n      exec "#{libexec}/${meta.command}" "$@"\n    SH\n  end\n  test do\n    assert_match "${meta.version}", shell_output("#{bin}/${meta.command} --version")\n  end\nend\n`,
+        `class ${rubyClass} < Formula\n  desc "Pruftnet local web server (beta)"\n  homepage "https://pruftnet.app"\n  version "${meta.version}"\n  license "MIT"\n  on_macos do\n    on_arm do\n${stanza(server('darwin', 'arm64'))}\n    end\n    on_intel do\n${stanza(server('darwin', 'x64'))}\n    end\n  end\n  depends_on macos: :sequoia\n  def install\n    libexec.install Dir["*"]\n    (bin/"${meta.command}").write <<~SH\n      #!/bin/sh\n      exec "#{libexec}/${meta.command}" "$@"\n    SH\n  end\n  test do\n    assert_match "${meta.version}", shell_output("#{bin}/${meta.command} --version")\n  end\nend\n`,
     )
     const desktop = (arch) =>
         asset(`pruftnet-desktop${meta.suffix}-${meta.version}-mac-${arch}.dmg`)
     const cask = `pruftnet-desktop${meta.suffix}`
     await writeFile(
         join(tap, 'Casks', `${cask}.rb`),
-        `cask "${cask}" do\n  version "${meta.version}"\n  on_arm do\n    url "${url(desktop('arm64').name)}"\n    sha256 "${desktop('arm64').sha256}"\n  end\n  on_intel do\n    url "${url(desktop('x64').name)}"\n    sha256 "${desktop('x64').sha256}"\n  end\n  name "${meta.name}"\n  desc "Network analysis software (beta)"\n  homepage "https://pruftnet.app"\n  app "${meta.name}.app"\n  caveats "Ad-hoc signed beta, without Apple notarization. See the installation guide for Gatekeeper and capture permissions."\nend\n`,
+        `cask "${cask}" do\n  version "${meta.version}"\n  on_arm do\n    url "${url(desktop('arm64').name)}"\n    sha256 "${desktop('arm64').sha256}"\n  end\n  on_intel do\n    url "${url(desktop('x64').name)}"\n    sha256 "${desktop('x64').sha256}"\n  end\n  name "${meta.name}"\n  desc "Network analysis software (beta)"\n  homepage "https://pruftnet.app"\n  depends_on macos: ">= :sequoia"\n  app "${meta.name}.app"\n  caveats "Ad-hoc signed beta, without Apple notarization. See the installation guide for Gatekeeper and capture permissions."\nend\n`,
     )
     const pool = join(pages, 'pool', channel)
     await mkdir(pool, { recursive: true })

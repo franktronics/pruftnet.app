@@ -1,6 +1,6 @@
 # Installation (beta)
 
-Desktop and Server run on macOS Intel/Apple Silicon, Windows x64, and Linux x64/ARM64.
+Desktop and Server run on macOS 15+ Intel/Apple Silicon, Windows x64, and Linux x64/ARM64.
 Linux packages target Ubuntu 24.04+ or Debian 13+. Other distributions need a compatible glibc, C++ runtime and libpcap. No Node.js, pnpm or compiler is required for release archives.
 
 ## Downloads
@@ -40,6 +40,25 @@ For desktop, the worker is under `/opt/Pruftnet/resources/native/`. Nightly uses
 
 ## Package managers
 
-The release workflow updates the Homebrew tap and signed APT repository after all target builds pass. Installation commands are published with each release. APT requires adding the repository and its scoped signing key once. Package managers provide updates; in-app auto-update is deferred.
+After the first successful repository publication, install on macOS with:
+
+```sh
+brew install --cask franktronics/pruftnet/pruftnet-desktop
+brew install franktronics/pruftnet/pruftnet-server
+```
+
+On Ubuntu 24.04+ or Debian 13+, add the signed APT repository once:
+
+```sh
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://franktronics.github.io/pruftnet.app/pruftnet.asc | sudo tee /etc/apt/keyrings/pruftnet.asc >/dev/null
+printf '%s\n' 'deb [signed-by=/etc/apt/keyrings/pruftnet.asc] https://franktronics.github.io/pruftnet.app main main' | sudo tee /etc/apt/sources.list.d/pruftnet.list
+sudo apt update
+sudo apt install pruftnet-desktop pruftnet-server
+```
+
+For nightly, append `-nightly` to package names. For APT also add an equivalent repository line using `nightly main` instead of `main main`. Both channels can coexist. Homebrew support is macOS only; Linux binaries require the system libpcap ABI from the supported Debian/Ubuntu releases. RPM artifacts are experimental and are not installation-tested on RPM distributions.
+
+Package managers provide updates; in-app auto-update is deferred.
 
 Server archive users must retain the full directory when upgrading and stop the old process first. Persistent data is outside the installation directory.
