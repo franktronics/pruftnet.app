@@ -10,6 +10,9 @@ option(PRUFTNET_SNIFFING_USE_LIBFUZZER "Build fuzz harnesses for libFuzzer inste
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
 
 function(pruftnet_enable_warnings target)
     if(MSVC)

@@ -8,7 +8,8 @@
         "build": "vite build --config config/vite.server.config.ts",
         "start": "node dist/main.js serve",
         "lint": "eslint .",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test": "node --import tsx --test src/config.test.ts"
     },
     "dependencies": {
         "@effect/platform": "catalog:",

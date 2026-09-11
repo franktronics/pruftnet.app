@@ -10,6 +10,7 @@ export async function stageNative(destination) {
         args.push(
             `-DPCAP_INCLUDE_DIR=${sdk}/usr/include`,
             `-DPCAP_LIBRARY=${sdk}/usr/lib/libpcap.tbd`,
+            '-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0',
         )
     }
     if (process.platform === 'win32') {

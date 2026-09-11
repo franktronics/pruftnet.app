@@ -13,11 +13,13 @@ if (process.platform === 'darwin') {
 } else if (process.platform === 'win32') {
     executable = join(output, 'win-unpacked', `${meta.name}.exe`)
 } else {
-    executable = join(
-        output,
-        process.arch === 'arm64' ? 'linux-arm64-unpacked' : 'linux-unpacked',
-        `pruftnet-desktop${meta.suffix}`,
-    )
+    executable = process.argv.includes('--installed')
+        ? join('/opt', meta.name, `pruftnet-desktop${meta.suffix}`)
+        : join(
+              output,
+              process.arch === 'arm64' ? 'linux-arm64-unpacked' : 'linux-unpacked',
+              `pruftnet-desktop${meta.suffix}`,
+          )
 }
 run(executable, ['--smoke-test'], {
     timeout: 30000,
