@@ -118,5 +118,11 @@ app.on('window-all-closed', () => {
 
 bootstrap().catch((error: unknown) => {
     console.error('Failed to start desktop app', error)
-    app.quit()
+    if (!process.argv.includes('--smoke-test')) {
+        dialog.showErrorBox(
+            'Pruftnet could not start',
+            error instanceof Error ? error.message : String(error),
+        )
+    }
+    app.exit(1)
 })

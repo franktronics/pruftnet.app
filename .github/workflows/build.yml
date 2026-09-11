@@ -50,10 +50,10 @@ jobs:
               if: runner.os == 'Windows'
               run: packages/core/cpp/build/Release/capture_worker_protocol_tests.exe
             - name: Relocated server smoke test
-              run: node scripts/distribution/smoke.mjs
+              run: node scripts/distribution/smoke.mjs ${{ runner.os == 'Windows' && '--without-npcap' || '' }}
             - name: Desktop startup smoke test
               if: runner.os != 'Linux'
-              run: node scripts/distribution/desktop-smoke.mjs
+              run: node scripts/distribution/desktop-smoke.mjs ${{ runner.os == 'Windows' && '--without-npcap' || '' }}
             - name: Desktop startup smoke test (Xvfb)
               if: runner.os == 'Linux'
               run: |

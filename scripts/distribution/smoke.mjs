@@ -42,39 +42,54 @@ try {
     server.on('error', (error) => {
         logs += error.message
     })
-    let ready = false
-    for (let i = 0; i < 100; i++) {
-        if (server.exitCode !== null) throw new Error(`Server exited: ${logs}`)
-        try {
-            const health = await fetch(`http://127.0.0.1:${port}/health`)
-            if (health.ok) {
-                ready = true
-                break
+    if (process.argv.includes('--without-npcap')) {
+        assert.equal(process.platform, 'win32')
+        const [code] = await Promise.race([
+            once(server, 'exit'),
+            delay(10000).then(() => {
+                throw new Error('Missing Npcap did not produce a startup error')
+            }),
+        ])
+        assert.equal(code, 1, logs)
+        assert.match(logs, /Npcap is required\. Install it from https:\/\/npcap\.com/)
+        console.log(
+            `Relocated Windows server ${metadata.version}: version and missing Npcap diagnostic passed`,
+        )
+    } else {
+        let ready = false
+        for (let i = 0; i < 100; i++) {
+            if (server.exitCode !== null) throw new Error(`Server exited: ${logs}`)
+            try {
+                const health = await fetch(`http://127.0.0.1:${port}/health`)
+                if (health.ok) {
+                    ready = true
+                    break
+                }
+            } catch {
+                /* Wait for the packaged server to bind. */
             }
-        } catch {
-            /* Wait for the packaged server to bind. */
+            await delay(100)
         }
-        await delay(100)
+        assert.ok(ready, `Server did not become ready: ${logs}`)
+        const page = await fetch(`http://127.0.0.1:${port}/`)
+        assert.equal(page.status, 200)
+        const html = await page.text()
+        const asset = html.match(/src="([^"]+\.js)"/)
+        assert.ok(asset, 'Frontend bundle was not served')
+        assert.equal((await fetch(new URL(asset[1], `http://127.0.0.1:${port}/`))).status, 200)
+        const exited = once(server, 'exit')
+        server.kill('SIGTERM')
+        const result = await Promise.race([
+            exited,
+            delay(10000).then(() => {
+                throw new Error('Shutdown timed out')
+            }),
+        ])
+        if (process.platform !== 'win32') assert.equal(result[0], 0, logs)
+        console.log(
+            `Relocated server ${metadata.version}: runtime, migrations, HTTP, frontend and shutdown passed`,
+        )
     }
-    assert.ok(ready, `Server did not become ready: ${logs}`)
-    const page = await fetch(`http://127.0.0.1:${port}/`)
-    assert.equal(page.status, 200)
-    const html = await page.text()
-    const asset = html.match(/src="([^"]+\.js)"/)
-    assert.ok(asset, 'Frontend bundle was not served')
-    assert.equal((await fetch(new URL(asset[1], `http://127.0.0.1:${port}/`))).status, 200)
-    const exited = once(server, 'exit')
-    server.kill('SIGTERM')
-    const result = await Promise.race([
-        exited,
-        delay(10000).then(() => {
-            throw new Error('Shutdown timed out')
-        }),
-    ])
-    if (process.platform !== 'win32') assert.equal(result[0], 0, logs)
-    console.log(
-        `Relocated server ${metadata.version}: runtime, migrations, HTTP, frontend and shutdown passed`,
-    )
 } finally {
     if (server && server.exitCode === null) server.kill('SIGKILL')
     await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })

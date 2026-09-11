@@ -24,7 +24,17 @@ export async function stageNative(destination) {
         )
     }
     run('cmake', args)
-    run('cmake', ['--build', build, '--config', 'Release', '--parallel', '3'])
+    run('cmake', [
+        '--build',
+        build,
+        '--config',
+        'Release',
+        '--parallel',
+        '3',
+        ...(process.platform === 'win32'
+            ? ['--target', 'pruftnet_capture_worker', 'capture_worker_protocol_tests']
+            : []),
+    ])
     await mkdir(destination, { recursive: true })
     const worker =
         process.platform === 'win32' ? 'pruftnet_capture_worker.exe' : 'pruftnet_capture_worker'
