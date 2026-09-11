@@ -90,7 +90,7 @@ if (process.argv[2] !== 'server') {
     config.mac.notarize = false
     const artifact = `pruftnet-desktop${meta.suffix}-${meta.version}-\${os}-\${arch}.\${ext}`
     config.artifactName = artifact
-    for (const key of ['dmg', 'win', 'linux', 'appImage', 'deb', 'rpm'])
+    for (const key of ['dmg', 'win', 'linux', 'appImage', 'deb'])
         config[key].artifactName = artifact
     config.deb.depends = [
         'libgtk-3-0',

@@ -6,7 +6,7 @@ import { metadata, root, run } from './common.mjs'
 const meta = metadata()
 const directory = join(root, 'release')
 const names = (await readdir(directory))
-    .filter((name) => /\.(dmg|zip|exe|AppImage|deb|rpm|tar\.gz)$/.test(name))
+    .filter((name) => /\.(dmg|zip|exe|AppImage|deb|tar\.gz)$/.test(name))
     .sort()
 for (const [os, arch] of [
     ['darwin', 'arm64'],

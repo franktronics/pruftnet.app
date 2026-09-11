@@ -54,14 +54,10 @@ linux:
     target:
         - target: AppImage
         - target: deb
-        - target: rpm
     artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 appImage:
     artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 deb:
-    artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-
-rpm:
     artifactName: ${productName}-${version}-${os}-${arch}.${ext}

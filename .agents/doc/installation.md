@@ -36,7 +36,7 @@ For live capture, grant capabilities only to the installed native worker. For th
 sudo setcap cap_net_raw,cap_net_admin=eip /opt/pruftnet-server/app/native/pruftnet_capture_worker
 ```
 
-For desktop, the worker is under `/opt/Pruftnet/resources/native/`. Nightly uses its own installation path. Repeat after upgrades. Restrict executable access to a trusted capture group where appropriate. Never run the Electron app as root. AppImage's read-only mount cannot retain file capabilities; use the Debian/RPM package for live capture.
+For desktop, the worker is under `/opt/Pruftnet/resources/native/`. Nightly uses its own installation path. Repeat after upgrades. Restrict executable access to a trusted capture group where appropriate. Never run the Electron app as root. AppImage's read-only mount cannot retain file capabilities; use the Debian package for live capture.
 
 ## Package managers
 
@@ -57,7 +57,7 @@ sudo apt update
 sudo apt install pruftnet-desktop pruftnet-server
 ```
 
-For nightly, append `-nightly` to package names. For APT also add an equivalent repository line using `nightly main` instead of `main main`. Both channels can coexist. Homebrew support is macOS only; Linux binaries require the system libpcap ABI from the supported Debian/Ubuntu releases. RPM artifacts are experimental and are not installation-tested on RPM distributions.
+For nightly, append `-nightly` to package names. For APT also add an equivalent repository line using `nightly main` instead of `main main`. Both channels can coexist. Homebrew support is macOS only; Linux binaries require the system libpcap ABI from the supported Debian/Ubuntu releases. RPM distribution support is deferred until it has a native build and installation check.
 
 Package managers provide updates; in-app auto-update is deferred.
 
