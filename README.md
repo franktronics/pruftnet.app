@@ -1,3 +1,5 @@
+> **Archived version:** This branch preserves the previous Pruftnet application. Active development is on `dev`; principal releases are on `main`.
+
 # Prüftnet
 
 ![Preview](https://pruftnet.app/analysis.jpeg)
