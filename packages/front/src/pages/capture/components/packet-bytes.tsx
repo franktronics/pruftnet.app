@@ -61,16 +61,13 @@ export function PacketBytes({
         virtualizer.scrollToIndex(Math.floor(index / BYTE_ROW_WIDTH), { align: 'auto' })
     }
     function handleKey(event: KeyboardEvent) {
-        const delta =
-            event.key === 'ArrowRight'
-                ? 1
-                : event.key === 'ArrowLeft'
-                  ? -1
-                  : event.key === 'ArrowDown'
-                    ? BYTE_ROW_WIDTH
-                    : event.key === 'ArrowUp'
-                      ? -BYTE_ROW_WIDTH
-                      : 0
+        const delta = cond(
+            [event.key === 'ArrowRight', 1],
+            [event.key === 'ArrowLeft', -1],
+            [event.key === 'ArrowDown', BYTE_ROW_WIDTH],
+            [event.key === 'ArrowUp', -BYTE_ROW_WIDTH],
+            [true, 0],
+        )
         if (!delta && event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
         const current = activeByte ?? 0
@@ -101,18 +98,14 @@ export function PacketBytes({
             hovered && !selectedBlock && 'ring-primary',
         )
     }
-    const emptyMessage =
-        detailState?.kind === 'loading'
-            ? 'Loading packet bytes...'
-            : detailState?.kind === 'pending'
-              ? 'Packet bytes are waiting for analysis.'
-              : detailState?.kind === 'evicted'
-                ? 'Packet bytes were evicted from retention.'
-                : detailState?.kind === 'invalid'
-                  ? 'Packet bytes are invalid.'
-                  : detailState?.kind === 'unavailable'
-                    ? 'Packet bytes are unavailable.'
-                    : 'Select a packet to inspect its bytes'
+    const emptyMessage = cond(
+        [detailState?.kind === 'loading', 'Loading packet bytes...'],
+        [detailState?.kind === 'pending', 'Packet bytes are waiting for analysis.'],
+        [detailState?.kind === 'evicted', 'Packet bytes were evicted from retention.'],
+        [detailState?.kind === 'invalid', 'Packet bytes are invalid.'],
+        [detailState?.kind === 'unavailable', 'Packet bytes are unavailable.'],
+        [true, 'Select a packet to inspect its bytes'],
+    )
     return (
         <PanelShell title="Bytes" showHeader={false}>
             <div className="flex h-full min-h-0 flex-col">
