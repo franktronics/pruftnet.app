@@ -1,0 +1,70 @@
+name: Recover release publication
+on:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Existing main release tag
+                required: true
+                type: string
+            run_id:
+                description: Original release run whose five builds succeeded
+                required: true
+                type: string
+permissions:
+    contents: read
+concurrency:
+    group: release-main
+    cancel-in-progress: false
+jobs:
+    publish:
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+            actions: read
+        steps:
+            - uses: actions/checkout@v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - name: Verify artifact provenance
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ inputs.tag }}
+                  ARTIFACT_RUN_ID: ${{ inputs.run_id }}
+              run: |
+                  [[ "$RELEASE_TAG" =~ ^v0\.[0-9]+\.[0-9]+$ ]]
+                  [[ "$ARTIFACT_RUN_ID" =~ ^[0-9]+$ ]]
+                  release_commit=$(git rev-list -n 1 "$RELEASE_TAG")
+                  git merge-base --is-ancestor "$release_commit" origin/main
+                  release_version=${RELEASE_TAG#v}
+                  test "$(git show "$release_commit:package.json" | jq -r .version)" = "$release_version"
+                  gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+                  jq -e --arg tag "$RELEASE_TAG" --arg sha "$release_commit" '.event == "push" and .head_branch == $tag and .head_sha == $sha and .path == ".github/workflows/release.yml" and .status == "completed"' "$RUNNER_TEMP/source-run.json"
+                  gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID/jobs?filter=latest&per_page=100" > "$RUNNER_TEMP/source-jobs.json"
+                  jq -e '[.jobs[] | select(.name | startswith("build / build ("))] | length == 5 and all(.[]; .conclusion == "success")' "$RUNNER_TEMP/source-jobs.json"
+                  echo "PRUFTNET_VERSION=$release_version" >> "$GITHUB_ENV"
+                  echo "PRUFTNET_CHANNEL=main" >> "$GITHUB_ENV"
+                  echo "RELEASE_COMMIT=$release_commit" >> "$GITHUB_ENV"
+            - uses: actions/download-artifact@v8.0.1
+              with:
+                  run-id: ${{ inputs.run_id }}
+                  github-token: ${{ github.token }}
+                  pattern: packages-*
+                  path: release
+                  merge-multiple: true
+            - uses: actions/setup-node@v7.0.0
+              with:
+                  node-version-file: .node-version
+            - name: Publish verified artifacts
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: node scripts/distribution/publish.mjs
+    repositories:
+        needs: publish
+        uses: ./.github/workflows/repositories.yml
+        permissions:
+            contents: read
+            pages: write
+            id-token: write
+        secrets: inherit

@@ -34,3 +34,7 @@ GitHub Pages must use Actions deployment. No general-purpose PAT is stored in th
 `pnpm build` builds both distributions. `pnpm package:server` and `pnpm package:desktop` build one distribution. Outputs are in `release/`. Use `PRUFTNET_VERSION` for a nightly build; channel identity follows the version. `pnpm test:distribution` checks release identity validation.
 
 Initial macOS releases are ad-hoc signed and not notarized. Windows releases are unsigned. Developer ID, Windows signing and in-app updates are deferred. Installation and capture permissions are documented in [installation.md](installation.md).
+
+## Failed publication recovery
+
+If all five release builds passed but no GitHub release was created, run `Recover release publication` on `main` with the existing tag and original Actions run ID. It verifies tag ancestry, source workflow, commit identity and successful builds before reusing the immutable artifacts. It never moves tags or rebuilds binaries. For a failure after GitHub publication, retry only `Update package repositories`.
