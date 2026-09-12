@@ -20,9 +20,11 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - `apps/server`: Node.js server built with Effect and Effect-Platform that serves @repo/front.
 - `apps/desktop`: Electron.js cross-platform application for Linux, Mac, and Windows.
 - `packages/front`: React frontend, which is the core content of the application. It is used by both the desktop and the server.
+- `packages/shared`: Shared Effect schemas, RPC contracts, and application command definitions.
 - `packages/utils`: Shared runtime utilities consumed by both server and client applications.
 - `packages/ui`: Front-end component library built with Shadcn and organized using Atomic Design.
 - `packages/core`: The core of the backend. This package is included in both the desktop and server because they share the same logic.
+- `packages/packet-codec`: Generated and hand-written TypeScript reader for packet-tree payloads.
 
 ## Rules that should always be followed for prompting:
 
@@ -45,33 +47,18 @@ Instructions:
 
 Load the relevant doc file based on the task at hand:
 
-- [application-commands](.agents/doc/application-commands.md)
-- [application-settings](.agents/doc/application-settings.md)
-- [backend-sniffing](.agents/doc/backend-sniffing.md)
-- [capture-architecture](.agents/doc/capture-architecture.md)
-- [capture-benchmark](.agents/doc/capture-benchmark.md)
-- [capture-frontend](.agents/doc/capture-frontend.md)
-- [capture-pipeline-current](.agents/doc/capture-pipeline-current.md)
-- [capture-sniffing](.agents/doc/capture-sniffing.md)
-- [coding-style](.agents/doc/coding-style.md)
-- [cpp-architecture](.agents/doc/cpp-architecture.md)
-- [dissector-architecture](.agents/doc/dissector-architecture.md)
-- [dissector-coverage](.agents/doc/dissector-coverage.md)
-- [durable-captures](.agents/doc/durable-captures.md)
-- [frontend-design-system](.agents/doc/frontend-design-system.md)
-- [installation](.agents/doc/installation.md)
-- [packet-codec-benchmark](.agents/doc/packet-codec-benchmark.md)
-- [packet-delivery-performance](.agents/doc/packet-delivery-performance.md)
-- [packet-detail-performance](.agents/doc/packet-detail-performance.md)
-- [packet-latency-audit](.agents/doc/packet-latency-audit.md)
-- [parser-architecture](.agents/doc/parser-architecture.md)
-- [parser-phase-3-plan](.agents/doc/parser-phase-3-plan.md)
-- [parser-phase-4-plan](.agents/doc/parser-phase-4-plan.md)
-- [parser-phase-5-plan](.agents/doc/parser-phase-5-plan.md)
-- [realtime-state-sync](.agents/doc/realtime-state-sync.md)
-- [release](.agents/doc/release.md)
+- [application-commands](.agents/doc/application-commands.md): Command catalogue, native menu bridge, and shortcuts.
+- [application-settings](.agents/doc/application-settings.md): Renderer-owned preferences and packet-list cache policy.
+- [capture-architecture](.agents/doc/capture-architecture.md): Capture ownership, durable storage, delivery, and failure invariants.
+- [coding-style](.agents/doc/coding-style.md): Cross-package code and test conventions.
+- [cpp-architecture](.agents/doc/cpp-architecture.md): Native component boundaries and change guidance.
+- [frontend-design-system](.agents/doc/frontend-design-system.md): Visual, layout, density, and accessibility rules.
+- [parser-architecture](.agents/doc/parser-architecture.md): Packet parser contracts and dissector contribution rules.
+- [release](.agents/doc/release.md): Versioning, CI publication, and recovery procedure.
 
 * Always update documentation for significant changes or new features, and remove outdated information.
+* Use the format: `[link-name](link): shot description`
+* Write documentation only for those features that the code itself cannot describe simply.
 * All documentation files must be listed here.
 * Prefers short, concise documentation
 

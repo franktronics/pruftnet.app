@@ -12,7 +12,7 @@ server mode.
 - Runtime state machine: `src/sniffing/sniffer_runtime.cpp`
 - Detailed contributor map: `../../../.agents/doc/cpp-architecture.md`
 - Capture invariants: `../../../.agents/doc/capture-architecture.md`
-- Dissector architecture: `../../../.agents/doc/dissector-architecture.md`
+- Parser and dissector contracts: `../../../.agents/doc/parser-architecture.md`
 
 Only headers under `include/pruftnet/` are C++ library API. Files under `src/`
 and `tools/` are implementation details. The framed worker protocol is an
@@ -55,15 +55,15 @@ by packet count and bytes, and every rejection has an exact counter.
 Add the dissector under the matching `src/parsing/dissectors/<family>`
 directory, append its fields, and register dispatch in the matching catalog
 section. Follow the
-[`Adding a New Dissector`](../../../.agents/doc/dissector-architecture.md#adding-a-new-dissector)
+[`Adding a New Dissector`](../../../.agents/doc/parser-architecture.md#adding-a-dissector)
 checklist. Do not add parsing to capture callbacks, the writer, Node, or
 React.
 
 The current catalog contains 38 protocols and 649 fields, including bounded
 IP/TCP reassembly, core LAN/control protocols, DNS/DHCP/NTP, common tunnels,
 HTTP/1.x, TLS cleartext handshake metadata, and protected QUIC v1/v2 header
-metadata. See `../../../.agents/doc/dissector-coverage.md` for the exact
-coverage and next implementation order.
+metadata. See `../../../.agents/doc/parser-architecture.md` for the supported
+scope and contribution rules.
 
 ## Build and test
 

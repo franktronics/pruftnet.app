@@ -1,7 +1,0 @@
-trial=1 elapsed_ms=974.01 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=2 elapsed_ms=988.892 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=3 elapsed_ms=981.874 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=4 elapsed_ms=974.033 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=5 elapsed_ms=1051.92 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=6 elapsed_ms=969.445 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000
-trial=7 elapsed_ms=986.774 observed=50000 persisted=50000 analyzed=50000 indexes=0 callbacks=50000

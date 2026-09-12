@@ -33,7 +33,7 @@ GitHub Pages must use Actions deployment. No general-purpose PAT is stored in th
 
 `pnpm build` builds both distributions. `pnpm package:server` and `pnpm package:desktop` build one distribution. Outputs are in `release/`. Use `PRUFTNET_VERSION` for a nightly build; channel identity follows the version. `pnpm test:distribution` checks release identity validation.
 
-Initial macOS releases are ad-hoc signed and not notarized. Windows releases are unsigned. Developer ID, Windows signing and in-app updates are deferred. Installation and capture permissions are documented in [installation.md](installation.md).
+Initial macOS releases are ad hoc signed and not notarized. Windows releases are unsigned. Developer ID, Windows signing and in-app updates are deferred. Installation and capture permissions are documented in the root [README](../../README.md).
 
 ## Failed publication recovery
 

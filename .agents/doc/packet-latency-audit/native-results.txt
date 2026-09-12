@@ -1,3 +1,0 @@
-trial=1 after_300ms observed=1 persisted=0 analyzed=0 callbacks=0 after_stop persisted=1 analyzed=1 callbacks=1
-trial=2 after_300ms observed=1 persisted=0 analyzed=0 callbacks=0 after_stop persisted=1 analyzed=1 callbacks=1
-trial=3 after_300ms observed=1 persisted=0 analyzed=0 callbacks=0 after_stop persisted=1 analyzed=1 callbacks=1

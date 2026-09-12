@@ -1,4 +1,0 @@
-{"name":"merge_50000_plus_1024","median_ms":1.31,"p95_ms":3.58,"max_ms":6.97,"checksum":5500110}
-{"name":"merge_filter_counts_max_time","median_ms":9.15,"p95_ms":10.98,"max_ms":19.42,"checksum":16510340}
-{"name":"filter_text_tcp_50000","median_ms":8.4,"p95_ms":8.95,"max_ms":9.36,"checksum":353870}
-{"name":"full_batches_publication","calls":5,"returned_state":false,"outcome":"AbortError"}

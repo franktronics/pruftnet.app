@@ -1,8 +1,0 @@
-packets=213741 bytes=252463940
-legacy_last trials=5 median_ms=2100.73 max_ms=2125.14
-first_rebuild trials=1 median_ms=2240.04 max_ms=2240.04
-ordinal=0 indexed trials=20 median_ms=1.06346 max_ms=1.37013
-ordinal=106870 indexed trials=20 median_ms=1.08317 max_ms=1.22121
-ordinal=213740 indexed trials=20 median_ms=0.379125 max_ms=0.400166
-write_committed_index trials=5 median_ms=72.7096 max_ms=74.1338
-index_bytes=3422464
