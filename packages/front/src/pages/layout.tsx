@@ -103,7 +103,7 @@ export function DashboardLayout() {
     const [titlebarTarget, setTitlebarTarget] = useState<HTMLDivElement | null>(null)
 
     return (
-        <SidebarProvider className={isDesktop ? 'flex-col' : undefined}>
+        <SidebarProvider className={cn('h-svh overflow-hidden', isDesktop && 'flex-col')}>
             <DesktopTitlebarTarget.Provider value={titlebarTarget}>
                 <LayoutApplicationCommands pathname={pathname} />
                 {isDesktop && (
@@ -120,7 +120,9 @@ export function DashboardLayout() {
                         <main
                             className={cn(
                                 'flex min-h-0 min-w-0 flex-1 flex-col',
-                                isCaptureWorkspace ? 'overflow-hidden' : 'gap-4 p-4 pt-0',
+                                isCaptureWorkspace
+                                    ? 'overflow-hidden'
+                                    : 'scroll-pt-4 gap-4 overflow-y-auto p-4 pt-0',
                             )}
                         >
                             <Outlet />
