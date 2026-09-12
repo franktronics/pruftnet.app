@@ -19,6 +19,7 @@ release
 packages/core/cpp/build
 packages/core/cpp/build-*
 *.tsbuildinfo
+.pnpm-store
 
 # Environment
 *.local
