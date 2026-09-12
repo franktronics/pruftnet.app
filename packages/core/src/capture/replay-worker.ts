@@ -164,7 +164,8 @@ export class ReplayWorker extends Context.Tag('@repo/core/capture/ReplayWorker')
                 child.stderr.on('data', (chunk: string) => {
                     stderr = (stderr + chunk).slice(-MAX_STDERR_BYTES)
                 })
-                child.on('exit', (code, signal) => {
+                // exit can precede the final stderr data, especially on Windows.
+                child.on('close', (code, signal) => {
                     setTerminal(
                         new ReplayWorkerError({
                             reason: 'exit',

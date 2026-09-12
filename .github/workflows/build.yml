@@ -49,6 +49,9 @@ jobs:
             - name: Windows protocol tests (no Npcap redistribution)
               if: runner.os == 'Windows'
               run: packages/core/cpp/build/Release/capture_worker_protocol_tests.exe
+            - name: Windows worker transport tests
+              if: runner.os == 'Windows'
+              run: pnpm --filter @repo/core exec vitest run src/capture/replay-worker.test.ts
             - name: Relocated server smoke test
               run: node scripts/distribution/smoke.mjs ${{ runner.os == 'Windows' && '--without-npcap' || '' }}
             - name: Desktop startup smoke test

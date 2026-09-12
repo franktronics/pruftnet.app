@@ -16,7 +16,7 @@ A `v0.x.y` tag whose commit belongs to `main` publishes the principal release. T
 
 [Standard GitHub runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) are free for this public repository: Ubuntu 24.04 x64/ARM64, macOS 26 Intel/Apple Silicon (macOS 15 minimum for installed packages), Windows 2025 x64. Node is pinned in `.node-version`; downloadable server runtimes have checked-in SHA-256 digests. Native C++ builds use the system macOS SDK, Linux libpcap or the pinned Windows Npcap SDK.
 
-Native tests and replay fixtures run on Linux/macOS. Windows builds the native worker and runs the driver-independent protocol test. Without Npcap on the runner, Windows smoke tests verify the bundled runtime and actionable missing-driver error. Full Windows startup and capture must be checked on a machine with Npcap installed. Linux/macOS smoke tests exercise the relocated server and packaged desktop startup. Physical interfaces and permissions require real-machine release checks.
+Native tests and replay fixtures run on Linux/macOS. Windows builds the native worker and runs driver-independent protocol and transport tests, including diagnostics received after process exit. Without Npcap on the runner, Windows smoke tests verify the bundled runtime and actionable missing-driver error. Full Windows startup and capture must be checked on a machine with Npcap installed. Linux/macOS smoke tests exercise the relocated server and packaged desktop startup. Physical interfaces and permissions require real-machine release checks.
 
 ## Package repositories
 
