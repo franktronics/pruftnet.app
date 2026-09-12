@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { metadata, root, run } from './common.mjs'
 
 const meta = metadata()
-const directory = join(root, 'release')
+const directory = process.env.PRUFTNET_ARTIFACT_DIR || join(root, 'release')
 const names = (await readdir(directory))
     .filter((name) => /\.(dmg|zip|exe|AppImage|deb|tar\.gz)$/.test(name))
     .sort()
@@ -20,9 +20,10 @@ for (const [os, arch] of [
         throw new Error(`Missing server ${os}-${arch}`)
     const desktopOS = { darwin: 'mac', linux: 'linux', win32: 'win' }[os]
     const desktopExt = { darwin: 'dmg', linux: 'deb', win32: 'exe' }[os]
+    const desktopArch = os === 'linux' && arch === 'x64' ? 'amd64' : arch
     if (
         !names.includes(
-            `pruftnet-desktop${meta.suffix}-${meta.version}-${desktopOS}-${arch}.${desktopExt}`,
+            `pruftnet-desktop${meta.suffix}-${meta.version}-${desktopOS}-${desktopArch}.${desktopExt}`,
         )
     )
         throw new Error(`Missing desktop ${os}-${arch}`)
