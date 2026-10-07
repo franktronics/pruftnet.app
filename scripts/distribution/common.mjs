@@ -28,6 +28,14 @@ export function metadata(env = process.env) {
         command: `pruftnet${suffix}`,
     }
 }
+/** The README "Install" section, shipped as INSTALL.md inside server archives. */
+export function installGuide(
+    readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8'),
+) {
+    const section = readme.match(/^## Install\n[\s\S]*?(?=^## )/m)?.[0]
+    if (!section) throw new Error('README.md has no "## Install" section')
+    return `# Install Pruftnet\n\n${section.slice('## Install'.length).trim()}\n`
+}
 export function pnpm(args, options = {}) {
     // Use the package manager's JS entrypoint, avoiding cmd.exe argument interpretation.
     const entry = process.env.npm_execpath
