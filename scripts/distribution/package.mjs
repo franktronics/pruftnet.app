@@ -79,7 +79,7 @@ if (process.argv[2] !== 'server') {
         dependencies: {},
     }
     config.files.push('!**/node_modules/**/*')
-    config.npmRebuild = false
+    config.beforeBuild = join(root, 'scripts/distribution/skip-node-modules.cjs')
     config.publish = null
     config.directories.output = output
     config.extraResources.push({ from: native, to: 'native' })
