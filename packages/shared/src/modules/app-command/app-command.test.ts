@@ -6,6 +6,7 @@ import {
     electronAccelerator,
     isApplicationCommandStateSnapshot,
     resolveCaptureCycleCommand,
+    shortcutKeys,
 } from './app-command'
 
 describe('application commands', () => {
@@ -13,6 +14,12 @@ describe('application commands', () => {
         expect(new Set(applicationCommands.map(({ id }) => id)).size).toBe(
             applicationCommandIds.length,
         )
+    })
+
+    test('renders shortcut keys for macOS and other platforms', () => {
+        expect(shortcutKeys('Mod+Shift+E', true)).toEqual(['⌘', '⇧', 'E'])
+        expect(shortcutKeys('Mod+Shift+E', false)).toEqual(['Ctrl', 'Shift', 'E'])
+        expect(shortcutKeys('Alt+Left', true)).toEqual(['⌥', '←'])
     })
 
     test('converts portable shortcuts to Electron accelerators', () => {

@@ -177,6 +177,19 @@ export function isApplicationCommandStateSnapshot(
     })
 }
 
+/** Display keys for a catalogue shortcut such as `Mod+Shift+E`, using macOS symbols when `mac`. */
+export function shortcutKeys(shortcut: string, mac: boolean): string[] {
+    return shortcut.split('+').map((part) => {
+        if (part === 'Mod') return mac ? '⌘' : 'Ctrl'
+        if (part === 'Ctrl') return mac ? '⌃' : 'Ctrl'
+        if (part === 'Alt') return mac ? '⌥' : 'Alt'
+        if (part === 'Shift') return mac ? '⇧' : 'Shift'
+        if (part === 'Left') return '←'
+        if (part === 'Plus') return '+'
+        return part.toUpperCase()
+    })
+}
+
 export function electronAccelerator(shortcut: string): string {
     return shortcut.replace('Mod', 'CommandOrControl')
 }
