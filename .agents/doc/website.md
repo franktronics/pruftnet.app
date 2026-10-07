@@ -12,7 +12,7 @@ Pages are prerendered except `/downloads`, which renders per request through the
 
 ## Published figures
 
-`src/content/benchmarks.ts` holds every performance number on the landing, rounded down from the slowest of three Release runs, with the machine named. Re-measure before changing it: the C++ benchmarks build with `-DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON`; the end-to-end figure replays a large synthetic pcap through `ReplayWorker`. Screenshots in `src/assets/screenshots` must only show synthetic traffic (documentation address ranges, `example.*` domains), never real captures.
+`src/content/benchmarks.ts` holds every performance number on the landing, rounded down from the slowest of three Release runs, with the machine named. Re-measure before changing it: the C++ benchmarks build with `-DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON`; the end-to-end figure replays a large synthetic pcap through `ReplayWorker`. Screenshots in `src/assets/screenshots` must only show synthetic traffic (documentation address ranges, `example.*` domains), never real captures. The capture settings and statistics panels are HTML reproductions of the application's dialogs; the statistics run `src/simulation/capture-stats.ts`, a model of the capture ledger whose conservation equations must always balance, as in the application.
 
 ## Deployment
 
