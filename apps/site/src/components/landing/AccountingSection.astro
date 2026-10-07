@@ -1,0 +1,43 @@
+---
+import CaptureStatsDemo from './CaptureStatsDemo.astro'
+import SectionIntro from './SectionIntro.astro'
+
+const guarantees = [
+    {
+        title: 'Disk before analysis',
+        body: 'Packets are committed to a pcapng spool first. A slow dissector delays the view, never the capture.',
+    },
+    {
+        title: 'Recovers from crashes',
+        body: 'After a crash, the capture reopens with every packet up to the last complete one. A torn tail is cut, not guessed.',
+    },
+    {
+        title: 'Loss has a name',
+        body: 'Kernel drops, interface drops, a full queue, write failures and retention are counted separately and reconciled live.',
+    },
+]
+---
+
+<section id="accounting" class="scroll-mt-16">
+    <div class="page border-hairline border-t py-24 md:py-32">
+        <SectionIntro label="Accounting" title="Know where every packet went.">
+            <p>
+                Each capture keeps a ledger from the network card to the decoded tree. When the
+                numbers do not add up, you see which stage dropped what.
+            </p>
+        </SectionIntro>
+        <div class="panel mt-14 p-3 md:p-4" data-reveal>
+            <CaptureStatsDemo />
+        </div>
+        <ol class="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-3">
+            {
+                guarantees.map((item) => (
+                    <li>
+                        <h3 class="text-foreground font-semibold">{item.title}</h3>
+                        <p class="text-muted-foreground mt-2 text-[0.9375rem] leading-relaxed">{item.body}</p>
+                    </li>
+                ))
+            }
+        </ol>
+    </div>
+</section>

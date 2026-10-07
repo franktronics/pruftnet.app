@@ -1,0 +1,43 @@
+---
+import { Check, Copy } from '@lucide/astro'
+
+interface Props {
+    code: string
+    class?: string
+}
+
+const { code, class: className } = Astro.props
+---
+
+<div
+    class:list={[
+        'group bg-foreground/[0.04] relative flex items-center rounded-md font-mono text-[0.8125rem] ring-1 ring-foreground/8',
+        className,
+    ]}
+>
+    <code class="min-w-0 flex-1 overflow-x-auto px-3.5 py-2.5 whitespace-pre" data-lenis-prevent>{code}</code>
+    <button
+        type="button"
+        class="text-muted-foreground hover:text-foreground mr-1 grid size-8 shrink-0 place-items-center rounded transition-colors"
+        aria-label="Copy command"
+        data-copy={code}
+    >
+        <Copy class="size-3.5 group-data-[copied]:hidden" aria-hidden="true" />
+        <Check class="hidden size-3.5 group-data-[copied]:block" aria-hidden="true" />
+    </button>
+</div>
+
+<script>
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+        button.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(button.dataset.copy ?? '')
+            const wrapper = button.parentElement!
+            wrapper.dataset.copied = ''
+            button.setAttribute('aria-label', 'Copied')
+            setTimeout(() => {
+                delete wrapper.dataset.copied
+                button.setAttribute('aria-label', 'Copy command')
+            }, 1600)
+        })
+    }
+</script>

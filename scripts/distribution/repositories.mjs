@@ -148,11 +148,11 @@ await writeFile(
     join(pages, 'index.html'),
     '<!doctype html><html lang="en"><meta charset="utf-8"><title>Pruftnet packages</title><h1>Pruftnet packages</h1><p>Signed APT repository. See the <a href="https://github.com/' +
         repository +
-        '/blob/main/.agents/doc/installation.md">installation guide</a>.</p></html>',
+        '/blob/main/README.md#install">installation guide</a>.</p></html>',
 )
 await writeFile(
     join(tap, 'README.md'),
     '# Pruftnet Homebrew tap\n\nInstall Desktop: `brew install --cask franktronics/pruftnet/pruftnet-desktop`\n\nInstall Server: `brew install franktronics/pruftnet/pruftnet-server`\n\nAppend `-nightly` to a package name for the nightly channel.\n\nSee https://github.com/' +
         repository +
-        '/blob/main/.agents/doc/installation.md for capture permissions and unsigned beta installation.\n',
+        '/blob/main/README.md#install for capture permissions and unsigned beta installation.\n',
 )

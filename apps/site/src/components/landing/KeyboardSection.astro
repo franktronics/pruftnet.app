@@ -1,0 +1,41 @@
+---
+import { applicationCommands, shortcutKeys } from '@repo/shared/app-command'
+
+import SectionIntro from './SectionIntro.astro'
+
+// Start and stop share Mod+E; list the toggle once.
+const shortcuts = applicationCommands
+    .filter((command) => command.shortcut && command.id !== 'stop-capture')
+    .map((command) => ({
+        label: command.id === 'start-capture' ? 'Start or stop capture' : command.label,
+        keys: shortcutKeys(command.shortcut!, true),
+    }))
+---
+
+<section id="keyboard" class="scroll-mt-16">
+<div class="page border-hairline border-t py-24 md:py-32">
+    <SectionIntro label="Keyboard" title="Every action is a command.">
+        <p>
+            Press <kbd class="kbd">⌘</kbd> <kbd class="kbd">K</kbd> and type. The command palette,
+            the menu bar and the shortcuts share one list, so nothing is reachable only by mouse.
+        </p>
+    </SectionIntro>
+    <div class="panel mt-14 px-7 pt-3 pb-6 md:px-10 md:pb-8" data-reveal>
+        <ul class="grid text-[0.9375rem] sm:grid-cols-2 sm:gap-x-12 lg:grid-cols-3">
+            {
+                shortcuts.map((shortcut) => (
+                    <li class="border-hairline flex h-12 items-center justify-between gap-4 border-b">
+                        <span class="text-foreground">{shortcut.label}</span>
+                        <span class="flex gap-1">
+                            {shortcut.keys.map((key) => (
+                                <kbd class="kbd">{key}</kbd>
+                            ))}
+                        </span>
+                    </li>
+                ))
+            }
+        </ul>
+        <p class="label mt-4">Ctrl and Alt replace ⌘ and ⌥ on Windows and Linux.</p>
+    </div>
+</div>
+</section>

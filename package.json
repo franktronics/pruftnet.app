@@ -10,6 +10,7 @@
         "build:cpp": "cmake -S packages/core/cpp -B packages/core/cpp/build && cmake --build packages/core/cpp/build --target pruftnet_capture_worker",
         "dev:server": "pnpm --filter @repo/server dev",
         "dev:desktop": "pnpm --filter @repo/desktop dev",
+        "dev:site": "pnpm --filter @repo/site dev",
         "format": "prettier --write .",
         "lint": "pnpm -r lint",
         "typecheck": "pnpm -r typecheck",

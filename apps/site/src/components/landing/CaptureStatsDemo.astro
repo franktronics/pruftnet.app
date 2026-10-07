@@ -1,0 +1,423 @@
+---
+import { Activity, CircleCheck, Database, HardDrive, TriangleAlert } from '@lucide/astro'
+
+import {
+    CHART_HEIGHT,
+    CHART_WIDTH,
+    PRESSURE_HEIGHT,
+    WINDOW,
+    chart,
+    createSimulation,
+    ledger,
+} from '#site/simulation/capture-stats'
+
+// Rendered once at build time so the panel is complete without JavaScript; the script below
+// restarts the same model on the visitor's clock.
+const simulation = createSimulation(7, Date.UTC(2026, 9, 7, 15, 33, 4))
+const snapshot = ledger(simulation)
+const view = chart(simulation)
+const value = (key: keyof typeof snapshot.values) => snapshot.values[key]
+
+type MetricTone = 'danger' | 'retention' | undefined
+const sections: { title: string; icon: typeof Activity; metrics: [string, string, MetricTone?][] }[] = [
+    {
+        title: 'Capture source',
+        icon: Activity,
+        metrics: [
+            ['Observed', 'observed'],
+            ['Kernel loss', '0', 'danger'],
+            ['Interface loss', '0', 'danger'],
+            ['Dispatch errors', '0', 'danger'],
+            ['Invalid payload', '0', 'danger'],
+        ],
+    },
+    {
+        title: 'Capture queue',
+        icon: Database,
+        metrics: [
+            ['Accepted', 'accepted'],
+            ['Queue full', 'queueFull', 'danger'],
+            ['Oversize', '0', 'danger'],
+            ['Current', 'current'],
+        ],
+    },
+    {
+        title: 'Persistence',
+        icon: HardDrive,
+        metrics: [
+            ['Persisted', 'persisted'],
+            ['Disk retained', 'diskRetained'],
+            ['Write failures', '0', 'danger'],
+            ['Unpersisted', '0 pkt', 'danger'],
+            ['Retention evicted', '0 pkt', 'retention'],
+        ],
+    },
+    {
+        title: 'Analysis',
+        icon: Database,
+        metrics: [
+            ['Analyzed', 'analyzed'],
+            ['Backlog', 'backlog'],
+            ['Analysis gaps', '0', 'retention'],
+            ['Errors', '0'],
+        ],
+    },
+]
+const isLive = (key: string): key is keyof typeof snapshot.values => key in snapshot.values
+
+const series = [
+    { key: 'observed', label: 'Observed', color: 'var(--chart-1)' },
+    { key: 'persisted', label: 'Persisted', color: 'var(--chart-2)' },
+    { key: 'analyzed', label: 'Analyzed', color: 'var(--chart-3)' },
+] as const
+---
+
+<div class="@container bg-popover text-popover-foreground rounded-xl p-5 text-[0.8125rem] ring-1 ring-white/10 sm:p-6" data-capture-stats>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <p class="text-[0.9375rem] font-medium">Capture statistics</p>
+            <p class="text-muted-foreground mt-1">
+                Throughput, queue pressure, persistence and analysis from one live ledger.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button
+                type="button"
+                class="text-muted-foreground hover:text-foreground hidden h-8 rounded-md px-2.5 transition-colors"
+                data-reset
+            >
+                Reset
+            </button>
+            <button
+                type="button"
+                aria-pressed="false"
+                class="hover:bg-foreground/5 aria-pressed:bg-destructive/15 aria-pressed:text-destructive aria-pressed:ring-destructive/40 h-8 rounded-md px-3 font-medium ring-1 ring-[var(--hairline)] transition-colors"
+                data-overload
+            >
+                Simulate overload
+            </button>
+        </div>
+    </div>
+
+    <p
+        class="group mt-4 flex items-center gap-2 font-medium text-emerald-400 data-[tone=warning]:text-amber-400"
+        data-tone={snapshot.status.tone}
+        data-status
+    >
+        <CircleCheck class="size-4 shrink-0 group-data-[tone=warning]:hidden" aria-hidden="true" />
+        <TriangleAlert class="size-4 shrink-0 group-data-[tone=healthy]:hidden" aria-hidden="true" />
+        <span data-value="status">{snapshot.status.message}</span>
+    </p>
+    <p class="text-muted-foreground mt-1.5 hidden pl-6" data-loss-note>
+        <span data-value="lossShare"></span> of observed packets were dropped at the queue instead of
+        stalling the capture. Every one is counted.
+    </p>
+
+    <section class="mt-5" aria-label="Commit throughput">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h3 class="text-muted-foreground font-medium">Commit throughput</h3>
+                <p class="mt-1 font-mono text-xl leading-none font-medium tabular-nums" data-value="throughput">
+                    {value('throughput')}
+                </p>
+            </div>
+            <div class="text-muted-foreground flex gap-3 text-xs">
+                {
+                    series.map((item) => (
+                        <span class="flex items-center gap-1.5">
+                            <span class="size-1.5 rounded-full" style={`background: ${item.color}`} />
+                            {item.label}
+                        </span>
+                    ))
+                }
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
+            <div class="text-muted-foreground relative w-9 font-mono text-[0.6875rem] tabular-nums" data-y-axis>
+                {
+                    view.ticks.map((tick) => (
+                        <span class="absolute right-0 -translate-y-1/2" style={`top: ${tick.offset * 100}%`}>
+                            {tick.label}
+                        </span>
+                    ))
+                }
+            </div>
+            <div class="relative h-44">
+                <svg
+                    class="absolute inset-0 size-full overflow-visible"
+                    viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+                    preserveAspectRatio="none"
+                    role="img"
+                    aria-label="Observed, persisted and analyzed packets per second over the last minute"
+                >
+                    <g data-grid>
+                        {
+                            view.ticks.map((tick) => (
+                                <line
+                                    x1="0"
+                                    x2={CHART_WIDTH}
+                                    y1={tick.offset * CHART_HEIGHT}
+                                    y2={tick.offset * CHART_HEIGHT}
+                                    stroke="var(--border)"
+                                    stroke-dasharray="3 3"
+                                    vector-effect="non-scaling-stroke"
+                                />
+                            ))
+                        }
+                    </g>
+                    {
+                        series.map((item) => (
+                            <path
+                                d={view.lines[item.key]}
+                                fill="none"
+                                stroke={item.color}
+                                stroke-width="1.75"
+                                stroke-linejoin="round"
+                                vector-effect="non-scaling-stroke"
+                                data-line={item.key}
+                            />
+                        ))
+                    }
+                </svg>
+            </div>
+            <div></div>
+            <div class="text-muted-foreground relative mt-2 h-4 font-mono text-[0.6875rem] tabular-nums" data-x-axis>
+                {
+                    view.times.map((time, index) => (
+                        <span
+                            class:list={['absolute', index === 0 ? '' : index === view.times.length - 1 ? '-translate-x-full' : 'hidden -translate-x-1/2 @xl:block']}
+                            style={`left: ${time.offset * 100}%`}
+                        >
+                            {time.label}
+                        </span>
+                    ))
+                }
+            </div>
+        </div>
+        <div class="text-muted-foreground mt-3 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs">
+            <span>1 min visible</span>
+            <span>Rolling window · {WINDOW}/{WINDOW} samples · oldest samples are replaced</span>
+        </div>
+    </section>
+
+    <section class="mt-6" aria-label="Capture queue pressure">
+        <div class="flex items-center justify-between gap-2">
+            <h3 class="text-muted-foreground font-medium">Capture queue pressure</h3>
+            <span class="font-mono tabular-nums" data-value="pressure">{value('pressure')}</span>
+        </div>
+        <svg class="mt-2 h-10 w-full overflow-visible" viewBox={`0 0 ${CHART_WIDTH} ${PRESSURE_HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+            <path
+                d={view.pressure}
+                fill="none"
+                stroke="var(--chart-4)"
+                stroke-width="1.75"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+                data-line="pressure"
+            />
+        </svg>
+    </section>
+
+    <div class="mt-6 grid gap-x-8 gap-y-6 @2xl:grid-cols-2">
+        {
+            sections.map((section) => (
+                <section>
+                    <h3 class="text-muted-foreground flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-[0.08em] uppercase">
+                        <section.icon class="size-3.5" aria-hidden="true" />
+                        {section.title}
+                    </h3>
+                    <dl class="mt-2 grid grid-cols-2 gap-x-5 gap-y-1.5">
+                        {section.metrics.map(([label, key, tone]) => (
+                            <div class="flex min-w-0 items-baseline justify-between gap-2">
+                                <dt class="text-muted-foreground truncate">{label}</dt>
+                                <dd
+                                    class:list={[
+                                        'shrink-0 font-mono tabular-nums',
+                                        tone === 'danger' && 'text-destructive',
+                                        tone === 'retention' && 'text-amber-400',
+                                    ]}
+                                    data-value={isLive(key) ? key : undefined}
+                                >
+                                    {isLive(key) ? value(key) : key}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </section>
+            ))
+        }
+    </div>
+
+    <section class="border-border mt-6 border-t pt-4" aria-label="Packet conservation">
+        <div class="flex items-center justify-between">
+            <h3 class="text-muted-foreground text-[0.6875rem] font-semibold tracking-[0.08em] uppercase">
+                Packet conservation
+            </h3>
+            <span class="text-muted-foreground text-xs">live</span>
+        </div>
+        <div class="mt-2 space-y-1 font-mono text-xs tabular-nums">
+            {
+                snapshot.conservation.map((equation, index) => (
+                    <div class="flex items-center justify-between">
+                        <span class="text-muted-foreground">{equation.label}</span>
+                        <span class="text-emerald-400" data-equation={index}>
+                            {`${equation.left.toLocaleString('en-US')} = ${equation.right.toLocaleString('en-US')}`}
+                        </span>
+                    </div>
+                ))
+            }
+        </div>
+    </section>
+
+    <section class="border-border mt-4 border-t pt-4" aria-label="Interface en0">
+        <div class="flex items-center justify-between gap-2">
+            <h3 class="font-mono font-medium">en0</h3>
+            <span class="text-xs text-emerald-400">capturing</span>
+        </div>
+        <dl class="text-muted-foreground mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+            <div>Queue <span class="text-foreground font-mono tabular-nums" data-value="interfaceQueue">{value('interfaceQueue')}</span></div>
+            <div>Bytes <span class="text-foreground font-mono tabular-nums" data-value="interfaceBytes">{value('interfaceBytes')}</span></div>
+            <div>Peak <span class="text-foreground font-mono tabular-nums" data-value="interfacePeak">{value('interfacePeak')}</span></div>
+            <div>Lost <span class="text-foreground font-mono tabular-nums" data-value="interfaceLost">{value('interfaceLost')}</span></div>
+        </dl>
+    </section>
+</div>
+
+<script>
+    import {
+        CHART_HEIGHT,
+        CHART_WIDTH,
+        TICK_MS,
+        chart,
+        createSimulation,
+        formatCount,
+        ledger,
+        resume,
+        step,
+    } from '#site/simulation/capture-stats'
+
+    const OVERLOAD_TICKS = 8
+
+    for (const root of document.querySelectorAll<HTMLElement>('[data-capture-stats]')) {
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+        const overloadButton = root.querySelector<HTMLButtonElement>('[data-overload]')!
+        const resetButton = root.querySelector<HTMLButtonElement>('[data-reset]')!
+        const status = root.querySelector<HTMLElement>('[data-status]')!
+        const lossNote = root.querySelector<HTMLElement>('[data-loss-note]')!
+        const yAxis = root.querySelector<HTMLElement>('[data-y-axis]')!
+        const xAxis = root.querySelector<HTMLElement>('[data-x-axis]')!
+        const grid = root.querySelector<SVGGElement>('[data-grid]')!
+        const values = new Map(
+            [...root.querySelectorAll<HTMLElement>('[data-value]')].map((element) => [element.dataset.value!, element]),
+        )
+        const lines = new Map(
+            [...root.querySelectorAll<SVGPathElement>('[data-line]')].map((element) => [element.dataset.line!, element]),
+        )
+        const equations = [...root.querySelectorAll<HTMLElement>('[data-equation]')]
+
+        let simulation = createSimulation(Date.now() % 100_000, Date.now())
+        let overloadTicks = 0
+        let visible = false
+        let timer: number | undefined
+
+        const render = () => {
+            const snapshot = ledger(simulation)
+            const view = chart(simulation)
+            status.dataset.tone = snapshot.status.tone
+            values.get('status')!.textContent = snapshot.status.message
+            for (const [key, text] of Object.entries(snapshot.values)) {
+                const element = values.get(key)
+                if (element) element.textContent = text
+            }
+            snapshot.conservation.forEach((equation, index) => {
+                const balanced = equation.left === equation.right
+                const element = equations[index]!
+                element.textContent = `${formatCount(equation.left)} ${balanced ? '=' : '≠'} ${formatCount(equation.right)}`
+                element.classList.toggle('text-emerald-400', balanced)
+                element.classList.toggle('text-amber-400', !balanced)
+            })
+            for (const [key, path] of Object.entries(view.lines)) lines.get(key)!.setAttribute('d', path)
+            lines.get('pressure')!.setAttribute('d', view.pressure)
+
+            const ticks = yAxis.children.length === view.ticks.length ? [...yAxis.children] : null
+            if (!ticks) {
+                yAxis.replaceChildren(
+                    ...view.ticks.map(() => {
+                        const label = document.createElement('span')
+                        label.className = 'absolute right-0 -translate-y-1/2'
+                        return label
+                    }),
+                )
+                grid.replaceChildren(
+                    ...view.ticks.map(() => {
+                        const rule = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+                        rule.setAttribute('x1', '0')
+                        rule.setAttribute('x2', String(CHART_WIDTH))
+                        rule.setAttribute('stroke', 'var(--border)')
+                        rule.setAttribute('stroke-dasharray', '3 3')
+                        rule.setAttribute('vector-effect', 'non-scaling-stroke')
+                        return rule
+                    }),
+                )
+            }
+            view.ticks.forEach((tick, index) => {
+                const label = yAxis.children[index] as HTMLElement
+                label.style.top = `${tick.offset * 100}%`
+                label.textContent = tick.label
+                const rule = grid.children[index]!
+                rule.setAttribute('y1', String(tick.offset * CHART_HEIGHT))
+                rule.setAttribute('y2', String(tick.offset * CHART_HEIGHT))
+            })
+            view.times.forEach((time, index) => {
+                const label = xAxis.children[index]
+                if (label) label.textContent = time.label
+            })
+
+            overloadButton.setAttribute('aria-pressed', String(simulation.overload))
+            overloadButton.textContent = simulation.overload ? 'Stop overload' : 'Simulate overload'
+            resetButton.classList.toggle('hidden', simulation.totals.queueFull === 0)
+            lossNote.classList.toggle('hidden', simulation.totals.queueFull === 0)
+            values.get('lossShare')!.textContent = `${snapshot.lossShare.toFixed(1)}%`
+        }
+
+        const tick = () => {
+            step(simulation)
+            if (simulation.overload && --overloadTicks <= 0) simulation.overload = false
+            render()
+        }
+
+        // Ticks only while the panel is on screen and the tab is visible.
+        const schedule = () => {
+            const running = visible && !document.hidden && !reducedMotion.matches
+            if (running && timer === undefined) {
+                resume(simulation, Date.now())
+                timer = window.setInterval(tick, TICK_MS)
+            } else if (!running && timer !== undefined) {
+                window.clearInterval(timer)
+                timer = undefined
+            }
+        }
+
+        overloadButton.addEventListener('click', () => {
+            simulation.overload = !simulation.overload
+            overloadTicks = simulation.overload ? OVERLOAD_TICKS : 0
+            // Without animation, play the whole overload at once and show its outcome.
+            if (reducedMotion.matches && simulation.overload)
+                for (let index = 0; index < OVERLOAD_TICKS; index += 1) tick()
+            render()
+        })
+        resetButton.addEventListener('click', () => {
+            simulation = createSimulation(Date.now() % 100_000, Date.now())
+            overloadTicks = 0
+            render()
+        })
+
+        new IntersectionObserver(([entry]) => {
+            visible = entry!.isIntersecting
+            schedule()
+        }).observe(root)
+        document.addEventListener('visibilitychange', schedule)
+        reducedMotion.addEventListener('change', schedule)
+        render()
+    }
+</script>

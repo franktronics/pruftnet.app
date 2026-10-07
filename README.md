@@ -1,11 +1,11 @@
 # Pruftnet
 
-Cross-platform network analysis software. **Beta, new generation starting at 0.2.0.**
+Cross-platform network analysis software. **Beta, new generation starting at 0.2.0.** Website: [pruftnet.app](https://pruftnet.app).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/preview-dark.png">
   <source media="(prefers-color-scheme: light)" srcset=".github/assets/preview-light.png">
-  <img alt="Pruftnet packet inspection workspace" src=".github/preview-light.png">
+  <img alt="Pruftnet packet inspection workspace" src=".github/assets/preview-light.png">
 </picture>
 
 ## Install
@@ -68,6 +68,8 @@ pnpm build:cpp
 pnpm dev:desktop
 # Or:
 pnpm dev:server
+# Website (apps/site):
+pnpm dev:site
 ```
 
 `packages/core` shares the backend and native worker between Electron and the local HTTP server. `packages/front` shares the React interface; `packages/shared` owns RPC contracts.

@@ -1,0 +1,144 @@
+---
+import { ChevronDown } from '@lucide/astro'
+
+// Mirrors CaptureSettingsDialog in @repo/front: same sections, controls and bounds. Option names
+// are what libpcap reports for a Wi-Fi and an access-point interface on macOS.
+const interfaces = [
+    { name: 'en0', linkTypes: ['EN10MB', 'IEEE802_11_RADIO'], timestampTypes: ['host', 'host_hiprec'] },
+    { name: 'ap1', linkTypes: ['EN10MB'], timestampTypes: ['host', 'host_hiprec'] },
+]
+
+const buffers = [
+    { label: 'Snapshot bytes', value: 65535, min: 64, max: 262144 },
+    { label: 'Kernel buffer MiB', value: 16, min: 1, max: 512 },
+    { label: 'Ring slots', value: 2048, min: 64, max: 262144 },
+]
+
+const control =
+    'border-input bg-input/30 hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/30 h-9 rounded-md border text-sm transition-colors outline-none focus-visible:ring-2'
+---
+
+<div class="bg-popover text-popover-foreground rounded-xl p-5 ring-1 ring-white/10 sm:p-6" data-capture-settings>
+    <p class="font-medium">Capture settings</p>
+    <p class="text-muted-foreground mt-1 text-sm">
+        Configure packet acquisition before starting. Active capture settings are read-only.
+    </p>
+
+    <div class="mt-5 space-y-6 text-sm">
+        <section class="space-y-3">
+            <div class="border-border border-b pb-2">
+                <h3 class="font-semibold">Capture filter</h3>
+                <p class="text-muted-foreground">Applied by libpcap before packets enter the application.</p>
+            </div>
+            <label for="demo-filter" class="block font-medium">BPF expression</label>
+            <input
+                id="demo-filter"
+                class:list={[control, 'w-full px-3 font-mono']}
+                value="tcp port 443 or udp port 53"
+                placeholder="tcp port 443"
+                spellcheck="false"
+                autocomplete="off"
+            />
+        </section>
+
+        <section class="space-y-3">
+            <div class="border-border border-b pb-2">
+                <h3 class="font-semibold">Interfaces</h3>
+                <p class="text-muted-foreground">
+                    Link and timestamp options are resolved from each interface's capabilities.
+                </p>
+            </div>
+            {
+                interfaces.map((item) => (
+                    <div class="border-border grid gap-3 border-b pb-4 last:border-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+                        <div>
+                            <code class="font-mono font-medium">{item.name}</code>
+                            <p class="text-muted-foreground">Capture interface</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="text-muted-foreground flex cursor-pointer items-center gap-2">
+                                Promiscuous
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked="true"
+                                    aria-label={`Promiscuous mode for ${item.name}`}
+                                    class="group bg-input/80 aria-checked:bg-primary focus-visible:ring-ring/30 relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors outline-none focus-visible:ring-2"
+                                    data-switch
+                                >
+                                    <span class="bg-foreground group-aria-checked:bg-primary-foreground block size-4 translate-x-0.5 rounded-full transition-transform group-aria-checked:translate-x-[1.125rem]" />
+                                </button>
+                            </label>
+                            {[
+                                { prefix: 'DLT', width: 'w-32', label: `Link type for ${item.name}`, options: item.linkTypes },
+                                { prefix: 'Timestamp', width: 'w-40', label: `Timestamp source for ${item.name}`, options: item.timestampTypes },
+                            ].map((select) => (
+                                <span class="relative">
+                                    <select aria-label={select.label} class:list={[control, select.width, 'appearance-none truncate pr-8 pl-3']}>
+                                        <option value="">{select.prefix}: Auto</option>
+                                        {select.options.map((option) => (
+                                            <option value={option}>{option}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown
+                                        class="text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2"
+                                        aria-hidden="true"
+                                    />
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                ))
+            }
+        </section>
+
+        <section class="space-y-3">
+            <div class="border-border border-b pb-2">
+                <h3 class="font-semibold">Buffers</h3>
+                <p class="text-muted-foreground">Memory is bounded again by the backend and native worker.</p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-3">
+                {
+                    buffers.map((field) => (
+                        <label class="text-muted-foreground block space-y-1.5">
+                            <span>{field.label}</span>
+                            <input
+                                type="number"
+                                inputmode="numeric"
+                                value={field.value}
+                                min={field.min}
+                                max={field.max}
+                                step="1"
+                                class:list={[control, 'text-foreground w-full px-3 font-mono']}
+                                data-bounded
+                            />
+                        </label>
+                    ))
+                }
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    for (const root of document.querySelectorAll<HTMLElement>('[data-capture-settings]')) {
+        for (const toggle of root.querySelectorAll<HTMLButtonElement>('[data-switch]')) {
+            toggle.addEventListener('click', () => {
+                toggle.setAttribute('aria-checked', String(toggle.getAttribute('aria-checked') !== 'true'))
+            })
+        }
+        // Same rule as the application: round, then clamp to the field's bounds.
+        for (const input of root.querySelectorAll<HTMLInputElement>('[data-bounded]')) {
+            let last = input.value
+            input.addEventListener('change', () => {
+                const next = Number(input.value)
+                if (input.value === '' || !Number.isFinite(next)) {
+                    input.value = last
+                    return
+                }
+                input.value = String(Math.min(Number(input.max), Math.max(Number(input.min), Math.round(next))))
+                last = input.value
+            })
+        }
+    }
+</script>

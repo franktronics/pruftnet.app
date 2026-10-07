@@ -1,0 +1,80 @@
+/* Pruftnet 0.1 landing theme (orange, Shadcn "new-york"), scoped to the archive page so the
+   reproduction keeps its original look without leaking into the current site. */
+.archive {
+    --radius: 0.65rem;
+    --background: oklch(0.98 0.005 90);
+    --foreground: oklch(0.141 0.005 285.823);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.141 0.005 285.823);
+    --primary: oklch(0.646 0.222 41.116);
+    --primary-foreground: oklch(0.98 0.016 73.684);
+    --secondary: oklch(0.967 0.001 286.375);
+    --muted: oklch(0.967 0.001 286.375);
+    --muted-foreground: oklch(0.552 0.016 285.938);
+    --accent: oklch(0.967 0.001 286.375);
+    --accent-foreground: oklch(0.21 0.006 285.885);
+    --border: oklch(0.92 0.004 286.32);
+    --ring: oklch(0.75 0.183 55.934);
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+}
+
+.archive .container-main {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+    .archive .container-main {
+        padding-inline: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .archive .container-main {
+        padding-inline: 2rem;
+    }
+}
+
+.archive .guides-vertical::before,
+.archive .guides-horizontal-full::before {
+    content: '';
+    position: absolute;
+}
+
+.archive .guides-vertical::before {
+    inset: 0 auto 0 0;
+    width: 1px;
+    background-image: linear-gradient(to bottom, var(--border) 50%, transparent 50%);
+    background-size: 1px 8px;
+}
+
+.archive .guides-horizontal-full {
+    position: relative;
+    height: 1px;
+    width: 100%;
+}
+
+.archive .guides-horizontal-full::before {
+    inset: 0 0 auto 0;
+    height: 1px;
+    background-image: linear-gradient(to right, var(--border) 50%, transparent 50%);
+    background-size: 8px 1px;
+}
+
+.archive details > summary {
+    list-style: none;
+}
+
+.archive details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.archive details[open] .chevron {
+    transform: rotate(180deg);
+}

@@ -1,0 +1,41 @@
+---
+import { Monitor, Server } from '@lucide/astro'
+
+import { serverUsage } from '#site/content/platform-notes'
+import SectionIntro from './SectionIntro.astro'
+
+const modes = [
+    {
+        icon: Monitor,
+        title: 'Desktop app',
+        body: 'A native window on macOS, Windows and Linux, with the menu bar, shortcuts and file dialogs you expect.',
+    },
+    {
+        icon: Server,
+        title: 'Local server',
+        body: `The same interface in your browser. Run ${serverUsage.command} and open ${serverUsage.url}. It listens on localhost only.`,
+    },
+]
+---
+
+<section id="modes" class="scroll-mt-16">
+    <div class="page border-hairline border-t py-24 md:py-32">
+        <SectionIntro label="Runs where you work" title="One app, two ways to open it.">
+            <p>
+                Captures export to pcapng or classic pcap, so they open in Wireshark, tcpdump or
+                whatever comes next in your pipeline.
+            </p>
+        </SectionIntro>
+        <div class="mt-14 grid gap-4 sm:grid-cols-2">
+            {
+                modes.map((mode, index) => (
+                    <div class="panel p-7 md:p-10" data-reveal style={`--reveal-delay: ${index * 70}ms`}>
+                        <mode.icon class="text-primary size-5" aria-hidden="true" />
+                        <h3 class="text-foreground mt-6 text-lg font-semibold">{mode.title}</h3>
+                        <p class="text-muted-foreground mt-2 leading-relaxed">{mode.body}</p>
+                    </div>
+                ))
+            }
+        </div>
+    </div>
+</section>
