@@ -1,9 +1,14 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { cn, cond } from '@repo/utils'
 
 import type { ByteRange } from '#front/pages/capture/model/packet-view'
-import { BYTE_ROW_WIDTH } from '#front/pages/capture/model/packet-view'
+import {
+    BYTE_ROW_WIDTH,
+    deepestNodeAtByte,
+    nodeRange,
+} from '#front/pages/capture/model/packet-view'
 import { PanelShell } from './panel-shell'
 import type { PacketDetailState } from '#front/pages/capture/hooks/use-packet-detail'
 import type { PacketDetailView } from '#front/pages/capture/model/packet-detail'
@@ -28,6 +33,11 @@ export function PacketBytes({
         detail?.sources[0]
     const sourceId = source?.id ?? 0
     const bytes = source?.bytes ?? new Uint8Array()
+    const hoveredRange = useMemo(() => {
+        if (!detail || hoveredByte === undefined) return undefined
+        const nodeIndex = deepestNodeAtByte(detail, sourceId, hoveredByte)
+        return nodeIndex === undefined ? undefined : nodeRange(detail, nodeIndex)
+    }, [detail, hoveredByte, sourceId])
     const rowCount = Math.ceil(bytes.length / BYTE_ROW_WIDTH)
     const virtualizer = useVirtualizer({
         count: rowCount,
@@ -51,16 +61,13 @@ export function PacketBytes({
         virtualizer.scrollToIndex(Math.floor(index / BYTE_ROW_WIDTH), { align: 'auto' })
     }
     function handleKey(event: KeyboardEvent) {
-        const delta =
-            event.key === 'ArrowRight'
-                ? 1
-                : event.key === 'ArrowLeft'
-                  ? -1
-                  : event.key === 'ArrowDown'
-                    ? BYTE_ROW_WIDTH
-                    : event.key === 'ArrowUp'
-                      ? -BYTE_ROW_WIDTH
-                      : 0
+        const delta = cond(
+            [event.key === 'ArrowRight', 1],
+            [event.key === 'ArrowLeft', -1],
+            [event.key === 'ArrowDown', BYTE_ROW_WIDTH],
+            [event.key === 'ArrowUp', -BYTE_ROW_WIDTH],
+            [true, 0],
+        )
         if (!delta && event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
         const current = activeByte ?? 0
@@ -74,18 +81,31 @@ export function PacketBytes({
             'aria-selected': activeByte !== undefined && index === activeByte,
         }
     }
-    const emptyMessage =
-        detailState?.kind === 'loading'
-            ? 'Loading packet bytes...'
-            : detailState?.kind === 'pending'
-              ? 'Packet bytes are waiting for analysis.'
-              : detailState?.kind === 'evicted'
-                ? 'Packet bytes were evicted from retention.'
-                : detailState?.kind === 'invalid'
-                  ? 'Packet bytes are invalid.'
-                  : detailState?.kind === 'unavailable'
-                    ? 'Packet bytes are unavailable.'
-                    : 'Select a packet to inspect its bytes'
+    function byteClassName(index: number, baseClassName: string) {
+        const selectedBlock =
+            range?.sourceId === sourceId && index >= range.start && index < range.end
+        const hoveredBlock =
+            hoveredRange?.sourceId === sourceId &&
+            index >= hoveredRange.start &&
+            index < hoveredRange.end
+        const hovered = hoveredByte === index
+        return cn(
+            baseClassName,
+            selectedBlock && 'bg-primary text-primary-foreground',
+            hoveredBlock && !selectedBlock && 'bg-muted-foreground/30',
+            hovered && 'ring-1 ring-inset',
+            hovered && selectedBlock && 'ring-primary-foreground',
+            hovered && !selectedBlock && 'ring-primary',
+        )
+    }
+    const emptyMessage = cond(
+        [detailState?.kind === 'loading', 'Loading packet bytes...'],
+        [detailState?.kind === 'pending', 'Packet bytes are waiting for analysis.'],
+        [detailState?.kind === 'evicted', 'Packet bytes were evicted from retention.'],
+        [detailState?.kind === 'invalid', 'Packet bytes are invalid.'],
+        [detailState?.kind === 'unavailable', 'Packet bytes are unavailable.'],
+        [true, 'Select a packet to inspect its bytes'],
+    )
     return (
         <PanelShell title="Bytes" showHeader={false}>
             <div className="flex h-full min-h-0 flex-col">
@@ -130,7 +150,7 @@ export function PacketBytes({
                         onPointerLeave={() => setHoveredByte(undefined)}
                     >
                         <div
-                            className="relative min-w-[680px]"
+                            className="relative min-w-170"
                             style={{ height: virtualizer.getTotalSize() }}
                         >
                             {virtualizer.getVirtualItems().map((item) => {
@@ -151,11 +171,6 @@ export function PacketBytes({
                                         <span className="flex w-[25rem] shrink-0">
                                             {Array.from({ length: BYTE_ROW_WIDTH }, (_, column) => {
                                                 const index = offset + column
-                                                const highlighted =
-                                                    range?.sourceId === sourceId &&
-                                                    index >= range.start &&
-                                                    index < range.end
-                                                const hovered = hoveredByte === index
                                                 return index < bytes.length ? (
                                                     <span
                                                         key={column}
@@ -163,7 +178,10 @@ export function PacketBytes({
                                                         role="gridcell"
                                                         {...byteProps(index)}
                                                         aria-label={`Byte ${index}`}
-                                                        className={`inline-block w-6 cursor-pointer text-center ${highlighted ? 'bg-primary text-primary-foreground' : hovered ? 'ring-primary ring-1 ring-inset' : ''}`}
+                                                        className={byteClassName(
+                                                            index,
+                                                            'inline-block w-6 cursor-pointer text-center',
+                                                        )}
                                                     >
                                                         {bytes[index]!.toString(16).padStart(
                                                             2,
@@ -184,18 +202,16 @@ export function PacketBytes({
                                         >
                                             {Array.from(row, (byte, column) => {
                                                 const index = offset + column
-                                                const highlighted =
-                                                    range?.sourceId === sourceId &&
-                                                    index >= range.start &&
-                                                    index < range.end
-                                                const hovered = hoveredByte === index
                                                 return (
                                                     <span
                                                         key={column}
                                                         role="gridcell"
                                                         {...byteProps(index)}
                                                         aria-label={`ASCII equivalent of byte ${index}`}
-                                                        className={`cursor-pointer ${highlighted ? 'bg-primary text-primary-foreground' : hovered ? 'ring-primary ring-1 ring-inset' : ''}`}
+                                                        className={byteClassName(
+                                                            index,
+                                                            'cursor-pointer',
+                                                        )}
                                                     >
                                                         {byte >= 32 && byte <= 126
                                                             ? String.fromCharCode(byte)

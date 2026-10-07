@@ -29,7 +29,7 @@ Write pragmatic, strict TypeScript that matches the repository instead of adding
 - Keep functions focused and name them by observable behavior.
 - For multi-line arrow functions, prefer an explicit body with `return`; single-line functions may use implicit returns.
 - Prefer early returns or Effect failures over deeply nested branches.
-- For multi-branch conditional values, prefer `cond` from `@repo/utils` over nested ternaries. Include an explicit fallback case such as `[true, fallback]` when the result must always be defined.
+- For a value with two or more conditional branches, use `cond` from `@repo/utils`. Never use nested or chained ternary expressions. Keep a single ternary only for a simple binary choice. Include an explicit fallback case such as `[true, fallback]` when the result must always be defined.
 - Do not catch an error only to discard it. Preserve typed expected errors and let unexpected defects remain visible.
 - Never expose raw database, Clerk, filesystem, or third-party errors across an API boundary.
 - Keep Effects inside services and handlers; run them only at application boundaries.
