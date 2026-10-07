@@ -32,7 +32,8 @@ export function metadata(env = process.env) {
 export function installGuide(
     readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8'),
 ) {
-    const section = readme.match(/^## Install\n[\s\S]*?(?=^## )/m)?.[0]
+    // Windows checkouts may convert the README to CRLF.
+    const section = readme.replace(/\r\n/g, '\n').match(/^## Install\n[\s\S]*?(?=^## )/m)?.[0]
     if (!section) throw new Error('README.md has no "## Install" section')
     return `# Install Pruftnet\n\n${section.slice('## Install'.length).trim()}\n`
 }

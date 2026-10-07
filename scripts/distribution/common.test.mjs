@@ -21,5 +21,9 @@ test('install guide is the README install section', () => {
     )
     assert.equal(guide, '# Install Pruftnet\n\nDownload.\n\n### Capture permissions\n\nGrant.\n')
     assert.throws(() => installGuide('# Pruftnet\n'))
+    assert.equal(
+        installGuide('## Install\r\n\r\nDownload.\r\n\r\n## Next\r\n'),
+        '# Install Pruftnet\n\nDownload.\n',
+    )
     assert.match(installGuide(), /### Capture permissions/)
 })
