@@ -9,12 +9,16 @@
         "start": "node dist/main.js serve",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
-        "test": "node --import tsx --test src/config.test.ts"
+        "test": "vitest run"
     },
     "dependencies": {
+        "@effect/cli": "~0.75.2",
         "@effect/platform": "catalog:",
         "@effect/platform-node": "catalog:",
+        "@effect/printer": "~0.49.0",
+        "@effect/printer-ansi": "~0.49.0",
         "@repo/core": "workspace:*",
+        "@repo/shared": "workspace:*",
         "effect": "catalog:"
     },
     "devDependencies": {
@@ -25,7 +29,8 @@
         "tsx": "^4.22.4",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
-        "vite": "^8.0.16"
+        "vite": "^8.0.16",
+        "vitest": "^4.1.10"
     },
     "imports": {
         "#server/*": "./src/*"

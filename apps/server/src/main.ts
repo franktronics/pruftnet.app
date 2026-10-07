@@ -1,59 +1,45 @@
-import { NodeRuntime } from '@effect/platform-node'
-import { Effect } from 'effect'
-import { releaseName, releaseVersion } from '@repo/core'
-import { parseArgs } from 'node:util'
-import { fileURLToPath } from 'node:url'
+import { ValidationError } from '@effect/cli'
+import { NodeContext, NodeRuntime } from '@effect/platform-node'
+import { Cause, Console, Effect, Exit, Option } from 'effect'
 
-import { loadServerConfig } from './config'
-import { startServer } from './server'
+import { runCli } from './cli/app'
+import { extractLogLevel, LogLevelFlag } from './cli/options'
+import { CliError, ExitCode } from './errors'
 
-const { values, positionals } = parseArgs({
-    allowPositionals: true,
-    options: {
-        help: { type: 'boolean', short: 'h' },
-        version: { type: 'boolean', short: 'v' },
-        port: { type: 'string' },
-        host: { type: 'string' },
-        'data-dir': { type: 'string' },
-    },
-})
-if (values.version) {
-    console.log(`${releaseName} ${releaseVersion}`)
-    process.exit(0)
-}
-if (values.help || positionals.length === 0) {
-    console.log(
-        `${releaseName} ${releaseVersion}\nUsage: pruftnet serve [--port 3000] [--host 127.0.0.1] [--data-dir PATH]\n\nOnly loopback addresses are supported. Stop the server with Ctrl+C.`,
-    )
-    process.exit(0)
-}
-if (positionals.length !== 1 || positionals[0] !== 'serve') {
-    console.error('Unknown command. Use --help for usage.')
-    process.exit(1)
-}
-if (values['data-dir']) process.env.PRUFTNET_DATA_DIR = values['data-dir']
-const config = loadServerConfig({
-    ...(values.port === undefined ? {} : { port: Number(values.port) }),
-    ...(values.host === undefined ? {} : { host: values.host }),
-})
-if (config.mode === 'production') {
-    process.env.PRUFTNET_CAPTURE_WORKER_PATH = fileURLToPath(
-        new URL(
-            process.platform === 'win32'
-                ? './native/pruftnet_capture_worker.exe'
-                : './native/pruftnet_capture_worker',
-            import.meta.url,
-        ),
-    )
+function exitCodeOf(exit: Exit.Exit<unknown, unknown>): number {
+    if (Exit.isSuccess(exit) || Cause.isInterruptedOnly(exit.cause)) return ExitCode.success
+    const failure = Cause.failureOption(exit.cause)
+    if (Option.isSome(failure) && failure.value instanceof CliError) return failure.value.exitCode
+    if (Option.isSome(failure) && ValidationError.isValidationError(failure.value)) {
+        return ExitCode.usage
+    }
+    return ExitCode.failure
 }
 
-const program = Effect.gen(function* () {
-    yield* Effect.log(`Starting server in ${config.mode} mode on port ${config.port}`)
-    const server = yield* startServer(config)
-    yield* Effect.log(`Listening on ${server.address}`)
-    yield* Effect.never.pipe(
-        Effect.ensuring(server.close.pipe(Effect.catchAll((error) => Effect.logError(error)))),
-    )
-})
+function reportFailure(cause: Cause.Cause<unknown>) {
+    if (Cause.isInterruptedOnly(cause)) return Effect.void
+    const failure = Cause.failureOption(cause)
+    // @effect/cli has already printed usage errors with the relevant help.
+    if (Option.isSome(failure) && ValidationError.isValidationError(failure.value)) {
+        return Effect.void
+    }
+    if (Option.isSome(failure) && failure.value instanceof CliError) {
+        const { message, hint } = failure.value
+        return Console.error(hint ? `Error: ${message}\nHint: ${hint}` : `Error: ${message}`)
+    }
+    return Console.error(Cause.pretty(cause))
+}
 
-NodeRuntime.runMain(program)
+const { args, logLevel } = extractLogLevel(process.argv)
+
+// Without a command, show help instead of silently exiting.
+runCli(args.length > 2 ? args : [...args, '--help']).pipe(
+    Effect.provideService(LogLevelFlag, logLevel),
+    Effect.tapErrorCause(reportFailure),
+    Effect.provide(NodeContext.layer),
+    NodeRuntime.runMain({
+        disableErrorReporting: true,
+        disablePrettyLogger: true,
+        teardown: (exit, onExit) => onExit(exitCodeOf(exit)),
+    }),
+)

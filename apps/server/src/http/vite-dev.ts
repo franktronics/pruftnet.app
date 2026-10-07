@@ -3,9 +3,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { join } from 'node:path'
 import type { ViteDevServer } from 'vite'
 
-import type { ServerConfig } from '#server/config'
+import type { RuntimePaths } from '#server/runtime-paths'
 
-export async function createViteDevServer(config: ServerConfig) {
+export async function createViteDevServer(config: RuntimePaths) {
     const { createServer } = await import('vite')
 
     return createServer({
@@ -21,7 +21,7 @@ export async function createViteDevServer(config: ServerConfig) {
     })
 }
 
-export function serveViteFrontend(vite: ViteDevServer, config: ServerConfig) {
+export function serveViteFrontend(vite: ViteDevServer, config: RuntimePaths) {
     return (request: IncomingMessage, response: ServerResponse) => {
         vite.middlewares(request, response, async (error?: unknown) => {
             if (error) {

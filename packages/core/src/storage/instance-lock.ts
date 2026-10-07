@@ -5,7 +5,7 @@ import { Clock, Context, Effect, Layer } from 'effect'
 import { AppDataPaths } from './app-data-paths'
 import { InstanceLockError } from './errors'
 
-interface LockOwner {
+export interface LockOwner {
     readonly pid: number
     readonly startedAtMs: number
 }
@@ -32,6 +32,17 @@ function processIsAlive(pid: number) {
     } catch (cause) {
         return isErrno(cause, 'EPERM')
     }
+}
+
+/**
+ * Process holding an instance lock, if it is still alive. Lets diagnostics report a running
+ * instance without acquiring the lock.
+ */
+export async function readLiveInstanceLockOwner(path: string): Promise<LockOwner | undefined> {
+    const owner = await readFile(path, 'utf8')
+        .then(parseOwner)
+        .catch(() => undefined)
+    return owner && processIsAlive(owner.pid) ? owner : undefined
 }
 
 async function acquire(path: string, startedAtMs: number): Promise<FileHandle> {

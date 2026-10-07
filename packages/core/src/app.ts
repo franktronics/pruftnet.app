@@ -4,7 +4,7 @@ import { NetworkInterfaceLive } from './network-interface'
 import {
     CaptureCatalog,
     CaptureHandlers,
-    CaptureServiceLive,
+    makeCaptureLayer,
     CaptureSessionManager,
     CaptureSessionRepository,
     CaptureRecovery,
@@ -12,6 +12,7 @@ import {
     ExportEncoder,
     ExportArtifactRepository,
     ExportScheduler,
+    type CaptureLayerOptions,
     type ExportDestinationOptions,
 } from './capture'
 import {
@@ -25,7 +26,11 @@ import { ShutdownCoordinator } from './shutdown'
 import { RealtimeHandlers, RealtimeHub } from './realtime'
 
 export interface AppLayerOptions
-    extends AppDataPathsOptions, ExportDestinationOptions, DatabaseLayerOptions {}
+    extends
+        AppDataPathsOptions,
+        ExportDestinationOptions,
+        DatabaseLayerOptions,
+        CaptureLayerOptions {}
 
 export function makeAppLayer(options: AppLayerOptions) {
     const realtime = RealtimeHub.layer
@@ -35,7 +40,7 @@ export function makeAppLayer(options: AppLayerOptions) {
     const captureRepository = CaptureSessionRepository.layer.pipe(Layer.provideMerge(database))
     const exportRepository = ExportArtifactRepository.layer.pipe(Layer.provideMerge(database))
     const repositories = Layer.mergeAll(captureRepository, exportRepository)
-    const captureDomain = Layer.mergeAll(repositories, CaptureServiceLive, realtime)
+    const captureDomain = Layer.mergeAll(repositories, makeCaptureLayer(options), realtime)
     const catalog = CaptureCatalog.layer.pipe(Layer.provideMerge(captureDomain))
     const recovery = CaptureRecovery.layer.pipe(Layer.provideMerge(captureDomain))
     const manager = CaptureSessionManager.layer.pipe(
