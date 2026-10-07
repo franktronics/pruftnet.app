@@ -18,6 +18,11 @@ const PacketRoute = Schema.Struct({
 const Revision = /^(0|[1-9][0-9]*)$/
 const routePattern = /^\/capture\/([^/]+)\/packets\/([^/]+)$/
 
+/** Packet detail URLs share the `/capture/` prefix with the frontend capture route. */
+export function isPacketDetailPath(pathname: string) {
+    return routePattern.test(pathname)
+}
+
 function sendJson(response: ServerResponse, status: number, body: unknown) {
     response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
     response.end(JSON.stringify(body))

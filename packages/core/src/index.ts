@@ -10,6 +10,7 @@ export {
     releaseName,
     releaseVersion,
 } from './distribution'
+export { isPacketDetailPath } from './capture/detail-http'
 export { makeAppLayer }
 export type { AppLayerOptions } from './app'
 export * from './capture'

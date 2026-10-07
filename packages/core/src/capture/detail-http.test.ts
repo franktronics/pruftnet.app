@@ -10,7 +10,7 @@ import {
 import { Stream, Effect, Layer } from 'effect'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
-import { makePacketDetailNodeHandler } from './detail-http'
+import { isPacketDetailPath, makePacketDetailNodeHandler } from './detail-http'
 import { CaptureSessionManager } from './manager'
 
 const captureId = '00000000000000000000000000000001'
@@ -137,4 +137,10 @@ describe('makePacketDetailNodeHandler', () => {
 
         await cancelled
     })
+})
+
+test('only packet URLs are routed away from the frontend capture page', () => {
+    expect(isPacketDetailPath(`/capture/${captureId}/packets/7`)).toBe(true)
+    expect(isPacketDetailPath(`/capture/${captureId}`)).toBe(false)
+    expect(isPacketDetailPath(`/capture/${captureId}/`)).toBe(false)
 })

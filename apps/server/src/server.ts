@@ -2,7 +2,7 @@ import type { IncomingMessage, Server as NodeServer, ServerResponse } from 'node
 import { createServer } from 'node:http'
 
 import { Effect, Exit, Scope } from 'effect'
-import { beginNodeServerClose, makeAppNodeHandlers } from '@repo/core'
+import { beginNodeServerClose, isPacketDetailPath, makeAppNodeHandlers } from '@repo/core'
 
 import type { ServerConfig } from './config'
 import { serveStaticFrontend } from './http/static-files'
@@ -77,7 +77,7 @@ export function startServer(config: ServerConfig): Effect.Effect<StartedServer, 
                     return
                 }
 
-                if (url.pathname.startsWith('/capture/')) {
+                if (isPacketDetailPath(url.pathname)) {
                     handlers.packetDetail(request, response)
                     return
                 }
