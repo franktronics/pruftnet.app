@@ -36,7 +36,7 @@ const assetsFor = (platform: Platform, distribution: 'desktop' | 'server') =>
                         <section>
                             <h4 class="text-muted-foreground mb-2 text-sm font-medium">Desktop app</h4>
                             {desktop.length ? (
-                                <AssetTable rows={desktop} emphasize={primary} />
+                                <AssetTable rows={desktop} />
                             ) : (
                                 <p class="text-muted-foreground text-sm">Not published for this release.</p>
                             )}
