@@ -1,6 +1,5 @@
 ---
-import captureSettings from '#site/assets/screenshots/capture-settings-dark.png'
-import Screenshot from '#site/components/Screenshot.astro'
+import CaptureSettingsDemo from './CaptureSettingsDemo.astro'
 import SectionIntro from './SectionIntro.astro'
 
 const specs = [
@@ -30,14 +29,8 @@ const specs = [
                     ))
                 }
             </dl>
-                        <div class="min-w-0 px-7 pb-7 md:px-10 md:pb-10 lg:col-span-7 lg:pt-10 lg:pl-0">
-                <Screenshot
-                    src={captureSettings}
-                    alt="Capture settings dialog with a BPF filter and two interfaces, each with promiscuous mode, link type and timestamp source."
-                    widths={[600, 900, 1344]}
-                    sizes="(min-width: 1024px) 42rem, 100vw"
-                    class="w-full"
-                />
+            <div class="min-w-0 px-7 pb-7 md:px-10 md:pb-10 lg:col-span-7 lg:pt-10 lg:pl-0">
+                <CaptureSettingsDemo />
             </div>
         </div>
     </div>
