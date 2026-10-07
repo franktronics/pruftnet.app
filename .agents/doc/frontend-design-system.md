@@ -2,6 +2,10 @@
 
 Pruftnet uses a compact desktop density optimized for packet inspection. Shared controls use Inter; addresses, byte values, counters, and timestamps use the system monospace stack with tabular figures.
 
+## Layout
+
+The app shell is bounded to the viewport (`h-svh overflow-hidden` on the sidebar wrapper in `packages/front/src/pages/layout.tsx`); the document itself never scrolls. Each page scrolls inside its own content area, and panels with tall content own their scroll containers. Position: sticky elements must anchor to that scroll container, not the document.
+
 ## Density
 
 - default controls: 28 px;

@@ -90,11 +90,11 @@ export function SettingsPage() {
     }, [])
 
     return (
-        <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 pt-5 pb-10">
+        <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-10">
             <div className="grid items-start gap-5 md:grid-cols-[11rem_minmax(0,1fr)]">
                 <nav
                     aria-label="Settings sections"
-                    className="bg-muted/25 grid gap-1 rounded-lg border p-2 md:sticky md:top-4"
+                    className="bg-muted/25 grid gap-1 rounded-lg border p-2 md:sticky md:top-0"
                 >
                     <a
                         href="#appearance"

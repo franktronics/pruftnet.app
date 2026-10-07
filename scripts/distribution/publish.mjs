@@ -47,7 +47,7 @@ await writeFile(
 const notes = join(directory, 'notes.md')
 await writeFile(
     notes,
-    `Pruftnet ${meta.version} (beta)\n\nDesktop and local web server for macOS Intel/Apple Silicon, Linux x64/ARM64 and Windows x64.\n\n- macOS builds are ad-hoc signed, without Developer ID or notarization. Gatekeeper may block opening.\n- Windows requires a separate Npcap installation; the application is currently unsigned.\n- Linux live capture requires worker capabilities.\n- Main and nightly installations and data are isolated. No in-app auto-update yet.\n\nSee [installation instructions](https://github.com/${process.env.GITHUB_REPOSITORY}/blob/v${meta.version}/.agents/doc/installation.md).\n\nCommit: ${process.env.RELEASE_COMMIT}\n`,
+    `Pruftnet ${meta.version} (beta)\n\nDesktop and local web server for macOS Intel/Apple Silicon, Linux x64/ARM64 and Windows x64.\n\n- macOS builds are ad-hoc signed, without Developer ID or notarization. Gatekeeper may block opening.\n- Windows requires a separate Npcap installation; the application is currently unsigned.\n- Linux live capture requires worker capabilities.\n- Main and nightly installations and data are isolated. No in-app auto-update yet.\n\nSee [installation instructions](https://github.com/${process.env.GITHUB_REPOSITORY}/blob/v${meta.version}/README.md#install).\n\nCommit: ${process.env.RELEASE_COMMIT}\n`,
 )
 const tag = `v${meta.version}`
 run('gh', [

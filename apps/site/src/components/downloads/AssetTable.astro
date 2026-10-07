@@ -1,0 +1,56 @@
+---
+import { Download } from '@lucide/astro'
+
+import { formatLabels, type Architecture, type PackageFormat } from '#site/releases/assets'
+import { formatBytes } from '#site/releases/format'
+
+interface Row {
+    name: string
+    url: string
+    size: number
+    sha256: string | null
+    arch: Architecture
+    format: PackageFormat
+    note?: string
+}
+
+interface Props {
+    rows: Row[]
+    emphasize?: boolean
+}
+
+const { rows, emphasize = false } = Astro.props
+const archLabel = (arch: Architecture) => (arch === 'x64' ? 'x64' : 'ARM64')
+---
+
+<ul class="divide-hairline border-hairline divide-y border-y">
+    {
+        rows.map((row, index) => (
+            <li class="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 py-3">
+                <div class="min-w-0">
+                    <p class="text-foreground text-[0.9375rem]">
+                        <span class="font-medium">{formatLabels[row.format]}</span>
+                        <span class="text-muted-foreground"> · {archLabel(row.arch)}</span>
+                        {row.note && <span class="text-muted-foreground"> · {row.note}</span>}
+                    </p>
+                    <p class="label truncate" title={row.sha256 ? `sha256 ${row.sha256}` : row.name}>
+                        {row.name} · {formatBytes(row.size)}
+                    </p>
+                </div>
+                <a
+                    href={row.url}
+                    class:list={[
+                        'inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
+                        emphasize && index === 0
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'text-foreground ring-foreground/12 hover:bg-foreground/5 ring-1',
+                    ]}
+                    aria-label={`Download ${row.name}`}
+                >
+                    <Download class="size-3.5" aria-hidden="true" />
+                    <span class="hidden sm:inline">Download</span>
+                </a>
+            </li>
+        ))
+    }
+</ul>

@@ -1,7 +1,7 @@
 import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'yaml'
-import { root, metadata, pnpm, run } from './common.mjs'
+import { installGuide, root, metadata, pnpm, run } from './common.mjs'
 import { stageNative } from './native.mjs'
 import { stageRuntime } from './runtime.mjs'
 
@@ -27,7 +27,7 @@ if (process.argv[2] !== 'desktop') {
     const nodeVersion = await stageRuntime(join(directory, 'runtime'))
     await writeFile(join(directory, 'app/package.json'), '{"type":"module"}\n')
     await cp(join(root, 'LICENSE'), join(directory, 'LICENSE'))
-    await cp(join(root, '.agents/doc/installation.md'), join(directory, 'INSTALL.md'))
+    await writeFile(join(directory, 'INSTALL.md'), installGuide())
     await writeFile(
         join(directory, 'release.json'),
         JSON.stringify({ ...meta, node: nodeVersion }, null, 2) + '\n',
@@ -79,7 +79,7 @@ if (process.argv[2] !== 'server') {
         dependencies: {},
     }
     config.files.push('!**/node_modules/**/*')
-    config.npmRebuild = false
+    config.beforeBuild = join(root, 'scripts/distribution/skip-node-modules.cjs')
     config.publish = null
     config.directories.output = output
     config.extraResources.push({ from: native, to: 'native' })

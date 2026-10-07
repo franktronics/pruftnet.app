@@ -1,0 +1,15 @@
+{
+    "extends": "astro/tsconfigs/strict",
+    "compilerOptions": {
+        "erasableSyntaxOnly": true,
+        "verbatimModuleSyntax": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "types": ["vitest/globals"],
+        "paths": {
+            "#site/*": ["./src/*"]
+        }
+    },
+    "include": [".astro/types.d.ts", "src", "astro.config.mjs"],
+    "exclude": ["dist"]
+}

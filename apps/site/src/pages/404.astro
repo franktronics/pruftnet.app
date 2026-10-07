@@ -1,0 +1,20 @@
+---
+import SiteFooter from '#site/components/SiteFooter.astro'
+import SiteHeader from '#site/components/SiteHeader.astro'
+import BaseLayout from '#site/layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Page not found · Pruftnet" description="This page does not exist." path="/404" noindex>
+    <SiteHeader />
+    <main class="page py-24 md:py-36">
+        <p class="label">404</p>
+        <h1 class="display text-foreground mt-5 text-[clamp(2.5rem,1.6rem+3.6vw,4.5rem)]">
+            Nothing captured here.
+        </h1>
+        <p class="lede mt-6 max-w-xl">
+            This address does not match any page. Go to the <a class="link text-foreground" href="/">home page</a>
+            or <a class="link text-foreground" href="/downloads">download Pruftnet</a>.
+        </p>
+    </main>
+    <SiteFooter />
+</BaseLayout>

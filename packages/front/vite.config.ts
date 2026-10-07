@@ -51,6 +51,10 @@ export default defineConfig({
             'react/jsx-dev-runtime',
             '@tanstack/react-router',
             'lucide-react',
+            // Worker-only dependency: the packet-detail worker is loaded through
+            // `new URL(..., import.meta.url)`, which the dependency scanner does not traverse.
+            // Pre-optimizing avoids a late-discovery full page reload on the first packet selection.
+            'flatbuffers',
         ],
         exclude: ['@repo/ui', '@repo/utils'],
     },

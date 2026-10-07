@@ -1,0 +1,34 @@
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import js from '@eslint/js'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
+
+export default defineConfig([
+    globalIgnores(['dist', '.astro']),
+    {
+        files: ['**/*.{ts,mjs,js}'],
+        extends: [js.configs.recommended, tseslint.configs.recommended],
+        languageOptions: {
+            globals: { ...globals.browser, ...globals.node },
+            parserOptions: { tsconfigRootDir },
+        },
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['../*'],
+                            message:
+                                'Use the package #alias for imports outside the current directory.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+])

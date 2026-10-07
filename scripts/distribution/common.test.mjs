@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { metadata } from './common.mjs'
+import { installGuide, metadata } from './common.mjs'
 
 test('release identities isolate names and commands', () => {
     const main = metadata({ PRUFTNET_VERSION: '0.2.0' })
@@ -14,4 +14,16 @@ test('rejects invalid versions and conflicting channels', () => {
         assert.throws(() => metadata({ PRUFTNET_VERSION: version }))
     }
     assert.throws(() => metadata({ PRUFTNET_VERSION: '0.2.0', PRUFTNET_CHANNEL: 'nightly' }))
+})
+test('install guide is the README install section', () => {
+    const guide = installGuide(
+        '# Pruftnet\n\n## Install\n\nDownload.\n\n### Capture permissions\n\nGrant.\n\n## Development\n\nNo.\n',
+    )
+    assert.equal(guide, '# Install Pruftnet\n\nDownload.\n\n### Capture permissions\n\nGrant.\n')
+    assert.throws(() => installGuide('# Pruftnet\n'))
+    assert.equal(
+        installGuide('## Install\r\n\r\nDownload.\r\n\r\n## Next\r\n'),
+        '# Install Pruftnet\n\nDownload.\n',
+    )
+    assert.match(installGuide(), /### Capture permissions/)
 })
