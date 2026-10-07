@@ -48,7 +48,8 @@ function platformDataRoot(appName: string) {
     }
 }
 
-function defaultDataRoot(options: AppDataPathsOptions) {
+/** Data root the application layer will use, without creating it. */
+export function resolveAppDataRoot(options: AppDataPathsOptions) {
     if (options.dataRoot) return resolve(options.dataRoot)
     if (options.runtime === 'test') {
         throw new AppDataPathError({
@@ -69,6 +70,11 @@ function defaultDataRoot(options: AppDataPathsOptions) {
     return platformDataRoot(`${releaseName}/${options.runtime}`)
 }
 
+/** Instance lock file inside a data root, held while an application instance uses it. */
+export function instanceLockPathFor(dataRoot: string) {
+    return resolve(dataRoot, 'locks', 'instance.lock')
+}
+
 function isContained(root: string, candidate: string) {
     const child = relative(root, candidate)
     return child === '' || (!child.startsWith('..') && !isAbsolute(child))
@@ -83,7 +89,7 @@ export class AppDataPaths extends Context.Tag('@repo/core/storage/AppDataPaths')
             AppDataPaths,
             Effect.tryPromise({
                 try: async () => {
-                    const requestedRoot = defaultDataRoot(options)
+                    const requestedRoot = resolveAppDataRoot(options)
                     await mkdir(requestedRoot, { recursive: true, mode: 0o700 })
                     const dataRoot = await realpath(requestedRoot)
                     const capturesRoot = resolve(dataRoot, 'captures')
@@ -115,7 +121,7 @@ export class AppDataPaths extends Context.Tag('@repo/core/storage/AppDataPaths')
                         capturesRoot,
                         exportsRoot,
                         locksRoot,
-                        instanceLockPath: resolveContained(resolve(locksRoot, 'instance.lock')),
+                        instanceLockPath: resolveContained(instanceLockPathFor(dataRoot)),
                         captureRoot,
                         captureSegmentsRoot: (captureId: string) =>
                             resolve(captureRoot(captureId), 'segments'),

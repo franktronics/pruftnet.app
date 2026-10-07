@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
     beginNodeServerClose,
+    captureWorkerExecutableName,
     isPacketDetailPath,
     makeAppNodeHandlers,
     type ShutdownError,
@@ -72,6 +73,9 @@ export function startDesktopRpcServer(
                     migrationsFolder: app.isPackaged
                         ? join(process.resourcesPath, 'drizzle')
                         : join(workspaceRoot, 'packages/core/drizzle'),
+                    captureWorkerPath: app.isPackaged
+                        ? join(process.resourcesPath, 'native', captureWorkerExecutableName())
+                        : undefined,
                     resolveDesktopDestination: (destinationToken, format) =>
                         exportDestinations.consume(destinationToken, format),
                 }),

@@ -17,13 +17,6 @@ async function bootstrap() {
     if (process.platform === 'win32') app.setAppUserModelId(releaseAppId)
     if (app.isPackaged) {
         app.setPath('userData', join(app.getPath('appData'), releaseName, 'electron'))
-        process.env.PRUFTNET_CAPTURE_WORKER_PATH = join(
-            process.resourcesPath,
-            'native',
-            process.platform === 'win32'
-                ? 'pruftnet_capture_worker.exe'
-                : 'pruftnet_capture_worker',
-        )
     }
     await app.whenReady()
     if (smoke) console.log('Smoke: Electron ready')

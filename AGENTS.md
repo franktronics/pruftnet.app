@@ -56,6 +56,7 @@ Load the relevant doc file based on the task at hand:
 - [frontend-design-system](.agents/doc/frontend-design-system.md): Visual, layout, density, and accessibility rules.
 - [parser-architecture](.agents/doc/parser-architecture.md): Packet parser contracts and dissector contribution rules.
 - [release](.agents/doc/release.md): Versioning, CI publication, and recovery procedure.
+- [server-cli](.agents/doc/server-cli.md): Server commands, settings precedence, exit codes, and service packaging.
 - [website](.agents/doc/website.md): pruftnet.app rendering, release catalog, published figures, and deployment.
 
 * Always update documentation for significant changes or new features, and remove outdated information.

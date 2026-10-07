@@ -17,7 +17,26 @@ Download Desktop installers or standalone Server archives from [Releases](https:
 - Server archives include Node. Extract the whole archive, run `./pruftnet serve` (Windows: `pruftnet.cmd serve`), then open http://127.0.0.1:3000.
 - Nightly uses `pruftnet-nightly`, port 3001, and separate installation and data directories.
 
-Server binds only to localhost. Use `--help`, `--version`, `--port`, or `--data-dir` as needed. Desktop and Server databases are separate; an explicit `--data-dir` or `PRUFTNET_DATA_DIR` is not migrated automatically.
+### Server
+
+`pruftnet serve` binds only to loopback addresses until authentication is implemented. Desktop and Server databases are separate; an explicit `--data-dir` or `PRUFTNET_DATA_DIR` is not migrated automatically.
+
+- `pruftnet doctor` checks the configuration, data directory, port, native worker and capture permissions, and explains how to fix failures.
+- `pruftnet interfaces` lists capture interfaces. `pruftnet config show` prints the effective settings and where each comes from. `pruftnet --help` lists every option.
+- Flags override `PRUFTNET_*` environment variables, which override a JSON file. `pruftnet config path` prints its default location; `--config` selects another file:
+
+```json
+{
+    "port": 3000,
+    "dataDir": "/srv/pruftnet",
+    "logLevel": "info",
+    "logFormat": "json",
+    "strictPort": true
+}
+```
+
+- A busy port makes `serve` try the next ones, unless `--strict-port` is set. Exit codes: 0 success, 1 failure, 2 invalid usage or configuration, 3 port unavailable.
+- Run it as a service with `sudo systemctl enable --now pruftnet-server` (Debian package: `pruftnet` user, `/etc/pruftnet-server/server.json`, data in `/var/lib/pruftnet-server`) or `brew services start pruftnet-server`.
 
 ### Capture permissions
 
@@ -29,13 +48,19 @@ sudo chown "$USER" /dev/bpf*
 
 On Windows, install [Npcap](https://npcap.com/#download) before starting Pruftnet. It is not bundled. Installers are currently unsigned and Windows may show a publisher warning.
 
-For Linux live capture, grant capabilities only to the installed native worker, never to the desktop or server process:
+On Linux, capture capabilities belong only to the native worker, never to the desktop or server process. The Debian server package grants them at installation and lets only root and members of the `pruftnet` group run the worker. Join the group, then log in again:
 
 ```sh
-sudo setcap cap_net_raw,cap_net_admin=eip /opt/pruftnet-server/app/native/pruftnet_capture_worker
+sudo usermod -aG pruftnet "$USER"
 ```
 
-The desktop worker is under `/opt/Pruftnet/resources/native/`; repeat the capability grant after upgrades. AppImage cannot retain file capabilities, so use the Debian package for live capture. Do not run Pruftnet as root.
+For the desktop package and server archives, grant them manually and repeat after upgrades:
+
+```sh
+sudo setcap cap_net_raw,cap_net_admin=eip /opt/Pruftnet/resources/native/pruftnet_capture_worker
+```
+
+AppImage cannot retain file capabilities, so use the Debian package for live capture. Do not run Pruftnet as root.
 
 ### Package managers
 

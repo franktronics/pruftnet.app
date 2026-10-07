@@ -7,6 +7,7 @@ export {
     releaseAppId,
     releaseAssetSuffix,
     releaseChannel,
+    releaseCommand,
     releaseName,
     releaseVersion,
 } from './distribution'

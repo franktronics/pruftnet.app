@@ -14,6 +14,55 @@ await mkdir(staging, { recursive: true })
 const native = join(staging, 'native')
 await stageNative(native)
 
+/** Renders a template from apps/server/packaging/linux for this release channel. */
+async function serverPackagingTemplate(file) {
+    const template = await readFile(join(root, 'apps/server/packaging/linux', file), 'utf8')
+    const values = {
+        PACKAGE: `pruftnet-server${meta.suffix}`,
+        COMMAND: meta.command,
+        NAME: meta.name,
+        PORT: String(meta.serverPort),
+    }
+    return template.replace(/@([A-Z]+)@/g, (match, key) => {
+        if (!(key in values)) throw new Error(`Unknown placeholder ${match} in ${file}`)
+        return values[key]
+    })
+}
+
+async function packageServerDeb(directory, name) {
+    const pkg = `pruftnet-server${meta.suffix}`
+    const debRoot = join(staging, 'server-deb')
+    await rm(debRoot, { recursive: true, force: true })
+    for (const path of ['DEBIAN', 'usr/bin', 'usr/lib/systemd/system', `etc/${pkg}`]) {
+        await mkdir(join(debRoot, path), { recursive: true })
+    }
+    await cp(directory, join(debRoot, `opt/${pkg}`), { recursive: true })
+    await writeFile(
+        join(debRoot, `usr/bin/${meta.command}`),
+        `#!/bin/sh\nexec /opt/${pkg}/${meta.command} "$@"\n`,
+    )
+    await chmod(join(debRoot, `usr/bin/${meta.command}`), 0o755)
+    await writeFile(
+        join(debRoot, `usr/lib/systemd/system/${pkg}.service`),
+        await serverPackagingTemplate('service'),
+    )
+    await writeFile(
+        join(debRoot, `etc/${pkg}/server.json`),
+        await serverPackagingTemplate('server.json'),
+    )
+    await writeFile(join(debRoot, 'DEBIAN/conffiles'), `/etc/${pkg}/server.json\n`)
+    for (const script of ['postinst', 'prerm', 'postrm']) {
+        await writeFile(join(debRoot, 'DEBIAN', script), await serverPackagingTemplate(script))
+        await chmod(join(debRoot, 'DEBIAN', script), 0o755)
+    }
+    const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
+    await writeFile(
+        join(debRoot, 'DEBIAN/control'),
+        `Package: ${pkg}\nVersion: ${meta.version.replace('-nightly.', '~nightly.')}\nArchitecture: ${arch}\nMaintainer: Franklin Tenepo\nDepends: libc6 (>= 2.39), libstdc++6, libpcap0.8t64, adduser, libcap2-bin\nSection: net\nPriority: optional\nDescription: Pruftnet local web server (beta)\n`,
+    )
+    run('dpkg-deb', ['--build', '--root-owner-group', debRoot, join(output, `${name}.deb`)])
+}
+
 if (process.argv[2] !== 'desktop') {
     pnpm(['--filter', '@repo/front', 'build'])
     pnpm(['--filter', '@repo/server', 'build'])
@@ -25,6 +74,7 @@ if (process.argv[2] !== 'desktop') {
     await cp(join(root, 'packages/front/dist'), join(directory, 'app/front'), { recursive: true })
     await cp(native, join(directory, 'app/native'), { recursive: true })
     const nodeVersion = await stageRuntime(join(directory, 'runtime'))
+    // Launchers hide node:sqlite's ExperimentalWarning, printed on every CLI command otherwise.
     await writeFile(join(directory, 'app/package.json'), '{"type":"module"}\n')
     await cp(join(root, 'LICENSE'), join(directory, 'LICENSE'))
     await writeFile(join(directory, 'INSTALL.md'), installGuide())
@@ -35,37 +85,18 @@ if (process.argv[2] !== 'desktop') {
     if (process.platform === 'win32') {
         await writeFile(
             join(directory, `${meta.command}.cmd`),
-            `@echo off\r\n"%~dp0runtime\\node.exe" "%~dp0app\\main.js" %*\r\n`,
+            `@echo off\r\n"%~dp0runtime\\node.exe" --disable-warning=ExperimentalWarning "%~dp0app\\main.js" %*\r\n`,
         )
         run('tar', ['-a', '-c', '-f', join(output, `${name}.zip`), '-C', staging, name])
     } else {
         await writeFile(
             join(directory, meta.command),
-            `#!/bin/sh\nset -eu\nROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$ROOT/runtime/node" "$ROOT/app/main.js" "$@"\n`,
+            `#!/bin/sh\nset -eu\nROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$ROOT/runtime/node" --disable-warning=ExperimentalWarning "$ROOT/app/main.js" "$@"\n`,
         )
         await chmod(join(directory, meta.command), 0o755)
         await chmod(join(directory, 'runtime/node'), 0o755)
         run('tar', ['-czf', join(output, `${name}.tar.gz`), '-C', staging, name])
-        if (process.platform === 'linux') {
-            const debRoot = join(staging, 'server-deb')
-            await rm(debRoot, { recursive: true, force: true })
-            await mkdir(join(debRoot, 'DEBIAN'), { recursive: true })
-            await mkdir(join(debRoot, 'usr/bin'), { recursive: true })
-            await cp(directory, join(debRoot, `opt/pruftnet-server${meta.suffix}`), {
-                recursive: true,
-            })
-            await writeFile(
-                join(debRoot, `usr/bin/${meta.command}`),
-                `#!/bin/sh\nexec /opt/pruftnet-server${meta.suffix}/${meta.command} "$@"\n`,
-            )
-            await chmod(join(debRoot, `usr/bin/${meta.command}`), 0o755)
-            const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
-            await writeFile(
-                join(debRoot, 'DEBIAN/control'),
-                `Package: pruftnet-server${meta.suffix}\nVersion: ${meta.version.replace('-nightly.', '~nightly.')}\nArchitecture: ${arch}\nMaintainer: Franklin Tenepo\nDepends: libc6 (>= 2.39), libstdc++6, libpcap0.8t64\nSection: net\nPriority: optional\nDescription: Pruftnet local web server (beta)\n`,
-            )
-            run('dpkg-deb', ['--build', '--root-owner-group', debRoot, join(output, `${name}.deb`)])
-        }
+        if (process.platform === 'linux') await packageServerDeb(directory, name)
     }
     await writeFile(join(staging, 'server-path.txt'), directory)
 }

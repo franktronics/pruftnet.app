@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+WORKER=/opt/@PACKAGE@/app/native/pruftnet_capture_worker
+
+if [ "$1" = configure ]; then
+    if ! getent group pruftnet >/dev/null; then
+        addgroup --system pruftnet
+    fi
+    if ! getent passwd pruftnet >/dev/null; then
+        adduser --system --ingroup pruftnet --home /nonexistent --no-create-home \
+            --shell /usr/sbin/nologin --gecos "Pruftnet server" pruftnet
+    fi
+
+    # Like Wireshark's dumpcap: only root and members of the pruftnet group may run the
+    # worker, which alone receives the capture capabilities. Upgrades replace the file, so
+    # this runs on every configure.
+    chown root:pruftnet "$WORKER"
+    chmod 0750 "$WORKER"
+    if ! setcap cap_net_raw,cap_net_admin=eip "$WORKER"; then
+        echo "@PACKAGE@: unable to grant capture capabilities to $WORKER; live capture will be unavailable." >&2
+    fi
+
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        if systemctl is-active --quiet @PACKAGE@.service; then
+            systemctl restart @PACKAGE@.service || true
+        fi
+    fi
+fi

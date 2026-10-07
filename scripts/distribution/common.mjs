@@ -25,7 +25,10 @@ export function metadata(env = process.env) {
         channel,
         suffix,
         name: `Pruftnet${suffix ? ' Nightly' : ''}`,
+        // Must match releaseCommand in packages/core/src/distribution.ts.
         command: `pruftnet${suffix}`,
+        // Must match defaultPort in apps/server/src/settings/settings.ts.
+        serverPort: suffix ? 3001 : 3000,
         // Must match releaseAppId in packages/core/src/distribution.ts.
         appId: `app.pruftnet.desktop${suffix ? '.nightly' : ''}`,
     }

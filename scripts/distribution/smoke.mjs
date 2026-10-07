@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import { cp, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -17,18 +17,35 @@ try {
     const node = join(installed, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node')
     const main = join(installed, 'app/main.js')
     const env = { ...process.env, NODE_PATH: '', PRUFTNET_DATA_DIR: join(temp, 'data') }
-    delete env.PRUFTNET_CAPTURE_WORKER_PATH
-    delete env.PRUFTNET_MIGRATIONS_DIR
     delete env.FRONTEND_DIST_PATH
-    delete env.HOST
-    delete env.PORT
+    for (const name of Object.keys(env)) {
+        if (name.startsWith('PRUFTNET_') && name !== 'PRUFTNET_DATA_DIR') delete env[name]
+    }
+    const cli = (args) =>
+        spawnSync(node, [main, ...args], { cwd: temp, env, encoding: 'utf8', timeout: 30000 })
     assert.equal(
         run(node, [main, '--version'], { cwd: temp, env, stdio: 'pipe' }),
-        `${metadata.name} ${metadata.version}`,
+        metadata.version,
     )
+    const settings = JSON.parse(cli(['config', 'show', '--json']).stdout).settings
+    assert.equal(settings.dataDir.source, 'environment')
+    assert.equal(settings.port.value, metadata.serverPort)
+    assert.equal(cli(['serve', '--host', '0.0.0.0']).status, 2)
+    const doctor = JSON.parse(cli(['doctor', '--json']).stdout)
+    const status = Object.fromEntries(doctor.checks.map((check) => [check.name, check.status]))
+    for (const name of [
+        'Configuration',
+        'Data directory',
+        'Web interface',
+        'Database migrations',
+        'Capture worker',
+    ])
+        assert.equal(status[name], 'ok', JSON.stringify(doctor.checks))
+    if (!process.argv.includes('--without-npcap'))
+        assert.equal(status['Worker startup'], 'ok', JSON.stringify(doctor.checks))
     const port = 19000 + Math.floor(Math.random() * 20000)
     let logs = ''
-    server = spawn(node, [main, 'serve', '--port', String(port)], {
+    server = spawn(node, [main, 'serve', '--port', String(port), '--strict-port'], {
         cwd: temp,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -62,6 +79,7 @@ try {
             try {
                 const health = await fetch(`http://127.0.0.1:${port}/health`)
                 if (health.ok) {
+                    assert.equal((await health.json()).version, metadata.version)
                     ready = true
                     break
                 }
@@ -87,7 +105,7 @@ try {
         ])
         if (process.platform !== 'win32') assert.equal(result[0], 0, logs)
         console.log(
-            `Relocated server ${metadata.version}: runtime, migrations, HTTP, frontend and shutdown passed`,
+            `Relocated server ${metadata.version}: CLI, doctor, runtime, migrations, HTTP, frontend and shutdown passed`,
         )
     }
 } finally {
