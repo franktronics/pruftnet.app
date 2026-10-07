@@ -1,5 +1,4 @@
 import { parseReleaseAsset, type ReleaseFile } from './assets'
-import { parseLegacyAsset } from './legacy'
 
 const file = (name: string): ReleaseFile => ({
     name,
@@ -56,23 +55,4 @@ describe('parseReleaseAsset', () => {
             expect(parseReleaseAsset(file(name))).toBeNull()
         },
     )
-})
-
-describe('parseLegacyAsset', () => {
-    // Every package name published by v0.1.2.
-    test.each([
-        ['Pruftnet-0.1.2.Setup-arm64.exe', 'windows', 'arm64', 'exe', false],
-        ['Pruftnet-0.1.2.Setup-x64.exe', 'windows', 'x64', 'exe', false],
-        ['Pruftnet-arm64.dmg', 'macos', 'arm64', 'dmg', false],
-        ['Pruftnet-darwin-arm64-0.1.2.zip', 'macos', 'arm64', 'zip', false],
-        ['Pruftnet-darwin-x64-0.1.2.zip', 'macos', 'x64', 'zip', false],
-        ['Pruftnet-linux-arm64-0.1.2.zip', 'linux', 'arm64', 'zip', false],
-        ['Pruftnet-linux-x64-0.1.2.zip', 'linux', 'x64', 'zip', false],
-        ['pruftnet-server-linux-x64-0.0.1.tar.gz', 'linux', 'x64', 'tar.gz', true],
-        ['Pruftnet-x64.dmg', 'macos', 'x64', 'dmg', false],
-        ['pruftnet_0.1.2_amd64.deb', 'linux', 'x64', 'deb', false],
-        ['pruftnet_0.1.2_arm64.deb', 'linux', 'arm64', 'deb', false],
-    ])('%s', (name, platform, arch, format, server) => {
-        expect(parseLegacyAsset(file(name))).toMatchObject({ platform, arch, format, server })
-    })
 })

@@ -1,11 +1,12 @@
 import { Data, Effect, Schema, SynchronizedRef } from 'effect'
 
 import { compareAssets, parseReleaseAsset, type ReleaseAsset, type ReleaseFile } from './assets'
-import { LEGACY_RELEASE_TAG, parseLegacyAsset, type LegacyAsset } from './legacy'
 
 const REPOSITORY = 'franktronics/pruftnet.app'
 const API = `https://api.github.com/repos/${REPOSITORY}`
 export const RELEASES_URL = `https://github.com/${REPOSITORY}/releases`
+/** The last release of the archived 0.1 application (branch dev-archive). It never changes. */
+export const LEGACY_RELEASE = { version: '0.1.2', url: `${RELEASES_URL}/tag/v0.1.2` } as const
 const CACHE_TTL_MS = 15 * 60 * 1000
 const REQUEST_TIMEOUT = '6 seconds'
 
@@ -32,7 +33,7 @@ export class ReleaseCatalogError extends Data.TaggedError('ReleaseCatalogError')
     readonly message: string
 }> {}
 
-interface ReleaseSummary {
+export interface ReleaseSummary {
     tag: string
     version: string
     title: string
@@ -45,14 +46,10 @@ export interface Release extends ReleaseSummary {
     checksumsUrl: string | null
 }
 
-export interface LegacyRelease extends ReleaseSummary {
-    assets: LegacyAsset[]
-}
-
 export interface ReleaseCatalog {
     stable: Release | null
-    nightly: Release | null
-    legacy: LegacyRelease | null
+    /** Only summarized: the page links nightly builds to GitHub instead of listing them. */
+    nightly: ReleaseSummary | null
     fetchedAt: string
     /** True when GitHub failed and the previous successful snapshot is served instead. */
     stale: boolean
@@ -138,17 +135,6 @@ export function toRelease(release: GithubRelease): Release {
     }
 }
 
-export function toLegacyRelease(release: GithubRelease): LegacyRelease {
-    return {
-        ...summarize(release),
-        assets: release.assets
-            .map(toFile)
-            .map(parseLegacyAsset)
-            .filter((asset) => asset !== null)
-            .sort(compareAssets),
-    }
-}
-
 const isNightly = (release: GithubRelease) =>
     !release.draft && release.prerelease && release.tag_name.includes('-nightly.')
 
@@ -170,10 +156,7 @@ const loadCatalog = Effect.all(
         // The list is newest first; nightlies are prereleases and never become "latest".
         nightly: fetchRecentReleases.pipe(
             Effect.map((releases) => releases.find(isNightly)),
-            Effect.map((release) => (release ? toRelease(release) : null)),
-        ),
-        legacy: optional(fetchRelease(`/releases/tags/${LEGACY_RELEASE_TAG}`)).pipe(
-            Effect.map((release) => release && toLegacyRelease(release)),
+            Effect.map((release) => (release ? summarize(release) : null)),
         ),
     },
     { concurrency: 'unbounded' },
