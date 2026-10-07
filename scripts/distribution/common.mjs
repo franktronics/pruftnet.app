@@ -26,7 +26,13 @@ export function metadata(env = process.env) {
         suffix,
         name: `Pruftnet${suffix ? ' Nightly' : ''}`,
         command: `pruftnet${suffix}`,
+        // Must match releaseAppId in packages/core/src/distribution.ts.
+        appId: `app.pruftnet.desktop${suffix ? '.nightly' : ''}`,
     }
+}
+/** Channel variant of a packaging asset: `assets/icons/icon.icns` -> `assets/icons/icon-nightly.icns`. */
+export function channelAsset(path, meta) {
+    return path.replace(/(\.[a-z]+)$/, `${meta.suffix}$1`)
 }
 /** The README "Install" section, shipped as INSTALL.md inside server archives. */
 export function installGuide(
