@@ -3,7 +3,14 @@ import { makeAppLayer } from './app'
 import { makeAppNodeHandlers } from './rpc-http'
 
 export { AppRpcGroup, makeAppNodeHandlers }
-export { releaseChannel, releaseVersion, releaseName } from './distribution'
+export {
+    releaseAppId,
+    releaseAssetSuffix,
+    releaseChannel,
+    releaseName,
+    releaseVersion,
+} from './distribution'
+export { isPacketDetailPath } from './capture/detail-http'
 export { makeAppLayer }
 export type { AppLayerOptions } from './app'
 export * from './capture'

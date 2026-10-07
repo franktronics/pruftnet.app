@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
     beginNodeServerClose,
+    isPacketDetailPath,
     makeAppNodeHandlers,
     type ShutdownError,
     type ShutdownStatus,
@@ -81,7 +82,7 @@ export function startDesktopRpcServer(
 
                 if (
                     url.pathname !== '/rpc' &&
-                    !url.pathname.startsWith('/capture/') &&
+                    !isPacketDetailPath(url.pathname) &&
                     !url.pathname.startsWith('/exports/')
                 ) {
                     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
@@ -114,7 +115,7 @@ export function startDesktopRpcServer(
                 }
 
                 if (url.pathname === '/rpc') handlers.rpc(request, response)
-                else if (url.pathname.startsWith('/capture/')) {
+                else if (isPacketDetailPath(url.pathname)) {
                     handlers.packetDetail(request, response)
                 } else {
                     handlers.exportDownload(request, response)

@@ -1,5 +1,5 @@
 import { BrowserWindow, nativeTheme } from 'electron'
-import { releaseName } from '@repo/core'
+import { releaseAssetSuffix, releaseName } from '@repo/core'
 import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,7 +23,7 @@ function getWindowIconPath() {
         return undefined
     }
 
-    return join(currentDirectory, '../../assets/icons/icon.png')
+    return join(currentDirectory, `../../assets/icons/icon${releaseAssetSuffix}.png`)
 }
 
 function getRendererPath() {

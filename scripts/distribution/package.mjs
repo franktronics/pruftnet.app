@@ -1,7 +1,7 @@
 import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'yaml'
-import { installGuide, root, metadata, pnpm, run } from './common.mjs'
+import { channelAsset, installGuide, root, metadata, pnpm, run } from './common.mjs'
 import { stageNative } from './native.mjs'
 import { stageRuntime } from './runtime.mjs'
 
@@ -72,7 +72,10 @@ if (process.argv[2] !== 'desktop') {
 if (process.argv[2] !== 'server') {
     const config = parse(await readFile(join(root, 'apps/desktop/electron-builder.yml'), 'utf8'))
     config.productName = meta.name
-    config.appId = `app.pruftnet.desktop${meta.suffix ? '.nightly' : ''}`
+    config.appId = meta.appId
+    for (const target of [config.mac, config.dmg, config.win, config.linux])
+        target.icon = channelAsset(target.icon, meta)
+    config.dmg.background = channelAsset(config.dmg.background, meta)
     config.extraMetadata = {
         version: meta.version,
         name: `pruftnet-desktop${meta.suffix}`,
