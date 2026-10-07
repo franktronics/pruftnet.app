@@ -19,6 +19,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 - `apps/server`: Node.js server built with Effect and Effect-Platform that serves @repo/front.
 - `apps/desktop`: Electron.js cross-platform application for Linux, Mac, and Windows.
+- `apps/site`: Astro website for pruftnet.app (landing, downloads, archive of the 0.1 landing).
 - `packages/front`: React frontend, which is the core content of the application. It is used by both the desktop and the server.
 - `packages/shared`: Shared Effect schemas, RPC contracts, and application command definitions.
 - `packages/utils`: Shared runtime utilities consumed by both server and client applications.
@@ -55,6 +56,7 @@ Load the relevant doc file based on the task at hand:
 - [frontend-design-system](.agents/doc/frontend-design-system.md): Visual, layout, density, and accessibility rules.
 - [parser-architecture](.agents/doc/parser-architecture.md): Packet parser contracts and dissector contribution rules.
 - [release](.agents/doc/release.md): Versioning, CI publication, and recovery procedure.
+- [website](.agents/doc/website.md): pruftnet.app rendering, release catalog, published figures, and deployment.
 
 * Always update documentation for significant changes or new features, and remove outdated information.
 * Use the format: `[link-name](link): shot description`

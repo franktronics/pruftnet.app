@@ -1,0 +1,13 @@
+# Docker build context is the repository root (see apps/site/Dockerfile).
+**/node_modules
+**/dist
+**/dist-electron
+**/.astro
+**/.vite
+.git
+.data
+.repos
+.pnpm-store
+build
+release
+packages/core/cpp/build*

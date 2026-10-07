@@ -1,0 +1,52 @@
+---
+import GithubMark from './GithubMark.astro'
+import Mark from './Mark.astro'
+
+const links = [
+    { href: '/#capture', label: 'Features' },
+    { href: '/#performance', label: 'Performance' },
+    { href: '/downloads', label: 'Download' },
+]
+---
+
+<!-- Sticky and translucent; the hairline appears once the page scrolls under it. -->
+<header
+    class="group/header bg-background/72 sticky top-0 z-40 border-b border-transparent backdrop-blur-xl transition-colors data-[scrolled]:border-[var(--hairline)]"
+    data-site-header
+>
+    <nav class="page flex h-16 items-center gap-8" aria-label="Main">
+        <a href="/" class="mr-auto flex items-center gap-2.5" aria-label="Pruftnet home">
+            <Mark class="text-foreground size-[1.375rem]" />
+            <span class="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] [font-stretch:90%]">
+                Pruftnet
+            </span>
+        </a>
+        <ul class="text-muted-foreground hidden items-center gap-7 text-sm sm:flex">
+            {
+                links.map((link) => (
+                    <li>
+                        <a href={link.href} class="hover:text-foreground transition-colors">
+                            {link.label}
+                        </a>
+                    </li>
+                ))
+            }
+        </ul>
+        <a
+            href="https://github.com/franktronics/pruftnet.app"
+            class="text-muted-foreground hover:text-foreground -mr-2 p-2 transition-colors"
+            aria-label="Pruftnet on GitHub"
+        >
+            <GithubMark class="size-[1.125rem]" />
+        </a>
+    </nav>
+</header>
+
+<script>
+    const header = document.querySelector<HTMLElement>('[data-site-header]')
+    if (header) {
+        const update = () => header.toggleAttribute('data-scrolled', scrollY > 8)
+        addEventListener('scroll', update, { passive: true })
+        update()
+    }
+</script>

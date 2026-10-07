@@ -1,0 +1,19 @@
+# Website
+
+`apps/site` is the Astro site served at https://pruftnet.app. It is dark only and reuses the application's dark tokens from `@repo/ui/styles.css`; `src/styles/site.css` only deepens the page canvas so product screenshots stand out, and feature visuals sit in `.panel` containers. Shortcuts shown on the landing come from the `@repo/shared/app-command` catalogue.
+
+## Rendering
+
+Pages are prerendered except `/downloads`, which renders per request through the Node adapter (standalone). Production builds bundle every dependency into `dist/server/entry.mjs`; the runtime image contains only `dist/`. `/archive` reproduces the 0.1 landing with its orange theme scoped to `.archive` and is excluded from indexing and the sitemap. `/doc` redirects to the README install section.
+
+## Release catalog
+
+`src/releases/catalog.ts` reads three GitHub releases: `releases/latest` (stable), the newest `-nightly.` prerelease, and the fixed `v0.1.2` tag of the archived generation. Results are cached for 15 minutes; concurrent requests share one refresh and a failed refresh serves the previous snapshot marked stale. Set `GITHUB_TOKEN` to raise the API rate limit. Asset names are parsed against the patterns produced by `scripts/distribution/package.mjs`; change both together. Checksums come from the API `digest` field.
+
+## Published figures
+
+`src/content/benchmarks.ts` holds every performance number on the landing, rounded down from the slowest of three Release runs, with the machine named. Re-measure before changing it: the C++ benchmarks build with `-DPRUFTNET_SNIFFING_BUILD_BENCHMARKS=ON`; the end-to-end figure replays a large synthetic pcap through `ReplayWorker`. Screenshots in `src/assets/screenshots` must only show synthetic traffic (documentation address ranges, `example.*` domains), never real captures.
+
+## Deployment
+
+Dokploy builds `apps/site/Dockerfile` with the repository root as context from `main`, limited to changes under `apps/site`, `packages/{ui,utils,shared}` and `pnpm-lock.yaml`. The container listens on port 4321. `pruftnet.app` is canonical; `www` redirects to it.

@@ -1,0 +1,68 @@
+---
+import CodeLine from '#site/components/CodeLine.astro'
+import { platformNotes } from '#site/content/platform-notes'
+import { platformLabels, platforms, type Platform } from '#site/releases/assets'
+import type { Release } from '#site/releases/catalog'
+import AssetTable from './AssetTable.astro'
+
+interface Props {
+    release: Release
+    /** Anchor ids (#macos, ...) and first-run notes belong to the primary release only. */
+    primary?: boolean
+}
+
+const { release, primary = false } = Astro.props
+const assetsFor = (platform: Platform, distribution: 'desktop' | 'server') =>
+    release.assets.filter((asset) => asset.platform === platform && asset.distribution === distribution)
+---
+
+<div class="space-y-4">
+    {
+        platforms.map((platform) => {
+            const note = platformNotes[platform]
+            const desktop = assetsFor(platform, 'desktop')
+            const server = assetsFor(platform, 'server')
+            return (
+                <article
+                    id={primary ? platform : undefined}
+                    data-platform={platform}
+                    class="border-hairline data-[current]:ring-primary/50 scroll-mt-24 rounded-[0.625rem] border p-6 transition-shadow data-[current]:ring-2 md:p-8"
+                >
+                    <header class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                        <h3 class="heading text-foreground text-2xl">{platformLabels[platform]}</h3>
+                        <p class="label">{note.requirement}</p>
+                    </header>
+                    <div class="mt-6 grid gap-8 lg:grid-cols-2">
+                        <section>
+                            <h4 class="text-muted-foreground mb-2 text-sm font-medium">Desktop app</h4>
+                            {desktop.length ? (
+                                <AssetTable rows={desktop} emphasize={primary} />
+                            ) : (
+                                <p class="text-muted-foreground text-sm">Not published for this release.</p>
+                            )}
+                        </section>
+                        <section>
+                            <h4 class="text-muted-foreground mb-2 text-sm font-medium">Local server</h4>
+                            {server.length ? (
+                                <AssetTable rows={server} />
+                            ) : (
+                                <p class="text-muted-foreground text-sm">Not published for this release.</p>
+                            )}
+                        </section>
+                    </div>
+                    {primary && (
+                        <div class="bg-muted/50 mt-8 rounded-md p-5 text-sm leading-relaxed">
+                            <p class="text-foreground font-medium">Before the first capture</p>
+                            <ul class="text-muted-foreground mt-2 list-disc space-y-1.5 pl-5">
+                                {note.steps.map((step) => (
+                                    <li>{step}</li>
+                                ))}
+                            </ul>
+                            {note.command && <CodeLine code={note.command} class="mt-3 bg-background" />}
+                        </div>
+                    )}
+                </article>
+            )
+        })
+    }
+</div>

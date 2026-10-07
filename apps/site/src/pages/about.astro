@@ -1,0 +1,62 @@
+---
+import GithubMark from '#site/components/GithubMark.astro'
+import SiteFooter from '#site/components/SiteFooter.astro'
+import SiteHeader from '#site/components/SiteHeader.astro'
+import BaseLayout from '#site/layouts/BaseLayout.astro'
+---
+
+<BaseLayout
+    title="About Pruftnet"
+    description="Where Pruftnet comes from, who builds it, and how the project is developed in the open."
+    path="/about"
+>
+    <SiteHeader />
+    <main class="page py-16 md:py-24">
+        <article class="max-w-2xl">
+            <p class="label">About</p>
+            <h1 class="display text-foreground mt-5 text-[clamp(2.5rem,1.6rem+3.6vw,4.5rem)]">
+                A packet analyzer, built in the open.
+            </h1>
+
+            <div class="text-muted-foreground mt-12 space-y-12 text-[1.0625rem] leading-relaxed">
+                <section>
+                    <h2 class="text-foreground text-xl font-semibold">How it started</h2>
+                    <p class="mt-3">
+                        Pruftnet began as an academic project at the Technische Hochschule Nürnberg and
+                        grew into an open-source tool for network engineers, security researchers and
+                        anyone who wants to understand what crosses their network.
+                    </p>
+                    <p class="mt-3">
+                        Version 0.2 is a rewrite. The capture engine moved to a native C++ worker that
+                        writes every packet to disk before analysis, so the application can account for
+                        each one. The earlier 0.1 generation, with its topology graph and workflow
+                        builder, remains available in the <a class="link text-foreground" href="/archive">archive</a>.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-foreground text-xl font-semibold">Who builds it</h2>
+                    <p class="mt-3">
+                        Pruftnet is created and maintained by Wilson Tenepo, a software developer with
+                        more than six years of experience building applications, currently at Siemens AG.
+                    </p>
+                    <p class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                        <a class="link text-foreground inline-flex items-center gap-2" href="https://github.com/franktronics">
+                            <GithubMark class="size-4" /> franktronics
+                        </a>
+                        <a class="link text-foreground" href="https://x.com/franktronics_w">X: @franktronics_w</a>
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-foreground text-xl font-semibold">Open source</h2>
+                    <p class="mt-3">
+                        The code is released under the MIT License. Issues, ideas and pull requests are
+                        welcome on <a class="link text-foreground" href="https://github.com/franktronics/pruftnet.app">GitHub</a>.
+                    </p>
+                </section>
+            </div>
+        </article>
+    </main>
+    <SiteFooter />
+</BaseLayout>

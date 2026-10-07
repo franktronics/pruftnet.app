@@ -1,0 +1,22 @@
+---
+// Monochrome rendition of the application icon: an open ring around a small packet graph.
+interface Props {
+    class?: string
+}
+const { class: className } = Astro.props
+---
+
+<svg class={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path
+        d="M24.5 6.2A13 13 0 1 0 25.4 25"
+        stroke="currentColor"
+        stroke-width="2.6"
+        stroke-linecap="round"
+    />
+    <path d="m11 12.5 1 7.5m.8-7.8 5 3.3m1.6-1.4 3-4.6m-1.6 7.6 3.4 2.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    <circle cx="19.2" cy="16.6" r="3.6" fill="currentColor" />
+    <circle cx="11" cy="11.6" r="2" fill="currentColor" />
+    <circle cx="12.2" cy="21.2" r="2.3" fill="currentColor" />
+    <circle cx="23.6" cy="8.6" r="2.2" fill="currentColor" />
+    <circle cx="25.4" cy="20.6" r="2.1" fill="currentColor" />
+</svg>

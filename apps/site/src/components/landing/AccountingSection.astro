@@ -1,0 +1,52 @@
+---
+import statistics from '#site/assets/screenshots/statistics-dark.png'
+import Screenshot from '#site/components/Screenshot.astro'
+import SectionIntro from './SectionIntro.astro'
+
+const guarantees = [
+    {
+        title: 'Disk before analysis',
+        body: 'Packets are committed to a pcapng spool first. A slow dissector delays the view, never the capture.',
+    },
+    {
+        title: 'Recovers from crashes',
+        body: 'After a crash, the capture reopens with every packet up to the last complete one. A torn tail is cut, not guessed.',
+    },
+    {
+        title: 'Loss has a name',
+        body: 'Kernel drops, interface drops, a full queue, write failures and retention are counted separately and reconciled live.',
+    },
+]
+---
+
+<section id="accounting" class="scroll-mt-16">
+    <div class="page border-hairline border-t py-24 md:py-32">
+        <SectionIntro label="Accounting" title="Know where every packet went.">
+            <p>
+                Each capture keeps a ledger from the network card to the decoded tree. When the
+                numbers do not add up, you see which stage dropped what.
+            </p>
+        </SectionIntro>
+        <div class="panel mt-14 grid lg:grid-cols-12" data-reveal>
+            <ol class="space-y-8 p-7 md:p-10 lg:col-span-4">
+                {
+                    guarantees.map((item) => (
+                        <li>
+                            <h3 class="text-foreground font-semibold">{item.title}</h3>
+                            <p class="text-muted-foreground mt-2 text-[0.9375rem] leading-relaxed">{item.body}</p>
+                        </li>
+                    ))
+                }
+            </ol>
+            <div class="min-w-0 px-7 pb-7 md:px-10 md:pb-10 lg:col-span-8 lg:pt-10 lg:pl-0">
+                <Screenshot
+                    src={statistics}
+                    alt="Capture statistics: commit throughput chart, counters for capture source, queue, persistence and analysis, and a packet conservation check where observed, queued and analyzed totals are equal."
+                    widths={[800, 1200, 1600, 2048]}
+                    sizes="(min-width: 1024px) 52rem, 100vw"
+                    class="w-full"
+                />
+            </div>
+        </div>
+    </div>
+</section>

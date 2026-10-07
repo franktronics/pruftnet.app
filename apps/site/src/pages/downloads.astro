@@ -1,0 +1,177 @@
+---
+import { ArrowUpRight } from '@lucide/astro'
+import { Effect } from 'effect'
+
+import LegacyDownloads from '#site/components/downloads/LegacyDownloads.astro'
+import ReleaseDownloads from '#site/components/downloads/ReleaseDownloads.astro'
+import SiteFooter from '#site/components/SiteFooter.astro'
+import SiteHeader from '#site/components/SiteHeader.astro'
+import BaseLayout from '#site/layouts/BaseLayout.astro'
+import { getReleaseCatalog, RELEASES_URL, type ReleaseCatalog } from '#site/releases/catalog'
+import { formatDate } from '#site/releases/format'
+
+// Rendered per request so a new release or nightly shows up without redeploying the site.
+export const prerender = false
+
+const catalog: ReleaseCatalog | null = await Effect.runPromise(
+    getReleaseCatalog.pipe(
+        Effect.catchAll((error) => Effect.logError(error.message).pipe(Effect.as(null))),
+    ),
+)
+Astro.response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+
+const stable = catalog?.stable
+const nightly = catalog?.nightly
+const legacy = catalog?.legacy
+---
+
+<BaseLayout
+    title="Download Pruftnet"
+    description="Download Pruftnet for macOS, Windows and Linux: the desktop app, the local server, nightly builds and the archived 0.1 release."
+    path="/downloads"
+>
+    <SiteHeader />
+    <main>
+        <section class="page pt-16 pb-12 md:pt-24">
+            <p class="label">Downloads</p>
+            <h1 class="display text-foreground mt-5 text-[clamp(2.5rem,1.6rem+3.6vw,4.5rem)]">
+                Download Pruftnet
+            </h1>
+            {
+                stable && (
+                    <p class="lede mt-6 max-w-2xl">
+                        Version {stable.version}, released {formatDate(stable.publishedAt)}. Free and
+                        open source under the MIT License.
+                    </p>
+                )
+            }
+            <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                {
+                    stable && (
+                        <a href={stable.url} class="link text-foreground inline-flex items-center gap-1">
+                            Release notes <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                        </a>
+                    )
+                }
+                {
+                    stable?.checksumsUrl && (
+                        <a href={stable.checksumsUrl} class="link text-foreground inline-flex items-center gap-1">
+                            SHA256SUMS <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                        </a>
+                    )
+                }
+                <a href={RELEASES_URL} class="link text-muted-foreground inline-flex items-center gap-1">
+                    All releases on GitHub <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                </a>
+            </div>
+            {
+                catalog?.stale && (
+                    <p class="text-muted-foreground border-hairline mt-8 rounded-md border px-4 py-3 text-sm">
+                        GitHub is not responding, so this list may be a few minutes old. Updated{' '}
+                        {formatDate(catalog.fetchedAt)}.
+                    </p>
+                )
+            }
+            {
+                !catalog && (
+                    <p class="text-foreground border-hairline mt-8 rounded-md border px-4 py-3 text-sm">
+                        The release list could not be loaded from GitHub. Download builds directly from{' '}
+                        <a class="link" href={RELEASES_URL}>
+                            GitHub Releases
+                        </a>
+                        .
+                    </p>
+                )
+            }
+        </section>
+
+        {
+            stable && (
+                <section class="page pb-20" aria-labelledby="stable-title">
+                    <h2 id="stable-title" class="sr-only">
+                        Pruftnet {stable.version}
+                    </h2>
+                    <ReleaseDownloads release={stable} primary />
+                </section>
+            )
+        }
+
+        <section id="nightly" class="bg-muted/40 border-hairline scroll-mt-16 border-y">
+            <div class="page py-20">
+                <div class="flex flex-wrap items-end justify-between gap-6">
+                    <div class="max-w-2xl">
+                        <p class="label">Nightly</p>
+                        <h2 class="heading text-foreground mt-4 text-3xl">
+                            {nightly ? `Nightly ${nightly.version}` : 'Nightly builds'}
+                        </h2>
+                        <p class="text-muted-foreground mt-3 leading-relaxed">
+                            Built from every change merged into the development branch. Nightly
+                            installs side by side with the stable app, under its own name, port and
+                            data directory.
+                        </p>
+                    </div>
+                    {
+                        nightly && (
+                            <a href={nightly.url} class="link text-foreground inline-flex items-center gap-1 text-sm">
+                                Published {formatDate(nightly.publishedAt)}
+                                <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                            </a>
+                        )
+                    }
+                </div>
+                <div class="mt-10">
+                    {
+                        nightly ? (
+                            <ReleaseDownloads release={nightly} />
+                        ) : (
+                            <p class="text-muted-foreground border-hairline rounded-md border border-dashed px-5 py-6 text-sm">
+                                No nightly build has been published yet. The first one appears here
+                                after the next change is merged.
+                            </p>
+                        )
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section id="legacy" class="page scroll-mt-16 py-20">
+            <div class="flex flex-wrap items-end justify-between gap-6">
+                <div class="max-w-2xl">
+                    <p class="label">Archive</p>
+                    <h2 class="heading text-foreground mt-4 text-3xl">
+                        Pruftnet {legacy?.version ?? '0.1.2'}
+                    </h2>
+                    <p class="text-muted-foreground mt-3 leading-relaxed">
+                        The last release of the previous generation, with the topology graph and the
+                        workflow builder. It is no longer maintained.
+                    </p>
+                </div>
+                <a href="/archive" class="link text-foreground text-sm">About Pruftnet 0.1</a>
+            </div>
+            <div class="mt-10">
+                {
+                    legacy ? (
+                        <LegacyDownloads release={legacy} />
+                    ) : (
+                        <p class="text-muted-foreground text-sm">
+                            Available on{' '}
+                            <a class="link" href={`${RELEASES_URL}/tag/v0.1.2`}>
+                                GitHub
+                            </a>
+                            .
+                        </p>
+                    )
+                }
+            </div>
+        </section>
+    </main>
+    <SiteFooter />
+</BaseLayout>
+
+<script>
+    import { detectPlatform } from '#site/scripts/platform'
+
+    const platform = detectPlatform()
+    const current = platform && document.getElementById(platform)
+    if (current) current.dataset.current = ''
+</script>

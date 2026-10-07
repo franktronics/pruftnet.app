@@ -1,0 +1,92 @@
+---
+import { ArrowRight } from '@lucide/astro'
+
+import workspaceDark from '#site/assets/screenshots/workspace-dark.png'
+import GithubMark from '#site/components/GithubMark.astro'
+import Screenshot from '#site/components/Screenshot.astro'
+
+const version = import.meta.env.PRUFTNET_VERSION
+---
+
+<section class="relative isolate overflow-hidden">
+    <!-- Soft overhead light behind the window; the page itself stays one flat color. -->
+    <div
+        class="pointer-events-none absolute inset-x-0 top-[16rem] -z-10 mx-auto h-[44rem] max-w-7xl bg-[radial-gradient(closest-side,oklch(1_0_0/0.06),transparent)]"
+        aria-hidden="true"
+    ></div>
+    <div class="page pt-12 sm:pt-16 md:pt-20">
+        <p class="label flex flex-wrap items-center gap-x-3 gap-y-1" data-reveal>
+            <span class="text-foreground">v{version}</span>
+            <span class="border-primary/40 text-primary rounded-full border px-2 py-px text-[0.6875rem] tracking-wider uppercase">
+                Beta
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>macOS, Windows, Linux</span>
+            <span aria-hidden="true">·</span>
+            <span>MIT License</span>
+        </p>
+        <h1
+            class="display text-foreground mt-7 max-w-[13ch] text-[clamp(2.75rem,1.6rem+4.8vw,5.5rem)]"
+            data-reveal
+            style="--reveal-delay: 60ms"
+        >
+            Every packet, accounted for.
+        </h1>
+        <div class="mt-7 grid gap-8 md:grid-cols-[minmax(0,56ch)_auto] md:items-end md:justify-between">
+            <p class="lede" data-reveal style="--reveal-delay: 120ms">
+                Pruftnet is an open-source packet analyzer. Capture on several interfaces at once,
+                decode any field down to its bytes, and see where every packet went: written to
+                disk, dissected, or counted as dropped.
+            </p>
+            <div class="flex flex-wrap items-center gap-3" data-reveal style="--reveal-delay: 180ms">
+                <a
+                    href="/downloads"
+                    data-platform-download
+                    class="bg-foreground text-background hover:bg-foreground/90 inline-flex h-11 items-center gap-2 rounded-lg pr-4 pl-5 text-[0.9375rem] font-medium transition-colors"
+                >
+                    <span data-platform-label>Download</span>
+                    <ArrowRight class="size-4" aria-hidden="true" />
+                </a>
+                <a
+                    href="https://github.com/franktronics/pruftnet.app"
+                    class="text-foreground hover:bg-foreground/5 inline-flex h-11 items-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium ring-1 ring-[var(--hairline)] transition-colors"
+                >
+                    <GithubMark class="size-4" />
+                    Source on GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- The window fades into the canvas instead of ending on an edge. -->
+    <div class="page mt-12 md:mt-14" data-reveal style="--reveal-delay: 260ms">
+        <div class="relative">
+            <Screenshot
+                src={workspaceDark}
+                window
+                priority
+                alt="Pruftnet capture workspace: a packet list, the decoded fields of a TLS ClientHello with the server name selected, its bytes highlighted in the hex view, and live capture statistics."
+                widths={[800, 1200, 1600, 2400, 3200]}
+                sizes="(min-width: 1296px) 1216px, calc(100vw - 2 * clamp(1rem, 4vw, 2.5rem))"
+            />
+            <div
+                class="to-background pointer-events-none absolute inset-x-[-1px] bottom-[-1px] h-1/2 bg-gradient-to-b from-transparent"
+                aria-hidden="true"
+            ></div>
+        </div>
+    </div>
+</section>
+
+<script>
+    import { detectPlatform } from '#site/scripts/platform'
+
+    const platform = detectPlatform()
+    const labels = { macos: 'macOS', windows: 'Windows', linux: 'Linux' } as const
+    if (platform) {
+        for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-platform-download]')) {
+            link.href = `/downloads#${platform}`
+            const label = link.querySelector('[data-platform-label]')
+            if (label) label.textContent = `Download for ${labels[platform]}`
+        }
+    }
+</script>

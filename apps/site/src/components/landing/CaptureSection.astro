@@ -1,0 +1,44 @@
+---
+import captureSettings from '#site/assets/screenshots/capture-settings-dark.png'
+import Screenshot from '#site/components/Screenshot.astro'
+import SectionIntro from './SectionIntro.astro'
+
+const specs = [
+    ['Filter', 'BPF expressions, compiled by libpcap before packets reach the app'],
+    ['Per interface', 'Promiscuous or monitor mode, link type, timestamp source'],
+    ['Buffers', 'Snapshot length, kernel buffer and ring size, all bounded'],
+    ['Engine', 'Native C++ worker on libpcap (macOS, Linux) or Npcap (Windows)'],
+]
+---
+
+<section id="capture" class="scroll-mt-16">
+    <div class="page pt-20 pb-24 md:pt-28 md:pb-32">
+        <SectionIntro label="Capture" title="Every interface, one capture.">
+            <p>
+                Select any number of interfaces and start a single capture. Each interface reads
+                into its own bounded queue, so a busy link never starves a quiet one.
+            </p>
+        </SectionIntro>
+        <div class="panel mt-14 grid lg:grid-cols-12" data-reveal>
+            <dl class="divide-hairline divide-y p-7 text-[0.9375rem] md:p-10 lg:col-span-5">
+                {
+                    specs.map(([term, description]) => (
+                        <div class="py-4 first:pt-0 last:pb-0">
+                            <dt class="label">{term}</dt>
+                            <dd class="text-foreground mt-1.5">{description}</dd>
+                        </div>
+                    ))
+                }
+            </dl>
+                        <div class="min-w-0 px-7 pb-7 md:px-10 md:pb-10 lg:col-span-7 lg:pt-10 lg:pl-0">
+                <Screenshot
+                    src={captureSettings}
+                    alt="Capture settings dialog with a BPF filter and two interfaces, each with promiscuous mode, link type and timestamp source."
+                    widths={[600, 900, 1344]}
+                    sizes="(min-width: 1024px) 42rem, 100vw"
+                    class="w-full"
+                />
+            </div>
+        </div>
+    </div>
+</section>

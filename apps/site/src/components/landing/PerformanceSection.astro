@@ -1,0 +1,75 @@
+---
+import { benchmarkFigures, benchmarkMachine, overloadLedger } from '#site/content/benchmarks'
+import SectionIntro from './SectionIntro.astro'
+
+const count = (value: number) => value.toLocaleString('en-US')
+---
+
+<section id="performance" class="scroll-mt-16">
+<div class="page border-hairline border-t py-24 md:py-32">
+    <SectionIntro label="Performance" title="Numbers from a laptop, not a lab." >
+        <p>
+            The capture path is native C++ from libpcap to disk, and the dissectors parse without
+            allocating once warm. These are Release builds on an ordinary developer machine.
+        </p>
+    </SectionIntro>
+
+    <dl class="border-hairline mt-16 grid border-t sm:grid-cols-3">
+        {
+            benchmarkFigures.map((figure, index) => (
+                <div
+                    class="border-hairline flex flex-col border-b py-8 sm:border-b-0 sm:py-10 sm:pr-8 sm:not-first:border-l sm:not-first:pl-8"
+                    data-reveal
+                    style={`--reveal-delay: ${index * 70}ms`}
+                >
+                    <dt class="text-foreground order-2 mt-3 font-medium">{figure.label}</dt>
+                    <dd class="text-foreground">
+                        <span class="display text-[clamp(3.25rem,2rem+3.4vw,5rem)] tabular-nums">
+                            {figure.value}
+                        </span>
+                        <span class="figure text-muted-foreground ml-2 text-base">{figure.unit}</span>
+                    </dd>
+                    <dd class="text-muted-foreground order-3 mt-3 text-sm leading-relaxed">{figure.detail}</dd>
+                </div>
+            ))
+        }
+    </dl>
+
+    <div class="panel mt-6 grid gap-8 p-7 md:grid-cols-[1fr_auto] md:items-center md:p-10" data-reveal>
+        <div class="max-w-xl">
+            <h3 class="text-foreground font-semibold">Overload, on purpose</h3>
+            <p class="text-muted-foreground mt-2 leading-relaxed">
+                In the end-to-end run the replay offered packets faster than the capture queue could
+                take them. Pruftnet kept what it could and counted the rest, to the packet.
+            </p>
+        </div>
+        <table class="figure text-sm">
+            <tbody>
+                <tr>
+                    <td class="text-muted-foreground pr-6">offered</td>
+                    <td class="text-foreground text-right">{count(overloadLedger.offered)}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted-foreground pr-6">written and dissected</td>
+                    <td class="text-foreground text-right">{count(overloadLedger.stored)}</td>
+                </tr>
+                <tr class="border-hairline border-b">
+                    <td class="text-muted-foreground pr-6 pb-2">dropped, queue full</td>
+                    <td class="text-foreground pb-2 text-right">{count(overloadLedger.queueFull)}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted-foreground pt-2 pr-6">unaccounted</td>
+                    <td class="text-foreground pt-2 text-right">0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="label mt-8">
+        Measured on {benchmarkMachine}. Benchmarks live in
+        <a class="link" href="https://github.com/franktronics/pruftnet.app/tree/main/packages/core/cpp/benchmarks">
+            packages/core/cpp/benchmarks
+        </a>.
+    </p>
+</div>
+</section>

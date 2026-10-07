@@ -1,0 +1,240 @@
+---
+import { clientHelloHex, clientHelloTree, type PacketField } from '#site/content/client-hello'
+import SectionIntro from './SectionIntro.astro'
+
+interface Row {
+    field: PacketField
+    depth: number
+    id: string
+}
+
+const flatten = (fields: PacketField[], depth = 0, prefix = 'f'): Row[] =>
+    fields.flatMap((field, index) => {
+        const id = `${prefix}-${index}`
+        return [{ field, depth, id }, ...flatten(field.children ?? [], depth + 1, id)]
+    })
+
+const rows = flatten(clientHelloTree)
+const bytes = clientHelloHex.match(/../g)!
+const lines = Array.from({ length: Math.ceil(bytes.length / 16) }, (_, line) => line * 16)
+const printable = (hex: string) => {
+    const code = Number.parseInt(hex, 16)
+    return code >= 0x20 && code < 0x7f ? String.fromCharCode(code) : '·'
+}
+const initial = rows.find((row) => row.field.label === 'Server name')!
+const initialEnd = initial.field.start + initial.field.length
+// A highlighted range reads as one block: only its first and last byte are rounded.
+const litClasses = (index: number) => [
+    index >= initial.field.start && index < initialEnd && 'is-lit',
+    index === initial.field.start && 'is-lit-start',
+    index === initialEnd - 1 && 'is-lit-end',
+]
+---
+
+<section id="inspect" class="scroll-mt-16">
+    <div class="page border-hairline border-t py-24 md:py-32">
+        <SectionIntro label="Inspection" title="Point at a field. See its bytes.">
+            <p>
+                Pruftnet decodes 38 protocols, from Ethernet and VLAN tags to DNS, TLS and QUIC,
+                and reassembles TCP streams before reading the application layer.
+            </p>
+        </SectionIntro>
+
+        <div class="panel mt-14" data-dissection data-reveal>
+            <div class="border-hairline label flex h-10 items-center justify-between border-b px-4">
+                <span>Frame 8679 · TLS ClientHello</span>
+                <span>{bytes.length} bytes</span>
+            </div>
+            <div class="grid md:grid-cols-[minmax(0,1fr)_auto]">
+                <ul class="border-hairline max-h-104 overflow-y-auto py-1.5 text-[0.8125rem] md:border-r" role="tree" aria-label="Decoded fields" data-lenis-prevent>
+                    {
+                        rows.map((row) => (
+                            <li role="none">
+                                <button
+                                    type="button"
+                                    role="treeitem"
+                                    aria-level={row.depth + 1}
+                                    aria-selected={row.id === initial.id ? 'true' : 'false'}
+                                    data-field={row.id}
+                                    data-start={row.field.start}
+                                    data-end={row.field.start + row.field.length}
+                                    data-depth={row.depth}
+                                    class="aria-selected:bg-accent flex h-8 w-full items-center gap-3 pr-4 text-left transition-colors hover:bg-white/3 aria-selected:shadow-[inset_2px_0_0_var(--primary)]"
+                                    style={`padding-left: ${0.875 + row.depth * 0.875}rem`}
+                                >
+                                    <span class:list={['truncate', row.field.children ? 'font-semibold' : 'font-medium']}>
+                                        {row.field.label}
+                                    </span>
+                                    {row.field.value && (
+                                        <span class="text-muted-foreground ml-auto truncate font-mono text-xs">
+                                            {row.field.value}
+                                        </span>
+                                    )}
+                                </button>
+                            </li>
+                        ))
+                    }
+                </ul>
+                <div class="border-hairline overflow-x-auto border-t px-4 py-3 font-mono text-[0.75rem] leading-7 md:border-t-0" aria-hidden="true">
+                    {
+                        lines.map((offset) => (
+                            <div class="flex whitespace-nowrap">
+                                <span class="text-muted-foreground/70 w-20 shrink-0">{offset.toString(16).padStart(8, '0')}</span>
+                                <span class="flex w-96 shrink-0 pr-3">
+                                    {bytes.slice(offset, offset + 16).map((hex, index) => (
+                                        <span data-byte={offset + index} class:list={['inline-block w-6 text-center transition-colors cursor-pointer', ...litClasses(offset + index)]}>{hex}</span>
+                                    ))}
+                                </span>
+                                <span class="border-hairline text-muted-foreground hidden border-l pl-3 tracking-[0.18em] xl:flex">
+                                    {bytes.slice(offset, offset + 16).map((hex, index) => (
+                                        <span data-ascii={offset + index} class:list={['transition-colors cursor-pointer', ...litClasses(offset + index)]}>{printable(hex)}</span>
+                                    ))}
+                                </span>
+                            </div>
+                        ))
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Mirrors the application's byte view: muted preview on hover, primary for the selection. */
+    [data-byte].is-preview,
+    [data-ascii].is-preview {
+        background: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
+    }
+
+    [data-byte].is-lit,
+    [data-ascii].is-lit {
+        background: var(--primary);
+        color: var(--primary-foreground);
+    }
+
+    .is-lit-start {
+        border-start-start-radius: 0.1875rem;
+        border-end-start-radius: 0.1875rem;
+    }
+
+    .is-lit-end {
+        border-start-end-radius: 0.1875rem;
+        border-end-end-radius: 0.1875rem;
+    }
+
+    [data-byte].is-pointed,
+    [data-ascii].is-pointed {
+        box-shadow: inset 0 0 0 1px var(--primary);
+    }
+
+    [data-byte].is-lit.is-pointed,
+    [data-ascii].is-lit.is-pointed {
+        box-shadow: inset 0 0 0 1px var(--primary-foreground);
+    }
+</style>
+
+<script>
+    // Mirrors the capture page: hovering previews the deepest field under the pointer, clicking
+    // selects it and reveals it in the tree (see deepestNodeAtByte in @repo/front).
+    for (const root of document.querySelectorAll<HTMLElement>('[data-dissection]')) {
+        const tree = root.querySelector<HTMLElement>('[role="tree"]')!
+        const fields = [...root.querySelectorAll<HTMLButtonElement>('[data-field]')].map((element) => ({
+            element,
+            start: Number(element.dataset.start),
+            end: Number(element.dataset.end),
+            depth: Number(element.dataset.depth),
+        }))
+        type Field = (typeof fields)[number]
+        const cells = [...root.querySelectorAll<HTMLElement>('[data-byte], [data-ascii]')].map((element) => ({
+            element,
+            index: Number(element.dataset.byte ?? element.dataset.ascii),
+        }))
+        let selected: Field | undefined
+        let preview: Field | undefined
+        let pointed: number | undefined
+
+        const deepestAt = (byte: number) => {
+            let match: Field | undefined
+            for (const field of fields) {
+                if (field.end <= field.start || byte < field.start || byte >= field.end) continue
+                const length = field.end - field.start
+                if (!match || field.depth > match.depth || (field.depth === match.depth && length < match.end - match.start))
+                    match = field
+            }
+            return match
+        }
+
+        // A highlighted range reads as one block: only its first and last byte are rounded.
+        const paint = () => {
+            for (const { element, index } of cells) {
+                const lit = selected !== undefined && index >= selected.start && index < selected.end
+                const previewed = !lit && preview !== undefined && index >= preview.start && index < preview.end
+                const block = lit ? selected : previewed ? preview : undefined
+                element.classList.toggle('is-lit', lit)
+                element.classList.toggle('is-preview', previewed)
+                element.classList.toggle('is-lit-start', block?.start === index)
+                element.classList.toggle('is-lit-end', block !== undefined && block.end - 1 === index)
+                element.classList.toggle('is-pointed', pointed === index)
+            }
+        }
+
+        // Scrolls the tree only, never the page (scrollIntoView would also move the window).
+        const reveal = (element: HTMLElement) => {
+            const top = element.offsetTop - tree.offsetTop
+            const bottom = top + element.offsetHeight
+            if (top < tree.scrollTop) tree.scrollTop = top
+            else if (bottom > tree.scrollTop + tree.clientHeight) tree.scrollTop = bottom - tree.clientHeight
+        }
+
+        const select = (field: Field | undefined, scroll: boolean) => {
+            if (!field) return
+            selected = field
+            for (const other of fields) other.element.setAttribute('aria-selected', String(other === field))
+            if (scroll) reveal(field.element)
+            paint()
+        }
+
+        for (const field of fields) {
+            field.element.addEventListener('click', () => select(field, false))
+            field.element.addEventListener('focus', () => select(field, false))
+            field.element.addEventListener('pointerenter', () => {
+                preview = field
+                paint()
+            })
+            field.element.addEventListener('pointerleave', () => {
+                preview = undefined
+                paint()
+            })
+        }
+
+        const byteOf = (target: EventTarget | null) => {
+            const cell = (target as HTMLElement | null)?.closest<HTMLElement>('[data-byte], [data-ascii]')
+            return cell ? Number(cell.dataset.byte ?? cell.dataset.ascii) : undefined
+        }
+        root.addEventListener('pointerover', (event) => {
+            const byte = byteOf(event.target)
+            if (byte === undefined) return
+            pointed = byte
+            preview = deepestAt(byte)
+            paint()
+        })
+        root.addEventListener('pointerout', (event) => {
+            if (byteOf(event.target) === undefined || byteOf(event.relatedTarget) !== undefined) return
+            pointed = undefined
+            preview = undefined
+            paint()
+        })
+        root.addEventListener('click', (event) => {
+            const byte = byteOf(event.target)
+            if (byte !== undefined) select(deepestAt(byte), true)
+        })
+        tree.addEventListener('keydown', (event) => {
+            const current = fields.findIndex((field) => field.element === document.activeElement)
+            if (current < 0 || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return
+            event.preventDefault()
+            fields[current + (event.key === 'ArrowDown' ? 1 : -1)]?.element.focus()
+        })
+
+        select(fields.find((field) => field.element.getAttribute('aria-selected') === 'true'), false)
+    }
+</script>

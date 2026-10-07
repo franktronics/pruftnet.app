@@ -1,0 +1,34 @@
+---
+import AccountingSection from '#site/components/landing/AccountingSection.astro'
+import ArchiveNote from '#site/components/landing/ArchiveNote.astro'
+import CaptureSection from '#site/components/landing/CaptureSection.astro'
+import Hero from '#site/components/landing/Hero.astro'
+import InspectSection from '#site/components/landing/InspectSection.astro'
+import InstallSection from '#site/components/landing/InstallSection.astro'
+import KeyboardSection from '#site/components/landing/KeyboardSection.astro'
+import ModesSection from '#site/components/landing/ModesSection.astro'
+import PerformanceSection from '#site/components/landing/PerformanceSection.astro'
+import SiteFooter from '#site/components/SiteFooter.astro'
+import SiteHeader from '#site/components/SiteHeader.astro'
+import BaseLayout from '#site/layouts/BaseLayout.astro'
+---
+
+<BaseLayout
+    title="Pruftnet — open-source packet analyzer"
+    description="Capture on several interfaces at once, decode every field down to its bytes, and see where every packet went. Free and open source for macOS, Windows and Linux."
+    path="/"
+>
+    <SiteHeader />
+    <main>
+        <Hero />
+        <CaptureSection />
+        <InspectSection />
+        <AccountingSection />
+        <PerformanceSection />
+        <KeyboardSection />
+        <ModesSection />
+        <InstallSection />
+        <ArchiveNote />
+    </main>
+    <SiteFooter />
+</BaseLayout>
