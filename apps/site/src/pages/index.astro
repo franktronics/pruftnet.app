@@ -11,6 +11,24 @@ import PerformanceSection from '#site/components/landing/PerformanceSection.astr
 import SiteFooter from '#site/components/SiteFooter.astro'
 import SiteHeader from '#site/components/SiteHeader.astro'
 import BaseLayout from '#site/layouts/BaseLayout.astro'
+
+// Structured data for search engines: the application, its platforms and its price.
+const softwareApplication = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Pruftnet',
+    description:
+        'Open-source packet analyzer: capture on several interfaces at once, decode every field down to its bytes, and account for every packet.',
+    url: 'https://pruftnet.app/',
+    downloadUrl: 'https://pruftnet.app/downloads',
+    softwareVersion: import.meta.env.PRUFTNET_VERSION,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'macOS, Windows, Linux',
+    license: 'https://opensource.org/licenses/MIT',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    sameAs: ['https://github.com/franktronics/pruftnet.app'],
+}
 ---
 
 <BaseLayout
@@ -18,6 +36,7 @@ import BaseLayout from '#site/layouts/BaseLayout.astro'
     description="Capture on several interfaces at once, decode every field down to its bytes, and see where every packet went. Free and open source for macOS, Windows and Linux."
     path="/"
 >
+    <script slot="head" type="application/ld+json" set:html={JSON.stringify(softwareApplication)} />
     <SiteHeader />
     <main>
         <Hero />

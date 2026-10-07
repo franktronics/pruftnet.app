@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, Download, Network } from '@lucide/a
 import analysis from '#site/assets/archive/analysis.jpeg'
 import capture from '#site/assets/archive/capture.jpeg'
 import graph from '#site/assets/archive/graph2.jpeg'
+import shareImage from '#site/assets/og/archive.png'
 import heroIllustration from '#site/assets/archive/home_svg.svg?url'
 import WindowFrame from '#site/components/archive/WindowFrame.astro'
 import GithubMark from '#site/components/GithubMark.astro'
@@ -47,6 +48,8 @@ const bullet = 'bg-primary size-2 flex-none rounded-full'
     path="/archive"
     noindex
     bodyClass="archive"
+    shareImage={shareImage}
+    shareImageAlt="Pruftnet 0.1, the archived previous generation with a topology graph."
 >
     <div class="dark bg-background text-foreground relative z-[60] text-sm">
         <div class="page flex min-h-11 flex-wrap items-center justify-between gap-x-6 gap-y-1 py-2">

@@ -1,4 +1,5 @@
 ---
+import shareImage from '#site/assets/og/about.png'
 import GithubMark from '#site/components/GithubMark.astro'
 import SiteFooter from '#site/components/SiteFooter.astro'
 import SiteHeader from '#site/components/SiteHeader.astro'
@@ -9,6 +10,8 @@ import BaseLayout from '#site/layouts/BaseLayout.astro'
     title="About Pruftnet"
     description="Where Pruftnet comes from, who builds it, and how the project is developed in the open."
     path="/about"
+    shareImage={shareImage}
+    shareImageAlt="About Pruftnet: an open-source packet analyzer built in the open."
 >
     <SiteHeader />
     <main class="page py-16 md:py-24">

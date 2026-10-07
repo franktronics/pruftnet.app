@@ -1,4 +1,5 @@
 ---
+import shareImage from '#site/assets/og/downloads.png'
 import { ArrowUpRight } from '@lucide/astro'
 import { Effect } from 'effect'
 
@@ -29,6 +30,8 @@ const legacy = catalog?.legacy
     title="Download Pruftnet"
     description="Download Pruftnet for macOS, Windows and Linux: the desktop app, the local server, nightly builds and the archived 0.1 release."
     path="/downloads"
+    shareImage={shareImage}
+    shareImageAlt="Download Pruftnet for macOS, Windows and Linux: desktop app and local server, stable and nightly builds."
 >
     <SiteHeader />
     <main>
