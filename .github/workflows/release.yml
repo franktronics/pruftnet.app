@@ -1,7 +1,8 @@
 name: Release
-# Nightlies run on the dev push created by a PR merge, not on the pull_request event: the
-# github-pages environment only accepts dev, main and v0.* refs, and a pull_request run deploys
-# from the PR branch. prepare-release.mjs skips dev pushes that are not PR merges.
+# Every dev push is built here (ci.yml skips dev pushes). Only the push created by a PR merge
+# publishes a nightly. Runs on push rather than pull_request because the github-pages
+# environment only accepts dev, main and v0.* refs, and a pull_request run deploys from the PR
+# branch.
 on:
     push:
         branches: [dev]
@@ -37,7 +38,6 @@ jobs:
               run: node scripts/distribution/prepare-release.mjs
     build:
         needs: prepare
-        if: needs.prepare.outputs.publish == 'true'
         uses: ./.github/workflows/build.yml
         with:
             ref: ${{ needs.prepare.outputs.ref }}
@@ -45,6 +45,7 @@ jobs:
             channel: ${{ needs.prepare.outputs.channel }}
     publish:
         needs: [prepare, build]
+        if: needs.prepare.outputs.publish == 'true'
         runs-on: ubuntu-24.04
         permissions:
             contents: write
