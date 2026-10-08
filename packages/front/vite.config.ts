@@ -3,13 +3,15 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
+import { startupShellPlugin } from './vite/boot-shell'
+
 const workspaceRoot = resolve(__dirname, '../..')
 
 export default defineConfig({
     test: {
         environment: 'node',
     },
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), startupShellPlugin()],
     resolve: {
         dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
         alias: [

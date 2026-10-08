@@ -8,6 +8,8 @@
         "./atoms": "./src/atomic/atoms/index.ts",
         "./molecules": "./src/atomic/molecules/index.ts",
         "./organisms": "./src/atomic/organisms/index.ts",
+        "./chart": "./src/atomic/organisms/chart.tsx",
+        "./sidebar-storage": "./src/atomic/organisms/sidebar-storage.ts",
         "./templates": "./src/atomic/templates/index.ts",
         "./hooks": "./src/hooks/index.ts",
         "./styles.css": "./src/styles/main.css"

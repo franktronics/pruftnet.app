@@ -6,6 +6,8 @@ Pruftnet uses a compact desktop density optimized for packet inspection. Shared 
 
 The app shell is bounded to the viewport (`h-svh overflow-hidden` on the sidebar wrapper in `packages/front/src/pages/layout.tsx`); the document itself never scrolls. Each page scrolls inside its own content area, and panels with tall content own their scroll containers. Position: sticky elements must anchor to that scroll container, not the document.
 
+The startup shell (`packages/front/vite/boot-shell.ts` and `.startup-shell` styles) paints the theme, sidebar, and canvas before JavaScript runs. Keep it aligned with the layout when the sidebar width or shell colors change.
+
 ## Density
 
 - default controls: 28 px;

@@ -3,11 +3,13 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 
+import { startupShellPlugin } from '@repo/front/vite'
+
 const workspaceRoot = resolve(__dirname, '../../..')
 
 export default defineConfig({
     base: './',
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), startupShellPlugin()],
     build: {
         outDir: 'dist-electron/renderer/main_window',
         emptyOutDir: true,

@@ -1,12 +1,13 @@
 import type { BrowserWindow, Event as ElectronEvent } from 'electron'
 
+import { rendererOrigin } from './renderer-protocol'
 import { getDesktopDevServerUrl } from './runtime-config'
 
 function isAllowedNavigation(navigationUrl: string) {
     const devServerUrl = getDesktopDevServerUrl()
 
     if (!devServerUrl) {
-        return navigationUrl.startsWith('file://')
+        return navigationUrl.startsWith(`${rendererOrigin}/`)
     }
 
     try {

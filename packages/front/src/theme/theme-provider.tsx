@@ -1,13 +1,12 @@
 import { createContext, use, useEffect, useState, type ReactNode } from 'react'
 
-import { isTheme, type Theme } from './theme'
+import { isTheme, themeStorageKey, type Theme } from './theme'
 
 type ThemeProviderValue = {
     readonly theme: Theme
     readonly setTheme: (theme: Theme) => void
 }
 
-const storageKey = 'pruftnet-theme'
 const ThemeContext = createContext<ThemeProviderValue | undefined>(undefined)
 
 function getInitialTheme(): Theme {
@@ -15,7 +14,7 @@ function getInitialTheme(): Theme {
         return 'system'
     }
 
-    const storedTheme = window.localStorage.getItem(storageKey)
+    const storedTheme = window.localStorage.getItem(themeStorageKey)
     return isTheme(storedTheme) ? storedTheme : 'system'
 }
 
@@ -42,7 +41,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
 
     useEffect(() => {
         applyTheme(theme)
-        window.localStorage.setItem(storageKey, theme)
+        window.localStorage.setItem(themeStorageKey, theme)
         void syncElectronTheme(theme)
     }, [theme])
 

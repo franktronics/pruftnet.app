@@ -39,4 +39,16 @@ if (process.argv.includes('--without-npcap')) {
 } else {
     assert.equal(result.status, 0, logs)
     assert.match(logs, /Smoke: renderer loaded/)
+    const startup = JSON.parse(logs.match(/^Smoke: startup (\{.*\})$/m)?.[1] ?? 'null')
+    assert.ok(startup, 'Startup timings were not reported')
+    console.table(startup)
+    // Measured from Electron ready: the runtime's own launch varies widely on cold CI runners
+    // and is outside the application's control. Generous enough to catch regressions such as
+    // the window waiting for the backend again, not small variations.
+    const budgetMs = Number(process.env.PRUFTNET_STARTUP_BUDGET_MS ?? 5000)
+    const applicationStartupMs = startup.appMountedMs - startup.electronReadyMs
+    assert.ok(
+        applicationStartupMs <= budgetMs,
+        `The application mounted ${applicationStartupMs} ms after Electron was ready (budget ${budgetMs} ms)`,
+    )
 }

@@ -60,6 +60,14 @@ stopping persistence. Clean shutdown interrupts input, drains or accounts
 queues, flushes and closes the spool, then lets analysis finish. Forced shutdown
 may leave a recoverable incomplete tail.
 
+## Startup
+
+Durable state is verified only after an unclean shutdown, detected when the
+instance lock of a dead process is reclaimed: SQLite `integrity_check` runs on
+a worker thread and finalized `stopped` and `failed` segments are revalidated.
+Interrupted captures are always recovered. The desktop RPC server listens before
+the backend is built, so the window loads in parallel and early requests wait.
+
 ## Platform and performance
 
 Linux and macOS use libpcap; Windows uses Npcap. Keep the worker, paths, and

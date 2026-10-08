@@ -1,6 +1,6 @@
+// `chart` is exported as `@repo/ui/chart` so Recharts is only bundled where it is imported.
 export * from './calendar'
 export * from './carousel'
-export * from './chart'
 export * from './command'
 export * from './drawer'
 export * from './navigation-menu'

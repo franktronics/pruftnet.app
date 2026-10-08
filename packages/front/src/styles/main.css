@@ -172,3 +172,35 @@
 .no-drag-region {
   -webkit-app-region: no-drag;
 }
+
+/* Static frame painted before React mounts; see packages/front/vite/boot-shell.ts. */
+.startup-shell {
+  display: flex;
+  height: 100svh;
+}
+
+.startup-shell-sidebar {
+  width: 16rem;
+  flex-shrink: 0;
+  border-right: 1px solid var(--desktop-sidebar-divider);
+  background-color: var(--sidebar);
+}
+
+:root[data-desktop-platform="darwin"] .startup-shell-sidebar {
+  background-color: color-mix(in oklab, var(--sidebar) 82%, transparent);
+}
+
+:root[data-startup-sidebar="collapsed"] .startup-shell-sidebar {
+  display: none;
+}
+
+.startup-shell-main {
+  flex: 1;
+  background-color: var(--background);
+}
+
+@media (max-width: 767px) {
+  .startup-shell-sidebar {
+    display: none;
+  }
+}

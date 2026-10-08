@@ -4,7 +4,8 @@ import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config'
+import { rendererEntryUrl } from './renderer-protocol'
+import { getDesktopDevServerUrl } from './runtime-config'
 import {
     getResolvedDesktopTheme,
     getTitleBarOverlay,
@@ -26,10 +27,6 @@ function getWindowIconPath() {
     return join(currentDirectory, `../../assets/icons/icon${releaseAssetSuffix}.png`)
 }
 
-function getRendererPath() {
-    return join(currentDirectory, `../renderer/${getRendererDirectoryName()}/index.html`)
-}
-
 type MainWindowOptions = {
     readonly rpcUrl: string
 }
@@ -49,6 +46,8 @@ export async function createMainWindow(options: MainWindowOptions) {
         minWidth: 960,
         minHeight: 640,
         title: releaseName,
+        // Shown on first paint so the window never flashes an empty frame.
+        show: false,
         icon: getWindowIconPath(),
         autoHideMenuBar: process.platform !== 'darwin',
         titleBarStyle: 'hidden',
@@ -73,17 +72,16 @@ export async function createMainWindow(options: MainWindowOptions) {
             nodeIntegration: false,
             preload: getPreloadPath(),
             sandbox: false,
+            // Cache compiled renderer code from the first launch instead of after repeated runs.
+            v8CacheOptions: 'bypassHeatCheck',
         },
     })
 
+    window.once('ready-to-show', () => window.show())
     protectWindowNavigation(window)
     syncWindowTitleBarOverlay(window, getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors))
 
-    if (devServerUrl) {
-        await window.loadURL(devServerUrl)
-    } else {
-        await window.loadFile(getRendererPath())
-    }
+    await window.loadURL(devServerUrl ?? rendererEntryUrl)
 
     return window
 }
