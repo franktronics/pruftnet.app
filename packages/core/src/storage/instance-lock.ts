@@ -10,6 +10,12 @@ export interface LockOwner {
     readonly startedAtMs: number
 }
 
+/**
+ * `unclean` when a lock left by a dead process was reclaimed: the previous instance did not
+ * release its resources, so durable state may need verification.
+ */
+export type PreviousShutdown = 'clean' | 'unclean'
+
 function isErrno(value: unknown, code: string): value is NodeJS.ErrnoException {
     return value instanceof Error && 'code' in value && value.code === code
 }
@@ -45,7 +51,11 @@ export async function readLiveInstanceLockOwner(path: string): Promise<LockOwner
     return owner && processIsAlive(owner.pid) ? owner : undefined
 }
 
-async function acquire(path: string, startedAtMs: number): Promise<FileHandle> {
+async function acquire(
+    path: string,
+    startedAtMs: number,
+): Promise<{ handle: FileHandle; previousShutdown: PreviousShutdown }> {
+    let previousShutdown: PreviousShutdown = 'clean'
     for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
             const handle = await open(path, 'wx', 0o600)
@@ -53,7 +63,7 @@ async function acquire(path: string, startedAtMs: number): Promise<FileHandle> {
                 JSON.stringify({ pid: process.pid, startedAtMs } satisfies LockOwner),
             )
             await handle.sync()
-            return handle
+            return { handle, previousShutdown }
         } catch (cause) {
             if (!isErrno(cause, 'EEXIST')) throw cause
             const owner = await readFile(path, 'utf8')
@@ -69,6 +79,7 @@ async function acquire(path: string, startedAtMs: number): Promise<FileHandle> {
             await unlink(path).catch((removeCause) => {
                 if (!isErrno(removeCause, 'ENOENT')) throw removeCause
             })
+            previousShutdown = 'unclean'
         }
     }
     throw new InstanceLockError({
@@ -79,14 +90,14 @@ async function acquire(path: string, startedAtMs: number): Promise<FileHandle> {
 
 export class InstanceLock extends Context.Tag('@repo/core/storage/InstanceLock')<
     InstanceLock,
-    { readonly path: string }
+    { readonly path: string; readonly previousShutdown: PreviousShutdown }
 >() {
     static readonly layer = Layer.scoped(
         InstanceLock,
         Effect.gen(function* () {
             const paths = yield* AppDataPaths
             const startedAtMs = yield* Clock.currentTimeMillis
-            const handle = yield* Effect.acquireRelease(
+            const { previousShutdown } = yield* Effect.acquireRelease(
                 Effect.tryPromise({
                     try: () => acquire(paths.instanceLockPath, startedAtMs),
                     catch: (cause) =>
@@ -98,14 +109,13 @@ export class InstanceLock extends Context.Tag('@repo/core/storage/InstanceLock')
                                   cause,
                               }),
                 }),
-                (file) =>
+                ({ handle }) =>
                     Effect.promise(async () => {
-                        await file.close().catch(() => undefined)
+                        await handle.close().catch(() => undefined)
                         await unlink(paths.instanceLockPath).catch(() => undefined)
                     }),
             )
-            void handle
-            return InstanceLock.of({ path: paths.instanceLockPath })
+            return InstanceLock.of({ path: paths.instanceLockPath, previousShutdown })
         }),
     )
 }

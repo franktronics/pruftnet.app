@@ -1,7 +1,7 @@
 import { CaptureStorageUnavailable, type CaptureRpcError } from '@repo/shared/capture'
 import { Context, Effect, Layer, Schema } from 'effect'
 
-import { AppDataPaths } from '#core/storage'
+import { AppDataPaths, InstanceLock } from '#core/storage'
 
 import {
     CaptureRepositoryError,
@@ -37,6 +37,13 @@ export class CaptureRecovery extends Context.Tag('@repo/core/capture/CaptureReco
             const capture = yield* Capture
             const repository = yield* CaptureSessionRepository
             const paths = yield* AppDataPaths
+            const lock = yield* InstanceLock
+            // Finalized segments only need revalidation when the previous instance died without
+            // releasing them; interrupted captures always need their partial tail recovered.
+            const recoverableStates =
+                lock.previousShutdown === 'unclean'
+                    ? ['interrupted', 'stopped', 'failed']
+                    : ['interrupted']
             const stored = <A>(
                 effect: Effect.Effect<A, CaptureRepositoryError | StoredCaptureNotFound>,
             ) => effect.pipe(Effect.mapError(repositoryFailure))
@@ -47,7 +54,7 @@ export class CaptureRecovery extends Context.Tag('@repo/core/capture/CaptureReco
                         .list()
                         .pipe(Effect.mapError(repositoryFailure))
                     for (const record of records.captures) {
-                        if (!['interrupted', 'stopped', 'failed'].includes(record.state)) continue
+                        if (!recoverableStates.includes(record.state)) continue
                         const interrupted = record.state === 'interrupted'
                         if (interrupted) {
                             yield* stored(repository.transition(record.captureId, 'recovering'))

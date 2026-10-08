@@ -1,4 +1,4 @@
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 
 import { drizzle } from 'drizzle-orm/node-sqlite'
@@ -8,6 +8,7 @@ import { Context, Effect, Layer } from 'effect'
 import { AppDataPaths } from './app-data-paths'
 import { DatabaseError } from './errors'
 import { InstanceLock } from './instance-lock'
+import { checkDatabaseIntegrity } from './integrity-check'
 import { SummaryQueryWorker, type SummaryIndexQuery, type SummaryIndexResult } from './query-worker'
 
 export type DrizzleDatabase = ReturnType<typeof drizzle>
@@ -47,7 +48,15 @@ export class Database extends Context.Tag('@repo/core/storage/Database')<
             Database,
             Effect.gen(function* () {
                 const paths = yield* AppDataPaths
-                yield* InstanceLock
+                const lock = yield* InstanceLock
+                // A full check reads the whole file, so its cost grows with captured history.
+                // Only an unreleased lock implies the previous writer may have damaged it.
+                if (lock.previousShutdown === 'unclean') {
+                    yield* Effect.tryPromise({
+                        try: () => checkDatabaseIntegrity(paths.databasePath),
+                        catch: (cause) => databaseFailure('check integrity', cause),
+                    })
+                }
                 const database = yield* Effect.acquireRelease(
                     Effect.try({
                         try: () => {
@@ -70,12 +79,6 @@ export class Database extends Context.Tag('@repo/core/storage/Database')<
                                         fileURLToPath(new URL('../../drizzle', import.meta.url)),
                                     migrationsTable: 'schema_migrations',
                                 })
-                                const integrity = connection
-                                    .prepare('PRAGMA integrity_check')
-                                    .get() as Record<string, SQLInputValue> | undefined
-                                if (!integrity || Object.values(integrity)[0] !== 'ok') {
-                                    throw new Error('SQLite integrity check failed.')
-                                }
                                 return { connection, database }
                             } catch (cause) {
                                 connection?.close()
