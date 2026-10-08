@@ -21,6 +21,7 @@ import { Effect, Exit, Scope } from 'effect'
 import { app } from 'electron'
 
 import type { DesktopExportDestinations } from './export-destinations'
+import { rendererOrigin } from './renderer-protocol'
 
 type AppNodeHandlers = Effect.Effect.Success<ReturnType<typeof makeAppNodeHandlers>>
 
@@ -136,7 +137,7 @@ export function startDesktopRpcServer(
                 const origin = request.headers.origin
                 if (
                     origin &&
-                    origin !== 'null' &&
+                    origin !== rendererOrigin &&
                     !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
                 ) {
                     response.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' })

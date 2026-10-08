@@ -7,10 +7,9 @@ import {
 } from '@tanstack/react-router'
 
 import { HomePage } from './home/home-page'
-import { SettingsPage } from './settings/settings-page'
 import { DashboardLayout } from './layout'
-import { CapturesPage } from './captures/captures-page'
 
+// Only the start page is in the startup bundle; other pages load on first navigation.
 const rootRoute = createRootRoute({
     component: DashboardLayout,
 })
@@ -24,13 +23,13 @@ const homeRoute = createRoute({
 const settingsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/settings',
-    component: SettingsPage,
+    component: lazyRouteComponent(() => import('./settings/settings-page'), 'SettingsPage'),
 })
 
 const capturesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/captures',
-    component: CapturesPage,
+    component: lazyRouteComponent(() => import('./captures/captures-page'), 'CapturesPage'),
 })
 
 const captureRoute = createRoute({
@@ -41,11 +40,11 @@ const captureRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([homeRoute, capturesRoute, settingsRoute, captureRoute])
 
-// Packaged desktop builds load the renderer from file://, where the URL path is the bundle
+// Packaged desktop builds load the renderer from a custom scheme, where the URL path is the bundle
 // location rather than an application route. Memory history also leaves the URL hash free for
 // in-page anchors such as the settings sections.
 const history =
-    window.location.protocol === 'file:'
+    window.location.protocol !== 'http:' && window.location.protocol !== 'https:'
         ? createMemoryHistory({ initialEntries: ['/'] })
         : undefined
 

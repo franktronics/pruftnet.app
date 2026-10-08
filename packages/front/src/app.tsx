@@ -30,6 +30,11 @@ function PacketSummaryCacheBudgetSync() {
 
 export function App() {
     useEffect(() => {
+        // Startup milestone read by the desktop smoke test.
+        performance.mark('pruftnet:app-mounted')
+    }, [])
+
+    useEffect(() => {
         if (!window.pruftnet) {
             return
         }

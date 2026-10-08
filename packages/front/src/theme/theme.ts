@@ -1,5 +1,7 @@
 export type Theme = 'dark' | 'light' | 'system'
 
+export const themeStorageKey = 'pruftnet-theme'
+
 export const themes = ['light', 'dark', 'system'] as const satisfies readonly Theme[]
 
 export function isTheme(value: string | null): value is Theme {

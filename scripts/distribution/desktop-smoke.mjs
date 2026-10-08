@@ -39,4 +39,14 @@ if (process.argv.includes('--without-npcap')) {
 } else {
     assert.equal(result.status, 0, logs)
     assert.match(logs, /Smoke: renderer loaded/)
+    const startup = JSON.parse(logs.match(/^Smoke: startup (\{.*\})$/m)?.[1] ?? 'null')
+    assert.ok(startup, 'Startup timings were not reported')
+    console.table(startup)
+    // Generous enough for cold CI runners; it catches regressions such as the window waiting
+    // for the backend again, not small variations.
+    const budgetMs = Number(process.env.PRUFTNET_STARTUP_BUDGET_MS ?? 5000)
+    assert.ok(
+        startup.appMountedMs <= budgetMs,
+        `The application mounted after ${startup.appMountedMs} ms (budget ${budgetMs} ms)`,
+    )
 }

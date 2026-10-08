@@ -4,7 +4,8 @@
     "version": "0.0.1",
     "type": "module",
     "exports": {
-        ".": "./src/app.tsx"
+        ".": "./src/app.tsx",
+        "./vite": "./vite/boot-shell.ts"
     },
     "scripts": {
         "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",

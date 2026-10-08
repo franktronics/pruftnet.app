@@ -4,7 +4,8 @@ import { release } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { getDesktopDevServerUrl, getRendererDirectoryName } from './runtime-config'
+import { rendererEntryUrl } from './renderer-protocol'
+import { getDesktopDevServerUrl } from './runtime-config'
 import {
     getResolvedDesktopTheme,
     getTitleBarOverlay,
@@ -24,10 +25,6 @@ function getWindowIconPath() {
     }
 
     return join(currentDirectory, `../../assets/icons/icon${releaseAssetSuffix}.png`)
-}
-
-function getRendererPath() {
-    return join(currentDirectory, `../renderer/${getRendererDirectoryName()}/index.html`)
 }
 
 type MainWindowOptions = {
@@ -75,6 +72,8 @@ export async function createMainWindow(options: MainWindowOptions) {
             nodeIntegration: false,
             preload: getPreloadPath(),
             sandbox: false,
+            // Cache compiled renderer code from the first launch instead of after repeated runs.
+            v8CacheOptions: 'bypassHeatCheck',
         },
     })
 
@@ -82,11 +81,7 @@ export async function createMainWindow(options: MainWindowOptions) {
     protectWindowNavigation(window)
     syncWindowTitleBarOverlay(window, getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors))
 
-    if (devServerUrl) {
-        await window.loadURL(devServerUrl)
-    } else {
-        await window.loadFile(getRendererPath())
-    }
+    await window.loadURL(devServerUrl ?? rendererEntryUrl)
 
     return window
 }

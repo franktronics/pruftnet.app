@@ -7,7 +7,10 @@ import { createMainWindow } from './main/create-window'
 import { installApplicationMenu } from './main/application-menu'
 import { DesktopExportDestinations } from './main/export-destinations'
 import { registerIpcHandlers } from './main/ipc'
+import { registerRendererScheme, serveRenderer } from './main/renderer-protocol'
+import { getDesktopDevServerUrl } from './main/runtime-config'
 import { startDesktopRpcServer } from './main/rpc-server'
+import { elapsedSinceProcessStart, rendererStartupTimings } from './main/startup-timing'
 
 async function bootstrap() {
     const smoke = process.argv.includes('--smoke-test')
@@ -18,13 +21,16 @@ async function bootstrap() {
     if (app.isPackaged) {
         app.setPath('userData', join(app.getPath('appData'), releaseName, 'electron'))
     }
+    registerRendererScheme()
     await app.whenReady()
+    const electronReadyMs = elapsedSinceProcessStart()
     if (smoke) console.log('Smoke: Electron ready')
+    if (!getDesktopDevServerUrl()) serveRenderer()
 
     const exportDestinations = new DesktopExportDestinations()
     const rpcServer = await Effect.runPromise(startDesktopRpcServer(exportDestinations))
     // The backend builds while the renderer loads; the window must not wait for it.
-    const backendReady = Effect.runPromise(rpcServer.ready)
+    const backendReady = Effect.runPromise(rpcServer.ready).then(elapsedSinceProcessStart)
     // Awaited below; this only keeps a failure during the window load from being unhandled.
     backendReady.catch(() => undefined)
 
@@ -32,9 +38,17 @@ async function bootstrap() {
     installApplicationMenu()
     let mainWindow = await createMainWindow({ rpcUrl: rpcServer.rpcUrl })
     if (smoke) {
+        const windowLoadedMs = elapsedSinceProcessStart()
         console.log('Smoke: renderer loaded')
-        await backendReady
+        const backendReadyMs = await backendReady
         console.log('Smoke: backend ready')
+        const startup = {
+            electronReadyMs,
+            windowLoadedMs,
+            ...(await rendererStartupTimings(mainWindow.webContents)),
+            backendReadyMs,
+        }
+        console.log(`Smoke: startup ${JSON.stringify(startup)}`)
         await Effect.runPromise(rpcServer.shutdown)
         await Effect.runPromise(rpcServer.close)
         app.exit(0)
