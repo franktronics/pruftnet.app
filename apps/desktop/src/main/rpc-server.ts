@@ -1,4 +1,9 @@
-import { createServer, type Server as NodeServer } from 'node:http'
+import {
+    createServer,
+    type IncomingMessage,
+    type Server as NodeServer,
+    type ServerResponse,
+} from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
@@ -17,9 +22,16 @@ import { app } from 'electron'
 
 import type { DesktopExportDestinations } from './export-destinations'
 
+type AppNodeHandlers = Effect.Effect.Success<ReturnType<typeof makeAppNodeHandlers>>
+
 type StartedDesktopRpcServer = {
     readonly rpcUrl: string
-    readonly shutdownStatus: Effect.Effect<ShutdownStatus, ShutdownError>
+    /**
+     * Builds the backend once. The server already accepts connections, so the renderer can load
+     * in parallel; requests received before this completes wait for it.
+     */
+    readonly ready: Effect.Effect<void, Error>
+    readonly shutdownStatus: Effect.Effect<ShutdownStatus, ShutdownError | Error>
     readonly shutdown: Effect.Effect<void, Error>
     readonly close: Effect.Effect<void, Error>
 }
@@ -58,6 +70,17 @@ function setCorsHeaders(
     }
 }
 
+function routeRequest(
+    handlers: AppNodeHandlers,
+    pathname: string,
+    request: IncomingMessage,
+    response: ServerResponse,
+) {
+    if (pathname === '/rpc') handlers.rpc(request, response)
+    else if (isPacketDetailPath(pathname)) handlers.packetDetail(request, response)
+    else handlers.exportDownload(request, response)
+}
+
 export function startDesktopRpcServer(
     exportDestinations: DesktopExportDestinations,
 ): Effect.Effect<StartedDesktopRpcServer, Error> {
@@ -65,22 +88,32 @@ export function startDesktopRpcServer(
         const scope = yield* Scope.make()
         return yield* Effect.gen(function* () {
             const token = randomBytes(32).toString('hex')
-            const handlers = yield* Scope.extend(
-                makeAppNodeHandlers({
-                    runtime: 'desktop',
-                    environment: app.isPackaged ? 'production' : 'development',
-                    workspaceRoot,
-                    migrationsFolder: app.isPackaged
-                        ? join(process.resourcesPath, 'drizzle')
-                        : join(workspaceRoot, 'packages/core/drizzle'),
-                    captureWorkerPath: app.isPackaged
-                        ? join(process.resourcesPath, 'native', captureWorkerExecutableName())
-                        : undefined,
-                    resolveDesktopDestination: (destinationToken, format) =>
-                        exportDestinations.consume(destinationToken, format),
-                }),
-                scope,
-            )
+            let handlers: AppNodeHandlers | undefined
+            let startupFailed = false
+            const pending: Array<() => void> = []
+
+            const dispatch = (
+                pathname: string,
+                request: IncomingMessage,
+                response: ServerResponse,
+            ) => {
+                if (handlers) {
+                    routeRequest(handlers, pathname, request, response)
+                    return
+                }
+                if (startupFailed) {
+                    response.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' })
+                    response.end('Backend unavailable')
+                    return
+                }
+                pending.push(() => {
+                    if (!request.destroyed) dispatch(pathname, request, response)
+                })
+            }
+            const releasePending = () => {
+                for (const resume of pending.splice(0)) resume()
+            }
+
             const server = createServer((request, response) => {
                 const url = new URL(request.url ?? '/', 'http://localhost')
 
@@ -118,12 +151,7 @@ export function startDesktopRpcServer(
                     return
                 }
 
-                if (url.pathname === '/rpc') handlers.rpc(request, response)
-                else if (isPacketDetailPath(url.pathname)) {
-                    handlers.packetDetail(request, response)
-                } else {
-                    handlers.exportDownload(request, response)
-                }
+                dispatch(url.pathname, request, response)
             })
 
             yield* listen(server)
@@ -135,15 +163,52 @@ export function startDesktopRpcServer(
                 )
             }
 
+            const built = yield* Effect.cached(
+                Scope.extend(
+                    makeAppNodeHandlers({
+                        runtime: 'desktop',
+                        environment: app.isPackaged ? 'production' : 'development',
+                        workspaceRoot,
+                        migrationsFolder: app.isPackaged
+                            ? join(process.resourcesPath, 'drizzle')
+                            : join(workspaceRoot, 'packages/core/drizzle'),
+                        captureWorkerPath: app.isPackaged
+                            ? join(process.resourcesPath, 'native', captureWorkerExecutableName())
+                            : undefined,
+                        resolveDesktopDestination: (destinationToken, format) =>
+                            exportDestinations.consume(destinationToken, format),
+                    }),
+                    scope,
+                ).pipe(
+                    Effect.tap((result) =>
+                        Effect.sync(() => {
+                            handlers = result
+                            releasePending()
+                        }),
+                    ),
+                    Effect.tapErrorCause((cause) =>
+                        Effect.sync(() => {
+                            startupFailed = true
+                            releasePending()
+                        }).pipe(Effect.zipRight(Scope.close(scope, Exit.failCause(cause)))),
+                    ),
+                ),
+            )
+
             return {
                 rpcUrl: `http://127.0.0.1:${(address as AddressInfo).port}/rpc?token=${token}`,
-                shutdownStatus: handlers.shutdown.status(),
-                shutdown: handlers.shutdown
-                    .shutdownDesktop()
-                    .pipe(Effect.mapError((error) => new Error(error.message, { cause: error }))),
+                ready: Effect.asVoid(built),
+                shutdownStatus: built.pipe(Effect.flatMap((result) => result.shutdown.status())),
+                shutdown: built.pipe(
+                    Effect.flatMap((result) => result.shutdown.shutdownDesktop()),
+                    Effect.mapError((error) => new Error(error.message, { cause: error })),
+                ),
                 close: Effect.gen(function* () {
+                    // Closing the scope while the backend is still being built would race its
+                    // finalizers, so wait for the build to settle first.
+                    const result = yield* Effect.either(built)
                     const httpClose = yield* Effect.sync(() => beginNodeServerClose(server))
-                    yield* handlers.shutdown.closeRealtime()
+                    if (result._tag === 'Right') yield* result.right.shutdown.closeRealtime()
                     yield* Effect.tryPromise({
                         try: () => httpClose,
                         catch: (cause) =>

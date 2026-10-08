@@ -23,13 +23,18 @@ async function bootstrap() {
 
     const exportDestinations = new DesktopExportDestinations()
     const rpcServer = await Effect.runPromise(startDesktopRpcServer(exportDestinations))
-    if (smoke) console.log('Smoke: backend ready')
+    // The backend builds while the renderer loads; the window must not wait for it.
+    const backendReady = Effect.runPromise(rpcServer.ready)
+    // Awaited below; this only keeps a failure during the window load from being unhandled.
+    backendReady.catch(() => undefined)
 
     registerIpcHandlers(exportDestinations)
     installApplicationMenu()
     let mainWindow = await createMainWindow({ rpcUrl: rpcServer.rpcUrl })
     if (smoke) {
         console.log('Smoke: renderer loaded')
+        await backendReady
+        console.log('Smoke: backend ready')
         await Effect.runPromise(rpcServer.shutdown)
         await Effect.runPromise(rpcServer.close)
         app.exit(0)
@@ -103,6 +108,8 @@ async function bootstrap() {
             mainWindow = await createMainWindow({ rpcUrl: rpcServer.rpcUrl })
         }
     })
+
+    await backendReady
 }
 
 app.on('window-all-closed', () => {

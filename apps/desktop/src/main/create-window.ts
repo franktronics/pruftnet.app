@@ -49,6 +49,8 @@ export async function createMainWindow(options: MainWindowOptions) {
         minWidth: 960,
         minHeight: 640,
         title: releaseName,
+        // Shown on first paint so the window never flashes an empty frame.
+        show: false,
         icon: getWindowIconPath(),
         autoHideMenuBar: process.platform !== 'darwin',
         titleBarStyle: 'hidden',
@@ -76,6 +78,7 @@ export async function createMainWindow(options: MainWindowOptions) {
         },
     })
 
+    window.once('ready-to-show', () => window.show())
     protectWindowNavigation(window)
     syncWindowTitleBarOverlay(window, getResolvedDesktopTheme(nativeTheme.shouldUseDarkColors))
 
