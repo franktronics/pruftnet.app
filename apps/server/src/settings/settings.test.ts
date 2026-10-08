@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 
+import { releaseCommand, releaseName } from '@repo/core'
 import { Either } from 'effect'
 import { describe, expect, test } from 'vitest'
 
@@ -139,9 +140,10 @@ describe('defaultConfigFilePath', () => {
         home: '/home/user',
     }
 
+    // Release builds run tests with the nightly identity too.
     test('follows platform conventions', () => {
         expect(defaultConfigFilePath({ ...base, platform: 'linux' })).toBe(
-            resolve('/home/user/.config/pruftnet/server.json'),
+            resolve('/home/user/.config', releaseCommand, 'server.json'),
         )
         expect(
             defaultConfigFilePath({
@@ -149,9 +151,9 @@ describe('defaultConfigFilePath', () => {
                 platform: 'linux',
                 environment: { XDG_CONFIG_HOME: '/xdg' },
             }),
-        ).toBe(resolve('/xdg/pruftnet/server.json'))
+        ).toBe(resolve('/xdg', releaseCommand, 'server.json'))
         expect(defaultConfigFilePath({ ...base, platform: 'darwin' })).toBe(
-            resolve('/home/user/Library/Application Support/Pruftnet/server.json'),
+            resolve('/home/user/Library/Application Support', releaseName, 'server.json'),
         )
         expect(
             defaultConfigFilePath({
@@ -159,7 +161,7 @@ describe('defaultConfigFilePath', () => {
                 platform: 'win32',
                 environment: { APPDATA: '/appdata' },
             }),
-        ).toBe(resolve('/appdata/Pruftnet/server.json'))
+        ).toBe(resolve('/appdata', releaseName, 'server.json'))
     })
 
     test('keeps development configuration in the workspace', () => {

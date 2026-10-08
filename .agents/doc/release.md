@@ -10,7 +10,7 @@ Root, desktop and server package versions identify the next principal release. U
 
 ## CI and publication
 
-PRs and pushes to `dev`/`main` validate types, lint, tests and packaging. A merged PR into `dev` publishes `0.x.y-nightly.YYYYMMDD.RUN` with an immutable commit and tag. Closed unmerged PRs and ordinary dev pushes never publish. There is no schedule.
+PRs and pushes to `dev`/`main` validate types, lint, tests and packaging. The `dev` push created by merging a PR publishes `0.x.y-nightly.YYYYMMDD.RUN` with an immutable commit and tag. Releases run on that push, not on `pull_request`, because the `github-pages` environment only deploys from `dev`, `main` and `v0.*`. Direct dev pushes and unmerged PRs never publish. There is no schedule.
 
 A `v0.x.y` tag whose commit belongs to `main` publishes the principal release. The tag must match package.json. All five build targets must succeed before a draft release is uploaded and made public. Nightlies are GitHub prereleases and never replace Latest.
 
