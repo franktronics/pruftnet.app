@@ -4,9 +4,20 @@ import * as React from 'react'
 
 import { cn } from '@repo/utils'
 
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+/** Dense data-table header surface, shared with virtualized grids that cannot use `<table>`. */
+const tableHeaderClassName =
+    'bg-muted text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+
+function Table({
+    className,
+    containerClassName,
+    ...props
+}: React.ComponentProps<'table'> & { containerClassName?: string }) {
     return (
-        <div data-slot="table-container" className="relative w-full overflow-x-auto">
+        <div
+            data-slot="table-container"
+            className={cn('relative w-full overflow-x-auto', containerClassName)}
+        >
             <table
                 data-slot="table"
                 className={cn('w-full caption-bottom text-xs', className)}
@@ -18,7 +29,11 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
     return (
-        <thead data-slot="table-header" className={cn('[&_tr]:border-b', className)} {...props} />
+        <thead
+            data-slot="table-header"
+            className={cn(tableHeaderClassName, '[&_tr]:border-b', className)}
+            {...props}
+        />
     )
 }
 
@@ -47,7 +62,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
         <tr
             data-slot="table-row"
             className={cn(
-                'hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
+                'hover:bg-muted/45 has-aria-expanded:bg-muted/45 data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground border-b',
                 className,
             )}
             {...props}
@@ -60,7 +75,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
         <th
             data-slot="table-head"
             className={cn(
-                'text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+                'h-8 px-2 text-left align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
                 className,
             )}
             {...props}
@@ -73,7 +88,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
         <td
             data-slot="table-cell"
             className={cn(
-                'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+                'h-[34px] px-2 py-0 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
                 className,
             )}
             {...props}
@@ -91,4 +106,14 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
     )
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption }
+export {
+    tableHeaderClassName,
+    Table,
+    TableHeader,
+    TableBody,
+    TableFooter,
+    TableHead,
+    TableRow,
+    TableCell,
+    TableCaption,
+}

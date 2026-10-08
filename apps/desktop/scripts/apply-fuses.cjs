@@ -8,7 +8,9 @@ function createFuseOptions(context) {
         version: FuseVersion.V1,
         resetAdHocDarwinSignature: context.electronPlatformName === 'darwin' && context.arch === 3,
         [FuseV1Options.RunAsNode]: false,
-        [FuseV1Options.EnableCookieEncryption]: true,
+        // The app stores no secrets in cookies. With an unstable (ad-hoc) macOS signature,
+        // encryption makes the keychain prompt for the "Safe Storage" key on every launch.
+        [FuseV1Options.EnableCookieEncryption]: false,
         [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
         [FuseV1Options.EnableNodeCliInspectArguments]: false,
         [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,

@@ -100,6 +100,8 @@ export function DashboardLayout() {
     const isDesktop = typeof window !== 'undefined' && Boolean(window.pruftnet)
     const desktopPlatform = isDesktop ? window.pruftnet?.platform : undefined
     const isCaptureWorkspace = pathname === '/' || pathname.startsWith('/capture/')
+    // Data-dense pages own their toolbars and scroll containers edge to edge.
+    const isFullBleed = isCaptureWorkspace || pathname.startsWith('/captures')
     const [titlebarTarget, setTitlebarTarget] = useState<HTMLDivElement | null>(null)
 
     return (
@@ -120,7 +122,7 @@ export function DashboardLayout() {
                         <main
                             className={cn(
                                 'flex min-h-0 min-w-0 flex-1 flex-col',
-                                isCaptureWorkspace
+                                isFullBleed
                                     ? 'overflow-hidden'
                                     : 'scroll-pt-4 gap-4 overflow-y-auto p-4 pt-0',
                             )}

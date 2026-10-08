@@ -3,6 +3,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
 import { Button } from '@repo/ui/atoms'
+import { tableHeaderClassName } from '@repo/ui/organisms'
 
 import {
     PACKET_SUMMARY_PAGE_SIZE,
@@ -275,7 +276,7 @@ export function PacketTable({
                     <div
                         ref={headerRef}
                         role="row"
-                        className="bg-muted text-muted-foreground grid h-8 w-full items-center border-b text-xs font-semibold tracking-wide uppercase"
+                        className={`${tableHeaderClassName} grid h-8 w-full items-center border-b`}
                         style={{ ...gridStyle, minWidth: tableWidth }}
                     >
                         {columns.map((column, index) => (

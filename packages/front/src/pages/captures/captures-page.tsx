@@ -12,7 +12,6 @@ import {
     AlertDialogTitle,
     Badge,
     Button,
-    Input,
     NativeSelect,
     NativeSelectOption,
     Table,
@@ -26,6 +25,7 @@ import { FileOutput, FolderOpen, Radio, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { BasicErrorAlert } from '#front/components/error-renderer'
+import { ToolbarSearch } from '#front/components/toolbar-search'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureHistoryOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
 
@@ -115,25 +115,26 @@ export function CapturesPage() {
             ].some((value) => value?.toLocaleLowerCase().includes(needle))
         })
     }, [captures.data?.captures, search, state])
+    const totalCaptures = captures.data?.captures.length ?? 0
 
     return (
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 py-4">
-            <div className="flex flex-wrap items-center gap-2 px-4" aria-label="History filters">
-                <label className="relative min-w-56 flex-1 sm:max-w-sm">
-                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-                    <Input
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Filter by capture, interface, or failure"
-                        className="pl-8"
-                    />
-                    <span className="sr-only">Filter capture history</span>
-                </label>
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <ToolbarSearch
+                value={search}
+                onChange={setSearch}
+                label="Capture history filter"
+                placeholder="Filter by capture, interface, or failure..."
+                count={
+                    search.trim() || state !== 'all'
+                        ? `${visibleCaptures.length.toLocaleString()} / ${totalCaptures.toLocaleString()}`
+                        : totalCaptures.toLocaleString()
+                }
+            >
                 <NativeSelect
                     value={state}
                     onChange={(event) => setState(event.target.value)}
                     aria-label="Filter by state"
-                    className="w-36"
+                    className="w-32"
                 >
                     <NativeSelectOption value="all">All states</NativeSelectOption>
                     <NativeSelectOption value="live">Live</NativeSelectOption>
@@ -141,13 +142,10 @@ export function CapturesPage() {
                     <NativeSelectOption value="completed">Completed</NativeSelectOption>
                     <NativeSelectOption value="failed">Failed</NativeSelectOption>
                 </NativeSelect>
-                <span className="text-muted-foreground ml-auto text-xs tabular-nums">
-                    {visibleCaptures.length} of {captures.data?.captures.length ?? 0}
-                </span>
-            </div>
+            </ToolbarSearch>
 
             {captures.error ? (
-                <div className="px-4">
+                <div className="shrink-0 border-b p-3">
                     <BasicErrorAlert
                         error={captures.error}
                         onRetry={() => void captures.refetch()}
@@ -155,19 +153,21 @@ export function CapturesPage() {
                 </div>
             ) : null}
             {open.error || remove.error ? (
-                <div className="px-4">
+                <div className="shrink-0 border-b p-3">
                     <BasicErrorAlert error={open.error ?? remove.error} />
                 </div>
             ) : null}
 
-            <div className="bg-background mx-4 min-h-0 min-w-0 flex-1 overflow-auto border-t">
-                <Table>
-                    <TableHeader className="bg-muted/40 sticky top-0 z-10">
+            <div className="bg-background min-h-0 min-w-0 flex-1 overflow-auto">
+                {/* The page scroller owns both axes so the sticky header anchors to it. */}
+                <Table containerClassName="overflow-visible">
+                    <TableHeader className="sticky top-0 z-10">
                         <TableRow>
                             <TableHead className="w-12">No.</TableHead>
                             <TableHead>State</TableHead>
                             <TableHead>Started</TableHead>
-                            <TableHead>Ended / duration</TableHead>
+                            <TableHead>Ended</TableHead>
+                            <TableHead>Duration</TableHead>
                             <TableHead>Interfaces</TableHead>
                             <TableHead className="text-right">Packets</TableHead>
                             <TableHead className="hidden text-right xl:table-cell">
@@ -207,12 +207,14 @@ export function CapturesPage() {
                                 <TableCell>
                                     <StateBadge capture={capture} />
                                 </TableCell>
-                                <TableCell>{timestamp(capture.startedAtNs)}</TableCell>
-                                <TableCell>
-                                    <div>{timestamp(capture.stoppedAtNs)}</div>
-                                    <div className="text-muted-foreground font-mono">
-                                        {duration(capture)}
-                                    </div>
+                                <TableCell className="font-mono tabular-nums">
+                                    {timestamp(capture.startedAtNs)}
+                                </TableCell>
+                                <TableCell className="font-mono tabular-nums">
+                                    {timestamp(capture.stoppedAtNs)}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground font-mono tabular-nums">
+                                    {duration(capture)}
                                 </TableCell>
                                 <TableCell
                                     className="max-w-52 truncate"
@@ -220,10 +222,10 @@ export function CapturesPage() {
                                 >
                                     {capture.interfaceNames.join(', ')}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="text-right font-mono tabular-nums">
                                     {BigInt(capture.packetCount).toLocaleString()}
                                 </TableCell>
-                                <TableCell className="hidden text-right font-mono xl:table-cell">
+                                <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
                                     {formatBytes(capture.retainedBytes)}
                                 </TableCell>
                                 <TableCell className="hidden uppercase xl:table-cell">

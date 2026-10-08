@@ -1,5 +1,5 @@
-import { Badge, Button, Input } from '@repo/ui'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { Badge, Button } from '@repo/ui'
+import { SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -11,6 +11,7 @@ import {
     countAdvancedPacketFilters,
     type PacketDisplayFilters,
 } from '#front/pages/capture/model/packet-filters'
+import { ToolbarSearch } from '#front/components/toolbar-search'
 
 export function DisplayFilter({
     value,
@@ -39,42 +40,22 @@ export function DisplayFilter({
     const activeCount = countAdvancedPacketFilters(filters)
     const filtering = value.trim() !== '' || activeCount > 0
     return (
-        <div className="bg-background flex h-10 shrink-0 items-center gap-2.5 border-b px-3">
-            <Search className="text-muted-foreground size-4" />
-            <Input
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                aria-label="Display filter"
-                placeholder="Filter displayed packets..."
-                spellCheck={false}
-                className="border-0 bg-transparent px-0 font-mono shadow-none focus-visible:ring-0 dark:bg-transparent"
-            />
-            {totalCount > 0 ? (
-                <span
-                    aria-live="polite"
-                    title={
-                        counting
-                            ? 'Showing the first matches. Counting remaining packets...'
-                            : undefined
-                    }
-                    className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:inline"
-                >
-                    {filtering
+        <ToolbarSearch
+            value={value}
+            onChange={onChange}
+            label="Display filter"
+            placeholder="Filter displayed packets..."
+            count={
+                totalCount > 0
+                    ? filtering
                         ? `${visibleCount.toLocaleString()}${counting ? '+' : ''} / ${totalCount.toLocaleString()}`
-                        : totalCount.toLocaleString()}
-                </span>
-            ) : null}
-            {value ? (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Clear display filter"
-                    onClick={() => onChange('')}
-                >
-                    <X />
-                </Button>
-            ) : null}
+                        : totalCount.toLocaleString()
+                    : undefined
+            }
+            countTitle={
+                counting ? 'Showing the first matches. Counting remaining packets...' : undefined
+            }
+        >
             <Button
                 type="button"
                 variant={activeCount > 0 ? 'secondary' : 'outline'}
@@ -98,6 +79,6 @@ export function DisplayFilter({
                     maxTimeSeconds={maxTimeSeconds}
                 />
             ) : null}
-        </div>
+        </ToolbarSearch>
     )
 }
