@@ -44,8 +44,9 @@ for (const channel of ['main', 'nightly']) {
     if (`v${meta.version}` !== release.tag_name || meta.channel !== channel)
         throw new Error('Release manifest mismatch')
     for (const asset of manifest.assets) {
-        if (!/^[a-zA-Z0-9.-]+$/.test(asset.name) || !/^[a-f0-9]{64}$/.test(asset.sha256))
-            throw new Error('Invalid asset manifest')
+        // Names end up in URLs and generated Ruby; `_` appears in `x86_64` AppImage names.
+        if (!/^[\w.-]+$/.test(asset.name) || !/^[a-f0-9]{64}$/.test(asset.sha256))
+            throw new Error(`Invalid asset manifest entry: ${JSON.stringify(asset.name)}`)
     }
     const asset = (name) => {
         const found = manifest.assets.find((a) => a.name === name)
