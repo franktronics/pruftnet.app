@@ -10,7 +10,7 @@ Each page passes its 1200 × 630 share image from `src/assets/og` to `BaseLayout
 
 ## Release catalog
 
-`src/releases/catalog.ts` reads three GitHub releases: `releases/latest` (stable), the newest `-nightly.` prerelease, and the fixed `v0.1.2` tag of the archived generation. Results are cached for 15 minutes; concurrent requests share one refresh and a failed refresh serves the previous snapshot marked stale. Set `GITHUB_TOKEN` to raise the API rate limit. Asset names are parsed against the patterns produced by `scripts/distribution/package.mjs`; change both together. Checksums come from the API `digest` field.
+`src/releases/catalog.ts` reads two GitHub releases: `releases/latest` (stable), listed asset by asset, and the newest `-nightly.` prerelease, only summarized since the page links nightly and the archived `v0.1.2` builds to GitHub. Results are cached for 15 minutes; concurrent requests share one refresh and a failed refresh serves the previous snapshot marked stale. Set `GITHUB_TOKEN` to raise the API rate limit. Asset names are parsed against the patterns produced by `scripts/distribution/package.mjs`; change both together. Checksums come from the API `digest` field.
 
 ## Published figures
 

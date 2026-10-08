@@ -44,8 +44,9 @@ for (const channel of ['main', 'nightly']) {
     if (`v${meta.version}` !== release.tag_name || meta.channel !== channel)
         throw new Error('Release manifest mismatch')
     for (const asset of manifest.assets) {
-        if (!/^[a-zA-Z0-9.-]+$/.test(asset.name) || !/^[a-f0-9]{64}$/.test(asset.sha256))
-            throw new Error('Invalid asset manifest')
+        // Names end up in URLs and generated Ruby; `_` appears in `x86_64` AppImage names.
+        if (!/^[\w.-]+$/.test(asset.name) || !/^[a-f0-9]{64}$/.test(asset.sha256))
+            throw new Error(`Invalid asset manifest entry: ${JSON.stringify(asset.name)}`)
     }
     const asset = (name) => {
         const found = manifest.assets.find((a) => a.name === name)
@@ -61,7 +62,7 @@ for (const channel of ['main', 'nightly']) {
     const rubyClass = channel === 'main' ? 'PruftnetServer' : 'PruftnetServerNightly'
     await writeFile(
         join(tap, 'Formula', `${formulaName}.rb`),
-        `class ${rubyClass} < Formula\n  desc "Pruftnet local web server (beta)"\n  homepage "https://pruftnet.app"\n  version "${meta.version}"\n  license "MIT"\n  on_macos do\n    on_arm do\n${stanza(server('darwin', 'arm64'))}\n    end\n    on_intel do\n${stanza(server('darwin', 'x64'))}\n    end\n  end\n  depends_on macos: :sequoia\n  def install\n    libexec.install Dir["*"]\n    (bin/"${meta.command}").write <<~SH\n      #!/bin/sh\n      exec "#{libexec}/${meta.command}" "$@"\n    SH\n  end\n  test do\n    assert_match "${meta.version}", shell_output("#{bin}/${meta.command} --version")\n  end\nend\n`,
+        `class ${rubyClass} < Formula\n  desc "Pruftnet local web server (beta)"\n  homepage "https://pruftnet.app"\n  version "${meta.version}"\n  license "MIT"\n  on_macos do\n    on_arm do\n${stanza(server('darwin', 'arm64'))}\n    end\n    on_intel do\n${stanza(server('darwin', 'x64'))}\n    end\n  end\n  depends_on macos: :sequoia\n  def install\n    libexec.install Dir["*"]\n    (bin/"${meta.command}").write <<~SH\n      #!/bin/sh\n      exec "#{libexec}/${meta.command}" "$@"\n    SH\n  end\n  service do\n    run [opt_bin/"${meta.command}", "serve", "--strict-port", "--log-format", "logfmt"]\n    keep_alive crashed: true\n    log_path var/"log/${formulaName}.log"\n    error_log_path var/"log/${formulaName}.log"\n  end\n  def caveats\n    "Run \\"${meta.command} doctor\\" to check capture permissions. Start in the background with: brew services start ${formulaName}"\n  end\n  test do\n    assert_match "${meta.version}", shell_output("#{bin}/${meta.command} --version")\n  end\nend\n`,
     )
     const desktop = (arch) =>
         asset(`pruftnet-desktop${meta.suffix}-${meta.version}-mac-${arch}.dmg`)

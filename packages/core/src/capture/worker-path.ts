@@ -1,9 +1,13 @@
 import { existsSync } from 'node:fs'
 import { dirname, isAbsolute, join, parse, resolve } from 'node:path'
 
+/** File name of the native capture worker, as built by CMake and bundled in packages. */
+export function captureWorkerExecutableName(platform: NodeJS.Platform = process.platform) {
+    return platform === 'win32' ? 'pruftnet_capture_worker.exe' : 'pruftnet_capture_worker'
+}
+
 const workerRelativePaths = (platform: NodeJS.Platform) => {
-    const executable =
-        platform === 'win32' ? 'pruftnet_capture_worker.exe' : 'pruftnet_capture_worker'
+    const executable = captureWorkerExecutableName(platform)
     return [
         join('packages', 'core', 'cpp', 'build', executable),
         join('packages', 'core', 'cpp', 'build', 'Debug', executable),

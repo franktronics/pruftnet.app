@@ -1,7 +1,7 @@
 export type Platform = 'macos' | 'windows' | 'linux'
 export type Architecture = 'x64' | 'arm64'
 export type Distribution = 'desktop' | 'server'
-export type PackageFormat = 'dmg' | 'zip' | 'exe' | 'deb' | 'appimage' | 'tar.gz' | 'rpm'
+export type PackageFormat = 'dmg' | 'zip' | 'exe' | 'deb' | 'appimage' | 'tar.gz'
 
 export interface ReleaseFile {
     name: string
@@ -32,7 +32,6 @@ export const formatLabels: Record<PackageFormat, string> = {
     deb: 'Debian package',
     appimage: 'AppImage',
     'tar.gz': 'Tarball',
-    rpm: 'RPM package',
 }
 
 // Platform and architecture spellings differ between electron-builder (${os}/${arch} plus the
@@ -80,7 +79,7 @@ export function parseReleaseAsset(file: ReleaseFile): ReleaseAsset | null {
     }
 }
 
-const formatOrder: PackageFormat[] = ['dmg', 'exe', 'deb', 'appimage', 'rpm', 'tar.gz', 'zip']
+const formatOrder: PackageFormat[] = ['dmg', 'exe', 'deb', 'appimage', 'tar.gz', 'zip']
 
 /** Stable display order: preferred installer first, then x64 before arm64. */
 export function compareAssets(

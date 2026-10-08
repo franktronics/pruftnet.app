@@ -9,6 +9,7 @@ directories:
 files:
     - dist-electron/**/*
     - assets/**/*
+    - '!assets/dmg/**'
     - package.json
 
 extraResources:
@@ -28,6 +29,14 @@ mac:
 
 dmg:
     artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+    # The window takes the size of the 1x background. Run `pnpm generate-icons` after changing
+    # the layout: the background drawing is aligned on these positions.
+    icon: assets/icons/icon.icns
+    background: assets/dmg/background.png
+    iconSize: 112
+    contents:
+        - { x: 180, y: 190, type: file }
+        - { x: 480, y: 190, type: link, path: /Applications }
 
 win:
     icon: assets/icons/icon.ico

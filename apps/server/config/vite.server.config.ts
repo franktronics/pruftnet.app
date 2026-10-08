@@ -10,7 +10,7 @@ export default defineConfig({
     define: {
         'process.env.NODE_ENV': JSON.stringify('production'),
         'process.env.PRUFTNET_CHANNEL': JSON.stringify(process.env.PRUFTNET_CHANNEL ?? 'main'),
-        'process.env.PRUFTNET_VERSION': JSON.stringify(process.env.PRUFTNET_VERSION ?? '0.2.0'),
+        'process.env.PRUFTNET_VERSION': JSON.stringify(process.env.PRUFTNET_VERSION ?? '0.2.1'),
     },
     plugins: [
         {

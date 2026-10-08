@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 import {
     beginNodeServerClose,
+    captureWorkerExecutableName,
+    isPacketDetailPath,
     makeAppNodeHandlers,
     type ShutdownError,
     type ShutdownStatus,
@@ -71,6 +73,9 @@ export function startDesktopRpcServer(
                     migrationsFolder: app.isPackaged
                         ? join(process.resourcesPath, 'drizzle')
                         : join(workspaceRoot, 'packages/core/drizzle'),
+                    captureWorkerPath: app.isPackaged
+                        ? join(process.resourcesPath, 'native', captureWorkerExecutableName())
+                        : undefined,
                     resolveDesktopDestination: (destinationToken, format) =>
                         exportDestinations.consume(destinationToken, format),
                 }),
@@ -81,7 +86,7 @@ export function startDesktopRpcServer(
 
                 if (
                     url.pathname !== '/rpc' &&
-                    !url.pathname.startsWith('/capture/') &&
+                    !isPacketDetailPath(url.pathname) &&
                     !url.pathname.startsWith('/exports/')
                 ) {
                     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
@@ -114,7 +119,7 @@ export function startDesktopRpcServer(
                 }
 
                 if (url.pathname === '/rpc') handlers.rpc(request, response)
-                else if (url.pathname.startsWith('/capture/')) {
+                else if (isPacketDetailPath(url.pathname)) {
                     handlers.packetDetail(request, response)
                 } else {
                     handlers.exportDownload(request, response)

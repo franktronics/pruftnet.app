@@ -1,0 +1,33 @@
+[Unit]
+Description=@NAME@ local web server
+Documentation=https://pruftnet.app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=pruftnet
+Group=pruftnet
+ExecStart=/usr/bin/@COMMAND@ serve --config /etc/@PACKAGE@/server.json
+StateDirectory=@PACKAGE@
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=30s
+
+# Live capture privileges come only from the file capabilities of the native worker (see
+# postinst). NoNewPrivileges would disable them, so it is intentionally not set.
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

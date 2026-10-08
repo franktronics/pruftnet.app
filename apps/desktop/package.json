@@ -1,7 +1,7 @@
 {
     "name": "@repo/desktop",
     "private": true,
-    "version": "0.2.0",
+    "version": "0.2.1",
     "productName": "Pruftnet",
     "description": "Network analysis software",
     "type": "module",
@@ -15,6 +15,7 @@
         "build:renderer": "vite build --config config/vite.renderer.config.ts",
         "package": "tsx scripts/build.ts --dir",
         "make": "tsx scripts/build.ts",
+        "generate-icons": "tsx scripts/generate-icons.ts",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit"
     },
@@ -41,10 +42,11 @@
         "electron-builder": "^26.0.12",
         "eslint": "catalog:",
         "globals": "catalog:",
+        "tsx": "^4.22.4",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
-        "tsx": "^4.22.4",
-        "vite": "^8.0.16"
+        "vite": "^8.0.16",
+        "yaml": "2.8.2"
     },
     "imports": {
         "#desktop/*": "./src/*"

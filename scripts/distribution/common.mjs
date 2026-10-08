@@ -25,8 +25,17 @@ export function metadata(env = process.env) {
         channel,
         suffix,
         name: `Pruftnet${suffix ? ' Nightly' : ''}`,
+        // Must match releaseCommand in packages/core/src/distribution.ts.
         command: `pruftnet${suffix}`,
+        // Must match defaultPort in apps/server/src/settings/settings.ts.
+        serverPort: suffix ? 3001 : 3000,
+        // Must match releaseAppId in packages/core/src/distribution.ts.
+        appId: `app.pruftnet.desktop${suffix ? '.nightly' : ''}`,
     }
+}
+/** Channel variant of a packaging asset: `assets/icons/icon.icns` -> `assets/icons/icon-nightly.icns`. */
+export function channelAsset(path, meta) {
+    return path.replace(/(\.[a-z]+)$/, `${meta.suffix}$1`)
 }
 /** The README "Install" section, shipped as INSTALL.md inside server archives. */
 export function installGuide(

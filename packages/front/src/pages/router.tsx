@@ -1,4 +1,5 @@
 import {
+    createMemoryHistory,
     createRootRoute,
     createRoute,
     createRouter,
@@ -40,7 +41,15 @@ const captureRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([homeRoute, capturesRoute, settingsRoute, captureRoute])
 
-export const router = createRouter({ routeTree })
+// Packaged desktop builds load the renderer from file://, where the URL path is the bundle
+// location rather than an application route. Memory history also leaves the URL hash free for
+// in-page anchors such as the settings sections.
+const history =
+    window.location.protocol === 'file:'
+        ? createMemoryHistory({ initialEntries: ['/'] })
+        : undefined
+
+export const router = createRouter({ routeTree, ...(history ? { history } : {}) })
 
 declare module '@tanstack/react-router' {
     interface Register {

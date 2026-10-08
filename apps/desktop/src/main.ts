@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron'
 import { Effect } from 'effect'
-import { releaseName } from '@repo/core'
+import { releaseAppId, releaseName } from '@repo/core'
 import { join } from 'node:path'
 
 import { createMainWindow } from './main/create-window'
@@ -13,15 +13,10 @@ async function bootstrap() {
     const smoke = process.argv.includes('--smoke-test')
     if (smoke) console.log('Smoke: bootstrap')
     app.setName(releaseName)
+    // Matches the installer shortcuts so taskbar pins and notifications stay per channel.
+    if (process.platform === 'win32') app.setAppUserModelId(releaseAppId)
     if (app.isPackaged) {
         app.setPath('userData', join(app.getPath('appData'), releaseName, 'electron'))
-        process.env.PRUFTNET_CAPTURE_WORKER_PATH = join(
-            process.resourcesPath,
-            'native',
-            process.platform === 'win32'
-                ? 'pruftnet_capture_worker.exe'
-                : 'pruftnet_capture_worker',
-        )
     }
     await app.whenReady()
     if (smoke) console.log('Smoke: Electron ready')
