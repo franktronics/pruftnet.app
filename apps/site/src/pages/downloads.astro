@@ -3,12 +3,11 @@ import shareImage from '#site/assets/og/downloads.png'
 import { ArrowUpRight } from '@lucide/astro'
 import { Effect } from 'effect'
 
-import LegacyDownloads from '#site/components/downloads/LegacyDownloads.astro'
 import ReleaseDownloads from '#site/components/downloads/ReleaseDownloads.astro'
 import SiteFooter from '#site/components/SiteFooter.astro'
 import SiteHeader from '#site/components/SiteHeader.astro'
 import BaseLayout from '#site/layouts/BaseLayout.astro'
-import { getReleaseCatalog, RELEASES_URL, type ReleaseCatalog } from '#site/releases/catalog'
+import { getReleaseCatalog, LEGACY_RELEASE, RELEASES_URL, type ReleaseCatalog } from '#site/releases/catalog'
 import { formatDate } from '#site/releases/format'
 
 // Rendered per request so a new release or nightly shows up without redeploying the site.
@@ -23,7 +22,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, stale-while-re
 
 const stable = catalog?.stable
 const nightly = catalog?.nightly
-const legacy = catalog?.legacy
 ---
 
 <BaseLayout
@@ -112,25 +110,16 @@ const legacy = catalog?.legacy
                             installs side by side with the stable app, under its own name, port and
                             data directory.
                         </p>
+                        {nightly && <p class="label mt-4">Published {formatDate(nightly.publishedAt)}</p>}
                     </div>
                     {
-                        nightly && (
-                            <a href={nightly.url} class="link text-foreground inline-flex items-center gap-1 text-sm">
-                                Published {formatDate(nightly.publishedAt)}
+                        nightly ? (
+                            <a href={nightly.url} class="text-foreground ring-foreground/12 hover:bg-foreground/5 inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium ring-1 transition-colors">
+                                Download from GitHub
                                 <ArrowUpRight class="size-3.5" aria-hidden="true" />
                             </a>
-                        )
-                    }
-                </div>
-                <div class="mt-10">
-                    {
-                        nightly ? (
-                            <ReleaseDownloads release={nightly} />
                         ) : (
-                            <p class="text-muted-foreground border-hairline rounded-md border border-dashed px-5 py-6 text-sm">
-                                No nightly build has been published yet. The first one appears here
-                                after the next change is merged.
-                            </p>
+                            <p class="text-muted-foreground text-sm">No nightly build has been published yet.</p>
                         )
                     }
                 </div>
@@ -142,29 +131,20 @@ const legacy = catalog?.legacy
                 <div class="max-w-2xl">
                     <p class="label">Archive</p>
                     <h2 class="heading text-foreground mt-4 text-3xl">
-                        Pruftnet {legacy?.version ?? '0.1.2'}
+                        Pruftnet {LEGACY_RELEASE.version}
                     </h2>
                     <p class="text-muted-foreground mt-3 leading-relaxed">
                         The last release of the previous generation, with the topology graph and the
                         workflow builder. It is no longer maintained.
                     </p>
                 </div>
-                <a href="/archive" class="link text-foreground text-sm">About Pruftnet 0.1</a>
-            </div>
-            <div class="mt-10">
-                {
-                    legacy ? (
-                        <LegacyDownloads release={legacy} />
-                    ) : (
-                        <p class="text-muted-foreground text-sm">
-                            Available on{' '}
-                            <a class="link" href={`${RELEASES_URL}/tag/v0.1.2`}>
-                                GitHub
-                            </a>
-                            .
-                        </p>
-                    )
-                }
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                    <a href="/archive" class="link text-foreground">About Pruftnet 0.1</a>
+                    <a href={LEGACY_RELEASE.url} class="text-foreground ring-foreground/12 hover:bg-foreground/5 inline-flex h-9 items-center gap-1.5 rounded-md px-3 font-medium ring-1 transition-colors">
+                        Download from GitHub
+                        <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                    </a>
+                </div>
             </div>
         </section>
     </main>
