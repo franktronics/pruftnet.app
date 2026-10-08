@@ -1,36 +1,43 @@
 name: Release
+# Nightlies run on the dev push created by a PR merge, not on the pull_request event: the
+# github-pages environment only accepts dev, main and v0.* refs, and a pull_request run deploys
+# from the PR branch. prepare-release.mjs skips dev pushes that are not PR merges.
 on:
     push:
-        tags: ['v0.*']
-    pull_request:
-        types: [closed]
         branches: [dev]
+        tags: ['v0.*']
 permissions:
     contents: read
 concurrency:
-    group: release-${{ github.event_name == 'pull_request' && 'nightly' || 'main' }}
+    group: release-${{ github.ref == 'refs/heads/dev' && 'nightly' || 'main' }}
     cancel-in-progress: false
 jobs:
     prepare:
-        if: github.event_name == 'push' || github.event.pull_request.merged == true
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            pull-requests: read
         outputs:
             version: ${{ steps.release.outputs.version }}
             channel: ${{ steps.release.outputs.channel }}
             ref: ${{ steps.release.outputs.ref }}
+            publish: ${{ steps.release.outputs.publish }}
         steps:
             - uses: actions/checkout@v7.0.1
               with:
-                  ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+                  ref: ${{ github.sha }}
                   fetch-depth: 0
                   persist-credentials: false
             - uses: actions/setup-node@v7.0.0
               with:
                   node-version-file: .node-version
             - id: release
+              env:
+                  GH_TOKEN: ${{ github.token }}
               run: node scripts/distribution/prepare-release.mjs
     build:
         needs: prepare
+        if: needs.prepare.outputs.publish == 'true'
         uses: ./.github/workflows/build.yml
         with:
             ref: ${{ needs.prepare.outputs.ref }}
