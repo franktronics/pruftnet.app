@@ -198,7 +198,7 @@ export function PacketBytes({
                                         </span>
                                         <span
                                             aria-hidden="true"
-                                            className="border-l pl-3 tracking-[0.18em]"
+                                            className="border-l pl-3"
                                         >
                                             {Array.from(row, (byte, column) => {
                                                 const index = offset + column
@@ -210,7 +210,7 @@ export function PacketBytes({
                                                         aria-label={`ASCII equivalent of byte ${index}`}
                                                         className={byteClassName(
                                                             index,
-                                                            'cursor-pointer',
+                                                            'inline-block w-[1.2ch] cursor-pointer text-center',
                                                         )}
                                                     >
                                                         {byte >= 32 && byte <= 126
