@@ -186,6 +186,11 @@ void split_and_pipelined_messages_use_tcp_stream_framing() {
   assert(node(second, *registry, "tcp.reassembled_segment_count").value_low ==
          2);
   assert(second.source_contributors(second.data_sources()[1]).size() == 2);
+  assert(node_count(second, *registry, "tcp.payload") == 0);
+  const auto &segment_data = node(second, *registry, "tcp.segment_data");
+  assert(segment_data.data_source_id == 0);
+  assert(segment_data.offset == 54);
+  assert(segment_data.length == message.size() - split);
 
   const auto pipelined =
       bytes("GET /one HTTP/1.1\r\nHost: example.com\r\n\r\n"

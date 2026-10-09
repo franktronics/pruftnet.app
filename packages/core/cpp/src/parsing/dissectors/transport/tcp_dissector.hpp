@@ -24,6 +24,7 @@ struct TcpDissectorState {
   FieldId reassembled_segment_count;
   FieldId reassembly_overlap;
   FieldId reassembly_conflict;
+  FieldId segment_data;
 };
 
 DissectionResult dissect_tcp(DissectorContext &, const void *,

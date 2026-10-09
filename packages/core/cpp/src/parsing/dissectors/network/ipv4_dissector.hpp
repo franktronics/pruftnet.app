@@ -22,6 +22,7 @@ struct Ipv4DissectorState {
   FieldId reassembled_length;
   FieldId reassembled_fragment_count;
   FieldId fragment_overlap;
+  FieldId fragment_data;
   FieldId ttl;
   FieldId protocol;
   FieldId checksum;

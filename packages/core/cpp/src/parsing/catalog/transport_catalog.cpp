@@ -38,6 +38,7 @@ void register_transport_catalog(CatalogRegistrar &registrar) {
                        registrar.field("tcp.reassembled_segment_count"),
                        registrar.field("tcp.reassembly_overlap"),
                        registrar.field("tcp.reassembly_conflict"),
+                       registrar.field("tcp.segment_data"),
                    });
   registrar.bind_ip_protocol(IpFamily::V4, 6, tcp_handle);
   registrar.bind_ip_protocol(IpFamily::V6, 6, tcp_handle);
