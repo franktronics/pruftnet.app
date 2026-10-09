@@ -943,6 +943,17 @@ export class CaptureSessionRepository extends Context.Tag(
                     return yield* database
                         .write('purge deleted captures', (db) =>
                             db.transaction((transaction) => {
+                                const deleted = transaction
+                                    .select({ id: captureSessions.id })
+                                    .from(captureSessions)
+                                    .where(eq(captureSessions.state, 'deleted'))
+                                // Older tombstones may still own rows without cascading keys.
+                                for (const table of [captureSegments, exportArtifacts]) {
+                                    transaction
+                                        .delete(table)
+                                        .where(inArray(table.captureId, deleted))
+                                        .run()
+                                }
                                 transaction
                                     .delete(captureSessions)
                                     .where(eq(captureSessions.state, 'deleted'))

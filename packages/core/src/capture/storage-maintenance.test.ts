@@ -169,6 +169,27 @@ describe('capture storage maintenance', () => {
         expect(result.after).toBe(2)
     })
 
+    test('purges tombstones left by deletions that kept segment rows', async () => {
+        const { layer } = await maintenanceLayer()
+        const result = await Effect.runPromise(
+            Effect.gen(function* () {
+                const catalog = yield* CaptureCatalog
+                const maintenance = yield* CaptureStorageMaintenance
+                yield* storedCapture(firstId)
+                yield* catalog.delete(firstId)
+                // Deletions before analysis-row cleanup left segment rows behind.
+                yield* addSegment(firstId)
+                const reset = yield* maintenance.reset(
+                    new ResetCaptureStorageRequest({ stopActiveCapture: false }),
+                )
+                return { reset, rows: yield* rowCounts }
+            }).pipe(Effect.provide(layer), Effect.scoped),
+        )
+
+        expect(result.reset.usage.captureCount).toBe('0')
+        expect(result.rows).toEqual({ sessions: 0, summaries: 0 })
+    })
+
     test('drops analysis rows when a single capture is deleted', async () => {
         const { layer } = await maintenanceLayer()
         const rows = await Effect.runPromise(
