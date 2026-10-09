@@ -4,6 +4,7 @@ import { Effect } from 'effect'
 import { CaptureCatalog } from './catalog'
 import { ExportScheduler } from './export-scheduler'
 import { CaptureSessionManager } from './manager'
+import { CaptureStorageMaintenance } from './storage-maintenance'
 import { ShutdownCoordinator } from '#core/shutdown'
 
 export const CaptureHandlers = CaptureRpcs.toLayer(
@@ -12,8 +13,10 @@ export const CaptureHandlers = CaptureRpcs.toLayer(
         const catalog = yield* CaptureCatalog
         const exports = yield* ExportScheduler
         const shutdown = yield* ShutdownCoordinator
+        const storage = yield* CaptureStorageMaintenance
+        const accepting = shutdown.assertAcceptingMutations()
         const mutation = <A, E>(effect: Effect.Effect<A, E>) =>
-            shutdown.assertAcceptingMutations().pipe(Effect.zipRight(effect))
+            accepting.pipe(Effect.zipRight(storage.guardMutation(effect)))
         return {
             ListCaptureInterfaces: capture.listInterfaces,
             GetCaptureInterfaceCapabilities: ({ name, monitorMode }) =>
@@ -41,6 +44,9 @@ export const CaptureHandlers = CaptureRpcs.toLayer(
             DeleteCapture: ({ captureId }) => mutation(catalog.delete(captureId)),
             CreateExport: (request) => mutation(exports.create(request)),
             ListExportJobs: exports.list,
+            GetCaptureStorageUsage: storage.usage,
+            ResetCaptureStorage: (request) =>
+                accepting.pipe(Effect.zipRight(storage.reset(request))),
         }
     }),
 )

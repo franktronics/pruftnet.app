@@ -113,6 +113,8 @@ export interface ExportSchedulerService {
     readonly list: () => Effect.Effect<ExportJobList>
     readonly cancelAll: () => Effect.Effect<void>
     readonly interruptAll: () => Effect.Effect<void>
+    /** Interrupts all work, releasing its segment leases, and forgets every job. */
+    readonly clear: () => Effect.Effect<void>
     readonly status: () => Effect.Effect<ExportSchedulerStatus>
 }
 
@@ -657,6 +659,19 @@ export class ExportScheduler extends Context.Tag('@repo/core/capture/ExportSched
                     ),
                 cancelAll: interruptAll,
                 interruptAll,
+                clear: () =>
+                    interruptAll().pipe(
+                        Effect.zipRight(
+                            Effect.sync(() => {
+                                jobs.clear()
+                                artifactProgress.clear()
+                                artifactSubscribers.clear()
+                                terminalOrder.length = 0
+                                lastPublishedJobs.clear()
+                                notifyProgress()
+                            }),
+                        ),
+                    ),
                 status: () =>
                     Effect.sync(() => ({
                         activeExportIds: [...jobs.values()]

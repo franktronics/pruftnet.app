@@ -23,6 +23,7 @@ packages/core/cpp/build-*
 
 # Environment
 *.local
+*.claude
 
 # Editor directories and files
 .vscode/*

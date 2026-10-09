@@ -143,6 +143,12 @@ export function ApplicationRealtimeProvider({ children }: { readonly children: R
             const sequence = BigInt(change.sequence)
             const gap = hasSequenceGap(lastSequence, sequence)
             if (sequence > lastSequence) lastSequence = sequence
+            // A reset replaces the whole catalogue, so a full snapshot is cheaper than replaying it.
+            if (change._tag === 'CaptureStorageReset') {
+                reconcile()
+                void queryClient.invalidateQueries({ queryKey: captureKeys.storageUsage() })
+                return
+            }
             if (gap) reconcile()
             if (reconciling) buffered.push(change)
             else apply(change)

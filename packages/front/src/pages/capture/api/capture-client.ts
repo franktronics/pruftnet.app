@@ -58,6 +58,9 @@ export const captureClient = {
     activeCapture: () => callRpc((client) => client.GetActiveCapture()),
     openCapture: (captureId: string) => callRpc((client) => client.OpenCapture({ captureId })),
     deleteCapture: (captureId: string) => callRpc((client) => client.DeleteCapture({ captureId })),
+    storageUsage: () => callRpc((client) => client.GetCaptureStorageUsage()),
+    resetStorage: (stopActiveCapture: boolean) =>
+        callRpc((client) => client.ResetCaptureStorage({ stopActiveCapture })),
     createExport: (input: {
         captureId: string
         format: ExportFormat

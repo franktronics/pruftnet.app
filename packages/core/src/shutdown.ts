@@ -91,15 +91,18 @@ export class ShutdownCoordinator extends Context.Tag('@repo/core/ShutdownCoordin
                     )
 
             return ShutdownCoordinator.of({
+                // Evaluated on each run so a reused assertion still observes a later shutdown.
                 assertAcceptingMutations: () =>
-                    shuttingDown
-                        ? Effect.fail(
-                              new CaptureStorageUnavailable({
-                                  title: 'The application is shutting down',
-                                  retryable: true,
-                              }),
-                          )
-                        : Effect.void,
+                    Effect.suspend(() =>
+                        shuttingDown
+                            ? Effect.fail(
+                                  new CaptureStorageUnavailable({
+                                      title: 'The application is shutting down',
+                                      retryable: true,
+                                  }),
+                              )
+                            : Effect.void,
+                    ),
                 status,
                 shutdownDesktop: () => run('desktop'),
                 shutdownServer: () => run('server'),
