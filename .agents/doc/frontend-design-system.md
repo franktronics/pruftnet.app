@@ -20,6 +20,10 @@ button and the page title, and back returns to the location the page was entered
 in-page locations such as settings sections. A secondary page may replace the sidebar contents with
 its own navigation, as Settings does.
 
+Record pages such as History pair a list with a resizable inspector on the right: a click selects,
+double click or Enter opens, and actions live in the inspector and the row context menu. On mobile
+the inspector is omitted and a tap opens the record.
+
 The startup shell (`packages/front/vite/boot-shell.ts` and `.startup-shell` styles) paints the theme, sidebar, and canvas before JavaScript runs. Keep it aligned with the layout when the sidebar width or shell colors change.
 
 ## Density
