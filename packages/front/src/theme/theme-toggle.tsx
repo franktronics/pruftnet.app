@@ -1,5 +1,3 @@
-import { Monitor, Moon, Sun } from 'lucide-react'
-
 import { Button } from '@repo/ui/atoms'
 import {
     DropdownMenu,
@@ -12,21 +10,11 @@ import {
 } from '@repo/ui/molecules'
 
 import { useTheme } from './theme-provider'
-import type { Theme } from './theme'
-
-const themeOptions: Array<{
-    readonly label: string
-    readonly value: Theme
-    readonly icon: typeof Sun
-}> = [
-    { label: 'Light', value: 'light', icon: Sun },
-    { label: 'Dark', value: 'dark', icon: Moon },
-    { label: 'System', value: 'system', icon: Monitor },
-]
+import { themeOptions } from './theme-options'
 
 export function ThemeToggle() {
     const { theme, setTheme } = useTheme()
-    const activeTheme = themeOptions.find((option) => option.value === theme) ?? themeOptions[2]
+    const activeTheme = themeOptions.find((option) => option.value === theme) ?? themeOptions[0]!
     const ActiveIcon = activeTheme.icon
 
     return (

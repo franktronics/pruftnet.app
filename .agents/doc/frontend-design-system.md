@@ -6,6 +6,12 @@ Pruftnet uses a compact desktop density optimized for packet inspection. Shared 
 
 The app shell is bounded to the viewport (`h-svh overflow-hidden` on the sidebar wrapper in `packages/front/src/pages/layout.tsx`); the document itself never scrolls. Each page scrolls inside its own content area, and panels with tall content own their scroll containers. Position: sticky elements must anchor to that scroll container, not the document.
 
+Navigation has two levels. The capture workspace is the primary page. Secondary pages (History,
+Settings) are listed in `packages/front/src/pages/secondary-pages.ts`: the title bar shows a back
+button and the page title, and back returns to the location the page was entered from, skipping
+in-page locations such as settings sections. A secondary page may replace the sidebar contents with
+its own navigation, as Settings does.
+
 The startup shell (`packages/front/vite/boot-shell.ts` and `.startup-shell` styles) paints the theme, sidebar, and canvas before JavaScript runs. Keep it aligned with the layout when the sidebar width or shell colors change.
 
 ## Density

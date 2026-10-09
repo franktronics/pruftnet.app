@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Keyboard, Search } from 'lucide-react'
 
 import { applicationCommands } from '@repo/shared/app-command'
 import { Input, Kbd } from '@repo/ui/atoms'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/molecules'
+import { Search } from 'lucide-react'
 
 import { formatShortcut, isMacPlatform } from '#front/app/commands/shortcut-format'
+import { SettingRow, SettingsGroup } from './settings-layout'
 
 const standardShortcuts = [
     ['Undo', 'Undo the last editing operation.', 'Editing', 'Mod+Z'],
@@ -71,61 +71,38 @@ export function KeyboardShortcutsSettings() {
     const categories = [...new Set(visibleRows.map((row) => row.category))]
 
     return (
-        <Card id="keyboard" tabIndex={-1}>
-            <CardHeader className="border-b">
-                <CardTitle className="flex items-center gap-2">
-                    <Keyboard className="text-muted-foreground size-4" />
-                    Keyboard shortcuts
-                </CardTitle>
-                <CardDescription>
-                    Shortcuts follow platform conventions and are not currently customizable.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-                <label className="relative block">
-                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-                    <Input
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search shortcuts"
-                        className="pl-8"
-                    />
-                    <span className="sr-only">Search keyboard shortcuts</span>
-                </label>
-                {categories.map((category) => (
-                    <section key={category} aria-labelledby={`keyboard-category-${category}`}>
-                        <h3
-                            id={`keyboard-category-${category}`}
-                            className="text-muted-foreground mb-1.5 text-xs font-semibold"
-                        >
-                            {category}
-                        </h3>
-                        <div className="divide-y rounded-md border">
-                            {visibleRows
-                                .filter((row) => row.category === category)
-                                .map((row) => (
-                                    <div
-                                        key={`${row.category}-${row.label}`}
-                                        className="grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                                    >
-                                        <div>
-                                            <div className="text-sm font-medium">{row.label}</div>
-                                            <div className="text-muted-foreground text-xs">
-                                                {row.description}
-                                            </div>
-                                        </div>
-                                        <Kbd>{formatShortcut(row.shortcut)}</Kbd>
-                                    </div>
-                                ))}
-                        </div>
-                    </section>
-                ))}
-                {visibleRows.length === 0 ? (
-                    <p className="text-muted-foreground py-6 text-center text-sm" role="status">
-                        No shortcuts match this search.
-                    </p>
-                ) : null}
-            </CardContent>
-        </Card>
+        <>
+            <label className="relative -mt-4 block">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                <Input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Filter by action, category, or key"
+                    spellCheck={false}
+                    className="h-8 pl-8"
+                />
+                <span className="sr-only">Filter keyboard shortcuts</span>
+            </label>
+            {categories.map((category) => (
+                <SettingsGroup key={category} title={category}>
+                    {visibleRows
+                        .filter((row) => row.category === category)
+                        .map((row) => (
+                            <SettingRow
+                                key={row.label}
+                                label={row.label}
+                                description={row.description}
+                                control={<Kbd>{formatShortcut(row.shortcut)}</Kbd>}
+                            />
+                        ))}
+                </SettingsGroup>
+            ))}
+            {visibleRows.length === 0 ? (
+                <p className="text-muted-foreground py-6 text-center text-sm" role="status">
+                    No shortcuts match this filter.
+                </p>
+            ) : null}
+        </>
     )
 }
