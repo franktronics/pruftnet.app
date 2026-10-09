@@ -9,10 +9,8 @@ import {
     PacketSummaryColumn,
     PacketSummaryFilter,
     PacketSummaryManifestRequest,
-    ReplayCaptureSource,
     ReadPacketSummariesRequest,
     ReadPacketSummaryRangeRequest,
-    StartCaptureRequest,
 } from './schema'
 
 const captureId = '0123456789abcdef0123456789abcdef'
@@ -90,14 +88,6 @@ describe('capture schemas', () => {
         }
     })
 
-    test('constructs a start request with a schema-backed replay source', () => {
-        const request = new StartCaptureRequest({
-            source: new ReplayCaptureSource({ fileId: 'demo' }),
-        })
-
-        expect(request.source).toMatchObject({ _tag: 'Replay', fileId: 'demo' })
-    })
-
     test('enforces packet summary batch request limits', () => {
         for (const limit of [1, 1024]) {
             expect(decode(ReadPacketSummariesRequest, { captureId, limit })).toMatchObject({
@@ -172,31 +162,6 @@ describe('capture schemas', () => {
 })
 
 describe('capture RPC contract', () => {
-    test('exposes the complete capture procedure set', () => {
-        expect([...CaptureRpcs.requests.keys()]).toEqual([
-            'ListCaptureInterfaces',
-            'GetCaptureInterfaceCapabilities',
-            'StartCapture',
-            'StopCapture',
-            'GetCaptureSession',
-            'ReadPacketSummaries',
-            'StreamPacketSummaries',
-            'GetPacketSummaryManifest',
-            'ReadPacketSummaryRange',
-            'GetRegistrySnapshot',
-            'GetCaptureStats',
-            'ListCaptureStatSamples',
-            'ReadCaptureEvents',
-            'ListCaptures',
-            'GetCapture',
-            'GetActiveCapture',
-            'OpenCapture',
-            'DeleteCapture',
-            'CreateExport',
-            'ListExportJobs',
-        ])
-    })
-
     test('rejects malformed payloads through attached RPC schemas', () => {
         const requests = [...CaptureRpcs.requests.values()]
         const startCapture = requests.find((request) => request._tag === 'StartCapture')

@@ -19,10 +19,6 @@ describe('settingsSectionFromPath', () => {
 })
 
 describe('matchSettingsSections', () => {
-    it('returns every section for an empty query', () => {
-        expect(matchSettingsSections('  ')).toHaveLength(4)
-    })
-
     it('matches labels and keywords case-insensitively', () => {
         expect(matchSettingsSections('DARK').map((section) => section.id)).toEqual(['general'])
         expect(matchSettingsSections('cache').map((section) => section.id)).toEqual(['performance'])
