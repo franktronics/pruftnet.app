@@ -134,7 +134,7 @@ test('reads the C++ fixture lazily with checksum parity', () => {
 })
 
 test('round-trips a real Ethernet IPv4 UDP parser tree from C++', () => {
-    expect(parserFixture.revision).toBe(9_138_740_466_261_038_128n)
+    expect(parserFixture.revision).toBe(6_817_249_447_716_193_747n)
     const reader = PacketTreeReader.open(parserFixture.bytes, {
         expectedRegistryRevision: parserFixture.revision,
         fieldValueTags: parserFieldValueTags(),
