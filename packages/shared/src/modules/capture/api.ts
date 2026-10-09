@@ -16,6 +16,8 @@ import {
     ListCaptureStatSamplesRequest,
     OpenCaptureResult,
     CaptureStats,
+    CaptureStorageResetResult,
+    CaptureStorageUsage,
     CaptureStatSampleList,
     PacketSummaryBatch,
     PacketSummaryManifest,
@@ -26,6 +28,7 @@ import {
     ReadPacketSummaryRangeRequest,
     RegistryRevisionRequest,
     RegistrySnapshot,
+    ResetCaptureStorageRequest,
     StartCaptureRequest,
     StreamPacketSummariesRequest,
 } from './schema'
@@ -126,6 +129,15 @@ export class CaptureRpcs extends RpcGroup.make(
     }),
     Rpc.make('ListExportJobs', {
         success: ExportJobList,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('GetCaptureStorageUsage', {
+        success: CaptureStorageUsage,
+        error: CaptureRpcError,
+    }),
+    Rpc.make('ResetCaptureStorage', {
+        payload: ResetCaptureStorageRequest,
+        success: CaptureStorageResetResult,
         error: CaptureRpcError,
     }),
 ) {}

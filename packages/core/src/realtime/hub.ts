@@ -15,6 +15,7 @@ import {
     CaptureLiveSnapshot,
     CaptureRecordChanged,
     CaptureRecordDeleted,
+    CaptureStorageReset,
     CaptureStreamReady,
     ExportJobChanged,
     ServerShuttingDown,
@@ -46,6 +47,7 @@ export interface RealtimeHubService {
     readonly publishCaptureRecord: (capture: CaptureRecord) => Effect.Effect<void>
     readonly publishCaptureDeleted: (captureId: string) => Effect.Effect<void>
     readonly publishExportJob: (job: ExportJob) => Effect.Effect<void>
+    readonly publishStorageReset: () => Effect.Effect<void>
     readonly publishCaptureSnapshot: (input: CaptureSnapshotInput) => Effect.Effect<void>
     readonly publishCaptureDataAvailable: (input: CaptureDataAvailableInput) => Effect.Effect<void>
     readonly close: Effect.Effect<void>
@@ -199,6 +201,8 @@ export class RealtimeHub extends Context.Tag('@repo/core/realtime/RealtimeHub')<
                     ),
                 publishExportJob: (job) =>
                     publishApplication((sequence) => new ExportJobChanged({ sequence, job })),
+                publishStorageReset: () =>
+                    publishApplication((sequence) => new CaptureStorageReset({ sequence })),
                 publishCaptureSnapshot: (input) =>
                     publishCapture(
                         input.captureId,

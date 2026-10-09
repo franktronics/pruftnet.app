@@ -25,6 +25,8 @@ export interface DatabaseService {
         operation: string,
         use: (database: DrizzleDatabase) => A,
     ) => Effect.Effect<A, DatabaseError>
+    /** Rebuilds the file and truncates the WAL so space freed by bulk deletion returns to the OS. */
+    readonly compact: () => Effect.Effect<void, DatabaseError>
 }
 
 export interface DatabaseLayerOptions {
@@ -113,6 +115,14 @@ export class Database extends Context.Tag('@repo/core/storage/Database')<
                         ),
                     read: run,
                     write: run,
+                    compact: () =>
+                        Effect.try({
+                            try: () => {
+                                database.connection.exec('VACUUM')
+                                database.connection.exec('PRAGMA wal_checkpoint(TRUNCATE)')
+                            },
+                            catch: (cause) => databaseFailure('compact', cause),
+                        }),
                 })
             }),
         )

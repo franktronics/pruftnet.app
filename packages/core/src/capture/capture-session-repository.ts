@@ -310,6 +310,8 @@ export interface CaptureSessionRepositoryService {
         generations: ReadonlyArray<number>,
     ) => Effect.Effect<void, CaptureRepositoryError>
     readonly finalizeDelete: (captureId: string) => Effect.Effect<CaptureRecord, RepositoryError>
+    /** Removes deletion tombstones and returns the IDs of the captures still retained. */
+    readonly purgeDeleted: () => Effect.Effect<ReadonlyArray<string>, CaptureRepositoryError>
     readonly upsertSegments: (
         captureId: string,
         segments: ReadonlyArray<StoredSegment>,
@@ -903,10 +905,20 @@ export class CaptureSessionRepository extends Context.Tag(
                         yield* database
                             .write('finalize capture deletion', (db) =>
                                 db.transaction((transaction) => {
-                                    transaction
-                                        .delete(exportArtifacts)
-                                        .where(eq(exportArtifacts.captureId, captureId))
-                                        .run()
+                                    // The tombstone row keeps the identity; analysis rows would
+                                    // otherwise outlive the deleted spool files.
+                                    for (const table of [
+                                        captureSummaries,
+                                        captureEvents,
+                                        captureStatSamples,
+                                        captureSegments,
+                                        exportArtifacts,
+                                    ]) {
+                                        transaction
+                                            .delete(table)
+                                            .where(eq(table.captureId, captureId))
+                                            .run()
+                                    }
                                     transaction
                                         .update(captureSessions)
                                         .set({ state: 'deleted', updatedAtNs: now })
@@ -927,6 +939,27 @@ export class CaptureSessionRepository extends Context.Tag(
                         return yield* get(captureId)
                     },
                 ),
+                purgeDeleted: Effect.fn('CaptureSessionRepository.purgeDeleted')(function* () {
+                    return yield* database
+                        .write('purge deleted captures', (db) =>
+                            db.transaction((transaction) => {
+                                transaction
+                                    .delete(captureSessions)
+                                    .where(eq(captureSessions.state, 'deleted'))
+                                    .run()
+                                return transaction
+                                    .select({ id: captureSessions.id })
+                                    .from(captureSessions)
+                                    .all()
+                                    .map((row) => row.id)
+                            }),
+                        )
+                        .pipe(
+                            Effect.mapError((cause) =>
+                                repositoryError('purge deleted captures', cause),
+                            ),
+                        )
+                }),
                 upsertSegments: Effect.fn('CaptureSessionRepository.upsertSegments')(
                     function* (captureId, segments) {
                         if (segments.length === 0) return

@@ -12,6 +12,7 @@ import {
     ExportEncoder,
     ExportArtifactRepository,
     ExportScheduler,
+    CaptureStorageMaintenance,
     type CaptureLayerOptions,
     type ExportDestinationOptions,
 } from './capture'
@@ -56,8 +57,9 @@ export function makeAppLayer(options: AppLayerOptions) {
     )
     const scheduler = ExportScheduler.layer.pipe(Layer.provideMerge(schedulerInputs))
     const shutdown = ShutdownCoordinator.layer.pipe(Layer.provideMerge(scheduler))
+    const storageMaintenance = CaptureStorageMaintenance.layer.pipe(Layer.provide(scheduler))
     const handlers = CaptureHandlers.pipe(
-        Layer.provide(Layer.mergeAll(manager, catalog, scheduler, shutdown)),
+        Layer.provide(Layer.mergeAll(manager, catalog, scheduler, shutdown, storageMaintenance)),
     )
     const realtimeHandlers = RealtimeHandlers.pipe(Layer.provide(Layer.merge(manager, realtime)))
     return Layer.mergeAll(NetworkInterfaceLive, handlers, realtimeHandlers, shutdown, realtime)

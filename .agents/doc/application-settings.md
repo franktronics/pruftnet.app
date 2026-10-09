@@ -44,6 +44,7 @@ and `SettingRow`:
 - General contains the theme control and the confirmed reset of every application setting.
 - Keyboard shortcuts lists catalogue and platform shortcuts with a filter.
 - Performance contains working packet-list cache controls and diagnostics.
-- Storage explains backend ownership and reserves the section for future retention policy controls.
+- Storage shows backend disk usage and the confirmed deletion of all capture data (see
+  `capture-architecture`).
 
 Controls describe user-visible effects rather than internal query or serialization mechanisms.

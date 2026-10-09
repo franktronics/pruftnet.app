@@ -48,6 +48,7 @@ function testLayer() {
             Effect.sync(() => {
                 calls.interruptAll += 1
             }),
+        clear: () => Effect.die('unused'),
         status: () => Effect.succeed({ activeExportIds: ['export'] }),
     })
     const dependencies = Layer.mergeAll(
