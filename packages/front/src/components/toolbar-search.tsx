@@ -35,7 +35,7 @@ export function ToolbarSearch({
                 <span
                     aria-live="polite"
                     title={countTitle}
-                    className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:inline"
+                    className="text-muted-foreground hidden shrink-0 text-xs tabular-nums sm:inline"
                 >
                     {count}
                 </span>

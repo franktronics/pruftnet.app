@@ -85,14 +85,10 @@
   background-color: color-mix(in oklab, var(--sidebar) 82%, transparent);
 }
 
+/* The native vibrancy material already blurs the desktop behind the window; a CSS
+   backdrop-filter would only blur the transparent page and keep a GPU layer alive. */
 .desktop-sidebar--vibrant [data-slot="sidebar-inner"] {
   background-color: color-mix(in oklab, var(--sidebar) 82%, transparent);
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .desktop-sidebar--vibrant [data-slot="sidebar-inner"] {
-    backdrop-filter: blur(24px);
-  }
 }
 
 :root[data-desktop-platform="darwin"] body {

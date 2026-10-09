@@ -91,7 +91,7 @@ export function DetailedTrafficChart({ data }: { data: CaptureChartPoint[] }) {
                     />
                 </ChartLineChart>
             </ChartContainer>
-            <div className="text-muted-foreground mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span>{formatDuration(visibleDuration)} visible</span>
                 <span>
                     Rolling window · {data.length}/{MAX_STATS_SAMPLES} samples · oldest samples are

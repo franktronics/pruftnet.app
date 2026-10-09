@@ -83,7 +83,7 @@ export function PacketTree({
     return (
         <PanelShell title="Structure" showHeader={false}>
             <div className="flex h-full min-h-0 flex-col">
-                <div className="text-muted-foreground flex h-7 shrink-0 items-center justify-end border-b px-3 font-mono text-[11px] tabular-nums">
+                <div className="text-muted-foreground flex h-7 shrink-0 items-center justify-end border-b px-3 font-mono text-xs tabular-nums">
                     {packetDetail.nodes.length.toLocaleString()} fields
                 </div>
                 <div

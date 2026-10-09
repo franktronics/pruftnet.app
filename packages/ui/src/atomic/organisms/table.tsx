@@ -5,8 +5,7 @@ import * as React from 'react'
 import { cn } from '@repo/utils'
 
 /** Dense data-table header surface, shared with virtualized grids that cannot use `<table>`. */
-const tableHeaderClassName =
-    'bg-muted text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+const tableHeaderClassName = 'bg-muted text-muted-foreground text-xs font-medium'
 
 function Table({
     className,

@@ -21,6 +21,7 @@ import {
     Maximize2,
     TriangleAlert,
 } from 'lucide-react'
+import { cn } from '@repo/utils'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 import {
@@ -46,11 +47,19 @@ const trafficSeries = [
 const pressureSeries = [{ dataKey: 'pressure', color: 'var(--chart-4)' }] as const
 type CaptureStatsEnvironment = 'dashboard' | 'modal'
 
+type MetricTone = 'danger' | 'retention' | 'normal'
+
 type Metric = {
     label: string
     value: string
     tooltip: string
-    tone?: 'danger' | 'retention' | 'normal'
+    tone: MetricTone
+}
+
+const metricToneClassName: Record<MetricTone, string> = {
+    danger: 'text-destructive',
+    retention: 'text-amber-700 dark:text-amber-400',
+    normal: '',
 }
 
 export function CaptureStatsPanel({
@@ -210,7 +219,7 @@ function CaptureStatsContent({
                                 : `${formatCount(latest.persistedRate)}/s`}
                         </p>
                     </div>
-                    <div className="text-muted-foreground flex gap-3 text-[11px]">
+                    <div className="text-muted-foreground flex gap-3 text-xs">
                         <ChartKey color="bg-chart-1" label="Observed" />
                         <ChartKey color="bg-chart-2" label="Persisted" />
                         <ChartKey color="bg-chart-3" label="Analyzed" />
@@ -344,15 +353,17 @@ function CaptureStatsContent({
                         ),
                         metric(
                             'Unpersisted',
-                            `${formatCount(stats.terminalWriteLosses)} pkt`,
+                            stats.terminalWriteLosses,
                             'Packets accepted by capture queues but not committed after a terminal writer failure. These packets are permanently unavailable.',
                             'danger',
+                            'pkt',
                         ),
                         metric(
                             'Retention evicted',
-                            `${formatCount(stats.spoolEvictedPackets)} pkt`,
+                            stats.spoolEvictedPackets,
                             'Intentional bounded-spool eviction. This is retention, not capture loss; increase the quota or disable disk ring mode to keep older packets.',
                             'retention',
+                            'pkt',
                         ),
                     ]}
                 />
@@ -436,13 +447,22 @@ function CaptureStatsContent({
     )
 }
 
+/** A loss or retention counter is only highlighted once it is nonzero; a zero is not news. */
 function metric(
     label: string,
     value: string,
     tooltip: string,
-    tone: Metric['tone'] = 'normal',
+    tone: MetricTone = 'normal',
+    unit?: string,
 ): Metric {
-    return { label, value: value.match(/^\d+$/) ? formatCount(value) : value, tooltip, tone }
+    if (!/^\d+$/.test(value)) return { label, value, tooltip, tone: 'normal' }
+    const count = formatCount(value)
+    return {
+        label,
+        value: unit ? `${count} ${unit}` : count,
+        tooltip,
+        tone: BigInt(value) > 0n ? tone : 'normal',
+    }
 }
 
 function LedgerSection({
@@ -456,7 +476,7 @@ function LedgerSection({
 }) {
     return (
         <section className="py-1.5">
-            <h3 className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.08em] uppercase">
+            <h3 className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                 <Icon className="size-3" />
                 {title}
             </h3>
@@ -471,13 +491,10 @@ function LedgerSection({
                             <MetricHelp text={item.tooltip} />
                         </dt>
                         <dd
-                            className={
-                                item.tone === 'danger'
-                                    ? 'text-destructive shrink-0 font-mono tabular-nums'
-                                    : item.tone === 'retention'
-                                      ? 'shrink-0 font-mono text-amber-700 tabular-nums dark:text-amber-400'
-                                      : 'shrink-0 font-mono tabular-nums'
-                            }
+                            className={cn(
+                                'shrink-0 font-mono tabular-nums',
+                                metricToneClassName[item.tone],
+                            )}
                         >
                             {item.value}
                         </dd>
@@ -547,11 +564,11 @@ function ConservationLedger({ stats, idSuffix }: { stats: CaptureStats; idSuffix
             <div className="flex items-center justify-between">
                 <h3
                     id={`conservation-title-${idSuffix}`}
-                    className="text-muted-foreground text-[11px] font-semibold tracking-[0.08em] uppercase"
+                    className="text-muted-foreground text-xs font-medium"
                 >
                     Packet conservation
                 </h3>
-                <span className="text-muted-foreground text-[10px]">snapshot</span>
+                <span className="text-muted-foreground text-xs">Snapshot</span>
             </div>
             <div className="mt-1.5 space-y-1">
                 {equations.map((equation) => {
@@ -559,7 +576,7 @@ function ConservationLedger({ stats, idSuffix }: { stats: CaptureStats; idSuffix
                     return (
                         <div
                             key={equation.label}
-                            className="flex items-center justify-between font-mono text-[11px] tabular-nums"
+                            className="flex items-center justify-between font-mono text-xs tabular-nums"
                         >
                             <span className="text-muted-foreground">{equation.label}</span>
                             <span className={balanced ? 'text-emerald-600' : 'text-amber-600'}>
