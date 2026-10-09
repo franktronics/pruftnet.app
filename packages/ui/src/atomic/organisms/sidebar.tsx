@@ -11,7 +11,7 @@ import { Button } from '../atoms/button'
 import { Input } from '../atoms/input'
 import { Separator } from '../atoms/separator'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './sheet'
-import { SIDEBAR_STORAGE_KEY } from './sidebar-storage'
+import { SIDEBAR_DEFAULT_OPEN, SIDEBAR_STORAGE_KEY } from './sidebar-storage'
 import { Skeleton } from '../atoms/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../molecules/tooltip'
 import { PanelLeft } from 'lucide-react'
@@ -54,7 +54,7 @@ function useSidebar() {
 }
 
 function SidebarProvider({
-    defaultOpen = true,
+    defaultOpen = SIDEBAR_DEFAULT_OPEN,
     open: openProp,
     onOpenChange: setOpenProp,
     className,

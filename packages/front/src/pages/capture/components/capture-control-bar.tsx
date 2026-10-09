@@ -376,8 +376,8 @@ function InterfaceSelector({
                                         <div className="flex items-center gap-2">
                                             <code>{item.name}</code>
                                             {item.isLoopback ? (
-                                                <span className="text-muted-foreground text-xs uppercase">
-                                                    loopback
+                                                <span className="text-muted-foreground text-xs">
+                                                    Loopback
                                                 </span>
                                             ) : null}
                                         </div>

@@ -2,9 +2,9 @@ import { usePacketVirtualizer } from '#front/pages/capture/hooks/use-packet-virt
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
-import { Button } from '@repo/ui/atoms'
+import { Button, MiddleTruncate } from '@repo/ui/atoms'
 import { tableHeaderClassName } from '@repo/ui/organisms'
-import { cn } from '@repo/utils'
+import { cn, cond } from '@repo/utils'
 
 import {
     PACKET_SUMMARY_PAGE_SIZE,
@@ -20,11 +20,11 @@ const columns = [
     { id: 'destination', label: 'Destination', width: 180, minWidth: 100 },
     { id: 'protocol', label: 'Protocol', width: 86, minWidth: 72 },
     { id: 'length', label: 'Length', width: 70, minWidth: 56 },
-    { id: 'info', label: 'Info', width: 360, minWidth: 180 },
+    // The last column has no resize handle and fills the remaining width; this is its minimum.
+    { id: 'info', label: 'Info', width: 240, minWidth: 180 },
 ] as const
 
 const initialColumnWidths: number[] = columns.map((column) => column.width)
-const initialTableWidth = initialColumnWidths.reduce((total, width) => total + width, 0)
 const noop = () => undefined
 
 const PacketDataRow = memo(function PacketDataRow({
@@ -63,7 +63,16 @@ const PacketDataRow = memo(function PacketDataRow({
             aria-rowindex={index + 1}
             aria-selected={selected}
             onClick={() => onSelect({ kind: 'packet', summary }, index)}
-            className={`absolute top-0 left-0 grid w-full cursor-default items-center border-b font-mono text-xs tabular-nums ${selected ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]' : 'hover:bg-muted/45'} ${summary.parseCondition === 'malformed' ? 'text-destructive' : summary.parseCondition !== 'complete' ? 'text-amber-700 dark:text-amber-400' : ''}`}
+            className={cn(
+                'absolute top-0 left-0 grid w-full cursor-default items-center text-xs tabular-nums',
+                selected
+                    ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--primary)]'
+                    : 'hover:bg-muted/45',
+                cond(
+                    [summary.parseCondition === 'malformed', 'text-destructive'],
+                    [summary.parseCondition !== 'complete', 'text-amber-700 dark:text-amber-400'],
+                ),
+            )}
             style={{
                 ...gridStyle,
                 height: size,
@@ -76,19 +85,23 @@ const PacketDataRow = memo(function PacketDataRow({
             <span role="gridcell" className="truncate px-2">
                 {relativeTime}
             </span>
-            <span role="gridcell" className="truncate px-2">
-                {columnValues.get('source') ?? ''}
-            </span>
-            <span role="gridcell" className="truncate px-2">
-                {columnValues.get('destination') ?? ''}
-            </span>
-            <span role="gridcell" className="truncate px-2 font-sans font-medium">
+            <MiddleTruncate
+                role="gridcell"
+                className="px-2 font-mono"
+                value={columnValues.get('source') ?? ''}
+            />
+            <MiddleTruncate
+                role="gridcell"
+                className="px-2 font-mono"
+                value={columnValues.get('destination') ?? ''}
+            />
+            <span role="gridcell" className="truncate px-2 font-medium">
                 {columnValues.get('protocol') ?? ''}
             </span>
             <span role="gridcell" className="truncate px-2 text-right">
                 {columnValues.get('length') || summary.capturedLength}
             </span>
-            <span role="gridcell" className="truncate px-2 font-sans">
+            <span role="gridcell" className="truncate px-2">
                 {columnValues.get('info') ?? ''}
             </span>
         </div>
@@ -132,8 +145,6 @@ export function PacketTable({
 }) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const headerRef = useRef<HTMLDivElement>(null)
-    const tableRef = useRef<HTMLDivElement>(null)
-    const hasInitializedColumnWidths = useRef(false)
     const columnResizeRef = useRef<{
         index: number
         pointerId: number
@@ -169,18 +180,6 @@ export function PacketTable({
         pendingSelection.current = undefined
         onSelect(row, index)
     }, [getRow, onSelect])
-    useEffect(() => {
-        const table = tableRef.current
-        if (!table) return
-        const observer = new ResizeObserver(([entry]) => {
-            if (hasInitializedColumnWidths.current || entry.contentRect.width <= 0) return
-            hasInitializedColumnWidths.current = true
-            const scale = Math.max(1, entry.contentRect.width / initialTableWidth)
-            setColumnWidths(initialColumnWidths.map((width) => Math.round(width * scale)))
-        })
-        observer.observe(table)
-        return () => observer.disconnect()
-    }, [])
 
     function moveSelection(delta: number) {
         if (rowCount === 0) return
@@ -221,7 +220,11 @@ export function PacketTable({
 
     const gridStyle = useMemo<CSSProperties>(
         () => ({
-            gridTemplateColumns: columnWidths.map((width) => `${width}px`).join(' '),
+            gridTemplateColumns: columnWidths
+                .map((width, index) =>
+                    index === columnWidths.length - 1 ? `minmax(${width}px, 1fr)` : `${width}px`,
+                )
+                .join(' '),
         }),
         [columnWidths],
     )
@@ -272,7 +275,7 @@ export function PacketTable({
 
     return (
         <PanelShell title="Packets" showHeader={false}>
-            <div ref={tableRef} className="relative flex h-full min-h-0 flex-col">
+            <div className="relative flex h-full min-h-0 flex-col">
                 <div className="relative shrink-0 overflow-hidden">
                     <div
                         ref={headerRef}
@@ -323,7 +326,7 @@ export function PacketTable({
                         <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 normal-case"
+                            className="h-7"
                             onClick={scrollToTop}
                             disabled={rowCount === 0}
                         >
@@ -346,7 +349,7 @@ export function PacketTable({
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 normal-case"
+                                className="h-7"
                                 onClick={scrollToBottom}
                                 disabled={rowCount === 0}
                             >
@@ -419,7 +422,7 @@ export function PacketTable({
                                         aria-rowindex={item.index + 1}
                                         aria-busy="true"
                                         aria-label={`List position ${item.index + 1}, packet loading`}
-                                        className="text-muted-foreground absolute top-0 left-0 grid w-full items-center border-b font-mono text-xs tabular-nums"
+                                        className="text-muted-foreground absolute top-0 left-0 grid w-full items-center text-xs tabular-nums"
                                         style={{
                                             ...gridStyle,
                                             height: item.size,
@@ -438,7 +441,7 @@ export function PacketTable({
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                className="h-6 justify-self-start normal-case"
+                                                className="h-6 justify-self-start"
                                                 style={{ gridColumn: '2 / -1' }}
                                                 onClick={onRetry}
                                             >
