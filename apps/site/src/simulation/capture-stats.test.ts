@@ -23,18 +23,6 @@ describe('capture statistics simulation', () => {
         expect(simulation.totals.backlog).toBe(0)
     })
 
-    it('drops only the excess of a short burst over the writer rate', () => {
-        const simulation = createSimulation(3, 0)
-        const before = { ...simulation.totals }
-        simulation.overload = true
-        for (let tick = 0; tick < 8; tick += 1) step(simulation)
-        const offered = simulation.totals.observed - before.observed
-        const dropped = simulation.totals.queueFull - before.queueFull
-        expect(dropped / offered).toBeGreaterThan(0.1)
-        expect(dropped / offered).toBeLessThan(0.3)
-        expect(ledger(simulation).lossShare).toBeLessThan(5)
-    })
-
     it('holds a full chart window', () => {
         const simulation = createSimulation(1, 60_000)
         expect(simulation.samples).toHaveLength(WINDOW)

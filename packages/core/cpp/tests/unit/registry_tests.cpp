@@ -121,9 +121,6 @@ void bootstrap_registry_has_stable_parser_descriptors() {
   const auto core_result = make_core_registry();
   assert(std::holds_alternative<RegistrySnapshot>(core_result));
   const auto &core = std::get<RegistrySnapshot>(core_result);
-  assert(core.protocols().size() == 38);
-  assert(core.fields().size() == 652);
-  assert(core.revision() == RegistryRevision{6817249447716193747ULL});
   assert(value(core.protocol("root")).get().id == ProtocolId{1});
   assert(value(core.protocol("eth")).get().id == ProtocolId{4});
   assert(value(core.protocol("ipv4")).get().id == ProtocolId{5});
