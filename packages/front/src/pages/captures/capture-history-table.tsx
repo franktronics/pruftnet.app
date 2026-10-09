@@ -1,8 +1,18 @@
 import type { CaptureRecord } from '@repo/shared/capture'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui'
+import {
+    MiddleTruncate,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@repo/ui'
 import { cn } from '@repo/utils'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { type KeyboardEvent, type ReactNode, useRef } from 'react'
+
+import { CopyButton } from '#front/components/copy-button'
 
 import { type CaptureActionHandlers, CaptureContextMenu } from './capture-actions'
 import {
@@ -19,6 +29,9 @@ import {
     formatShortDateTime,
 } from './capture-history'
 import { formatBytes } from './format-bytes'
+
+/** Needs an `@container` ancestor: the history page's table scroller. */
+const captureIdColumn = 'hidden @3xl:table-cell'
 
 const healthTextClass: Record<CaptureHealth, string> = {
     live: 'text-emerald-600 dark:text-emerald-400',
@@ -105,24 +118,21 @@ export function CaptureHistoryTable({
     )
 
     return (
-        <Table containerClassName="overflow-visible" className="table-fixed text-[13px]">
-            <colgroup>
-                <col className="w-40" />
-                <col className="w-24" />
-                <col />
-                <col className="w-24" />
-                <col className="w-24" />
-                <col className="w-24" />
-            </colgroup>
+        <Table
+            containerClassName="overflow-visible"
+            className="min-w-[36rem] table-fixed text-[13px]"
+        >
             {/* The page scroller owns both axes so the sticky header anchors to it. */}
             <TableHeader className="sticky top-0 z-10">
                 <TableRow>
-                    {sortableHead('started', 'Started')}
-                    {sortableHead('state', 'State')}
+                    {sortableHead('started', 'Started', 'w-32')}
+                    {sortableHead('state', 'State', 'w-24')}
                     <TableHead>Interfaces</TableHead>
-                    {sortableHead('duration', 'Duration', 'text-right')}
-                    {sortableHead('packets', 'Packets', 'text-right')}
-                    {sortableHead('size', 'Size', 'text-right')}
+                    {/* Hidden while the inspector leaves the table too narrow; the ID stays in the panel. */}
+                    <TableHead className={cn('w-40', captureIdColumn)}>Capture ID</TableHead>
+                    {sortableHead('duration', 'Duration', 'w-24 text-right')}
+                    {sortableHead('packets', 'Packets', 'w-24 text-right')}
+                    {sortableHead('size', 'Size', 'w-24 text-right')}
                 </TableRow>
             </TableHeader>
             <TableBody ref={bodyRef}>
@@ -148,7 +158,7 @@ export function CaptureHistoryTable({
                                     onKeyDown={(event) => handleKeyDown(event, capture)}
                                     onContextMenu={() => onSelect(capture)}
                                     className={cn(
-                                        'cursor-default outline-none select-none',
+                                        'group/row cursor-default outline-none select-none',
                                         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset',
                                     )}
                                 >
@@ -183,6 +193,9 @@ export function CaptureHistoryTable({
                                             ) : null}
                                         </span>
                                     </TableCell>
+                                    <TableCell className={captureIdColumn}>
+                                        <CaptureIdCell captureId={capture.captureId} />
+                                    </TableCell>
                                     <NumberCell muted>
                                         {formatDuration(captureDurationSeconds(capture))}
                                     </NumberCell>
@@ -199,6 +212,31 @@ export function CaptureHistoryTable({
                 })}
             </TableBody>
         </Table>
+    )
+}
+
+function CaptureIdCell({ captureId }: { captureId: string }) {
+    return (
+        <span className="flex min-w-0 items-center gap-1">
+            <MiddleTruncate
+                value={captureId}
+                tailLength={6}
+                className="text-muted-foreground font-mono text-xs [[data-state=selected]_&]:text-inherit"
+            />
+            {/* Copying is not a row action: keep clicks and Enter from selecting or opening. */}
+            <span
+                className="contents"
+                onClick={(event) => event.stopPropagation()}
+                onDoubleClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+            >
+                <CopyButton
+                    value={captureId}
+                    label="capture ID"
+                    className="opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100"
+                />
+            </span>
+        </span>
     )
 }
 

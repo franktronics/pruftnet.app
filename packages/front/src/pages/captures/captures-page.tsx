@@ -114,7 +114,7 @@ export function CapturesPage() {
 
     const list = (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="bg-background min-h-0 flex-1 overflow-auto">
+            <div className="bg-background @container min-h-0 flex-1 overflow-auto">
                 <CaptureHistoryTable
                     captures={page.items}
                     selectedId={selected?.captureId}

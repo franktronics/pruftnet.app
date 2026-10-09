@@ -1,10 +1,10 @@
 import type { CaptureRecord } from '@repo/shared/capture'
 import { Button, MiddleTruncate } from '@repo/ui'
 import { cn } from '@repo/utils'
-import { Check, Copy, FileOutput, FolderOpen, MousePointerClick } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { FileOutput, FolderOpen, MousePointerClick } from 'lucide-react'
+import type { ReactNode } from 'react'
 
-import { copyText } from '#front/pages/capture/model/copy-text'
+import { CopyButton } from '#front/components/copy-button'
 
 import { type CaptureActionHandlers, CaptureMoreMenu } from './capture-actions'
 import {
@@ -181,27 +181,13 @@ function Notice({
 }
 
 function CaptureIdField({ captureId }: { captureId: string }) {
-    const [copied, setCopied] = useState(false)
-
     return (
         <>
             <dt className="text-muted-foreground">Capture ID</dt>
             <dd className="flex min-w-0 items-center gap-1">
                 <MiddleTruncate value={captureId} tailLength={8} className="font-mono" />
-                <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    aria-label={copied ? 'Capture ID copied' : 'Copy capture ID'}
-                    onClick={() => {
-                        void copyText(captureId).then((ok) => {
-                            if (!ok) return
-                            setCopied(true)
-                            window.setTimeout(() => setCopied(false), 1_500)
-                        })
-                    }}
-                >
-                    {copied ? <Check /> : <Copy />}
-                </Button>
+                {/* Negative margin keeps the button from growing the row past the label's line height. */}
+                <CopyButton value={captureId} label="capture ID" className="-my-1" />
             </dd>
         </>
     )
