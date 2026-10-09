@@ -58,14 +58,18 @@ export function CaptureHistoryList({
     maxPackets,
     onSelect,
     onActivate,
+    activateOnClick = false,
     handlers,
 }: {
     groups: CaptureDayGroup[]
     selectedId: string | undefined
     maxPackets: bigint
+    /** Keyboard navigation, right click, and (by default) a single click. */
     onSelect: (capture: CaptureRecord) => void
     /** Double click or Enter: the row's primary action. */
     onActivate: (capture: CaptureRecord) => void
+    /** Without an inspector there is nothing to select into, so a click opens the row. */
+    activateOnClick?: boolean
     handlers: CaptureActionHandlers
 }) {
     const listRef = useRef<HTMLDivElement>(null)
@@ -131,6 +135,7 @@ export function CaptureHistoryList({
                                 maxPackets={maxPackets}
                                 onSelect={onSelect}
                                 onActivate={onActivate}
+                                activateOnClick={activateOnClick}
                                 onKeyDown={moveSelection}
                             />
                         </CaptureContextMenu>
@@ -148,6 +153,7 @@ function CaptureRow({
     maxPackets,
     onSelect,
     onActivate,
+    activateOnClick,
     onKeyDown,
 }: {
     capture: CaptureRecord
@@ -156,6 +162,7 @@ function CaptureRow({
     maxPackets: bigint
     onSelect: (capture: CaptureRecord) => void
     onActivate: (capture: CaptureRecord) => void
+    activateOnClick: boolean
     onKeyDown: (event: KeyboardEvent, capture: CaptureRecord) => void
 }) {
     const health = captureHealth(capture)
@@ -170,7 +177,7 @@ function CaptureRow({
             aria-label={source}
             data-capture-id={capture.captureId}
             tabIndex={focusable ? 0 : -1}
-            onClick={() => onSelect(capture)}
+            onClick={() => (activateOnClick ? onActivate : onSelect)(capture)}
             onDoubleClick={() => onActivate(capture)}
             onKeyDown={(event) => onKeyDown(event, capture)}
             onContextMenu={() => onSelect(capture)}

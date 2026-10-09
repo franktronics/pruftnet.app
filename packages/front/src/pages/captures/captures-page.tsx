@@ -98,10 +98,9 @@ export function CapturesPage() {
                 groups={groups}
                 selectedId={selected?.captureId}
                 maxPackets={maxPackets}
-                onSelect={(capture) =>
-                    isMobile ? handlers.onOpen(capture) : setSelectedId(capture.captureId)
-                }
+                onSelect={(capture) => setSelectedId(capture.captureId)}
                 onActivate={handlers.onOpen}
+                activateOnClick={isMobile}
                 handlers={handlers}
             />
             {!captures.isPending && allCaptures.length === 0 ? (
