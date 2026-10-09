@@ -4,6 +4,7 @@ import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
 import { Button } from '@repo/ui/atoms'
 import { tableHeaderClassName } from '@repo/ui/organisms'
+import { cn } from '@repo/utils'
 
 import {
     PACKET_SUMMARY_PAGE_SIZE,
@@ -292,7 +293,12 @@ export function PacketTable({
                                         aria-orientation="vertical"
                                         aria-label={`Resize ${column.label} column`}
                                         tabIndex={0}
-                                        className="group after:bg-border hover:after:bg-primary focus-visible:ring-ring focus-visible:after:bg-primary absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_45%,transparent)] focus-visible:ring-2 focus-visible:ring-inset"
+                                        className={cn(
+                                            'absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none',
+                                            'after:bg-border/50 after:absolute after:inset-y-2 after:left-1/2 after:w-px after:-translate-x-1/2',
+                                            'hover:after:bg-muted-foreground active:after:bg-muted-foreground focus-visible:after:bg-primary',
+                                            'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset',
+                                        )}
                                         onPointerDown={(event) =>
                                             handleColumnPointerDown(index, event)
                                         }
@@ -313,7 +319,7 @@ export function PacketTable({
                             </span>
                         ))}
                     </div>
-                    <div className="bg-muted absolute top-0 right-0 z-30 flex h-8 items-center gap-0.5 border-b border-l px-1 shadow-[-10px_0_12px_var(--muted)]">
+                    <div className="bg-table-header text-muted-foreground absolute top-0 right-0 z-30 flex h-8 items-center gap-0.5 border-b border-l px-1">
                         <Button
                             size="sm"
                             variant="ghost"
@@ -327,8 +333,8 @@ export function PacketTable({
                         {canFollow ? (
                             <Button
                                 size="sm"
-                                variant={following ? 'secondary' : 'ghost'}
-                                className="h-7 normal-case"
+                                variant="ghost"
+                                className="aria-pressed:bg-foreground/5 aria-pressed:text-foreground h-7 normal-case"
                                 onClick={followTail}
                                 disabled={rowCount === 0}
                                 aria-pressed={following}

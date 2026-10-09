@@ -29,6 +29,8 @@
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
+    --color-table-header: var(--table-header);
+    --color-table-header-foreground: var(--table-header-foreground);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
@@ -61,6 +63,8 @@
   --secondary-foreground: oklch(0.27 0.006 285);
   --muted: oklch(0.944 0.003 285);
   --muted-foreground: oklch(0.52 0.012 285);
+  --table-header: color-mix(in oklab, var(--muted) 65%, var(--background));
+  --table-header-foreground: color-mix(in oklab, var(--foreground) 80%, var(--muted-foreground));
   --accent: oklch(0.93 0.035 255);
   --accent-foreground: oklch(0.34 0.14 255);
   --destructive: oklch(0.577 0.245 27.325);
@@ -96,6 +100,8 @@
   --secondary-foreground: oklch(0.93 0.002 285);
   --muted: oklch(0.275 0.004 285);
   --muted-foreground: oklch(0.68 0.01 285);
+  --table-header: color-mix(in oklab, var(--muted) 65%, var(--background));
+  --table-header-foreground: color-mix(in oklab, var(--foreground) 80%, var(--muted-foreground));
   --accent: oklch(0.31 0.045 255);
   --accent-foreground: oklch(0.93 0.025 255);
   --destructive: oklch(0.704 0.191 22.216);
