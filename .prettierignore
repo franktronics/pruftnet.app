@@ -1,17 +1,35 @@
-/dist/
+# Dependencies & lockfiles
+node_modules
+.pnpm-store
+pnpm-lock.yaml
+
+# Build outputs & release artifacts
 dist
 build
-dist-electron
-dist-ssr
 out
 release
-out
-.agents/
-/src/stories/
+dist-electron
+dist-ssr
 .vite
-package-lock.json
-node_modules
-cpp
+*.tsbuildinfo
+
+# Vendored external repositories (read-only reference)
+.repos
+
+# Native C++ sources (not formatted by Prettier)
+packages/core/cpp
+
+# Runtime data & local tooling state
+.data
+.claude
+
+# Generated code (do not reformat)
+packages/packet-codec/src/generated
+packages/core/drizzle
+apps/site/.astro
+
+# Packaging templates (@PLACEHOLDER@ substituted at build time)
+apps/server/packaging
+
+# Hand-maintained styles (Tailwind/Shadcn conventions)
 *.css
-*.cc
-*.hpp
