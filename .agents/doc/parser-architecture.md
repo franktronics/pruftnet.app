@@ -41,6 +41,13 @@ registry descriptors, register construction in the matching catalog section,
 bind the correct selector, and add the source to CMake. Do not use global
 self-registration or mutable catalog state.
 
+A dissector that hands a completed reassembly to the next layer uses
+`DissectorContext::add_reassembled_source`: it also records this packet's
+contributed bytes as a field (`tcp.segment_data`, `ipv4.fragment_data`, ...), so
+byte selection in the original source resolves to the reassembling layer instead
+of its whole protocol node. Use `add_derived_source` alone only when those bytes
+already have a field, as with TLS `record_payload`.
+
 Tests must cover valid dispatch, truncation, malformed input, unknown bytes,
 and resource limits. Add reassembly provenance and recursion tests when
 applicable. Keep warm parsing allocation-free. Run `pnpm test:cpp`, relevant

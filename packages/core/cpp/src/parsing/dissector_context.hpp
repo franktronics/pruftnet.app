@@ -29,6 +29,15 @@ public:
   [[nodiscard]] std::optional<DataSourceId>
   add_derived_source(std::string_view name, std::span<const std::byte> bytes,
                      std::span<const ParsedContributor> contributors);
+  // Publishes a completed reassembly as a derived source and records the bytes
+  // this packet contributed as `contribution_field` under `parent`, so a byte
+  // selection in the contributing source resolves to the reassembling layer.
+  // The returned view borrows `payload.bytes`.
+  [[nodiscard]] std::optional<PacketView>
+  add_reassembled_source(std::string_view name,
+                         const ReassembledPayload &payload,
+                         FieldId contribution_field, std::uint32_t parent,
+                         const PacketView &contribution);
   [[nodiscard]] std::optional<std::uint32_t>
   add_protocol(FieldId field, std::uint32_t parent, const PacketView &view,
                std::size_t length);

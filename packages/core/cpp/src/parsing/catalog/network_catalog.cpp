@@ -81,6 +81,7 @@ void register_network_catalog(CatalogRegistrar &registrar) {
                         registrar.field("ipv4.reassembled_length"),
                         registrar.field("ipv4.reassembled_fragment_count"),
                         registrar.field("ipv4.fragment_overlap"),
+                        registrar.field("ipv4.fragment_data"),
                         registrar.field("ipv4.ttl"),
                         registrar.field("ipv4.protocol"),
                         registrar.field("ipv4.checksum"),
@@ -165,6 +166,7 @@ void register_network_catalog(CatalogRegistrar &registrar) {
                         registrar.field("ipv6.reassembled_length"),
                         registrar.field("ipv6.reassembled_fragment_count"),
                         registrar.field("ipv6.fragment_overlap"),
+                        registrar.field("ipv6.fragment_data"),
                     });
   registrar.bind_ethertype(0x86dd, ipv6_handle);
 

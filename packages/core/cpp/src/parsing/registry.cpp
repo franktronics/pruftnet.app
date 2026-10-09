@@ -1542,6 +1542,12 @@ RegistryResult<RegistrySnapshot> make_core_registry() {
                       "Protected short-header bits", FieldValueType::Unsigned},
       FieldDefinition{37, "quic.version_specific_data", "Version-specific data",
                       FieldValueType::Bytes},
+      FieldDefinition{4, "ipv4.fragment_data", "Fragment data",
+                      FieldValueType::Bytes},
+      FieldDefinition{9, "ipv6.fragment_data", "Fragment data",
+                      FieldValueType::Bytes},
+      FieldDefinition{7, "tcp.segment_data", "TCP segment data",
+                      FieldValueType::Bytes},
   };
   for (const auto &field : fields) {
     auto result = builder.register_field(

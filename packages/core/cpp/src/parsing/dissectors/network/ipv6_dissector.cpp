@@ -202,14 +202,13 @@ DissectionResult dissect_ipv6(DissectorContext &context, const void *opaque,
                   0, reassembled.part_count, ParsedNodeFlagGenerated)) {
             return {};
           }
-          const auto source_id = context.add_derived_source(
-              "Reassembled IPv6 payload", reassembled.bytes,
-              reassembled.contributors);
-          if (!source_id) {
+          const auto reassembled_view = context.add_reassembled_source(
+              "Reassembled IPv6 payload", reassembled, state.fragment_data,
+              current_parent, *remainder.value());
+          if (!reassembled_view) {
             return {};
           }
-          payload = PacketView::from_capture(
-              reassembled.bytes, reassembled.bytes.size(), *source_id);
+          payload = *reassembled_view;
           next = *contained_next;
           continue;
         }

@@ -278,6 +278,11 @@ void ipv4_fragments_reassemble_into_a_derived_transport_payload() {
   const auto &source = complete.data_sources()[1];
   assert(source.kind == DataSourceKind::Derived);
   assert(complete.source_name(source) == "Reassembled IPv4 payload");
+  assert(node_count(pending, *registry, "ipv4.fragment_data") == 0);
+  const auto &fragment_data = node(complete, *registry, "ipv4.fragment_data");
+  assert(fragment_data.data_source_id == 0);
+  assert(fragment_data.offset == 34);
+  assert(fragment_data.length == first.size());
   const auto contributors = complete.source_contributors(source);
   assert(contributors.size() == 2);
   assert(std::any_of(
@@ -324,6 +329,11 @@ void ipv6_fragments_reassemble_and_resume_next_header_processing() {
   const auto &source = complete.data_sources()[1];
   assert(source.kind == DataSourceKind::Derived);
   assert(complete.source_name(source) == "Reassembled IPv6 payload");
+  assert(node_count(pending, *registry, "ipv6.fragment_data") == 0);
+  const auto &fragment_data = node(complete, *registry, "ipv6.fragment_data");
+  assert(fragment_data.data_source_id == 0);
+  assert(fragment_data.offset == 62);
+  assert(fragment_data.length == first.size());
   assert(complete.source_contributors(source).size() == 2);
 }
 
