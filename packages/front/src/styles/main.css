@@ -55,8 +55,8 @@
   pointer-events: none;
   background-color: var(--desktop-sidebar-divider);
   transition:
-    left 200ms ease-linear,
-    opacity 200ms ease-linear;
+    left var(--sidebar-duration) ease-linear,
+    opacity var(--sidebar-duration) ease-linear;
 }
 
 .desktop-titlebar[data-sidebar-state="collapsed"]::after {
@@ -76,9 +76,9 @@
   width: var(--sidebar-width);
   background-color: var(--sidebar);
   transition:
-    width 200ms ease-linear,
-    background-color 200ms ease-linear,
-    border-color 200ms ease-linear;
+    width var(--sidebar-duration) ease-linear,
+    background-color var(--sidebar-duration) ease-linear,
+    border-color var(--sidebar-duration) ease-linear;
 }
 
 .desktop-titlebar-sidebar-boundary--vibrant {
@@ -104,7 +104,7 @@
 .desktop-titlebar-trigger {
   left: calc(var(--sidebar-width) - 2rem);
   top: calc((var(--desktop-titlebar-height) - 1.75rem) / 2);
-  transition: left 200ms ease-linear;
+  transition: left var(--sidebar-duration) ease-linear;
 }
 
 .desktop-titlebar-brand {
@@ -112,13 +112,13 @@
   top: calc((var(--desktop-titlebar-height) - 1.25rem) / 2);
   max-width: calc(var(--sidebar-width) - 3.75rem);
   transition:
-    left 200ms ease-linear,
-    max-width 200ms ease-linear;
+    left var(--sidebar-duration) ease-linear,
+    max-width var(--sidebar-duration) ease-linear;
 }
 
 .desktop-titlebar-brand-text {
   opacity: 1;
-  transition: opacity 150ms ease-linear;
+  transition: opacity var(--sidebar-duration) ease-linear;
   white-space: nowrap;
 }
 
