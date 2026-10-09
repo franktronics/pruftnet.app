@@ -1,12 +1,12 @@
 import type { Plugin } from 'vite'
-import { SIDEBAR_STORAGE_KEY } from '@repo/ui/sidebar-storage'
+import { SIDEBAR_DEFAULT_OPEN, SIDEBAR_STORAGE_KEY } from '@repo/ui/sidebar-storage'
 
 // Explicit extension: other packages' Vite configs load this module through Node directly.
 import { themeStorageKey } from '#front/theme/theme.ts'
 
 // Runs before first paint, so it must stay dependency free. It mirrors what ThemeProvider and
 // the desktop layout apply after React mounts, which keeps the first frame in the final theme.
-function applyStartupState(themeKey: string, sidebarKey: string) {
+function applyStartupState(themeKey: string, sidebarKey: string, sidebarDefaultOpen: boolean) {
     const root = document.documentElement
     let theme: string | null = null
     let sidebarOpen: string | null = null
@@ -22,7 +22,8 @@ function applyStartupState(themeKey: string, sidebarKey: string) {
     root.classList.add(dark ? 'dark' : 'light')
     const desktop = (window as { pruftnet?: { platform: string } }).pruftnet
     if (desktop) root.dataset.desktopPlatform = desktop.platform
-    if (sidebarOpen === 'false') root.dataset.startupSidebar = 'collapsed'
+    const open = sidebarOpen === null ? sidebarDefaultOpen : sidebarOpen === 'true'
+    if (!open) root.dataset.startupSidebar = 'collapsed'
 }
 
 const startupShell =
@@ -42,7 +43,7 @@ export function startupShellPlugin(): Plugin {
                 tags: [
                     {
                         tag: 'script',
-                        children: `(${applyStartupState.toString()})(${JSON.stringify(themeStorageKey)}, ${JSON.stringify(SIDEBAR_STORAGE_KEY)})`,
+                        children: `(${applyStartupState.toString()})(${JSON.stringify(themeStorageKey)}, ${JSON.stringify(SIDEBAR_STORAGE_KEY)}, ${SIDEBAR_DEFAULT_OPEN})`,
                         injectTo: 'head-prepend',
                     },
                 ],
