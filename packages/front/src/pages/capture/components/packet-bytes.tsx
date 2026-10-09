@@ -168,7 +168,7 @@ export function PacketBytes({
                                         <span className="text-muted-foreground w-16 shrink-0">
                                             {offset.toString(16).padStart(8, '0')}
                                         </span>
-                                        <span className="flex w-[25rem] shrink-0">
+                                        <span className="flex w-100 shrink-0">
                                             {Array.from({ length: BYTE_ROW_WIDTH }, (_, column) => {
                                                 const index = offset + column
                                                 return index < bytes.length ? (
@@ -196,10 +196,7 @@ export function PacketBytes({
                                                 )
                                             })}
                                         </span>
-                                        <span
-                                            aria-hidden="true"
-                                            className="border-l pl-3"
-                                        >
+                                        <span aria-hidden="true" className="border-l pl-3">
                                             {Array.from(row, (byte, column) => {
                                                 const index = offset + column
                                                 return (
@@ -210,7 +207,7 @@ export function PacketBytes({
                                                         aria-label={`ASCII equivalent of byte ${index}`}
                                                         className={byteClassName(
                                                             index,
-                                                            'inline-block w-[1.2ch] cursor-pointer text-center',
+                                                            'inline-block w-[1.8ch] cursor-pointer text-center',
                                                         )}
                                                     >
                                                         {byte >= 32 && byte <= 126
