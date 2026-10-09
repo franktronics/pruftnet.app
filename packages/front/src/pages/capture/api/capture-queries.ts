@@ -41,6 +41,7 @@ export const captureKeys = {
     history: () => [...captureKeys.all, 'history'] as const,
     active: () => [...captureKeys.all, 'active'] as const,
     exportJobs: () => [...captureKeys.all, 'export-jobs'] as const,
+    storageUsage: () => [...captureKeys.all, 'storage-usage'] as const,
 }
 
 export const captureInterfacesOptions = () =>
@@ -98,4 +99,10 @@ export const exportJobsOptions = () =>
     queryOptions({
         queryKey: captureKeys.exportJobs(),
         queryFn: captureClient.exportJobs,
+    })
+
+export const captureStorageUsageOptions = () =>
+    queryOptions({
+        queryKey: captureKeys.storageUsage(),
+        queryFn: captureClient.storageUsage,
     })

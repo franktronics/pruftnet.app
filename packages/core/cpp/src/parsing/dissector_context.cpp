@@ -41,6 +41,23 @@ std::optional<DataSourceId> DissectorContext::add_derived_source(
                                          contributors));
 }
 
+std::optional<PacketView> DissectorContext::add_reassembled_source(
+    std::string_view name, const ReassembledPayload &payload,
+    FieldId contribution_field, std::uint32_t parent,
+    const PacketView &contribution) {
+  if (!add_bytes(contribution_field, parent, contribution, 0,
+                 contribution.captured())) {
+    return std::nullopt;
+  }
+  const auto source_id =
+      add_derived_source(name, payload.bytes, payload.contributors);
+  if (!source_id) {
+    return std::nullopt;
+  }
+  return PacketView::from_capture(payload.bytes, payload.bytes.size(),
+                                  *source_id);
+}
+
 std::optional<std::uint32_t>
 DissectorContext::add_protocol(FieldId field, std::uint32_t parent,
                                const PacketView &view, std::size_t length) {

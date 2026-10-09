@@ -139,19 +139,17 @@ DissectionResult dissect_ipv4(DissectorContext &context, const void *opaque,
                                 ParsedNodeFlagGenerated)) {
         return {};
       }
-      const auto source_id = context.add_derived_source(
-          "Reassembled IPv4 payload", reassembled.bytes,
-          reassembled.contributors);
-      if (!source_id) {
+      const auto reassembled_view = context.add_reassembled_source(
+          "Reassembled IPv4 payload", reassembled, state.fragment_data,
+          *ip_node, payload);
+      if (!reassembled_view) {
         return {};
       }
-      const auto reassembled_view = PacketView::from_capture(
-          reassembled.bytes, reassembled.bytes.size(), *source_id);
       if (!context.push_network_layer(IpFamily::V4, *source, *destination)) {
         return {};
       }
       (void)context.dispatch_ip_protocol(IpFamily::V4, *protocol,
-                                         reassembled_view, *ip_node);
+                                         *reassembled_view, *ip_node);
       context.pop_network_layer();
       return {*total_length};
     }

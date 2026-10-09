@@ -118,7 +118,7 @@ export function AdvancedDisplayFilters({
                             <h3 id="time-range-title" className="text-xs font-semibold">
                                 Time range
                             </h3>
-                            <p className="text-muted-foreground mt-1 text-[11px]">
+                            <p className="text-muted-foreground mt-1 text-xs">
                                 Relative to the first retained packet. Leave the range untouched to
                                 show every packet.
                             </p>
@@ -348,7 +348,7 @@ function FilterCheckboxGroup({
             <legend className="mb-2 text-xs font-medium">{legend}</legend>
             <div className="bg-muted/30 max-h-28 space-y-1 overflow-y-auto rounded-md border p-2">
                 {items.length === 0 ? (
-                    <p className="text-muted-foreground text-[11px]">{emptyMessage}</p>
+                    <p className="text-muted-foreground text-xs">{emptyMessage}</p>
                 ) : (
                     items.map((item) => (
                         <CheckboxLabel
@@ -374,7 +374,7 @@ function CheckboxLabel({
     onChange: () => void
 }) {
     return (
-        <Label className="text-muted-foreground hover:text-foreground cursor-pointer gap-2 text-[11px]">
+        <Label className="text-muted-foreground hover:text-foreground cursor-pointer gap-2 text-xs">
             <Checkbox checked={checked} onCheckedChange={onChange} />
             <span className="truncate">{label}</span>
         </Label>

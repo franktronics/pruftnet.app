@@ -110,7 +110,7 @@ export function PacketBytes({
         <PanelShell title="Bytes" showHeader={false}>
             <div className="flex h-full min-h-0 flex-col">
                 {detail && bytes.length ? (
-                    <div className="text-muted-foreground flex h-7 shrink-0 items-center justify-end border-b px-3 font-mono text-[11px] tabular-nums">
+                    <div className="text-muted-foreground flex h-7 shrink-0 items-center justify-end border-b px-3 font-mono text-xs tabular-nums">
                         {bytes.length.toLocaleString()} bytes ·{' '}
                         {source?.name ?? `source ${sourceId}`}
                     </div>

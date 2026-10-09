@@ -54,11 +54,11 @@ import {
     type LiveInterfaceSettings,
 } from '#front/pages/home/live-capture-options'
 import { NewCaptureButton } from '#front/pages/capture/components/new-capture-button'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
 import {
     consumeCaptureSettingsRequest,
     subscribeToCaptureSettingsRequests,
-} from '#front/commands/capture-settings-request'
+} from '#front/app/commands/capture-settings-request'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 
 const defaultInterfaceSettings: LiveInterfaceSettings = {
@@ -376,8 +376,8 @@ function InterfaceSelector({
                                         <div className="flex items-center gap-2">
                                             <code>{item.name}</code>
                                             {item.isLoopback ? (
-                                                <span className="text-muted-foreground text-xs uppercase">
-                                                    loopback
+                                                <span className="text-muted-foreground text-xs">
+                                                    Loopback
                                                 </span>
                                             ) : null}
                                         </div>

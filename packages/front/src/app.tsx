@@ -1,5 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { LucideProvider } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { ThemeProvider } from './theme/theme-provider'
@@ -8,10 +9,10 @@ import './styles/main.css'
 import { syncDocumentWindowControlsOverlayClass } from './config/window-controls-overlay'
 import { queryClient } from './config/query-client'
 import { ExportManagerProvider } from './pages/captures/export-manager'
-import { ApplicationRealtimeProvider } from './realtime/application-realtime-provider'
-import { useAppSettings } from './settings/app-settings-context'
-import { AppSettingsProvider } from './settings/app-settings-provider'
-import { ApplicationCommandProvider } from './commands/application-command-provider'
+import { ApplicationRealtimeProvider } from './app/realtime/application-realtime-provider'
+import { useAppSettings } from './app/settings/app-settings-context'
+import { AppSettingsProvider } from './app/settings/app-settings-provider'
+import { ApplicationCommandProvider } from './app/commands/application-command-provider'
 import './config/desktop-api'
 import {
     packetSummaryCacheBytes,
@@ -44,19 +45,22 @@ export function App() {
     }, [])
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <AppSettingsProvider>
-                <PacketSummaryCacheBudgetSync />
-                <ApplicationRealtimeProvider>
-                    <ThemeProvider>
-                        <ApplicationCommandProvider>
-                            <ExportManagerProvider>
-                                <RouterProvider router={router} />
-                            </ExportManagerProvider>
-                        </ApplicationCommandProvider>
-                    </ThemeProvider>
-                </ApplicationRealtimeProvider>
-            </AppSettingsProvider>
-        </QueryClientProvider>
+        // A lighter icon stroke matches the weight of grayscale-antialiased Inter.
+        <LucideProvider strokeWidth={1.75}>
+            <QueryClientProvider client={queryClient}>
+                <AppSettingsProvider>
+                    <PacketSummaryCacheBudgetSync />
+                    <ApplicationRealtimeProvider>
+                        <ThemeProvider>
+                            <ApplicationCommandProvider>
+                                <ExportManagerProvider>
+                                    <RouterProvider router={router} />
+                                </ExportManagerProvider>
+                            </ApplicationCommandProvider>
+                        </ThemeProvider>
+                    </ApplicationRealtimeProvider>
+                </AppSettingsProvider>
+            </QueryClientProvider>
+        </LucideProvider>
     )
 }

@@ -6,7 +6,7 @@ import { cn } from '@repo/utils'
 
 /** Dense data-table header surface, shared with virtualized grids that cannot use `<table>`. */
 const tableHeaderClassName =
-    'bg-muted text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+    'bg-table-header text-table-header-foreground text-xs font-medium tracking-normal normal-case'
 
 function Table({
     className,
@@ -31,7 +31,11 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
     return (
         <thead
             data-slot="table-header"
-            className={cn(tableHeaderClassName, '[&_tr]:border-b', className)}
+            className={cn(
+                tableHeaderClassName,
+                '[&_tr]:border-b [&_tr:hover]:bg-transparent',
+                className,
+            )}
             {...props}
         />
     )
@@ -75,7 +79,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
         <th
             data-slot="table-head"
             className={cn(
-                'h-8 px-2 text-left align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+                'h-8 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
                 className,
             )}
             {...props}

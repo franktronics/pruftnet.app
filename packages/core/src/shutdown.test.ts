@@ -48,6 +48,7 @@ function testLayer() {
             Effect.sync(() => {
                 calls.interruptAll += 1
             }),
+        clear: () => Effect.die('unused'),
         status: () => Effect.succeed({ activeExportIds: ['export'] }),
     })
     const dependencies = Layer.mergeAll(
@@ -65,10 +66,12 @@ describe('ShutdownCoordinator', () => {
         const accepting = await Effect.runPromise(
             Effect.gen(function* () {
                 const shutdown = yield* ShutdownCoordinator
+                // Handlers build the assertion once and run it for every mutation.
+                const assertion = shutdown.assertAcceptingMutations()
                 yield* Effect.all([shutdown.shutdownDesktop(), shutdown.shutdownDesktop()], {
                     concurrency: 'unbounded',
                 })
-                return yield* Effect.exit(shutdown.assertAcceptingMutations())
+                return yield* Effect.exit(assertion)
             }).pipe(Effect.provide(layer)),
         )
 

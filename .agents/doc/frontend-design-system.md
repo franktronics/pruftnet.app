@@ -1,10 +1,28 @@
 # Frontend Design System
 
-Pruftnet uses a compact desktop density optimized for packet inspection. Shared controls use Inter; addresses, byte values, counters, and timestamps use the system monospace stack with tabular figures.
+Pruftnet uses a compact desktop density optimized for packet inspection.
+
+## Typography
+
+- Inter is loaded with its optical-size axis and rendered with grayscale antialiasing (`antialiased` on `body`).
+- Controls, packet numbers, timestamps, lengths, and info text use Inter; numeric columns add `tabular-nums`.
+- Addresses, byte values, and ledger counters use the system monospace stack with tabular figures. Long addresses use `MiddleTruncate` so both ends stay visible.
+- Labels and headers use sentence case with `font-medium`; do not add uppercase or letter-spaced labels.
+- Lucide icons use a 1.75 stroke, set once by `LucideProvider` in `app.tsx`.
 
 ## Layout
 
 The app shell is bounded to the viewport (`h-svh overflow-hidden` on the sidebar wrapper in `packages/front/src/pages/layout.tsx`); the document itself never scrolls. Each page scrolls inside its own content area, and panels with tall content own their scroll containers. Position: sticky elements must anchor to that scroll container, not the document.
+
+Navigation has two levels. The capture workspace is the primary page. Secondary pages (History,
+Settings) are listed in `packages/front/src/pages/secondary-pages.ts`: the title bar shows a back
+button and the page title, and back returns to the location the page was entered from, skipping
+in-page locations such as settings sections. A secondary page may replace the sidebar contents with
+its own navigation, as Settings does.
+
+Record pages such as History pair a sortable, paginated table (`TablePagination`) with a resizable
+inspector on the right: a click selects, double click or Enter opens, and actions live in the
+inspector and the row context menu. On mobile the inspector is omitted and a tap opens the record.
 
 The startup shell (`packages/front/vite/boot-shell.ts` and `.startup-shell` styles) paints the theme, sidebar, and canvas before JavaScript runs. Keep it aligned with the layout when the sidebar width or shell colors change.
 
@@ -22,9 +40,11 @@ Capture-specific fixed heights must follow this scale so adjacent panels align. 
 
 ## Color
 
-Light and dark themes use neutral canvas, panel, popover, and border layers. Blue is reserved for selection, keyboard focus, and chart identity. Green, amber, and red communicate healthy, degraded, and failed states. Packet data must not use status colors decoratively.
+Light and dark themes use neutral canvas, panel, popover, and border layers. Blue is reserved for selection, keyboard focus, and chart identity. Green, amber, and red communicate healthy, degraded, and failed states. Packet data must not use status colors decoratively, and a loss or retention counter is colored only while it is nonzero.
 
 The canonical colors live as Shadcn-compatible CSS variables in `packages/ui/src/styles/main.css`. Components consume semantic variables such as `background`, `muted`, `accent`, `primary`, and `chart-*`; they must not duplicate theme-specific literals.
+
+Table headers share the `table-header` and `table-header-foreground` tokens, including the virtualized packet grid. Use 32 px headers with 12 px medium-weight labels in sentence case, a thin bottom border, and subtle column resize handles that become clearer on hover or keyboard focus.
 
 ## Desktop Materials
 
@@ -34,4 +54,4 @@ On Linux and Windows, the native window-controls overlay is synchronized with th
 
 ## Motion And Accessibility
 
-Motion is limited to spatial transitions and live-data charts. Charts disable animation when capture is inactive and when the operating system requests reduced motion. Interactive values expose keyboard behavior, visible focus, and an accessible status message.
+Motion is limited to spatial transitions and live-data charts. Controls transition explicit properties (`transition`, `transition-colors`), never `transition-all`. Charts disable animation when capture is inactive and when the operating system requests reduced motion. Interactive values expose keyboard behavior, visible focus, and an accessible status message.

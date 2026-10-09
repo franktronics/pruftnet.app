@@ -153,6 +153,28 @@ export class ExportJobList extends Schema.Class<ExportJobList>('ExportJobList')(
     exports: Schema.Array(ExportJob),
 }) {}
 
+export class CaptureStorageUsage extends Schema.Class<CaptureStorageUsage>('CaptureStorageUsage')({
+    captureCount: DecimalString,
+    databaseBytes: DecimalString,
+    captureBytes: DecimalString,
+    exportBytes: DecimalString,
+}) {}
+
+export class ResetCaptureStorageRequest extends Schema.Class<ResetCaptureStorageRequest>(
+    'ResetCaptureStorageRequest',
+)({
+    /** Stops the running capture first instead of refusing the reset. */
+    stopActiveCapture: Schema.Boolean,
+}) {}
+
+export class CaptureStorageResetResult extends Schema.Class<CaptureStorageResetResult>(
+    'CaptureStorageResetResult',
+)({
+    deletedCaptures: DecimalString,
+    reclaimedBytes: DecimalString,
+    usage: CaptureStorageUsage,
+}) {}
+
 export class DesktopExportDestination extends Schema.TaggedClass<DesktopExportDestination>()(
     'Desktop',
     { destinationToken: Schema.NonEmptyString },

@@ -49,6 +49,14 @@ export class ExportJobChanged extends Schema.TaggedClass<ExportJobChanged>()('Ex
     job: ExportJob,
 }) {}
 
+/** Every retained capture and export was removed; clients must drop derived capture state. */
+export class CaptureStorageReset extends Schema.TaggedClass<CaptureStorageReset>()(
+    'CaptureStorageReset',
+    {
+        sequence: DecimalString,
+    },
+) {}
+
 export class ServerShuttingDown extends Schema.TaggedClass<ServerShuttingDown>()(
     'ServerShuttingDown',
     {
@@ -62,6 +70,7 @@ export const ApplicationChange = Schema.Union(
     CaptureRecordChanged,
     CaptureRecordDeleted,
     ExportJobChanged,
+    CaptureStorageReset,
     ServerShuttingDown,
 )
 export type ApplicationChange = Schema.Schema.Type<typeof ApplicationChange>

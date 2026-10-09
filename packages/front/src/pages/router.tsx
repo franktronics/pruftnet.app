@@ -4,10 +4,12 @@ import {
     createRoute,
     createRouter,
     lazyRouteComponent,
+    redirect,
 } from '@tanstack/react-router'
 
 import { HomePage } from './home/home-page'
 import { DashboardLayout } from './layout'
+import { defaultSettingsSection, findSettingsSection } from './settings/settings-sections'
 
 // Only the start page is in the startup bundle; other pages load on first navigation.
 const rootRoute = createRootRoute({
@@ -20,9 +22,25 @@ const homeRoute = createRoute({
     component: HomePage,
 })
 
-const settingsRoute = createRoute({
+const settingsIndexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/settings',
+    beforeLoad: () => {
+        throw redirect({ to: '/settings/$section', params: { section: defaultSettingsSection } })
+    },
+})
+
+const settingsSectionRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/settings/$section',
+    beforeLoad: ({ params }) => {
+        if (!findSettingsSection(params.section)) {
+            throw redirect({
+                to: '/settings/$section',
+                params: { section: defaultSettingsSection },
+            })
+        }
+    },
     component: lazyRouteComponent(() => import('./settings/settings-page'), 'SettingsPage'),
 })
 
@@ -38,11 +56,16 @@ const captureRoute = createRoute({
     component: lazyRouteComponent(() => import('./capture/capture-page'), 'CapturePage'),
 })
 
-const routeTree = rootRoute.addChildren([homeRoute, capturesRoute, settingsRoute, captureRoute])
+const routeTree = rootRoute.addChildren([
+    homeRoute,
+    capturesRoute,
+    settingsIndexRoute,
+    settingsSectionRoute,
+    captureRoute,
+])
 
 // Packaged desktop builds load the renderer from a custom scheme, where the URL path is the bundle
-// location rather than an application route. Memory history also leaves the URL hash free for
-// in-page anchors such as the settings sections.
+// location rather than an application route.
 const history =
     window.location.protocol !== 'http:' && window.location.protocol !== 'https:'
         ? createMemoryHistory({ initialEntries: ['/'] })

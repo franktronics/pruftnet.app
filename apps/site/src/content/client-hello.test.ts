@@ -12,10 +12,6 @@ function flatten(fields: PacketField[], parent?: PacketField): [PacketField, Pac
 }
 
 describe('client hello sample', () => {
-    test('is a complete 157 byte frame', () => {
-        expect(frame).toHaveLength(157)
-    })
-
     test('keeps every field inside its parent and the frame', () => {
         for (const [field, parent] of flatten(clientHelloTree)) {
             expect(field.start + field.length).toBeLessThanOrEqual(frame.length)

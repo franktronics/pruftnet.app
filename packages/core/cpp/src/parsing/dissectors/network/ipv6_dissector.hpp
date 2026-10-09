@@ -31,6 +31,7 @@ struct Ipv6DissectorState {
   FieldId reassembled_length;
   FieldId reassembled_fragment_count;
   FieldId fragment_overlap;
+  FieldId fragment_data;
 };
 
 DissectionResult dissect_ipv6(DissectorContext &, const void *,

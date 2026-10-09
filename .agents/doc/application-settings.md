@@ -32,10 +32,19 @@ for the current application session. A dataset is a capture revision plus its hi
 
 ## UI structure
 
-The Settings surface is a compact instrument-control page:
+Settings is a secondary page (see the navigation model in `frontend-design-system`). While it is
+open, the settings sidebar replaces the main navigation: section search and sections grouped
+by Application and Capture. Each section is a route (`/settings/$section`, catalogued in
+`pages/settings/settings-sections.ts`); `/settings` and unknown sections redirect to General. The
+settings sidebar loads lazily so it stays out of the startup bundle.
 
-- Appearance contains the operating-system/light/dark theme control.
+Sections render a centered column with a large title and groups of rows built from `SettingsGroup`
+and `SettingRow`:
+
+- General contains the theme control and the confirmed reset of every application setting.
+- Keyboard shortcuts lists catalogue and platform shortcuts with a filter.
 - Performance contains working packet-list cache controls and diagnostics.
-- Storage explains backend ownership and reserves the section for future retention policy controls.
+- Storage shows backend disk usage and the confirmed deletion of all capture data (see
+  `capture-architecture`).
 
 Controls describe user-visible effects rather than internal query or serialization mechanisms.

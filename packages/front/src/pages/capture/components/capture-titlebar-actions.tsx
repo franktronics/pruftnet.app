@@ -22,7 +22,7 @@ import { captureClient } from '#front/pages/capture/api/capture-client'
 import { activeCaptureOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
 import { useExportManager } from '#front/pages/captures/export-manager'
 import { cn } from '@repo/utils'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
 
 const terminalStates = new Set(['stopped', 'completed', 'failed'])
 
@@ -107,7 +107,7 @@ export function CaptureTitlebarActions({
                               : 'bg-muted-foreground/45',
                     )}
                 />
-                <span className={cn(compact ? 'hidden sm:inline' : undefined, 'uppercase')}>
+                <span className={compact ? 'hidden sm:inline' : undefined}>
                     {stateLabel(currentCapture)}
                 </span>
             </Button>
@@ -130,7 +130,7 @@ export function CaptureTitlebarActions({
                 )}
                 <span className={compact ? 'hidden md:inline' : 'hidden xl:inline'}>Export</span>
                 {activeExports.length > 0 ? (
-                    <span className="text-[10px] leading-none font-semibold tabular-nums">
+                    <span className="text-xs leading-none font-semibold tabular-nums">
                         {activeExports.length > 1 ? `${activeExports.length} · ` : ''}
                         {aggregatePercent === null ? '…' : `${aggregatePercent}%`}
                     </span>

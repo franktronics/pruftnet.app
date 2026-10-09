@@ -108,19 +108,17 @@ DissectionResult dissect_tcp(DissectorContext &context, const void *opaque,
                                  0, 1, ParsedNodeFlagGenerated))) {
         return {};
       }
-      const auto source_id = context.add_derived_source(
-          "Reassembled TCP stream", reassembled.bytes,
-          reassembled.contributors);
-      if (!source_id) {
+      const auto stream = context.add_reassembled_source(
+          "Reassembled TCP stream", reassembled, state.segment_data, *tcp_node,
+          payload);
+      if (!stream) {
         return {};
       }
-      const auto stream = PacketView::from_capture(
-          reassembled.bytes, reassembled.bytes.size(), *source_id);
       context.begin_tcp_application(*source_port, *destination_port, *sequence,
                                     syn);
       context.set_transport_end_of_stream(fin || reset);
       const auto result = context.dispatch_tcp_port(
-          *source_port, *destination_port, stream, *tcp_node);
+          *source_port, *destination_port, *stream, *tcp_node);
       context.set_transport_end_of_stream(false);
       context.end_tcp_application();
       if (result) {

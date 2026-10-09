@@ -60,6 +60,17 @@ stopping persistence. Clean shutdown interrupts input, drains or accounts
 queues, flushes and closes the spool, then lets analysis finish. Forced shutdown
 may leave a recoverable incomplete tail.
 
+## Deletion
+
+Deleting a capture marks it `deleting`, waits for export segment leases, then removes its files and
+analysis rows and leaves a `deleted` tombstone. Startup finishes any interrupted deletion.
+
+`CaptureStorageMaintenance.reset` deletes all capture data: it optionally stops the active capture,
+clears export jobs, deletes each capture through the catalogue, purges tombstones and unreferenced
+directories, then compacts SQLite. It is uninterruptible and holds every storage mutation permit;
+start, delete, and export requests fail fast while it runs. Clients receive `CaptureStorageReset` and
+reconcile.
+
 ## Startup
 
 Durable state is verified only after an unclean shutdown, detected when the

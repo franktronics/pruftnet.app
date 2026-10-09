@@ -1,6 +1,14 @@
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { ArrowLeft, History, Radar, Settings } from 'lucide-react'
-import { useState, type ComponentProps } from 'react'
+import {
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type ComponentProps,
+} from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { Button, Separator } from '@repo/ui/atoms'
@@ -25,9 +33,23 @@ import { ThemeToggle } from '#front/theme/theme-toggle'
 import { cn } from '@repo/utils'
 import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
 import { CaptureTitlebarActions } from '#front/pages/capture/components/capture-titlebar-actions'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
-import { requestCaptureSettings } from '#front/commands/capture-settings-request'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
+import { requestCaptureSettings } from '#front/app/commands/capture-settings-request'
 import { activeCaptureOptions } from '#front/pages/capture/api/capture-queries'
+import { settingsSectionFromPath } from '#front/pages/settings/settings-sections'
+import {
+    findSecondaryPage,
+    nextSecondaryPageStack,
+    secondaryPageReturnHref,
+    type SecondaryPageEntry,
+} from '#front/pages/secondary-pages'
+
+// Settings navigation is only needed once Settings opens, so it stays out of the startup bundle.
+const SettingsSidebar = lazy(() =>
+    import('#front/pages/settings/settings-sidebar').then((module) => ({
+        default: module.SettingsSidebar,
+    })),
+)
 
 const mainNavigation = [
     {
@@ -56,41 +78,47 @@ function isActiveRoute(pathname: string, to: string) {
         : pathname.startsWith(to)
 }
 
-function pageTitle(pathname: string) {
-    if (pathname.startsWith('/settings')) return 'Settings'
-    if (pathname.startsWith('/captures')) return 'History'
-    return undefined
-}
-
-function TitlebarPageTitle({ pathname }: { readonly pathname: string }) {
-    const router = useRouter()
-    const navigate = useNavigate()
-    const title = pageTitle(pathname)
-    if (!title) return null
+function TitlebarPageTitle({
+    pathname,
+    onBack,
+}: {
+    readonly pathname: string
+    readonly onBack: () => void
+}) {
+    const page = findSecondaryPage(pathname)
+    if (!page) return null
 
     return (
         <div className="no-drag-region flex shrink-0 items-center gap-1">
             <Tooltip>
                 <TooltipTrigger
                     render={
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Go back"
-                            onClick={() => {
-                                if (router.history.canGoBack()) router.history.back()
-                                else void navigate({ to: '/' })
-                            }}
-                        >
+                        <Button variant="ghost" size="icon" aria-label="Go back" onClick={onBack}>
                             <ArrowLeft />
                         </Button>
                     }
                 />
                 <TooltipContent>Back</TooltipContent>
             </Tooltip>
-            <span className="text-sm font-semibold tracking-tight">{title}</span>
+            <span className="text-sm font-semibold tracking-tight">{page.title}</span>
         </div>
     )
+}
+
+/** Tracks open secondary pages so their back button returns to where each was entered from. */
+function useSecondaryPageBack(href: string, pathname: string) {
+    const router = useRouter()
+    const stack = useRef<readonly SecondaryPageEntry[]>([])
+    const previousHref = useRef<string | undefined>(undefined)
+
+    useEffect(() => {
+        stack.current = nextSecondaryPageStack(stack.current, previousHref.current, pathname)
+        previousHref.current = href
+    }, [href, pathname])
+
+    return useCallback(() => {
+        void router.navigate({ href: secondaryPageReturnHref(stack.current) })
+    }, [router])
 }
 
 export function DashboardLayout() {
@@ -99,17 +127,20 @@ export function DashboardLayout() {
     })
     const isDesktop = typeof window !== 'undefined' && Boolean(window.pruftnet)
     const desktopPlatform = isDesktop ? window.pruftnet?.platform : undefined
-    const isCaptureWorkspace = pathname === '/' || pathname.startsWith('/capture/')
-    // Data-dense pages own their toolbars and scroll containers edge to edge.
-    const isFullBleed = isCaptureWorkspace || pathname.startsWith('/captures')
+    const href = useRouterState({ select: (state) => state.location.href })
     const [titlebarTarget, setTitlebarTarget] = useState<HTMLDivElement | null>(null)
+    const goBack = useSecondaryPageBack(href, pathname)
 
     return (
         <SidebarProvider className={cn('h-svh overflow-hidden', isDesktop && 'flex-col')}>
             <DesktopTitlebarTarget.Provider value={titlebarTarget}>
                 <LayoutApplicationCommands pathname={pathname} />
                 {isDesktop && (
-                    <DesktopTitleBar pathname={pathname} captureControlsRef={setTitlebarTarget} />
+                    <DesktopTitleBar
+                        pathname={pathname}
+                        onBack={goBack}
+                        captureControlsRef={setTitlebarTarget}
+                    />
                 )}
                 <div className="flex min-h-0 w-full min-w-0 flex-1 overflow-hidden">
                     <AppSidebar
@@ -118,15 +149,9 @@ export function DashboardLayout() {
                         desktopPlatform={desktopPlatform}
                     />
                     <SidebarInset className="min-h-0 w-auto min-w-0 overflow-hidden">
-                        {!isDesktop && <WebHeader pathname={pathname} />}
-                        <main
-                            className={cn(
-                                'flex min-h-0 min-w-0 flex-1 flex-col',
-                                isFullBleed
-                                    ? 'overflow-hidden'
-                                    : 'scroll-pt-4 gap-4 overflow-y-auto p-4 pt-0',
-                            )}
-                        >
+                        {!isDesktop && <WebHeader pathname={pathname} onBack={goBack} />}
+                        {/* Every page owns its toolbars and scroll containers edge to edge. */}
+                        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                             <Outlet />
                         </main>
                     </SidebarInset>
@@ -171,21 +196,15 @@ function LayoutApplicationCommands({ pathname }: { readonly pathname: string }) 
         disabledReason: pathname === '/captures' ? 'History is already open.' : undefined,
         execute: () => navigate({ to: '/captures' }),
     })
+    const settingsOpen = findSecondaryPage(pathname)?.id === 'settings'
     useRegisterApplicationCommand('settings', {
-        enabled: pathname !== '/settings',
-        disabledReason: pathname === '/settings' ? 'Settings are already open.' : undefined,
+        enabled: !settingsOpen,
+        disabledReason: settingsOpen ? 'Settings are already open.' : undefined,
         execute: () => navigate({ to: '/settings' }),
     })
     useRegisterApplicationCommand('keyboard-shortcuts', {
         enabled: true,
-        execute: async () => {
-            await navigate({ to: '/settings', hash: 'keyboard' })
-            requestAnimationFrame(() => {
-                const target = document.getElementById('keyboard')
-                target?.scrollIntoView({ block: 'start' })
-                target?.focus({ preventScroll: true })
-            })
-        },
+        execute: () => navigate({ to: '/settings/$section', params: { section: 'keyboard' } }),
     })
     useRegisterApplicationCommand('back', {
         enabled: router.history.canGoBack(),
@@ -216,9 +235,11 @@ function LayoutApplicationCommands({ pathname }: { readonly pathname: string }) 
 
 function DesktopTitleBar({
     pathname,
+    onBack,
     captureControlsRef,
 }: {
     pathname: string
+    onBack: () => void
     captureControlsRef: (element: HTMLDivElement | null) => void
 }) {
     const { state } = useSidebar()
@@ -262,7 +283,7 @@ function DesktopTitleBar({
                 id="desktop-titlebar-capture-controls"
                 className="flex min-w-0 flex-1 items-center gap-2 px-3"
             >
-                <TitlebarPageTitle pathname={pathname} />
+                <TitlebarPageTitle pathname={pathname} onBack={onBack} />
             </div>
             <div
                 className={cn('desktop-titlebar-actions no-drag-region', 'flex items-center gap-2')}
@@ -278,14 +299,20 @@ function DesktopTitleBar({
     )
 }
 
-function WebHeader({ pathname }: { readonly pathname: string }) {
+function WebHeader({
+    pathname,
+    onBack,
+}: {
+    readonly pathname: string
+    readonly onBack: () => void
+}) {
     return (
         <header className="flex h-10 shrink-0 items-center gap-2 border-b">
             <div className="flex flex-1 items-center gap-2 px-4">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="my-1.5 mr-2" />
                 <span className="text-sm font-medium tracking-tight">Pruftnet</span>
-                <TitlebarPageTitle pathname={pathname} />
+                <TitlebarPageTitle pathname={pathname} onBack={onBack} />
                 <div className="ml-auto flex items-center gap-2">
                     <CaptureTitlebarActions pathname={pathname} compact />
 
@@ -332,6 +359,8 @@ function AppSidebar({
     readonly desktopPlatform: string | undefined
     readonly pathname: string
 }) {
+    const settingsSection = settingsSectionFromPath(pathname)
+
     const desktopSidebarClassName = 'desktop-sidebar'
     const sidebarAppearanceClassName =
         desktopPlatform === 'darwin' ? 'desktop-sidebar--vibrant' : undefined
@@ -359,6 +388,20 @@ function AppSidebar({
             }
             {...props}
         >
+            {settingsSection ? (
+                <Suspense fallback={null}>
+                    <SettingsSidebar activeSectionId={settingsSection.id} />
+                </Suspense>
+            ) : (
+                <MainSidebarNavigation pathname={pathname} />
+            )}
+        </Sidebar>
+    )
+}
+
+function MainSidebarNavigation({ pathname }: { readonly pathname: string }) {
+    return (
+        <>
             <SidebarContent>
                 <SidebarGroup className="pt-2">
                     <SidebarGroupContent>
@@ -403,6 +446,6 @@ function AppSidebar({
                     })}
                 </SidebarMenu>
             </SidebarFooter>
-        </Sidebar>
+        </>
     )
 }
