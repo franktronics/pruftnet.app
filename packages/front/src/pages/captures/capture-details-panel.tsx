@@ -8,22 +8,14 @@ import { copyText } from '#front/pages/capture/model/copy-text'
 
 import { type CaptureActionHandlers, CaptureMoreMenu } from './capture-actions'
 import {
-    type CaptureHealth,
     captureDurationSeconds,
     captureHealth,
     captureSourceLabel,
     formatDateTime,
     formatDuration,
 } from './capture-history'
-import { HealthDot, healthText } from './capture-history-list'
+import { CaptureStatus, healthText } from './capture-history-table'
 import { formatBytes } from './format-bytes'
-
-const healthLabel: Record<CaptureHealth, string> = {
-    live: 'Capturing',
-    healthy: 'Complete',
-    degraded: 'Needs attention',
-    failed: 'Failed',
-}
 
 export function CaptureDetailsPanel({
     capture,
@@ -54,15 +46,7 @@ export function CaptureDetailsPanel({
             <header className="flex flex-col gap-3 border-b p-3">
                 <div className="min-w-0">
                     <h2 className="truncate text-sm font-medium">{captureSourceLabel(capture)}</h2>
-                    <p
-                        className={cn(
-                            'mt-0.5 flex items-center gap-1.5 text-xs',
-                            healthText(health),
-                        )}
-                    >
-                        <HealthDot health={health} className="size-1.5" />
-                        {healthLabel[health]}
-                    </p>
+                    <CaptureStatus health={health} className="mt-0.5 block text-xs" />
                 </div>
                 <div className="flex items-center gap-1.5">
                     <Button size="sm" onClick={() => handlers.onOpen(capture)}>

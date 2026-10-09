@@ -13,7 +13,7 @@ import {
     DropdownMenuTrigger,
 } from '@repo/ui'
 import { Copy, Ellipsis, FileOutput, FolderOpen, type LucideIcon, Trash2 } from 'lucide-react'
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, type ReactElement } from 'react'
 
 import { isLiveCapture } from './capture-history'
 
@@ -70,16 +70,16 @@ export function captureActions(
 export function CaptureContextMenu({
     capture,
     handlers,
-    children,
+    render,
 }: {
     capture: CaptureRecord
     handlers: CaptureActionHandlers
-    children: ReactNode
+    /** The element that receives the context menu, e.g. a table row; its handlers are merged. */
+    render: ReactElement
 }) {
     return (
         <ContextMenu>
-            {/* A wrapper keeps the row's own pointer and keyboard handlers intact. */}
-            <ContextMenuTrigger>{children}</ContextMenuTrigger>
+            <ContextMenuTrigger render={render} />
             <ContextMenuContent className="w-44">
                 {captureActions(capture, handlers).map((action) => (
                     <Fragment key={action.key}>

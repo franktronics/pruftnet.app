@@ -262,10 +262,7 @@ export function ExportManagerProvider({ children }: { readonly children: ReactNo
                         ) : null}
 
                         {capture ? (
-                            <section
-                                className="grid gap-3"
-                                aria-labelledby="new-export-title"
-                            >
+                            <section className="grid gap-3" aria-labelledby="new-export-title">
                                 <div>
                                     <h2 id="new-export-title" className="text-sm font-medium">
                                         New export

@@ -1,16 +1,25 @@
 import type { CaptureRecord } from '@repo/shared/capture'
 import { cond } from '@repo/utils'
 
-/** Health of a capture as the history page communicates it; drives the dot color and filters. */
+/** Health of a capture as the history page communicates it; drives the status label and filters. */
 export type CaptureHealth = 'live' | 'healthy' | 'degraded' | 'failed'
 
 export type CaptureHistoryFilter = 'all' | 'live' | 'issues'
 
-export interface CaptureDayGroup {
-    key: string
-    startedAtMs: number
-    captures: CaptureRecord[]
-    retainedBytes: bigint
+export type CaptureSortKey = 'started' | 'state' | 'duration' | 'packets' | 'size'
+
+export interface CaptureSort {
+    key: CaptureSortKey
+    direction: 'asc' | 'desc'
+}
+
+export const defaultCaptureSort: CaptureSort = { key: 'started', direction: 'desc' }
+
+export const captureHealthLabel: Record<CaptureHealth, string> = {
+    live: 'Live',
+    healthy: 'Complete',
+    degraded: 'Partial',
+    failed: 'Failed',
 }
 
 const NS_PER_MS = 1_000_000n
@@ -70,80 +79,72 @@ export function formatDuration(totalSeconds: number) {
     return `${seconds} s`
 }
 
-const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' })
 const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'medium',
 })
-const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-const weekdayFormat = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
+const shortDateTimeFormat = new Intl.DateTimeFormat(undefined, {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
 })
-
-export function formatTime(ns: string) {
-    return timeFormat.format(nsToMs(ns))
-}
+const shortDateTimeWithYearFormat = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+})
 
 export function formatDateTime(ns: string | null) {
     return ns ? dateTimeFormat.format(nsToMs(ns)) : '—'
 }
 
-/** Start and end clock times; a capture still running has no end yet. */
-export function formatTimeRange(capture: CaptureRecord) {
-    const start = formatTime(capture.startedAtNs)
-    if (!capture.stoppedAtNs) return `${start} → now`
-    const end = formatTime(capture.stoppedAtNs)
-    return start === end ? start : `${start} → ${end}`
+/** Compact start time for table cells; the year only appears when it is not the current one. */
+export function formatShortDateTime(ns: string, nowMs = Date.now()) {
+    const ms = nsToMs(ns)
+    const sameYear = new Date(ms).getFullYear() === new Date(nowMs).getFullYear()
+    return (sameYear ? shortDateTimeFormat : shortDateTimeWithYearFormat).format(ms)
 }
 
-function localDayKey(ms: number) {
-    const date = new Date(ms)
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+const healthRank: Record<CaptureHealth, number> = { live: 0, failed: 1, degraded: 2, healthy: 3 }
+
+function compareBigInt(left: bigint, right: bigint) {
+    return cond([left > right, 1], [left < right, -1]) ?? 0
 }
 
-export function formatDayLabel(ms: number, nowMs = Date.now()) {
-    const today = new Date(nowMs)
-    today.setHours(0, 0, 0, 0)
-    const day = new Date(ms)
-    day.setHours(0, 0, 0, 0)
-    const daysAgo = Math.round((today.getTime() - day.getTime()) / 86_400_000)
-    return (
-        cond(
-            [daysAgo === 0, 'Today'],
-            [daysAgo === 1, 'Yesterday'],
-            [daysAgo > 1 && daysAgo < 7, weekdayFormat.format(ms)],
-        ) ?? dayFormat.format(ms)
+const compareBy: Record<
+    CaptureSortKey,
+    (left: CaptureRecord, right: CaptureRecord, nowMs: number) => number
+> = {
+    started: (left, right) => compareBigInt(BigInt(left.startedAtNs), BigInt(right.startedAtNs)),
+    state: (left, right) => healthRank[captureHealth(left)] - healthRank[captureHealth(right)],
+    duration: (left, right, nowMs) =>
+        captureDurationSeconds(left, nowMs) - captureDurationSeconds(right, nowMs),
+    packets: (left, right) => compareBigInt(BigInt(left.packetCount), BigInt(right.packetCount)),
+    size: (left, right) => compareBigInt(BigInt(left.retainedBytes), BigInt(right.retainedBytes)),
+}
+
+/** Ties fall back to newest first so equal rows keep a predictable order across pages. */
+export function sortCaptures(
+    captures: readonly CaptureRecord[],
+    sort: CaptureSort,
+    nowMs = Date.now(),
+) {
+    const sign = sort.direction === 'asc' ? 1 : -1
+    return [...captures].sort(
+        (left, right) =>
+            sign * compareBy[sort.key](left, right, nowMs) || compareBy.started(right, left, nowMs),
     )
 }
 
-function compareNewestFirst(left: CaptureRecord, right: CaptureRecord) {
-    const a = BigInt(left.startedAtNs)
-    const b = BigInt(right.startedAtNs)
-    return cond([a > b, -1], [a < b, 1]) ?? 0
-}
-
-/** Sorts captures newest first and buckets them by the local calendar day they started on. */
-export function groupCapturesByDay(captures: readonly CaptureRecord[]): CaptureDayGroup[] {
-    const groups: CaptureDayGroup[] = []
-    for (const capture of [...captures].sort(compareNewestFirst)) {
-        const startedAtMs = nsToMs(capture.startedAtNs)
-        const key = localDayKey(startedAtMs)
-        const current = groups.at(-1)
-        if (current?.key === key) {
-            current.captures.push(capture)
-            current.retainedBytes += BigInt(capture.retainedBytes)
-        } else {
-            groups.push({
-                key,
-                startedAtMs,
-                captures: [capture],
-                retainedBytes: BigInt(capture.retainedBytes),
-            })
-        }
+/** Toggles direction on the active column; a new column starts with its most useful order. */
+export function nextCaptureSort(current: CaptureSort, key: CaptureSortKey): CaptureSort {
+    if (current.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
     }
-    return groups
+    return { key, direction: key === 'state' ? 'asc' : 'desc' }
 }
 
 export function matchesCaptureFilter(

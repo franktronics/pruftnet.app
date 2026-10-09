@@ -5,8 +5,9 @@ import {
     captureHealth,
     captureNotice,
     formatDuration,
-    groupCapturesByDay,
     matchesCaptureFilter,
+    nextCaptureSort,
+    sortCaptures,
 } from './capture-history'
 
 function msToNs(ms: number) {
@@ -57,26 +58,32 @@ describe('captureHealth', () => {
     })
 })
 
-describe('groupCapturesByDay', () => {
-    test('sorts newest first and sums retained bytes per local day', () => {
-        const morning = capture({
-            captureId: 'b'.repeat(32),
-            startedAtNs: msToNs(new Date(2026, 6, 25, 9, 0).getTime()),
-            retainedBytes: '2048',
-        })
-        const evening = capture()
-        const previousDay = capture({
-            captureId: 'c'.repeat(32),
-            startedAtNs: msToNs(new Date(2026, 6, 24, 23, 59).getTime()),
-        })
+describe('sortCaptures', () => {
+    const small = capture({ captureId: 'b'.repeat(32), packetCount: '5' })
+    const large = capture({ captureId: 'c'.repeat(32), packetCount: '900' })
+    const older = capture({
+        captureId: 'd'.repeat(32),
+        packetCount: '5',
+        startedAtNs: msToNs(new Date(2026, 6, 20).getTime()),
+    })
 
-        const groups = groupCapturesByDay([previousDay, morning, evening])
-
-        expect(groups.map((group) => group.captures.map((item) => item.captureId))).toEqual([
-            ['a'.repeat(32), 'b'.repeat(32)],
-            ['c'.repeat(32)],
+    test('sorts by the requested column and breaks ties newest first', () => {
+        const ids = (items: CaptureRecord[]) => items.map((item) => item.captureId[0])
+        expect(
+            ids(sortCaptures([older, small, large], { key: 'packets', direction: 'asc' })),
+        ).toEqual(['b', 'd', 'c'])
+        expect(ids(sortCaptures([small, older], { key: 'started', direction: 'asc' }))).toEqual([
+            'd',
+            'b',
         ])
-        expect(groups[0]?.retainedBytes).toBe(3072n)
+    })
+
+    test('toggles direction on the active column and resets it on a new one', () => {
+        expect(nextCaptureSort({ key: 'packets', direction: 'desc' }, 'packets')).toEqual({
+            key: 'packets',
+            direction: 'asc',
+        })
+        expect(nextCaptureSort({ key: 'packets', direction: 'asc' }, 'size').direction).toBe('desc')
     })
 })
 

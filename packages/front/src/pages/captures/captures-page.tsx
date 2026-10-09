@@ -20,6 +20,8 @@ import { Radio, Search } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 
 import { BasicErrorAlert } from '#front/components/error-renderer'
+import { paginate } from '#front/components/pagination'
+import { TablePagination } from '#front/components/table-pagination'
 import { ToolbarSearch } from '#front/components/toolbar-search'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureHistoryOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
@@ -29,10 +31,13 @@ import type { CaptureActionHandlers } from './capture-actions'
 import { CaptureDetailsPanel } from './capture-details-panel'
 import {
     type CaptureHistoryFilter,
-    groupCapturesByDay,
+    type CaptureSortKey,
+    defaultCaptureSort,
     matchesCaptureFilter,
+    nextCaptureSort,
+    sortCaptures,
 } from './capture-history'
-import { CaptureHistoryList } from './capture-history-list'
+import { CaptureHistoryTable } from './capture-history-table'
 import { useExportManager } from './export-manager'
 
 const noCaptures: readonly CaptureRecord[] = []
@@ -53,6 +58,9 @@ export function CapturesPage() {
     const [selectedId, setSelectedId] = useState<string>()
     const [search, setSearch] = useState('')
     const [filter, setFilter] = useState<CaptureHistoryFilter>('all')
+    const [sort, setSort] = useState(defaultCaptureSort)
+    const [pageNumber, setPageNumber] = useState(1)
+    const [pageSize, setPageSize] = useState(50)
     const open = useMutation({
         mutationFn: captureClient.openCapture,
         onSuccess: (result) =>
@@ -71,19 +79,31 @@ export function CapturesPage() {
 
     const allCaptures = captures.data?.captures ?? noCaptures
     const visibleCaptures = useMemo(
-        () => allCaptures.filter((capture) => matchesCaptureFilter(capture, filter, search)),
-        [allCaptures, filter, search],
+        () =>
+            sortCaptures(
+                allCaptures.filter((capture) => matchesCaptureFilter(capture, filter, search)),
+                sort,
+            ),
+        [allCaptures, filter, search, sort],
     )
-    const groups = useMemo(() => groupCapturesByDay(visibleCaptures), [visibleCaptures])
-    const maxPackets = visibleCaptures.reduce((max, capture) => {
-        const packets = BigInt(capture.packetCount)
-        return packets > max ? packets : max
-    }, 0n)
-    // The inspector follows the selection, and falls back to the newest visible capture.
-    const selected =
-        visibleCaptures.find((capture) => capture.captureId === selectedId) ??
-        groups[0]?.captures[0]
+    // `paginate` clamps the page, so a list that shrank after a delete never shows an empty page.
+    const page = paginate(visibleCaptures, pageNumber, pageSize)
+    // The inspector follows the selection, and falls back to the first row of the page.
+    const selected = page.items.find((capture) => capture.captureId === selectedId) ?? page.items[0]
     const filtered = search.trim() !== '' || filter !== 'all'
+
+    function changeSearch(next: string) {
+        setSearch(next)
+        setPageNumber(1)
+    }
+    function changeFilter(next: CaptureHistoryFilter) {
+        setFilter(next)
+        setPageNumber(1)
+    }
+    function changeSort(key: CaptureSortKey) {
+        setSort((current) => nextCaptureSort(current, key))
+        setPageNumber(1)
+    }
 
     const handlers: CaptureActionHandlers = {
         onOpen: (capture) => open.mutate(capture.captureId),
@@ -93,37 +113,52 @@ export function CapturesPage() {
     }
 
     const list = (
-        <div className="bg-background h-full min-h-0 overflow-auto">
-            <CaptureHistoryList
-                groups={groups}
-                selectedId={selected?.captureId}
-                maxPackets={maxPackets}
-                onSelect={(capture) => setSelectedId(capture.captureId)}
-                onActivate={handlers.onOpen}
-                activateOnClick={isMobile}
-                handlers={handlers}
-            />
-            {!captures.isPending && allCaptures.length === 0 ? (
-                <EmptyState
-                    icon={<Radio />}
-                    title="No retained captures"
-                    description="Start a capture to create the first durable session."
+        <div className="flex h-full min-h-0 flex-col">
+            <div className="bg-background min-h-0 flex-1 overflow-auto">
+                <CaptureHistoryTable
+                    captures={page.items}
+                    selectedId={selected?.captureId}
+                    sort={sort}
+                    onSortChange={changeSort}
+                    onSelect={(capture) => setSelectedId(capture.captureId)}
+                    onActivate={handlers.onOpen}
+                    activateOnClick={isMobile}
+                    handlers={handlers}
                 />
-            ) : null}
-            {!captures.isPending && allCaptures.length > 0 && visibleCaptures.length === 0 ? (
-                <EmptyState icon={<Search />} title="No captures match these filters">
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className="mt-2"
-                        onClick={() => {
-                            setSearch('')
-                            setFilter('all')
-                        }}
-                    >
-                        Clear filters
-                    </Button>
-                </EmptyState>
+                {!captures.isPending && allCaptures.length === 0 ? (
+                    <EmptyState
+                        icon={<Radio />}
+                        title="No retained captures"
+                        description="Start a capture to create the first durable session."
+                    />
+                ) : null}
+                {!captures.isPending && allCaptures.length > 0 && visibleCaptures.length === 0 ? (
+                    <EmptyState icon={<Search />} title="No captures match these filters">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="mt-2"
+                            onClick={() => {
+                                changeSearch('')
+                                changeFilter('all')
+                            }}
+                        >
+                            Clear filters
+                        </Button>
+                    </EmptyState>
+                ) : null}
+            </div>
+            {visibleCaptures.length > 0 ? (
+                <TablePagination
+                    label="Captures"
+                    page={page}
+                    pageSize={pageSize}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(next) => {
+                        setPageSize(next)
+                        setPageNumber(1)
+                    }}
+                />
             ) : null}
         </div>
     )
@@ -132,7 +167,7 @@ export function CapturesPage() {
         <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             <ToolbarSearch
                 value={search}
-                onChange={setSearch}
+                onChange={changeSearch}
                 label="Capture history filter"
                 placeholder="Filter by interface, capture ID, or failure..."
                 count={
@@ -148,7 +183,7 @@ export function CapturesPage() {
                     onValueChange={(values) => {
                         // Single-choice group: ignore attempts to deselect the active filter.
                         const next = filterOptions.find((option) => option.value === values[0])
-                        if (next) setFilter(next.value)
+                        if (next) changeFilter(next.value)
                     }}
                 >
                     {filterOptions.map((option) => (
