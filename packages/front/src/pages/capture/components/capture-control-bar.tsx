@@ -54,11 +54,11 @@ import {
     type LiveInterfaceSettings,
 } from '#front/pages/home/live-capture-options'
 import { NewCaptureButton } from '#front/pages/capture/components/new-capture-button'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
 import {
     consumeCaptureSettingsRequest,
     subscribeToCaptureSettingsRequests,
-} from '#front/commands/capture-settings-request'
+} from '#front/app/commands/capture-settings-request'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 
 const defaultInterfaceSettings: LiveInterfaceSettings = {

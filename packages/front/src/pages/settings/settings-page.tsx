@@ -33,8 +33,8 @@ import {
     currentCacheBudgetEnvironment,
     PACKET_LIST_CACHE_PRESETS_MIB,
     type PacketListCacheMode,
-} from '#front/settings/app-settings'
-import { useAppSettings } from '#front/settings/app-settings-context'
+} from '#front/app/settings/app-settings'
+import { useAppSettings } from '#front/app/settings/app-settings-context'
 import { themes, type Theme } from '#front/theme/theme'
 import { useTheme } from '#front/theme/theme-provider'
 import { KeyboardShortcutsSettings } from './keyboard-shortcuts-settings'

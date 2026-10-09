@@ -22,7 +22,7 @@ import { captureClient } from '#front/pages/capture/api/capture-client'
 import { activeCaptureOptions, captureKeys } from '#front/pages/capture/api/capture-queries'
 import { useExportManager } from '#front/pages/captures/export-manager'
 import { cn } from '@repo/utils'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
 
 const terminalStates = new Set(['stopped', 'completed', 'failed'])
 

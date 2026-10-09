@@ -5,7 +5,7 @@ import { applicationCommands } from '@repo/shared/app-command'
 import { Input, Kbd } from '@repo/ui/atoms'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/molecules'
 
-import { formatShortcut, isMacPlatform } from '#front/commands/shortcut-format'
+import { formatShortcut, isMacPlatform } from '#front/app/commands/shortcut-format'
 
 const standardShortcuts = [
     ['Undo', 'Undo the last editing operation.', 'Editing', 'Mod+Z'],

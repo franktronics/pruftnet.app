@@ -25,8 +25,8 @@ import { ThemeToggle } from '#front/theme/theme-toggle'
 import { cn } from '@repo/utils'
 import { DesktopTitlebarTarget } from '#front/components/desktop-titlebar-context'
 import { CaptureTitlebarActions } from '#front/pages/capture/components/capture-titlebar-actions'
-import { useRegisterApplicationCommand } from '#front/commands/application-command-provider'
-import { requestCaptureSettings } from '#front/commands/capture-settings-request'
+import { useRegisterApplicationCommand } from '#front/app/commands/application-command-provider'
+import { requestCaptureSettings } from '#front/app/commands/capture-settings-request'
 import { activeCaptureOptions } from '#front/pages/capture/api/capture-queries'
 
 const mainNavigation = [

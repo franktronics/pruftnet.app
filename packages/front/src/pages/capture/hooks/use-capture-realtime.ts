@@ -10,7 +10,7 @@ import { useEffect } from 'react'
 import { subscribeRpcStream } from '#front/config/effect-runtime'
 import { captureClient } from '#front/pages/capture/api/capture-client'
 import { captureKeys } from '#front/pages/capture/api/capture-queries'
-import { hasSequenceGap, heartbeatRequiresReconciliation } from '#front/realtime/stream-sequence'
+import { hasSequenceGap, heartbeatRequiresReconciliation } from '#front/app/realtime/stream-sequence'
 
 function mergeSample(
     current: CaptureStatSampleList | undefined,
