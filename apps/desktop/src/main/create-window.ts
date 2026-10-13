@@ -41,8 +41,8 @@ export async function createMainWindow(options: MainWindowOptions) {
     const devServerUrl = getDesktopDevServerUrl()
 
     const window = new BrowserWindow({
-        width: 1600,
-        height: 1100,
+        width: 1700,
+        height: 1120,
         minWidth: 960,
         minHeight: 640,
         title: releaseName,
