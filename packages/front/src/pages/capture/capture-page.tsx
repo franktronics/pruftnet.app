@@ -1,4 +1,4 @@
-import { useParams } from '@tanstack/react-router'
+import { Navigate, useParams } from '@tanstack/react-router'
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 
 import { useIsMobile } from '@repo/ui/hooks'
@@ -31,6 +31,15 @@ import {
 } from './model/packet-filters'
 import { deepestNodeAtByte, nodeRange, packetKey } from './model/packet-view'
 import { BasicErrorAlert } from '#front/components/error-renderer'
+
+function isCaptureNotFound(error: unknown) {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        '_tag' in error &&
+        error._tag === 'CaptureNotFound'
+    )
+}
 
 export function CapturePage() {
     const { captureId } = useParams({ from: '/capture/$captureId' })
@@ -137,6 +146,8 @@ function CaptureWorkspace({ captureId }: { captureId: string }) {
         )
     }
     if (session.error) {
+        // The capture was deleted (e.g. all data wiped) while this URL was still reachable.
+        if (isCaptureNotFound(session.error)) return <Navigate to="/" replace />
         return (
             <div className="bg-background h-full p-6">
                 <BasicErrorAlert error={session.error} onRetry={() => void session.refetch()} />

@@ -1,4 +1,5 @@
 import { usePacketVirtualizer } from '#front/pages/capture/hooks/use-packet-virtualizer'
+import { useUserScrollIntent } from '#front/pages/capture/hooks/use-user-scroll-intent'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent } from 'react'
 import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react'
@@ -156,6 +157,7 @@ export function PacketTable({
     const reportedPageRange = useRef('')
     const virtualizer = usePacketVirtualizer(rowCount, scrollRef)
     const { scrollToIndex, items: virtualItems } = virtualizer
+    const isUserScroll = useUserScrollIntent(scrollRef)
     useEffect(() => {
         if (following && rowCount > 0) scrollToIndex(rowCount - 1, { align: 'end' })
     }, [following, rowCount, scrollToIndex])
@@ -379,11 +381,12 @@ export function PacketTable({
                         const target = event.currentTarget
                         if (headerRef.current)
                             headerRef.current.style.transform = `translateX(${-target.scrollLeft}px)`
-                        if (
-                            following &&
-                            target.scrollHeight - target.scrollTop - target.clientHeight > 2
-                        )
-                            onPauseFollowing()
+                        const atBottom =
+                            target.scrollHeight - target.scrollTop - target.clientHeight <= 2
+                        if (following && !atBottom) onPauseFollowing()
+                        // Scrolling back to the bottom by hand resumes the tail, like Wireshark.
+                        else if (!following && canFollow && atBottom && isUserScroll())
+                            onFollowingChange(true)
                     }}
                     onKeyDown={(event) => {
                         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

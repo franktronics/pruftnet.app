@@ -1,7 +1,7 @@
 /**
- * Frame 8679 of the synthetic capture shown in the landing screenshots: a TLS 1.3 ClientHello for
- * updates.example.org. Field labels follow Pruftnet's packet tree; byte ranges were verified
- * against Wireshark's dissection of the same frame. Only documentation address ranges are used.
+ * A synthetic TLS 1.3 ClientHello for updates.example.org. Field labels follow Pruftnet's packet
+ * tree; byte ranges were verified against Wireshark's dissection of the same frame. Only
+ * documentation address ranges are used.
  */
 export const clientHelloHex =
     '02507200000102507200001f08004500008f00010000400633a80a14001fcb00' +

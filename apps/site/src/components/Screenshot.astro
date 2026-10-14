@@ -5,15 +5,13 @@ import { Picture } from 'astro:assets'
 interface Props {
     src: ImageMetadata
     alt: string
-    /** Full application window: draws the macOS window controls the capture cannot include. */
-    window?: boolean
     sizes: string
     widths: number[]
     priority?: boolean
     class?: string
 }
 
-const { src, alt, window = false, sizes, widths, priority = false, class: className } = Astro.props
+const { src, alt, sizes, widths, priority = false, class: className } = Astro.props
 ---
 
 <figure
@@ -30,15 +28,4 @@ const { src, alt, window = false, sizes, widths, priority = false, class: classN
         fetchpriority={priority ? 'high' : 'auto'}
         class="block h-auto w-full"
     />
-    {
-        /* Positions mirror trafficLightPosition { x: 16, y: 15 } in a 1600 × 1100 window. */
-        window &&
-            ['#ff5f57', '#febc2e', '#28c840'].map((color, index) => (
-                <i
-                    aria-hidden="true"
-                    class="absolute top-[1.36%] block aspect-square w-[0.75%] rounded-full"
-                    style={`left: ${1 + index * 1.25}%; background: ${color}`}
-                />
-            ))
-    }
 </figure>
